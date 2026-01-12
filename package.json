@@ -1,0 +1,28 @@
+{
+  "name": "shopkeeper-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:electron\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron electron/main.js",
+    "start": "npm run dev",
+    "build": "npm run build:client && npm run build:server && npm run build:electron",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build:electron": "electron-builder --win --x64",
+    "dist": "npm run build",
+    "package": "electron-builder --dir",
+    "clean": "rimraf dist build client/dist server/dist",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.0.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "cross-env": "^7.0.3",
+    "rimraf": "^5.0.5"
+  }
+}

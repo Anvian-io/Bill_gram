@@ -1,0 +1,36 @@
+{
+  "appId": "com.shopkeeper.app",
+  "productName": "Shopkeeper App",
+  "directories": {
+    "output": "dist",
+    "buildResources": "assets"
+  },
+  "files": [
+    "frontend/dist/**/*",
+    "backend/**/*",
+    "electron/**/*",
+    "!backend/node_modules/**/*",
+    "!**/*.map",
+    "!**/*.log"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      }
+    ],
+    "icon": "assets/icon.ico",
+    "publisherName": "Your Company Name"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "license": "LICENSE",
+    "perMachine": false,
+    "deleteAppDataOnUninstall": true
+  },
+  "publish": null
+}
