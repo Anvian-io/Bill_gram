@@ -6,10 +6,10 @@
     "buildResources": "assets"
   },
   "files": [
-    "frontend/dist/**/*",
-    "backend/**/*",
+    "client/dist/**/*",
+    "server/**/*",
     "electron/**/*",
-    "!backend/node_modules/**/*",
+    "!server/node_modules/**/*",
     "!**/*.map",
     "!**/*.log"
   ],

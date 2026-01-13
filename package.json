@@ -2,6 +2,7 @@
   "name": "shopkeeper-app",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:electron\"",
     "dev:client": "cd client && npm run dev",
