@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Menu, Moon, Sun, X, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "../../contexts/ThemeProvider";
 import { Header } from "./Header";
@@ -17,8 +17,26 @@ export function Navbar({ children }: NavbarProps) {
   const [currentPage, setCurrentPage] = useState<
     { label: string; path?: string }[]
   >([]);
+  const [pinnedItems, setPinnedItems] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Load pinned items from localStorage on component mount
+  useEffect(() => {
+    const savedPinnedItems = localStorage.getItem("pinnedNavItems");
+    if (savedPinnedItems) {
+      try {
+        setPinnedItems(JSON.parse(savedPinnedItems));
+      } catch (error) {
+        console.error("Error parsing pinned items from localStorage:", error);
+      }
+    }
+  }, []);
+
+  // Save pinned items to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("pinnedNavItems", JSON.stringify(pinnedItems));
+  }, [pinnedItems]);
 
   // Set current page based on current route
   useEffect(() => {
@@ -27,15 +45,13 @@ export function Navbar({ children }: NavbarProps) {
     );
 
     if (currentItem) {
-      // Only send the current page's breadcrumb, not all nav items
       setCurrentPage([
         {
-          label: currentItem.pages, // Use the pages string from navItem
+          label: currentItem.pages,
           path: currentItem.href,
         },
       ]);
     } else {
-      // Default to home if no match found
       setCurrentPage([
         {
           label: "Home",
@@ -56,7 +72,6 @@ export function Navbar({ children }: NavbarProps) {
   };
 
   const handleNavItemClick = (item: NavItem) => {
-    // Update current page when navigating
     setCurrentPage([
       {
         label: item.pages,
@@ -66,6 +81,35 @@ export function Navbar({ children }: NavbarProps) {
     setIsMobileMenuOpen(false);
     navigate(item.href);
   };
+
+  const togglePinItem = (href: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setPinnedItems((prev) => {
+      if (prev.includes(href)) {
+        return prev.filter((item) => item !== href);
+      } else {
+        return [...prev, href];
+      }
+    });
+  };
+
+  // Sort nav items: pinned items first, then others
+  const getSortedNavItems = () => {
+    const sorted = [...navItems].sort((a, b) => {
+      const aPinned = pinnedItems.includes(a.href);
+      const bPinned = pinnedItems.includes(b.href);
+
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+
+    return sorted;
+  };
+
+  const sortedNavItems = getSortedNavItems();
 
   return (
     <div className="h-screen bg-background text-foreground">
@@ -81,83 +125,113 @@ export function Navbar({ children }: NavbarProps) {
           onMouseEnter={() => setIsExpanded(true)}
           onMouseLeave={() => setIsExpanded(false)}
         >
-          {/* Header */}
-          <div className="flex items-center justify-start h-16 px-4 border-b border-border">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
-                <Menu className="w-5 h-5 text-sidebar-foreground" />
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex-shrink-0 flex items-center justify-start h-16 px-4 border-b border-border">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                  <Menu className="w-5 h-5 text-sidebar-foreground" />
+                </div>
+                <span
+                  className={`font-semibold text-lg text-sidebar-foreground transition-opacity duration-300 ${
+                    isExpanded ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  Dashboard
+                </span>
               </div>
-              <span
-                className={`font-semibold text-lg text-sidebar-foreground transition-opacity duration-300 ${
-                  isExpanded ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                Dashboard
-              </span>
             </div>
-          </div>
 
-          {/* Navigation */}
-          <div className="flex-1 px-3 py-6">
-            <ul className="space-y-2">
-              {navItems.map((item, index) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
+            {/* Navigation - Fixed height with scroll */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4">
+              <ul className="space-y-2">
+                {sortedNavItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  const isPinned = pinnedItems.includes(item.href);
 
-                return (
-                  <li key={index}>
-                    <Link
-                      to={item.href}
-                      onClick={() => handleNavItemClick(item)}
-                      className={`
-                        flex items-center px-3 py-3 rounded-lg transition-all duration-200 
-                        ${
-                          isActive
-                            ? "text-primary bg-primary/10 border border-primary/20"
-                            : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                        }
-                      `}
-                    >
-                      <Icon className="w-5 h-5 flex-shrink-0" />
-                      <span
-                        className={`ml-3 transition-all duration-300 whitespace-nowrap ${
-                          isExpanded
-                            ? "opacity-100 translate-x-0"
-                            : "opacity-0 -translate-x-2"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                  return (
+                    <li key={index}>
+                      <div className="relative group">
+                        <Link
+                          to={item.href}
+                          onClick={() => handleNavItemClick(item)}
+                          className={`
+                            flex items-center px-3 py-3 rounded-lg transition-all duration-200
+                            ${
+                              isActive
+                                ? "text-primary bg-primary/10 border border-primary/20"
+                                : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                            }
+                          `}
+                        >
+                          <Icon className="w-5 h-5 flex-shrink-0" />
+                          <span
+                            className={`ml-3 transition-all duration-300 whitespace-nowrap ${
+                              isExpanded
+                                ? "opacity-100 translate-x-0"
+                                : "opacity-0 -translate-x-2"
+                            }`}
+                          >
+                            {item.label}
+                          </span>
+                        </Link>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-border">
-            <Button
-              onClick={handleThemeChange}
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-            >
-              {theme === "dark" ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-              <span
-                className={`ml-3 transition-all duration-300 whitespace-nowrap ${
-                  isExpanded
-                    ? "opacity-100 translate-x-0"
-                    : "opacity-0 -translate-x-2"
-                }`}
+                        {/* Pin button - only visible when sidebar is expanded */}
+                        {(isExpanded || isMobileMenuOpen) && (
+                          <button
+                            onClick={(e) => togglePinItem(item.href, e)}
+                            className={`
+                              absolute right-2 top-1/2 transform -translate-y-1/2
+                              p-1.5 rounded-md transition-all duration-200
+                              ${
+                                isPinned
+                                  ? "text-primary bg-primary/10"
+                                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                              }
+                              opacity-100 group-hover:opacity-100
+                              ${isExpanded ? "" : "hidden"}
+                            `}
+                            title={isPinned ? "Unpin item" : "Pin item"}
+                          >
+                            {isPinned ? (
+                              <Pin className="w-3.5 h-3.5 fill-current" />
+                            ) : (
+                              <PinOff className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* Footer - Fixed at bottom */}
+            <div className="flex-shrink-0 p-3 border-t border-border">
+              <Button
+                onClick={handleThemeChange}
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
               >
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </span>
-            </Button>
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+                <span
+                  className={`ml-3 transition-all duration-300 whitespace-nowrap ${
+                    isExpanded
+                      ? "opacity-100 translate-x-0"
+                      : "opacity-0 -translate-x-2"
+                  }`}
+                >
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </span>
+              </Button>
+            </div>
           </div>
         </nav>
 
@@ -179,75 +253,101 @@ export function Navbar({ children }: NavbarProps) {
               isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            {/* Header with Close Button */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-border">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
-                  <Menu className="w-5 h-5 text-sidebar-foreground" />
+            <div className="flex flex-col h-full">
+              {/* Header with Close Button */}
+              <div className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b border-border">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                    <Menu className="w-5 h-5 text-sidebar-foreground" />
+                  </div>
+                  <span className="font-semibold text-lg text-sidebar-foreground">
+                    Dashboard
+                  </span>
                 </div>
-                <span className="font-semibold text-lg text-sidebar-foreground">
-                  Dashboard
-                </span>
+                <Button
+                  onClick={toggleMobileMenu}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
-              <Button
-                onClick={toggleMobileMenu}
-                variant="ghost"
-                size="sm"
-                className="p-2 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
 
-            {/* Navigation */}
-            <div className="flex-1 px-3 py-6">
-              <ul className="space-y-2">
-                {navItems.map((item, index) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
+              {/* Navigation - Fixed height with scroll */}
+              <div className="flex-1 overflow-y-auto px-3 py-4">
+                <ul className="space-y-2">
+                  {sortedNavItems.map((item, index) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    const isPinned = pinnedItems.includes(item.href);
 
-                  return (
-                    <li key={index}>
-                      <Link
-                        to={item.href}
-                        onClick={() => handleNavItemClick(item)}
-                        className={`
-                          flex items-center px-3 py-3 rounded-lg transition-all duration-200 
-                          ${
-                            isActive
-                              ? "text-primary bg-primary/10 border border-primary/20"
-                              : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                          }
-                        `}
-                      >
-                        <Icon className="w-5 h-5 flex-shrink-0" />
-                        <span className="ml-3 whitespace-nowrap">
-                          {item.label}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                    return (
+                      <li key={index}>
+                        <div className="relative group">
+                          <Link
+                            to={item.href}
+                            onClick={() => handleNavItemClick(item)}
+                            className={`
+                              flex items-center px-1 py-3 rounded-lg transition-all duration-200
+                              ${
+                                isActive
+                                  ? "text-primary bg-primary/10 border border-primary/20"
+                                  : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                              }
+                            `}
+                          >
+                            <Icon className="w-5 h-5 flex-shrink-0" />
+                            <span className="ml-3 whitespace-nowrap">
+                              {item.label}
+                            </span>
+                          </Link>
 
-            {/* Footer */}
-            <div className="p-3 border-t border-border">
-              <Button
-                onClick={handleThemeChange}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-                <span className="ml-3 whitespace-nowrap">
-                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                </span>
-              </Button>
+                          {/* Pin button - always visible on mobile */}
+                          <button
+                            onClick={(e) => togglePinItem(item.href, e)}
+                            className={`
+                              absolute right-2 top-1/2 transform -translate-y-1/2
+                              p-1.5 rounded-md transition-all duration-200
+                              ${
+                                isPinned
+                                  ? "text-primary bg-primary/10"
+                                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                              }
+                            `}
+                            title={isPinned ? "Unpin item" : "Pin item"}
+                          >
+                            {isPinned ? (
+                              <Pin className="w-3.5 h-3.5 fill-current" />
+                            ) : (
+                              <PinOff className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* Footer - Fixed at bottom */}
+              <div className="flex-shrink-0 p-3 border-t border-border">
+                <Button
+                  onClick={handleThemeChange}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
+                  )}
+                  <span className="ml-3 whitespace-nowrap">
+                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </span>
+                </Button>
+              </div>
             </div>
           </nav>
         </div>
@@ -271,7 +371,6 @@ export function Navbar({ children }: NavbarProps) {
             ml-0 
             bg-background`}
         >
-          {/* Fixed: Only pass the current page, not all nav items */}
           <Header isExpanded={isExpanded} pages={currentPage} />
           <div className="mt-20 mx-1 sm:mx-2 min-w-400">
             {children || (
@@ -286,6 +385,10 @@ export function Navbar({ children }: NavbarProps) {
                     </span>
                     <span className="sm:hidden">
                       Tap the menu icon to open the sidebar.
+                    </span>
+                    <br />
+                    <span className="text-sm mt-2 block">
+                      Pin your frequently visited sections using the 📌 icon
                     </span>
                   </p>
                 </div>

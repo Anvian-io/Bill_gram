@@ -23,17 +23,21 @@ interface ThemeProviderProps {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>("system");
+  // Initialize state with undefined, then update after reading localStorage
+  const [theme, setTheme] = useState<Theme | undefined>(undefined);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
+  // Read from localStorage on initial mount
   useEffect(() => {
-    const savedTheme = (localStorage.getItem("theme") as Theme) || "system";
-    setTheme(savedTheme);
+    const savedTheme = localStorage.getItem("theme") as Theme;
+    setTheme(savedTheme || "system");
   }, []);
 
+  // Apply theme to DOM
   useEffect(() => {
-    const root = window.document.documentElement;
+    if (theme === undefined) return; // Skip if theme not loaded yet
 
+    const root = window.document.documentElement;
     root.classList.remove("light", "dark");
 
     if (theme === "system") {
@@ -44,7 +48,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       root.classList.add(systemTheme);
       setResolvedTheme(systemTheme);
 
-      // Optional: Listen for system theme changes
+      // Listen for system theme changes
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const handleChange = () => {
         const newSystemTheme = mediaQuery.matches ? "dark" : "light";
@@ -63,8 +67,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Update localStorage when theme changes
   useEffect(() => {
-    localStorage.setItem("theme", theme);
+    if (theme !== undefined) {
+      localStorage.setItem("theme", theme);
+    }
   }, [theme]);
+
+  // Don't render children until theme is loaded to avoid flash
+  if (theme === undefined) {
+    return null; // or a loading spinner
+  }
 
   const value: ThemeContextType = {
     theme,
