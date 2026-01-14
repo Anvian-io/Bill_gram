@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const response = await authAPI.checkAuth();
-      setUser(response.data.user);
+      setUser(response.data.data.user);
     } catch (error) {
       localStorage.removeItem("token");
     } finally {
@@ -62,8 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await authAPI.login({ email, password });
-      const { token, user } = response.data;
-
+      const { token, user } = response.data.data;
+      // console.log(response,"foewihf")
       localStorage.setItem("token", token);
       setUser(user);
       return { success: true };
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     try {
       const response = await authAPI.register(userData);
-      return { success: true, data: response.data };
+      return { success: true, data: response.data.data };
     } catch (error: any) {
       return {
         success: false,
