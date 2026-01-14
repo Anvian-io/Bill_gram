@@ -1,11 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-// import { Toaster } from "@/components/ui/toaster";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +12,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 import "./App.css";
 import { Navbar } from "./components/common/Navbar";
+import { MainLayout } from "./components/common/MainLayout";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -29,12 +29,13 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <AuthProvider>
-      {/* Wrap entire app in ThemeProvider */}
       <ThemeProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -42,15 +43,19 @@ function App() {
                 path="/"
                 element={
                   <PrivateRoute>
-                    <Navbar>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      {/* <MainLayout isExpanded={isExpanded}> */}
                       <Dashboard />
+                      {/* </MainLayout> */}
                     </Navbar>
                   </PrivateRoute>
                 }
               />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-            {/* <Toaster /> */}
           </div>
         </Router>
       </ThemeProvider>

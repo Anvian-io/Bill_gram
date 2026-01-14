@@ -66,13 +66,13 @@ export const navItems: NavItem[] = [
     id: "shops",
     pages: "Home, Shops",
   },
-  {
-    icon: QrCode,
-    label: "QR Payments",
-    href: "/qr-payments",
-    id: "qr-payments",
-    pages: "Home, QR Payments",
-  },
+  // {
+  //   icon: QrCode,
+  //   label: "QR Payments",
+  //   href: "/qr-payments",
+  //   id: "qr-payments",
+  //   pages: "Home, QR Payments",
+  // },
   {
     icon: Download,
     label: "Backup & Restore",
@@ -80,13 +80,13 @@ export const navItems: NavItem[] = [
     id: "backup",
     pages: "Home, Backup",
   },
-  {
-    icon: Shield,
-    label: "License",
-    href: "/license",
-    id: "license",
-    pages: "Home, License",
-  },
+  // {
+  //   icon: Shield,
+  //   label: "License",
+  //   href: "/license",
+  //   id: "license",
+  //   pages: "Home, License",
+  // },
   // {
   //   icon: Users,
   //   label: "Users",

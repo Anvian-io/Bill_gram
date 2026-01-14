@@ -8,10 +8,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   children: React.ReactNode;
+  isExpanded: boolean;
+  setIsExpanded: (expanded: boolean) => void;
 }
 
-export function Navbar({ children }: NavbarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [currentPage, setCurrentPage] = useState<
@@ -110,7 +111,8 @@ export function Navbar({ children }: NavbarProps) {
   };
 
   const sortedNavItems = getSortedNavItems();
-
+  const handleMouseEnter = () => setIsExpanded(true);
+  const handleMouseLeave = () => setIsExpanded(false);
   return (
     <div className="h-screen bg-background text-foreground">
       <div className="flex h-full">
@@ -122,8 +124,8 @@ export function Navbar({ children }: NavbarProps) {
             ${isExpanded ? "w-64" : "w-16"}
             bg-sidebar border-r border-sidebar-border shadow-lg
           `}
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="flex flex-col h-full">
             {/* Header */}
@@ -372,7 +374,7 @@ export function Navbar({ children }: NavbarProps) {
             bg-background`}
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
-          <div className="mt-20 mx-1 sm:mx-2 min-w-400">
+          <div className="mt-18 p-1 mx-1 sm:mx-2 flex-1 overflow-auto">
             {children || (
               <div className="p-8">
                 <div className="rounded-lg p-8 text-center bg-card text-card-foreground">
