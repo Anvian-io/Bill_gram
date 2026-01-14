@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 
 let mainWindow;
 let backendProcess;
@@ -25,7 +26,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    // Production build - let's log paths for debugging
+    // Production build
     const indexPath = path.join(__dirname, "../client/dist/index.html");
     console.log("Loading frontend from:", indexPath);
     console.log("File exists:", fs.existsSync(indexPath));
@@ -54,6 +55,32 @@ function createWindow() {
   });
 }
 
+/**
+ * Get the database directory path based on platform
+ * This matches the logic in database.js
+ */
+function getDatabaseDirectory() {
+  const appName = "Shopkeeper";
+
+  if (process.env.NODE_ENV === "development") {
+    return path.join(__dirname, "../server/data");
+  }
+
+  const platform = os.platform();
+  const homeDir = os.homedir();
+
+  switch (platform) {
+    case "win32": // Windows
+      return path.join(homeDir, "AppData", "Local", appName);
+    case "darwin": // macOS
+      return path.join(homeDir, "Library", "Application Support", appName);
+    case "linux": // Linux
+      return path.join(homeDir, ".config", appName);
+    default:
+      return path.join(homeDir, `.${appName.toLowerCase()}`);
+  }
+}
+
 function startBackend() {
   let backendPath;
 
@@ -73,6 +100,9 @@ function startBackend() {
     );
     return;
   }
+
+  const dbDir = getDatabaseDirectory();
+  console.log("Database directory:", dbDir);
 
   backendProcess = spawn("node", [backendPath], {
     stdio: "inherit",
@@ -115,11 +145,23 @@ app.on("window-all-closed", () => {
   }
 });
 
+// IPC Handlers
+
+ipcMain.handle("get-database-location", async () => {
+  const dbDir = getDatabaseDirectory();
+  return path.join(dbDir, "shopkeeper.db");
+});
+
 ipcMain.handle("backup-database", async () => {
   try {
-    const appDataPath = app.getPath("userData");
-    const dbPath = path.join(appDataPath, "shopkeeper.db");
+    const dbDir = getDatabaseDirectory();
+    const dbPath = path.join(dbDir, "shopkeeper.db");
     const backupDir = path.join(app.getPath("documents"), "ShopkeeperBackups");
+
+    // Check if database exists
+    if (!fs.existsSync(dbPath)) {
+      return { success: false, error: "Database file not found" };
+    }
 
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -138,17 +180,48 @@ ipcMain.handle("backup-database", async () => {
 
 ipcMain.handle("restore-database", async (event, backupPath) => {
   try {
-    const appDataPath = app.getPath("userData");
-    const dbPath = path.join(appDataPath, "shopkeeper.db");
+    const dbDir = getDatabaseDirectory();
+    const dbPath = path.join(dbDir, "shopkeeper.db");
 
-    if (fs.existsSync(backupPath)) {
-      fs.copyFileSync(backupPath, dbPath);
-      return { success: true };
-    } else {
+    if (!fs.existsSync(backupPath)) {
       return { success: false, error: "Backup file not found" };
+    }
+
+    // Create a backup of current database before restoring
+    const tempBackup = path.join(dbDir, `temp-backup-${Date.now()}.db`);
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, tempBackup);
+    }
+
+    try {
+      fs.copyFileSync(backupPath, dbPath);
+
+      // Delete temp backup if restore successful
+      if (fs.existsSync(tempBackup)) {
+        fs.unlinkSync(tempBackup);
+      }
+
+      return { success: true };
+    } catch (restoreError) {
+      // Restore from temp backup if restore failed
+      if (fs.existsSync(tempBackup)) {
+        fs.copyFileSync(tempBackup, dbPath);
+        fs.unlinkSync(tempBackup);
+      }
+      throw restoreError;
     }
   } catch (error) {
     console.error("Restore failed:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("open-database-folder", async () => {
+  try {
+    const dbDir = getDatabaseDirectory();
+    shell.openPath(dbDir);
+    return { success: true };
+  } catch (error) {
     return { success: false, error: error.message };
   }
 });
