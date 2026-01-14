@@ -1,3 +1,4 @@
+// server/src/db/migrations.js
 export const migrations = [
   {
     version: 1,

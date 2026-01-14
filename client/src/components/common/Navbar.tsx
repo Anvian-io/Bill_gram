@@ -369,7 +369,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
 
         {/* Main Content */}
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out 
+          className={`flex-1 transition-all duration-300 ease-in-out h-full 
             ${isExpanded ? "sm:ml-64" : "sm:ml-16"} 
             ml-0 
             bg-background`}
