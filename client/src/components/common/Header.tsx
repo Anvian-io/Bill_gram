@@ -4,7 +4,7 @@ import { User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // import { NotificationsDropdown } from "../Notifications/NotificationsDropdown";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../../contexts/ThemeProvider";
+// import { useTheme } from "../../contexts/ThemeProvider";
 
 // Define types
 interface TimeState {
