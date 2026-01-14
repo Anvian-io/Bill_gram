@@ -33,7 +33,7 @@ export default function Login() {
       //   title: "Success",
       //   description: "Logged in successfully",
       // });
-      navigate("/dashboard");
+      navigate("/");
     } else {
       // toast({
       //   title: "Error",
