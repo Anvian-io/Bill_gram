@@ -1,4 +1,3 @@
-// electron/main.js
 const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
@@ -22,20 +21,33 @@ function createWindow() {
     show: false,
   });
 
-  // In development, load from Vite dev server
-  // In production, load from built files
   if (process.env.NODE_ENV === "development") {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../client/dist/index.html"));
+    // Production build - let's log paths for debugging
+    const indexPath = path.join(__dirname, "../client/dist/index.html");
+    console.log("Loading frontend from:", indexPath);
+    console.log("File exists:", fs.existsSync(indexPath));
+
+    mainWindow.loadFile(indexPath);
+
+    // TEMPORARILY enable dev tools to see errors
+    mainWindow.webContents.openDevTools();
   }
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
 
-  // Open external links in default browser
+  // Log any load failures
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription) => {
+      console.error("Failed to load:", errorCode, errorDescription);
+    }
+  );
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
@@ -43,7 +55,24 @@ function createWindow() {
 }
 
 function startBackend() {
-  const backendPath = path.join(__dirname, "../server/src/server.js");
+  let backendPath;
+
+  if (process.env.NODE_ENV === "development") {
+    backendPath = path.join(__dirname, "../server/src/server.js");
+  } else {
+    backendPath = path.join(process.resourcesPath, "server/src/server.js");
+  }
+
+  console.log("Starting backend from:", backendPath);
+
+  if (!fs.existsSync(backendPath)) {
+    console.error("Backend file not found at:", backendPath);
+    dialog.showErrorBox(
+      "Backend Error",
+      `Backend server file not found at: ${backendPath}`
+    );
+    return;
+  }
 
   backendProcess = spawn("node", [backendPath], {
     stdio: "inherit",
@@ -66,8 +95,6 @@ function startBackend() {
 }
 
 app.whenReady().then(() => {
-  // Only start backend in production mode
-  // In development, backend is started separately by npm run dev:server
   if (process.env.NODE_ENV !== "development") {
     startBackend();
   }
@@ -88,7 +115,6 @@ app.on("window-all-closed", () => {
   }
 });
 
-// IPC Handlers for backup/restore
 ipcMain.handle("backup-database", async () => {
   try {
     const appDataPath = app.getPath("userData");

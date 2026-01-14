@@ -7,11 +7,17 @@
   },
   "files": [
     "client/dist/**/*",
-    "server/**/*",
     "electron/**/*",
-    "!server/node_modules/**/*",
+    "!server/**/*",
     "!**/*.map",
     "!**/*.log"
+  ],
+  "extraResources": [
+    {
+      "from": "server",
+      "to": "server",
+      "filter": ["**/*"]
+    }
   ],
   "win": {
     "target": [

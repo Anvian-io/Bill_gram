@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import {
-  BrowserRouter as Router,
+  HashRouter as Router, // ✅ Important change
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
+
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeProvider";
+
 import "./App.css";
 import { Navbar } from "./components/common/Navbar";
-import { Dashboard,Login, Register, ProductInventory } from "./pages";
+import { Dashboard, Login, Register, ProductInventory } from "./pages";
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -35,6 +38,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+
               <Route
                 path="/"
                 element={
@@ -43,13 +47,12 @@ function App() {
                       isExpanded={isExpanded}
                       setIsExpanded={setIsExpanded}
                     >
-                      {/* <MainLayout isExpanded={isExpanded}> */}
                       <Dashboard />
-                      {/* </MainLayout> */}
                     </Navbar>
                   </PrivateRoute>
                 }
               />
+
               <Route
                 path="/product-inventory"
                 element={
@@ -63,6 +66,7 @@ function App() {
                   </PrivateRoute>
                 }
               />
+
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
