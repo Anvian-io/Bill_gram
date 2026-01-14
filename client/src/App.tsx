@@ -1,17 +1,22 @@
+// src/App.tsx
 import React, { useState } from "react";
 import {
-  BrowserRouter as Router, // ✅ Important change
+  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeProvider";
-
 import "./App.css";
 import { Navbar } from "./components/common/Navbar";
-import { Dashboard, Login, Register, ProductInventory } from "./pages";
+import {
+  Dashboard,
+  Login,
+  Register,
+  ProductInventory,
+  ProductForm,
+} from "./pages";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -62,6 +67,34 @@ function App() {
                       setIsExpanded={setIsExpanded}
                     >
                       <ProductInventory />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/product-inventory/new"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <ProductForm isEditMode={false} />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/product-inventory/:productId"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <ProductForm isEditMode={true} />
                     </Navbar>
                   </PrivateRoute>
                 }
