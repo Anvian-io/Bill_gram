@@ -76,7 +76,10 @@ export default function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 md:p-8">
+      <div
+        className="w-full lg:w-1/2 flex items-center justify-center p-4 md:p-8 bg-gradient-to-tr from-secondary/20 via-background to-primary/10
+"
+      >
         <div className="w-full max-w-md">
           <Card className="border-border/40 shadow-xl backdrop-blur-sm bg-card/50">
             <CardHeader className="space-y-1 pb-6">
