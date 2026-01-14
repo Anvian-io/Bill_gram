@@ -5,15 +5,11 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 import "./App.css";
 import { Navbar } from "./components/common/Navbar";
-import { MainLayout } from "./components/common/MainLayout";
-
+import { Dashboard,Login, Register, ProductInventory } from "./pages";
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -50,6 +46,19 @@ function App() {
                       {/* <MainLayout isExpanded={isExpanded}> */}
                       <Dashboard />
                       {/* </MainLayout> */}
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/product-inventory"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <ProductInventory />
                     </Navbar>
                   </PrivateRoute>
                 }

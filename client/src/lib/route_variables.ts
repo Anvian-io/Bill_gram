@@ -34,7 +34,7 @@ export const navItems: NavItem[] = [
   {
     icon: Package,
     label: "Products & Inventory",
-    href: "/products",
+    href: "/product-inventory",
     id: "products",
     pages: "Home, Products",
   },

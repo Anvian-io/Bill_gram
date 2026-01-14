@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "../../contexts/ThemeProvider";
 import { Header } from "./Header";
 import { type NavItem, navItems } from "@/lib/route_variables";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom"; // Remove useNavigate
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -20,7 +20,6 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   >([]);
   const [pinnedItems, setPinnedItems] = useState<string[]>([]);
   const location = useLocation();
-  const navigate = useNavigate();
 
   // Load pinned items from localStorage on component mount
   useEffect(() => {
@@ -73,6 +72,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   };
 
   const handleNavItemClick = (item: NavItem) => {
+    // Only update current page and close mobile menu
     setCurrentPage([
       {
         label: item.pages,
@@ -80,7 +80,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
       },
     ]);
     setIsMobileMenuOpen(false);
-    navigate(item.href);
+    // REMOVED: navigate(item.href); // Let the Link component handle navigation
   };
 
   const togglePinItem = (href: string, e: React.MouseEvent) => {
@@ -113,6 +113,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   const sortedNavItems = getSortedNavItems();
   const handleMouseEnter = () => setIsExpanded(true);
   const handleMouseLeave = () => setIsExpanded(false);
+
   return (
     <div className="h-screen bg-background text-foreground">
       <div className="flex h-full">
@@ -375,27 +376,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
           <div className="mt-18 p-1 mx-1 sm:mx-2 flex-1 overflow-auto">
-            {children || (
-              <div className="p-8">
-                <div className="rounded-lg p-8 text-center bg-card text-card-foreground">
-                  <h1 className="text-3xl font-bold mb-4 text-foreground">
-                    Welcome to Your Dashboard
-                  </h1>
-                  <p className="text-lg text-muted-foreground">
-                    <span className="hidden sm:inline">
-                      Hover over the sidebar to expand it.
-                    </span>
-                    <span className="sm:hidden">
-                      Tap the menu icon to open the sidebar.
-                    </span>
-                    <br />
-                    <span className="text-sm mt-2 block">
-                      Pin your frequently visited sections using the 📌 icon
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
+            {children}
           </div>
         </main>
       </div>
