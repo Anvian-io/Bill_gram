@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -28,14 +28,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { CustomPagination } from "@/components/custom_ui";
 
 // Define the type for product data
 interface Product {
@@ -150,6 +143,97 @@ export default function ProductInventory() {
       productGroup: "ELITE",
       status: "Low Stock",
     },
+    // Add more sample data for pagination testing
+    {
+      id: "6",
+      bNo: "1602770024182",
+      mfgDate: "2025-04-10",
+      expDate: "2026-04-10",
+      barcode: "10084",
+      basicPrice: 85.0,
+      openingStock: 12,
+      mrp: 130.0,
+      pRate: 85.0,
+      sRate: 102.0,
+      margin: 17.0,
+      productName: "VANILLA DREAM",
+      brand: "137 Degrees",
+      hsnCode: "18069015",
+      productGroup: "PREMIUM",
+      status: "In Stock",
+    },
+    {
+      id: "7",
+      bNo: "1602770024183",
+      mfgDate: "2025-05-15",
+      expDate: "2026-05-15",
+      barcode: "10085",
+      basicPrice: 110.0,
+      openingStock: 8,
+      mrp: 165.0,
+      pRate: 110.0,
+      sRate: 132.0,
+      margin: 22.0,
+      productName: "DARK CHOCOLATE",
+      brand: "Parle Agro",
+      hsnCode: "18069016",
+      productGroup: "ELITE",
+      status: "Low Stock",
+    },
+    {
+      id: "8",
+      bNo: "1602770024184",
+      mfgDate: "2025-06-20",
+      expDate: "2026-06-20",
+      barcode: "10086",
+      basicPrice: 95.0,
+      openingStock: 20,
+      mrp: 142.5,
+      pRate: 95.0,
+      sRate: 114.0,
+      margin: 19.0,
+      productName: "MILK CHOCOLATE",
+      brand: "137 Degrees",
+      hsnCode: "18069017",
+      productGroup: "STANDARD",
+      status: "In Stock",
+    },
+    {
+      id: "9",
+      bNo: "1602770024185",
+      mfgDate: null,
+      expDate: null,
+      barcode: "10087",
+      basicPrice: 130.0,
+      openingStock: 0,
+      mrp: 195.0,
+      pRate: 130.0,
+      sRate: 156.0,
+      margin: 26.0,
+      productName: "WHITE CHOCOLATE",
+      brand: "Parle Agro",
+      hsnCode: "18069018",
+      productGroup: "PREMIUM",
+      status: "Out of Stock",
+    },
+    {
+      id: "10",
+      bNo: "1602770024186",
+      mfgDate: "2025-07-25",
+      expDate: "2026-07-25",
+      barcode: "10088",
+      basicPrice: 180.0,
+      openingStock: 18,
+      mrp: 270.0,
+      pRate: 180.0,
+      sRate: 216.0,
+      margin: 36.0,
+      productName: "HAZELNUT DELIGHT",
+      brand: "137 Degrees",
+      hsnCode: "18069019",
+      productGroup: "ELITE",
+      status: "In Stock",
+    },
   ];
 
   // State for products and filters
@@ -165,6 +249,10 @@ export default function ProductInventory() {
     minStock: "",
     maxStock: "",
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
 
   // Filter products based on all filter criteria
   const filteredProducts = useMemo(() => {
@@ -210,6 +298,24 @@ export default function ProductInventory() {
     });
   }, [products, filters]);
 
+  // Calculate paginated data
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage, itemsPerPage]);
+
+  // Calculate total pages
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / itemsPerPage)
+  );
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, itemsPerPage]);
+
   // Handle filter changes
   const handleFilterChange = (field: string, value: string) => {
     setFilters((prev) => ({
@@ -233,13 +339,27 @@ export default function ProductInventory() {
     });
   };
 
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Optional: Scroll to top of table when page changes
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Get unique values for dropdown filters
   const uniqueBrands = Array.from(new Set(products.map((p) => p.brand)));
   const uniqueGroups = Array.from(new Set(products.map((p) => p.productGroup)));
   const statusOptions = ["In Stock", "Low Stock", "Out of Stock"];
 
+  // Calculate start and end index for display
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(
+    currentPage * itemsPerPage,
+    filteredProducts.length
+  );
+
   return (
-    <div className="min-h-screen bg-background p-2 md:p-6">
+    <div className="min-h-screen bg-background p-3">
       <div className="max-w-8xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -247,9 +367,6 @@ export default function ProductInventory() {
             <h1 className="text-3xl font-bold text-heading">
               Product Inventory
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and track your product inventory
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" className="gap-2">
@@ -268,7 +385,9 @@ export default function ProductInventory() {
         {/* Results Count */}
         <div className="flex justify-between items-center mb-4">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredProducts.length} of {products.length} products
+            Showing {startIndex} to {endIndex} of {filteredProducts.length}{" "}
+            products
+            {filteredProducts.length !== products.length && " (filtered)"}
           </p>
           <div className="text-sm text-muted-foreground">
             Sorted by: <span className="font-medium">Latest Added</span>
@@ -276,7 +395,7 @@ export default function ProductInventory() {
         </div>
 
         {/* Product Table */}
-        <Card>
+        <Card className="mb-6">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -304,7 +423,7 @@ export default function ProductInventory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.length === 0 ? (
+                  {paginatedProducts.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={13}
@@ -324,7 +443,7 @@ export default function ProductInventory() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredProducts.map((product) => (
+                    paginatedProducts.map((product) => (
                       <TableRow
                         key={product.id}
                         className="hover:bg-secondary/30"
@@ -426,34 +545,32 @@ export default function ProductInventory() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2 cursor-pointer">
-                                <Eye className="h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 cursor-pointer">
-                                <Edit className="h-4 w-4" />
-                                Edit Product
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2 text-red-600 cursor-pointer">
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
+                              title="Edit Product"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+                              title="Delete Product"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -464,24 +581,14 @@ export default function ProductInventory() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="mt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <div>
-            Data updated: {new Date().toLocaleDateString()} • Total value: ₹
-            {filteredProducts
-              .reduce((sum, p) => sum + p.basicPrice * p.openingStock, 0)
-              .toFixed(2)}
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" disabled>
-              Previous
-            </Button>
-            <span>Page 1 of 1</span>
-            <Button variant="outline" size="sm" disabled>
-              Next
-            </Button>
-          </div>
-        </div>
+        {/* Custom Pagination */}
+        {filteredProducts.length > 0 && (
+          <CustomPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
     </div>
   );
