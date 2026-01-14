@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { BreadcrumbWrapper } from "../custom_ui/CustomBreadCrumb";
-import { Bell, User, LogOut } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // import { NotificationsDropdown } from "../Notifications/NotificationsDropdown";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +37,7 @@ export function Header({ isExpanded, pages }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
+  // const { theme } = useTheme();
 
   useEffect(() => {
     // Get user from localStorage
