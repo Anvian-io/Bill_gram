@@ -68,7 +68,7 @@ export function Navbar({ children }: NavbarProps) {
   };
 
   return (
-    <div className="h-screen bg-background text-text">
+    <div className="h-screen bg-background text-foreground">
       <div className="flex h-full">
         {/* Desktop Sidebar - hidden on mobile */}
         <nav
@@ -76,7 +76,7 @@ export function Navbar({ children }: NavbarProps) {
             hidden sm:block
             fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out
             ${isExpanded ? "w-64" : "w-16"}
-            bg-sidebar border-r border-sidebarBorder shadow-lg
+            bg-sidebar border-r border-sidebar-border shadow-lg
           `}
           onMouseEnter={() => setIsExpanded(true)}
           onMouseLeave={() => setIsExpanded(false)}
@@ -84,11 +84,11 @@ export function Navbar({ children }: NavbarProps) {
           {/* Header */}
           <div className="flex items-center justify-start h-16 px-4 border-b border-border">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-hoverBg">
-                <Menu className="w-5 h-5 text-text" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                <Menu className="w-5 h-5 text-sidebar-foreground" />
               </div>
               <span
-                className={`font-semibold text-lg text-heading transition-opacity duration-300 ${
+                className={`font-semibold text-lg text-sidebar-foreground transition-opacity duration-300 ${
                   isExpanded ? "opacity-100" : "opacity-0"
                 }`}
               >
@@ -113,8 +113,8 @@ export function Navbar({ children }: NavbarProps) {
                         flex items-center px-3 py-3 rounded-lg transition-all duration-200 
                         ${
                           isActive
-                            ? "text-primary bg-primary/10"
-                            : "text-text hover:text-heading hover:bg-secondaryBg"
+                            ? "text-primary bg-primary/10 border border-primary/20"
+                            : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
                         }
                       `}
                     >
@@ -141,12 +141,7 @@ export function Navbar({ children }: NavbarProps) {
               onClick={handleThemeChange}
               variant="ghost"
               size="sm"
-              className={`w-full justify-start px-3 py-3 h-auto text-text 
-                ${
-                  theme === "dark"
-                    ? "hover:text-hoverText hover:bg-secondaryBg"
-                    : "hover:bg-gray-800 hover:bg-secondaryBg hover:text-heading"
-                }`}
+              className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
             >
               {theme === "dark" ? (
                 <Sun className="w-5 h-5" />
@@ -180,17 +175,17 @@ export function Navbar({ children }: NavbarProps) {
 
           {/* Mobile Sidebar */}
           <nav
-            className={`fixed left-0 top-0 h-full w-64 z-50 bg-sidebar border-r border-sidebarBorder shadow-lg transform transition-transform duration-300 ease-in-out ${
+            className={`fixed left-0 top-0 h-full w-64 z-50 bg-sidebar border-r border-sidebar-border shadow-lg transform transition-transform duration-300 ease-in-out ${
               isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
             {/* Header with Close Button */}
             <div className="flex items-center justify-between h-16 px-4 border-b border-border">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-buttonBg">
-                  <Menu className="w-5 h-5 text-text" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                  <Menu className="w-5 h-5 text-sidebar-foreground" />
                 </div>
-                <span className="font-semibold text-lg text-heading">
+                <span className="font-semibold text-lg text-sidebar-foreground">
                   Dashboard
                 </span>
               </div>
@@ -198,9 +193,9 @@ export function Navbar({ children }: NavbarProps) {
                 onClick={toggleMobileMenu}
                 variant="ghost"
                 size="sm"
-                className="p-2 hover:bg-buttonBg"
+                className="p-2 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
               >
-                <X className="w-5 h-5 text-text" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
 
@@ -220,8 +215,8 @@ export function Navbar({ children }: NavbarProps) {
                           flex items-center px-3 py-3 rounded-lg transition-all duration-200 
                           ${
                             isActive
-                              ? "text-primary bg-primary/10"
-                              : "text-text hover:text-hoverText hover:bg-buttonBg"
+                              ? "text-primary bg-primary/10 border border-primary/20"
+                              : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
                           }
                         `}
                       >
@@ -242,7 +237,7 @@ export function Navbar({ children }: NavbarProps) {
                 onClick={handleThemeChange}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start px-3 py-3 h-auto text-text hover:text-hoverText hover:bg-secondaryBg"
+                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
               >
                 {theme === "dark" ? (
                   <Sun className="w-5 h-5" />
@@ -260,12 +255,12 @@ export function Navbar({ children }: NavbarProps) {
         {/* Mobile Menu Button - only visible on mobile */}
         <Button
           onClick={toggleMobileMenu}
-          className="h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-sidebarBorder bg-sidebar"
+          className="h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-sidebar-border bg-sidebar text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           variant="ghost"
           size="sm"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-buttonBg">
-            <Menu className="w-5 h-5 text-text" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+            <Menu className="w-5 h-5" />
           </div>
         </Button>
 
@@ -274,18 +269,18 @@ export function Navbar({ children }: NavbarProps) {
           className={`flex-1 transition-all duration-300 ease-in-out 
             ${isExpanded ? "sm:ml-64" : "sm:ml-16"} 
             ml-0 
-            background bg-cardBg`}
+            bg-background`}
         >
           {/* Fixed: Only pass the current page, not all nav items */}
           <Header isExpanded={isExpanded} pages={currentPage} />
           <div className="mt-20 mx-1 sm:mx-2 min-w-400">
             {children || (
               <div className="p-8">
-                <div className="rounded-lg p-8 text-center bg-cardBg text-cardText">
-                  <h1 className="text-3xl font-bold mb-4 text-heading">
+                <div className="rounded-lg p-8 text-center bg-card text-card-foreground">
+                  <h1 className="text-3xl font-bold mb-4 text-foreground">
                     Welcome to Your Dashboard
                   </h1>
-                  <p className="text-lg text-text">
+                  <p className="text-lg text-muted-foreground">
                     <span className="hidden sm:inline">
                       Hover over the sidebar to expand it.
                     </span>
