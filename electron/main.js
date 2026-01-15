@@ -33,12 +33,8 @@ function createWindow() {
 
     mainWindow.loadFile(indexPath);
 
-    // ✅ REMOVE THIS LINE WHEN DONE DEBUGGING
-    // mainWindow.webContents.openDevTools();
-
-    // 🚀 ADD THESE LINES TO HIDE MENU
-    mainWindow.setMenu(null); // Completely removes the menu
-    mainWindow.setMenuBarVisibility(false); // Hides menu bar
+    // TEMPORARILY enable dev tools to see errors
+    mainWindow.webContents.openDevTools();
   }
 
   mainWindow.once("ready-to-show", () => {
