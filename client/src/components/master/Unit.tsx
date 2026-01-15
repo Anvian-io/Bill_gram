@@ -1,4 +1,3 @@
-// Updated Unit Component
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -21,6 +20,7 @@ import {
   Search,
   X,
   Ruler,
+  Calendar,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,18 +52,30 @@ interface Unit {
   symbol: string;
   baseUnit: boolean;
   conversionFactor: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function Unit() {
   // State for units
   const [units, setUnits] = useState<Unit[]>([
-    { id: 1, name: "Piece", symbol: "pc", baseUnit: true, conversionFactor: 1 },
+    {
+      id: 1,
+      name: "Piece",
+      symbol: "pc",
+      baseUnit: true,
+      conversionFactor: 1,
+      createdAt: "2024-01-15 09:30:00",
+      updatedAt: "2024-03-20 14:45:00",
+    },
     {
       id: 2,
       name: "Kilogram",
       symbol: "kg",
       baseUnit: true,
       conversionFactor: 1,
+      createdAt: "2024-02-10 11:20:00",
+      updatedAt: "2024-03-18 10:15:00",
     },
     {
       id: 3,
@@ -71,22 +83,44 @@ export default function Unit() {
       symbol: "g",
       baseUnit: false,
       conversionFactor: 0.001,
+      createdAt: "2024-01-05 08:45:00",
+      updatedAt: "2024-03-22 16:30:00",
     },
-    { id: 4, name: "Liter", symbol: "L", baseUnit: true, conversionFactor: 1 },
+    {
+      id: 4,
+      name: "Liter",
+      symbol: "L",
+      baseUnit: true,
+      conversionFactor: 1,
+      createdAt: "2023-12-20 13:10:00",
+      updatedAt: "2024-02-28 09:25:00",
+    },
     {
       id: 5,
       name: "Milliliter",
       symbol: "ml",
       baseUnit: false,
       conversionFactor: 0.001,
+      createdAt: "2024-03-01 10:00:00",
+      updatedAt: "2024-03-15 11:45:00",
     },
-    { id: 6, name: "Meter", symbol: "m", baseUnit: true, conversionFactor: 1 },
+    {
+      id: 6,
+      name: "Meter",
+      symbol: "m",
+      baseUnit: true,
+      conversionFactor: 1,
+      createdAt: "2024-01-12 08:30:00",
+      updatedAt: "2024-03-23 17:05:00",
+    },
     {
       id: 7,
       name: "Centimeter",
       symbol: "cm",
       baseUnit: false,
       conversionFactor: 0.01,
+      createdAt: "2024-02-28 15:30:00",
+      updatedAt: "2024-03-10 14:20:00",
     },
     {
       id: 8,
@@ -94,6 +128,8 @@ export default function Unit() {
       symbol: "doz",
       baseUnit: false,
       conversionFactor: 12,
+      createdAt: "2024-01-25 12:15:00",
+      updatedAt: "2024-03-19 13:40:00",
     },
     {
       id: 9,
@@ -101,6 +137,8 @@ export default function Unit() {
       symbol: "t",
       baseUnit: false,
       conversionFactor: 1000,
+      createdAt: "2024-03-10 09:00:00",
+      updatedAt: "2024-03-21 15:10:00",
     },
     {
       id: 10,
@@ -108,6 +146,8 @@ export default function Unit() {
       symbol: "lb",
       baseUnit: false,
       conversionFactor: 0.453592,
+      createdAt: "2023-11-15 14:20:00",
+      updatedAt: "2024-01-30 10:55:00",
     },
     {
       id: 11,
@@ -115,6 +155,8 @@ export default function Unit() {
       symbol: "oz",
       baseUnit: false,
       conversionFactor: 0.0283495,
+      createdAt: "2024-01-15 09:30:00",
+      updatedAt: "2024-03-20 14:45:00",
     },
     {
       id: 12,
@@ -122,16 +164,36 @@ export default function Unit() {
       symbol: "gal",
       baseUnit: false,
       conversionFactor: 3.78541,
+      createdAt: "2024-02-10 11:20:00",
+      updatedAt: "2024-03-18 10:15:00",
     },
-    { id: 13, name: "Box", symbol: "box", baseUnit: true, conversionFactor: 1 },
+    {
+      id: 13,
+      name: "Box",
+      symbol: "box",
+      baseUnit: true,
+      conversionFactor: 1,
+      createdAt: "2024-01-05 08:45:00",
+      updatedAt: "2024-03-22 16:30:00",
+    },
     {
       id: 14,
       name: "Carton",
       symbol: "ctn",
       baseUnit: true,
       conversionFactor: 1,
+      createdAt: "2023-12-20 13:10:00",
+      updatedAt: "2024-02-28 09:25:00",
     },
-    { id: 15, name: "Pack", symbol: "pk", baseUnit: true, conversionFactor: 1 },
+    {
+      id: 15,
+      name: "Pack",
+      symbol: "pk",
+      baseUnit: true,
+      conversionFactor: 1,
+      createdAt: "2024-03-01 10:00:00",
+      updatedAt: "2024-03-15 11:45:00",
+    },
   ]);
 
   // Form dialog state
@@ -255,6 +317,8 @@ export default function Unit() {
 
   // Handle form save
   const handleSave = (data: UnitFormData, id?: number) => {
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
     if (id) {
       // Update existing unit
       setUnits((prev) =>
@@ -263,6 +327,7 @@ export default function Unit() {
             ? {
                 ...unit,
                 ...data,
+                updatedAt: now,
               }
             : unit
         )
@@ -273,6 +338,8 @@ export default function Unit() {
       const newUnit: Unit = {
         id: Math.max(...units.map((u) => u.id)) + 1,
         ...data,
+        createdAt: now,
+        updatedAt: now,
       };
       setUnits((prev) => [...prev, newUnit]);
       toast.success("Unit created successfully!");
@@ -316,6 +383,18 @@ export default function Unit() {
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) => key !== "search" && value && value !== "all"
   ).length;
+
+  // Format date for display
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <motion.div
@@ -632,6 +711,7 @@ export default function Unit() {
                       <TableHead className="font-semibold text-right">
                         Conversion Factor
                       </TableHead>
+                      <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
                         Actions
                       </TableHead>
@@ -648,7 +728,7 @@ export default function Unit() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -752,7 +832,34 @@ export default function Unit() {
                                         .toFixed(4)
                                         .replace(/\.?0+$/, "")}
                                 </Badge>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  factor
+                                </p>
                               </motion.div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="space-y-1">
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-medium text-green-400">
+                                      Created:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(unit.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="text-xs font-medium text-orange-400">
+                                      Updated:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(unit.updatedAt)}
+                                  </p>
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right group-hover:bg-secondary/30 cursor-pointer">
                               <div className="flex justify-end gap-2">
