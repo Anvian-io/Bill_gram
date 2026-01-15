@@ -23,8 +23,7 @@ import {
   Phone,
   Mail,
   MapPin,
-  CreditCard,
-  DollarSign,
+  Calendar,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -513,6 +512,8 @@ export default function Customer() {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -979,6 +980,7 @@ export default function Customer() {
                       </TableHead>
                       <TableHead className="font-semibold">Salesman</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
                         Actions
                       </TableHead>
@@ -995,7 +997,7 @@ export default function Customer() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1189,6 +1191,30 @@ export default function Customer() {
                                 </Badge>
                               </motion.div>
                             </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="space-y-1">
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-medium text-green-400">
+                                      Created:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(customer.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="text-xs font-medium text-orange-400">
+                                      Updated:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(customer.updatedAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right group-hover:bg-secondary/30 cursor-pointer">
                               <div className="flex justify-end gap-2">
                                 <motion.div
@@ -1276,19 +1302,3 @@ export default function Customer() {
     </motion.div>
   );
 }
-
-// Helper component for Check icon
-const Check = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
