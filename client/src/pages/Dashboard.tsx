@@ -7,22 +7,129 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Download, Database } from "lucide-react";
+import {
+  Download,
+  Database,
+  TrendingUp,
+  TrendingDown,
+  ShoppingCart,
+  Package,
+  Users,
+  DollarSign,
+  BarChart3,
+  PieChart,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  Eye,
+  RefreshCw,
+  Badge,
+} from "lucide-react";
 import { useState } from "react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart as RePieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 // Extend the Window interface to include electronAPI
 declare global {
   interface Window {
     electronAPI?: {
-      backupDatabase: () => Promise<{ success: boolean; path?: string; error?: string }>;
+      backupDatabase: () => Promise<{
+        success: boolean;
+        path?: string;
+        error?: string;
+      }>;
     };
   }
 }
+
+// Mock data for charts
+const monthlySalesData = [
+  { month: "Jan", sales: 42000, purchases: 28000, profit: 14000 },
+  { month: "Feb", sales: 38000, purchases: 32000, profit: 6000 },
+  { month: "Mar", sales: 52000, purchases: 35000, profit: 17000 },
+  { month: "Apr", sales: 48000, purchases: 30000, profit: 18000 },
+  { month: "May", sales: 61000, purchases: 42000, profit: 19000 },
+  { month: "Jun", sales: 55000, purchases: 38000, profit: 17000 },
+  { month: "Jul", sales: 72000, purchases: 45000, profit: 27000 },
+  { month: "Aug", sales: 68000, purchases: 40000, profit: 28000 },
+  { month: "Sep", sales: 59000, purchases: 35000, profit: 24000 },
+  { month: "Oct", sales: 63000, purchases: 42000, profit: 21000 },
+  { month: "Nov", sales: 75000, purchases: 48000, profit: 27000 },
+  { month: "Dec", sales: 82000, purchases: 52000, profit: 30000 },
+];
+
+const productPerformanceData = [
+  { name: "MILKY BAR 5 RS", sales: 450, revenue: 67500 },
+  { name: "CHOCO DELIGHT", sales: 380, revenue: 53200 },
+  { name: "NUTTY CRUNCH", sales: 290, revenue: 34800 },
+  { name: "CARAMEL BLAST", sales: 520, revenue: 156000 },
+  { name: "FRUITY SWIRL", sales: 310, revenue: 54250 },
+  { name: "VANILLA DREAM", sales: 420, revenue: 42840 },
+];
+
+const expenseBreakdownData = [
+  { name: "Inventory", value: 42000, color: "#3b82f6" },
+  { name: "Salaries", value: 25000, color: "#10b981" },
+  { name: "Rent", value: 15000, color: "#f59e0b" },
+  { name: "Utilities", value: 8000, color: "#ef4444" },
+  { name: "Marketing", value: 12000, color: "#8b5cf6" },
+  { name: "Maintenance", value: 5000, color: "#6366f1" },
+];
+
+const dailySalesData = [
+  { day: "Mon", sales: 8500 },
+  { day: "Tue", sales: 9200 },
+  { day: "Wed", sales: 7800 },
+  { day: "Thu", sales: 10500 },
+  { day: "Fri", sales: 12800 },
+  { day: "Sat", sales: 15200 },
+  { day: "Sun", sales: 9800 },
+];
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupStatus, setBackupStatus] = useState("");
+  const [timeRange, setTimeRange] = useState<"week" | "month" | "year">(
+    "month"
+  );
+
+  // Calculate statistics
+  const totalSales = monthlySalesData.reduce(
+    (sum, item) => sum + item.sales,
+    0
+  );
+  const totalPurchases = monthlySalesData.reduce(
+    (sum, item) => sum + item.purchases,
+    0
+  );
+  const totalProfit = monthlySalesData.reduce(
+    (sum, item) => sum + item.profit,
+    0
+  );
+  const avgMonthlyProfit = Math.round(totalProfit / 12);
+  const profitMargin = ((totalProfit / totalSales) * 100).toFixed(1);
+
+  // Find best and worst months
+  const bestMonth = monthlySalesData.reduce((prev, current) =>
+    prev.profit > current.profit ? prev : current
+  );
+  const worstMonth = monthlySalesData.reduce((prev, current) =>
+    prev.profit < current.profit ? prev : current
+  );
 
   const handleBackupDatabase = async () => {
     try {
@@ -58,10 +165,17 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <div className="flex gap-3">
+    <div className="w-full space-y-6 p-2">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.shop_name || user?.username}! Here's your
+            business overview.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={handleBackupDatabase}
             disabled={isBackingUp}
@@ -70,7 +184,7 @@ export default function Dashboard() {
           >
             {isBackingUp ? (
               <>
-                <Database className="h-4 w-4 animate-pulse" />
+                <Database className="h-4 w-4 animate-spin" />
                 Backing up...
               </>
             ) : (
@@ -80,13 +194,15 @@ export default function Dashboard() {
               </>
             )}
           </Button>
-          <Button onClick={logout}>Logout</Button>
+          <Button onClick={logout} variant="outline">
+            Logout
+          </Button>
         </div>
       </div>
 
       {backupStatus && (
         <div
-          className={`mb-4 p-4 rounded-lg ${
+          className={`p-4 rounded-lg ${
             backupStatus.startsWith("✅")
               ? "bg-green-50 text-green-800 border border-green-200"
               : "bg-red-50 text-red-800 border border-red-200"
@@ -96,70 +212,207 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Welcome, {user?.shop_name || user?.username}!</CardTitle>
-            <CardDescription>Your shop management dashboard</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Here you can manage your shop inventory, sales, and purchases.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Shop Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p>
-                <strong>Email:</strong> {user?.email}
-              </p>
-              <p>
-                <strong>Phone:</strong> {user?.phone || "Not provided"}
-              </p>
-              <p>
-                <strong>Registered on:</strong>{" "}
-                {new Date(user?.created_at || "").toLocaleDateString()}
-              </p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Sales</p>
+                <p className="text-2xl font-bold">
+                  ₹{totalSales.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">
+                    +12.5% from last year
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Database Management</CardTitle>
-            <CardDescription>Backup and protect your data</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Regular backups help protect your shop data. Backups are saved to
-              your Documents folder.
-            </p>
-            <Button
-              onClick={handleBackupDatabase}
-              disabled={isBackingUp}
-              className="w-full"
-              variant="secondary"
-            >
-              {isBackingUp ? (
-                <>
-                  <Database className="h-4 w-4 mr-2 animate-pulse" />
-                  Creating Backup...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Create Backup
-                </>
-              )}
-            </Button>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Profit</p>
+                <p className="text-2xl font-bold">
+                  ₹{totalProfit.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">
+                    +18.3% from last year
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20">
+                <BarChart3 className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Purchases</p>
+                <p className="text-2xl font-bold">
+                  ₹{totalPurchases.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  <span className="text-sm text-red-600">
+                    -5.2% from last year
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/20">
+                <ShoppingCart className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Profit Margin</p>
+                <p className="text-2xl font-bold">{profitMargin}%</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <ArrowUpRight className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">+2.4% improved</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                <PieChart className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales vs Purchases Chart */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Monthly Sales vs Purchases</CardTitle>
+                <CardDescription>Revenue and cost comparison</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={timeRange === "month" ? "default" : "outline"}
+                  onClick={() => setTimeRange("month")}
+                >
+                  Month
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timeRange === "year" ? "default" : "outline"}
+                  onClick={() => setTimeRange("year")}
+                >
+                  Year
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlySalesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="month" stroke="#6b7280" fontSize={12} />
+                  <YAxis
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickFormatter={(value) => `₹${value / 1000}k`}
+                  />
+                  <Tooltip
+                    formatter={(value) => [
+                      `₹${Number(value).toLocaleString()}`,
+                      "Amount",
+                    ]}
+                    labelFormatter={(label) => `Month: ${label}`}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    name="Sales"
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="purchases"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    name="Purchases"
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="profit"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    name="Profit"
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Daily Sales Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Sales Trend</CardTitle>
+            <CardDescription>Last week's sales performance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailySalesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" stroke="#6b7280" fontSize={12} />
+                  <YAxis
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickFormatter={(value) => `₹${value / 1000}k`}
+                  />
+                  <Tooltip
+                    formatter={(value) => [
+                      `₹${Number(value).toLocaleString()}`,
+                      "Sales",
+                    ]}
+                  />
+                  <Bar
+                    dataKey="sales"
+                    fill="#8b5cf6"
+                    radius={[4, 4, 0, 0]}
+                    name="Daily Sales"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }

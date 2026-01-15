@@ -16,6 +16,7 @@ import {
   Register,
   ProductInventory,
   ProductForm,
+  MasterInventory
 } from "./pages";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -43,7 +44,6 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-
               <Route
                 path="/"
                 element={
@@ -57,7 +57,6 @@ function App() {
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/product-inventory"
                 element={
@@ -71,7 +70,6 @@ function App() {
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/product-inventory/new"
                 element={
@@ -85,7 +83,6 @@ function App() {
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/product-inventory/:productId"
                 element={
@@ -99,7 +96,20 @@ function App() {
                   </PrivateRoute>
                 }
               />
-
+              // In your App.tsx routes, update the product inventory route:
+              <Route
+                path="/master"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <MasterInventory />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
