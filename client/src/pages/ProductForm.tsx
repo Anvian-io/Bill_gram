@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -34,6 +35,9 @@ import {
   Trash2,
   Save,
   ArrowLeft,
+  Percent,
+  Package,
+  Shield,
 } from "lucide-react";
 
 // Define the schema for form validation
@@ -44,7 +48,7 @@ const productSchema = z.object({
   description: z.string().min(1, "Description is required"),
   hsnSacCode: z.string().min(1, "HSN/SAC code is required"),
   goodsOrServices: z.enum(["Goods", "Services"], {
-    error: "Please select Goods or Services",
+    message: "Please select Goods or Services",
   }),
   weight: z.coerce.number().positive("Weight must be positive"),
   unit: z.string().min(1, "Unit is required"),
@@ -70,6 +74,15 @@ const productSchema = z.object({
   insuranceTaxBasic: z.boolean().default(false),
   insuranceTaxMRP: z.boolean().default(false),
 
+  // GST Details
+  gstRate: z.coerce.number().min(0).max(100, "GST rate cannot exceed 100%"),
+  gstInclusive: z.boolean().default(true),
+  cessRate: z.coerce.number().min(0).max(100, "Cess rate cannot exceed 100%"),
+  hsnChapter: z.string().optional(),
+  gstApplicability: z
+    .enum(["Regular", "Composition", "Exempt"])
+    .default("Regular"),
+
   // Batch Details
   batches: z
     .array(
@@ -84,6 +97,7 @@ const productSchema = z.object({
         pRate: z.coerce.number().positive("Purchase rate must be positive"),
         sRate: z.coerce.number().positive("Sale rate must be positive"),
         margin: z.coerce.number(),
+        gstAmount: z.coerce.number().min(0).optional(),
       })
     )
     .default([]),
@@ -113,6 +127,11 @@ const defaultValues: ProductFormValues = {
   packagingMRP: false,
   insuranceTaxBasic: true,
   insuranceTaxMRP: false,
+  gstRate: 18,
+  gstInclusive: true,
+  cessRate: 0,
+  hsnChapter: "",
+  gstApplicability: "Regular",
   batches: [
     {
       bNo: "",
@@ -125,6 +144,7 @@ const defaultValues: ProductFormValues = {
       pRate: 0,
       sRate: 0,
       margin: 0,
+      gstAmount: 0,
     },
   ],
 };
@@ -133,7 +153,8 @@ const defaultValues: ProductFormValues = {
 const sampleProduct: ProductFormValues = {
   productCode: "10079",
   productBrand: "MILKY BAR 5 RS",
-  description: "MILKY BAR 5 RS",
+  description:
+    "MILKY BAR 5 RS - Premium chocolate bar with rich creamy texture. Perfect for all age groups.",
   hsnSacCode: "18069010",
   goodsOrServices: "Goods",
   weight: 1,
@@ -151,6 +172,11 @@ const sampleProduct: ProductFormValues = {
   packagingMRP: false,
   insuranceTaxBasic: true,
   insuranceTaxMRP: false,
+  gstRate: 18,
+  gstInclusive: true,
+  cessRate: 0,
+  hsnChapter: "18",
+  gstApplicability: "Regular",
   batches: [
     {
       bNo: "1602770024177",
@@ -163,6 +189,7 @@ const sampleProduct: ProductFormValues = {
       pRate: 95.0,
       sRate: 107.14,
       margin: 12.14,
+      gstAmount: 17.1,
     },
   ],
 };
@@ -178,6 +205,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   const [relatedImages, setRelatedImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Determine if we're in edit mode based on productId
+  const isEdit = isEditMode || !!productId;
+
   // Initialize form with proper typing
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema) as any,
@@ -186,10 +216,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
 
   // Watch batches for UI updates
   const batches = form.watch("batches");
+  const gstRate = form.watch("gstRate");
 
   // Calculate margin for a batch
   const calculateMargin = (pRate: number, sRate: number) => {
     return sRate - pRate;
+  };
+
+  // Calculate GST amount
+  const calculateGST = (amount: number) => {
+    return (amount * gstRate) / 100;
   };
 
   // Handle batch changes
@@ -206,6 +242,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
       const pRate = field === "pRate" ? value : updatedBatches[index].pRate;
       const sRate = field === "sRate" ? value : updatedBatches[index].sRate;
       updatedBatches[index].margin = calculateMargin(pRate, sRate);
+
+      // Update GST amount if GST inclusive
+      if (form.getValues("gstInclusive")) {
+        updatedBatches[index].gstAmount = calculateGST(pRate);
+      }
     }
 
     form.setValue("batches", updatedBatches);
@@ -224,6 +265,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
       pRate: 0,
       sRate: 0,
       margin: 0,
+      gstAmount: calculateGST(0),
     };
     form.setValue("batches", [...batches, newBatch]);
   };
@@ -301,210 +343,119 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   const unitOptions = ["GM", "KG", "PCS", "L", "ML", "M", "CM", "MM"];
   const productGroupOptions = ["ELITE", "PREMIUM", "STANDARD", "BASIC"];
   const purchaseSaleUnitOptions = ["PCS", "BOX", "CARTON", "KG", "GM", "L"];
+  const gstApplicabilityOptions = ["Regular", "Composition", "Exempt"];
 
   return (
-    <div className="min-h-screen bg-background p-3">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-3"
+    >
       <div className="max-w-8xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6"
+        >
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/product-inventory")}
-              className="gap-2"
+              className="gap-2 hover:bg-white/10"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-heading">
-                {isEditMode ? "Edit Product" : "Add New Product"}
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                {isEdit ? "Edit Product" : "Add New Product"}
               </h1>
-              <p className="text-sm text-muted-foreground">
-                {isEditMode
+              {/* <p className="text-sm text-muted-foreground mt-1">
+                {isEdit
                   ? "Update product details and inventory information"
                   : "Add a new product to your inventory"}
-              </p>
+              </p> */}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center gap-3"
+          >
             <Button
               variant="outline"
               onClick={() => navigate("/product-inventory")}
               disabled={isSubmitting}
+              className="border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               Cancel
             </Button>
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={isSubmitting}
-              className="gap-2 bg-primary hover:bg-primary/90"
+              className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Save className="h-4 w-4" />
-              {isSubmitting ? "Saving..." : "Save Product"}
+              {isSubmitting
+                ? "Saving..."
+                : isEdit
+                ? "Update Product"
+                : "Create Product"}
             </Button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Single Form Card */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle>Product Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
-                {/* Main Grid Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Column 1: Basic Information */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-                        Basic Information
-                      </h3>
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="productCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Product Code *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., 10079"
-                                  {...field}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="productBrand"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Product Brand *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., MILKY BAR 5 RS"
-                                  {...field}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Description *
-                              </FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Enter product description"
-                                  className="min-h-[60px] text-sm"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="hsnSacCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                HSN/SAC Code *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., 18069010"
-                                  {...field}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="goodsOrServices"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Goods/Services *
-                              </FormLabel>
-                              <FormControl>
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                  className="flex space-x-4"
-                                >
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem
-                                        value="Goods"
-                                        className="h-4 w-4"
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal text-xs">
-                                      Goods
-                                    </FormLabel>
-                                  </FormItem>
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem
-                                        value="Services"
-                                        className="h-4 w-4"
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal text-xs">
-                                      Services
-                                    </FormLabel>
-                                  </FormItem>
-                                </RadioGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-3">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="border border-gray-200 dark:border-gray-800 shadow-xl backdrop-blur-sm bg-white/95 dark:bg-gray-900/95">
+            <CardHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Product Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-8"
+                >
+                  {/* Main Grid Layout */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Column 1: Basic Information */}
+                    <div className="space-y-6">
+                      <motion.div
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          Basic Information
+                        </h3>
+                        <div className="space-y-4">
                           <FormField
                             control={form.control}
-                            name="weight"
+                            name="productCode"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">
-                                  Weight *
+                                <FormLabel className="text-xs font-medium">
+                                  Product Code *
                                 </FormLabel>
                                 <FormControl>
                                   <Input
-                                    type="number"
-                                    step="0.01"
+                                    placeholder="e.g., 10079"
                                     {...field}
-                                    className="h-8 text-sm"
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -514,29 +465,189 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
 
                           <FormField
                             control={form.control}
-                            name="unit"
+                            name="productBrand"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">
-                                  Unit *
+                                <FormLabel className="text-xs font-medium">
+                                  Product Brand *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="e.g., MILKY BAR 5 RS"
+                                    {...field}
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Description *
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Enter product description"
+                                    className="min-h-[100px] text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="hsnSacCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  HSN/SAC Code *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="e.g., 18069010"
+                                    {...field}
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="goodsOrServices"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Goods/Services *
+                                </FormLabel>
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex space-x-4"
+                                  >
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem
+                                          value="Goods"
+                                          className="h-4 w-4 text-primary"
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-xs cursor-pointer">
+                                        Goods
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem
+                                          value="Services"
+                                          className="h-4 w-4 text-primary"
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-xs cursor-pointer">
+                                        Services
+                                      </FormLabel>
+                                    </FormItem>
+                                  </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              control={form.control}
+                              name="weight"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Weight *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="unit"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Unit *
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                        <SelectValue placeholder="Select unit" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {unitOptions.map((unit) => (
+                                        <SelectItem
+                                          key={unit}
+                                          value={unit}
+                                          className="text-sm"
+                                        >
+                                          {unit}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="productGroup"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Product Group *
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
                                 >
                                   <FormControl>
-                                    <SelectTrigger className="h-8 text-sm">
-                                      <SelectValue placeholder="Select unit" />
+                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                      <SelectValue placeholder="Select group" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {unitOptions.map((unit) => (
+                                    {productGroupOptions.map((group) => (
                                       <SelectItem
-                                        key={unit}
-                                        value={unit}
+                                        key={group}
+                                        value={group}
                                         className="text-sm"
                                       >
-                                        {unit}
+                                        {group}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -546,82 +657,80 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                             )}
                           />
                         </div>
+                      </motion.div>
 
-                        <FormField
-                          control={form.control}
-                          name="productGroup"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Product Group *
-                              </FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-8 text-sm">
-                                    <SelectValue placeholder="Select group" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {productGroupOptions.map((group) => (
-                                    <SelectItem
-                                      key={group}
-                                      value={group}
-                                      className="text-sm"
-                                    >
-                                      {group}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Images Section */}
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-                        Product Images
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="text-xs text-muted-foreground">
-                              Main Image:
+                      {/* Images Section */}
+                      <motion.div
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.4, delay: 0.1 }}
+                      >
+                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          Product Images
+                        </h3>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Main Image
+                              </div>
+                              {mainImage && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={removeMainImage}
+                                  className="h-6 text-xs gap-1 hover:text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                  Remove
+                                </Button>
+                              )}
                             </div>
                             {mainImage ? (
-                              <div className="relative">
+                              <div className="relative group">
                                 <img
                                   src={URL.createObjectURL(mainImage)}
                                   alt="Main product"
-                                  className="h-12 w-12 object-cover rounded"
+                                  className="h-40 w-full object-cover rounded-lg border-2 border-primary/20 group-hover:border-primary transition-all duration-300"
                                 />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0"
-                                  onClick={removeMainImage}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 rounded-lg" />
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="border border-dashed rounded p-1">
-                                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                              <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer hover:border-primary transition-all duration-300 group">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                  <ImageIcon className="h-10 w-10 text-gray-400 group-hover:text-primary mb-2 transition-all duration-300" />
+                                  <p className="text-xs text-gray-500 group-hover:text-primary mb-1">
+                                    Click to upload main image
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Recommended: 500x500px
+                                  </p>
                                 </div>
                                 <Input
                                   type="file"
                                   accept="image/*"
                                   onChange={handleMainImageUpload}
                                   className="hidden"
-                                  id="main-image-upload"
+                                />
+                              </label>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Related Images
+                              </div>
+                              <div>
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleRelatedImagesUpload}
+                                  className="hidden"
+                                  id="related-images-upload"
+                                  multiple
                                 />
                                 <Button
                                   type="button"
@@ -629,136 +738,198 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                   size="sm"
                                   onClick={() =>
                                     document
-                                      .getElementById("main-image-upload")
+                                      .getElementById("related-images-upload")
                                       ?.click()
                                   }
-                                  className="h-6 text-xs gap-1"
+                                  className="h-7 text-xs gap-1"
                                 >
-                                  <Upload className="h-3 w-3" />
-                                  Upload
+                                  <Plus className="h-3 w-3" />
+                                  Add More
                                 </Button>
                               </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="text-xs text-muted-foreground">
-                              Related Images:
                             </div>
-                            <div>
-                              <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleRelatedImagesUpload}
-                                className="hidden"
-                                id="related-images-upload"
-                                multiple
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  document
-                                    .getElementById("related-images-upload")
-                                    ?.click()
-                                }
-                                className="h-6 text-xs gap-1"
-                              >
-                                <Plus className="h-3 w-3" />
-                                Add
-                              </Button>
+                            <div className="grid grid-cols-3 gap-2">
+                              <AnimatePresence>
+                                {relatedImages.map((image, index) => (
+                                  <motion.div
+                                    key={index}
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
+                                    className="relative group"
+                                  >
+                                    <img
+                                      src={URL.createObjectURL(image)}
+                                      alt={`Related ${index + 1}`}
+                                      className="h-20 w-full object-cover rounded-lg border border-gray-200 dark:border-gray-800 group-hover:border-destructive transition-all duration-300"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                      onClick={() => removeRelatedImage(index)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
                             </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {relatedImages.map((image, index) => (
-                              <div key={index} className="relative">
-                                <img
-                                  src={URL.createObjectURL(image)}
-                                  alt={`Related ${index + 1}`}
-                                  className="h-12 w-full object-cover rounded"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0"
-                                  onClick={() => removeRelatedImage(index)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
                         </div>
-                      </div>
+                      </motion.div>
                     </div>
-                  </div>
 
-                  {/* Column 2: Additional Information */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-                        Additional Information
-                      </h3>
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="productShortName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Product Short Name *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., MILKY BAR 5 RS"
-                                  {...field}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="productCompany"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Product Company *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., Parle Agro Private Limited"
-                                  {...field}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-3">
+                    {/* Column 2: Additional Information */}
+                    <div className="space-y-6">
+                      <motion.div
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                      >
+                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          Additional Information
+                        </h3>
+                        <div className="space-y-4">
                           <FormField
                             control={form.control}
-                            name="purchaseUnit"
+                            name="productShortName"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">
-                                  Purchase Unit *
+                                <FormLabel className="text-xs font-medium">
+                                  Product Short Name *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="e.g., MILKY BAR 5 RS"
+                                    {...field}
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="productCompany"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Product Company *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="e.g., Parle Agro Private Limited"
+                                    {...field}
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              control={form.control}
+                              name="purchaseUnit"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Purchase Unit *
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                        <SelectValue placeholder="Select unit" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {purchaseSaleUnitOptions.map((unit) => (
+                                        <SelectItem
+                                          key={unit}
+                                          value={unit}
+                                          className="text-sm"
+                                        >
+                                          {unit}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="conversionFactor"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Conversion Factor *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="pricePerPCS"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Price per PCS *
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
+                                      ₹
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      className="h-9 text-sm pl-8 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="saleUnit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  Sale Unit *
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
                                 >
                                   <FormControl>
-                                    <SelectTrigger className="h-8 text-sm">
+                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
                                       <SelectValue placeholder="Select unit" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -779,482 +950,608 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                             )}
                           />
 
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              control={form.control}
+                              name="cartonPack"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Carton Pack *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="innerPack"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Inner Pack
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      value={field.value || ""}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+
+                      {/* Packaging & Insurance Tax */}
+                      <motion.div
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.4, delay: 0.3 }}
+                      >
+                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          Settings
+                        </h3>
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-medium">
+                              <Package className="h-3 w-3" />
+                              Packaging
+                            </div>
+                            <FormField
+                              control={form.control}
+                              name="packagingBasic"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-xs font-normal cursor-pointer">
+                                    BASIC
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="packagingMRP"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-xs font-normal cursor-pointer">
+                                    MRP
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-medium">
+                              <Shield className="h-3 w-3" />
+                              Insurance Tax %
+                            </div>
+                            <FormField
+                              control={form.control}
+                              name="insuranceTaxBasic"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-xs font-normal cursor-pointer">
+                                    BASIC
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="insuranceTaxMRP"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-xs font-normal cursor-pointer">
+                                    MRP
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
+
+                    {/* Column 3: GST Details */}
+                    <motion.div
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.2 }}
+                      className="space-y-6"
+                    >
+                      <div>
+                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          GST Details
+                        </h3>
+                        <div className="space-y-4">
                           <FormField
                             control={form.control}
-                            name="conversionFactor"
+                            name="gstApplicability"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">
-                                  Conversion Factor *
+                                <FormLabel className="text-xs font-medium">
+                                  GST Applicability *
+                                </FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                      <SelectValue placeholder="Select applicability" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {gstApplicabilityOptions.map((option) => (
+                                      <SelectItem
+                                        key={option}
+                                        value={option}
+                                        className="text-sm"
+                                      >
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="gstRate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  GST Rate (%) *
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                                      <Percent className="h-3 w-3" />
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="cessRate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  CESS Rate (%)
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                                      <Percent className="h-3 w-3" />
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="hsnChapter"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  HSN Chapter
                                 </FormLabel>
                                 <FormControl>
                                   <Input
-                                    type="number"
-                                    step="0.01"
+                                    placeholder="e.g., 18"
                                     {...field}
-                                    className="h-8 text-sm"
+                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                        </div>
 
-                        <FormField
-                          control={form.control}
-                          name="pricePerPCS"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Price per PCS *
-                              </FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <span className="mr-2 text-muted-foreground text-xs">
-                                    ₹
-                                  </span>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    {...field}
-                                    className="h-8 text-sm"
-                                  />
+                          <FormField
+                            control={form.control}
+                            name="gstInclusive"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-xs font-medium">
+                                    GST Inclusive
+                                  </FormLabel>
+                                  <div className="text-xs text-muted-foreground">
+                                    GST included in product price
+                                  </div>
                                 </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="saleUnit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">
-                                Sale Unit *
-                              </FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
                                 <FormControl>
-                                  <SelectTrigger className="h-8 text-sm">
-                                    <SelectValue placeholder="Select unit" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {purchaseSaleUnitOptions.map((unit) => (
-                                    <SelectItem
-                                      key={unit}
-                                      value={unit}
-                                      className="text-sm"
-                                    >
-                                      {unit}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <FormField
-                            control={form.control}
-                            name="cartonPack"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">
-                                  Carton Pack *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    {...field}
-                                    className="h-8 text-sm"
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="h-5 w-5 data-[state=checked]:bg-primary"
                                   />
                                 </FormControl>
-                                <FormMessage />
                               </FormItem>
                             )}
                           />
 
-                          <FormField
-                            control={form.control}
-                            name="innerPack"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">
-                                  Inner Pack
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    value={field.value || ""}
-                                    className="h-8 text-sm"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          {/* GST Summary */}
+                          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                            <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">
+                              GST Summary
+                            </div>
+                            <div className="space-y-1 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Current GST Rate:
+                                </span>
+                                <span className="font-semibold text-primary">
+                                  {gstRate}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  CESS Rate:
+                                </span>
+                                <span className="font-semibold">
+                                  {form.watch("cessRate")}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Applicability:
+                                </span>
+                                <span className="font-semibold">
+                                  {form.watch("gstApplicability")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Packaging & Insurance Tax */}
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-                        Settings
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="text-xs font-medium mb-1">
-                            Packaging
-                          </div>
-                          <FormField
-                            control={form.control}
-                            name="packagingBasic"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-4 w-4"
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal">
-                                  BASIC
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="packagingMRP"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-4 w-4"
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal">
-                                  MRP
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="text-xs font-medium mb-1">
-                            Insurance Tax %
-                          </div>
-                          <FormField
-                            control={form.control}
-                            name="insuranceTaxBasic"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-4 w-4"
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal">
-                                  BASIC
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="insuranceTaxMRP"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-4 w-4"
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal">
-                                  MRP
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    </motion.div>
                   </div>
 
-                  {/* Column 3: Batch Details */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Batch Details
-                      </h3>
+                  {/* Batch Details Section - Now at the bottom */}
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    className="border-t border-gray-200 dark:border-gray-800 pt-6"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                          Batch Details
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Manage batch-specific pricing, stock, and expiration
+                          dates
+                        </p>
+                      </div>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={addBatchRow}
-                        className="h-7 text-xs gap-1"
+                        className="gap-2 border-primary/30 hover:bg-primary/5 hover:border-primary"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4" />
                         Add Batch
                       </Button>
                     </div>
-                    <div className="space-y-2">
+
+                    <AnimatePresence>
                       {batches.map((batch, index) => (
-                        <div
+                        <motion.div
                           key={index}
-                          className="border rounded p-3 space-y-2"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                          className="mb-4"
                         >
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Batch No.
+                          <Card className="border border-gray-200 dark:border-gray-800 overflow-hidden">
+                            <CardHeader className="py-3 px-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-2 w-2 rounded-full bg-primary" />
+                                  <CardTitle className="text-sm font-medium">
+                                    Batch #{index + 1}
+                                    {batch.bNo && (
+                                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                        ({batch.bNo})
+                                      </span>
+                                    )}
+                                  </CardTitle>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeBatchRow(index)}
+                                    disabled={batches.length === 1}
+                                    className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </div>
-                              <Input
-                                value={batch.bNo}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "bNo",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Batch number"
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Barcode
-                              </div>
-                              <Input
-                                value={batch.barcode}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "barcode",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Barcode"
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                          </div>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                {/* Batch Information */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      Batch No. *
+                                    </label>
+                                    <Input
+                                      value={batch.bNo}
+                                      onChange={(e) =>
+                                        handleBatchChange(
+                                          index,
+                                          "bNo",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Enter batch number"
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      Barcode *
+                                    </label>
+                                    <Input
+                                      value={batch.barcode}
+                                      onChange={(e) =>
+                                        handleBatchChange(
+                                          index,
+                                          "barcode",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Enter barcode"
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                MFG Date
-                              </div>
-                              <Input
-                                type="date"
-                                value={batch.mfgDate || ""}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "mfgDate",
-                                    e.target.value || null
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                EXP Date
-                              </div>
-                              <Input
-                                type="date"
-                                value={batch.expDate || ""}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "expDate",
-                                    e.target.value || null
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                          </div>
+                                {/* Dates */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      MFG Date
+                                    </label>
+                                    <Input
+                                      type="date"
+                                      value={batch.mfgDate || ""}
+                                      onChange={(e) =>
+                                        handleBatchChange(
+                                          index,
+                                          "mfgDate",
+                                          e.target.value || null
+                                        )
+                                      }
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      EXP Date
+                                    </label>
+                                    <Input
+                                      type="date"
+                                      value={batch.expDate || ""}
+                                      onChange={(e) =>
+                                        handleBatchChange(
+                                          index,
+                                          "expDate",
+                                          e.target.value || null
+                                        )
+                                      }
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Basic Price
-                              </div>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={batch.basicPrice}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "basicPrice",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Opening Stock
-                              </div>
-                              <Input
-                                type="number"
-                                value={batch.openingStock}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "openingStock",
-                                    parseInt(e.target.value) || 0
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                          </div>
+                                {/* Pricing */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      Purchase Rate *
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                                        ₹
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={batch.pRate}
+                                        onChange={(e) =>
+                                          handleBatchChange(
+                                            index,
+                                            "pRate",
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        className="h-8 text-sm pl-6"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      Sale Rate *
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                                        ₹
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={batch.sRate}
+                                        onChange={(e) =>
+                                          handleBatchChange(
+                                            index,
+                                            "sRate",
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        className="h-8 text-sm pl-6"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                MRP
-                              </div>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={batch.mrp}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "mrp",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Purchase Rate
-                              </div>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={batch.pRate}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "pRate",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                          </div>
+                                {/* Stock & MRP */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      Opening Stock *
+                                    </label>
+                                    <Input
+                                      type="number"
+                                      value={batch.openingStock}
+                                      onChange={(e) =>
+                                        handleBatchChange(
+                                          index,
+                                          "openingStock",
+                                          parseInt(e.target.value) || 0
+                                        )
+                                      }
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium mb-1 block">
+                                      MRP *
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                                        ₹
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={batch.mrp}
+                                        onChange={(e) =>
+                                          handleBatchChange(
+                                            index,
+                                            "mrp",
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        className="h-8 text-sm pl-6"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Sale Rate
+                                {/* Summary */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <div className="text-xs font-medium mb-1">
+                                      Margin
+                                    </div>
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs w-full justify-center py-1.5"
+                                    >
+                                      ₹{batch.margin.toFixed(2)}
+                                    </Badge>
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-medium mb-1">
+                                      GST Amount
+                                    </div>
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs w-full justify-center py-1.5"
+                                    >
+                                      ₹{batch.gstAmount?.toFixed(2) || "0.00"}
+                                    </Badge>
+                                  </div>
+                                </div>
                               </div>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={batch.sRate}
-                                onChange={(e) =>
-                                  handleBatchChange(
-                                    index,
-                                    "sRate",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Margin
-                              </div>
-                              <div className="flex items-center h-7">
-                                <Badge
-                                  variant="outline"
-                                  className="bg-green-50 text-green-700 text-xs w-full justify-center"
-                                >
-                                  ₹{batch.margin.toFixed(2)}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end pt-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeBatchRow(index)}
-                              disabled={batches.length === 1}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
                       ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/product-inventory")}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="gap-2 bg-primary hover:bg-primary/90"
-                  >
-                    <Save className="h-4 w-4" />
-                    {isSubmitting
-                      ? isEditMode
-                        ? "Updating..."
-                        : "Creating..."
-                      : isEditMode
-                      ? "Update Product"
-                      : "Create Product"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                    </AnimatePresence>
+                  </motion.div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

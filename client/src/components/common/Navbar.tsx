@@ -375,7 +375,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             bg-background`}
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
-          <div className="mt-18 flex-1 overflow-auto">
+          <div className="mt-16 flex-1 overflow-auto">
             {children}
           </div>
         </main>
