@@ -41,7 +41,14 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
+import {
+  containerVariants,
+  itemVariants,
+  rowVariants,
+  headerVariants,
+  buttonVariants,
+  badgeVariants,
+} from "../components/FramerVariants";
 // Define the type for product data
 interface Product {
   id: string;
@@ -409,81 +416,6 @@ export default function ProductInventory() {
     navigate("/product-inventory/new");
   };
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.4,
-      },
-    },
-  };
-
-  const rowVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      x: 0,
-      transition: {
-        delay: i * 0.05,
-        duration: 0.3,
-      },
-    }),
-    hover: {
-      scale: 1.0,
-      backgroundColor: "rgba(0, 0, 0, 0.02)",
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-
-  const headerVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-      },
-    },
-  };
-
-  const buttonVariants = {
-    hover: {
-      scale: 1.05,
-      transition: {
-        duration: 0.2,
-      },
-    },
-    tap: {
-      scale: 0.95,
-    },
-  };
-
-  const badgeVariants = {
-    initial: { scale: 1 },
-    hover: {
-      scale: 1.1,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) =>
@@ -527,7 +459,7 @@ export default function ProductInventory() {
 
             {/* 🔍 Search Bar (between header & buttons) */}
             <motion.div
-              className="relative  w-100"
+              className="relative w-100"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -972,8 +904,29 @@ export default function ProductInventory() {
             products
             {filteredProducts.length !== products.length && " (filtered)"}
           </p>
-          <div className="text-sm text-muted-foreground">
-            Sorted by: <span className="font-medium">Latest Added</span>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Sorted by: <span className="font-medium">Latest Added</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-muted-foreground">
+                Items per page:
+              </div>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => setItemsPerPage(Number(value))}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="5" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </motion.div>
 

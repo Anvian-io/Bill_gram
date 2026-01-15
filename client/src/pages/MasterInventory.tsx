@@ -287,7 +287,7 @@ export default function MasterInventory() {
           >
             {/* Content Area */}
             <Card className="border-none shadow-sm">
-              <CardContent className="p-6">{activeItem?.component}</CardContent>
+              <CardContent className="">{activeItem?.component}</CardContent>
             </Card>
           </motion.div>
         </AnimatePresence>
