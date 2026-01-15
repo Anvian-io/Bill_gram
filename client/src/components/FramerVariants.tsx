@@ -66,7 +66,7 @@ export const buttonVariants = {
 export const badgeVariants = {
   initial: { scale: 1 },
   hover: {
-    scale: 1.1,
+    scale: 1.01,
     transition: {
       duration: 0.2,
     },

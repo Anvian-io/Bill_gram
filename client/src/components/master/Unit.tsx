@@ -744,7 +744,7 @@ export default function Unit() {
                               >
                                 <Badge
                                   variant="outline"
-                                  className="font-mono text-base"
+                                  className="font-mono text-sm"
                                 >
                                   {unit.conversionFactor === 1
                                     ? "1"
