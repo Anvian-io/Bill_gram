@@ -174,7 +174,7 @@ export default function Login() {
           whileHover={{ y: -5 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
-          <Card className="border-border/40 shadow-xl backdrop-blur-sm bg-card/50">
+          <Card className="border-border/40 p-4 shadow-xl backdrop-blur-sm bg-card/50">
             <CardHeader className="space-y-1 pb-6">
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
