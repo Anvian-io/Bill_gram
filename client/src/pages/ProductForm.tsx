@@ -417,7 +417,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card className="border border-gray-200 dark:border-gray-800 shadow-xl backdrop-blur-sm bg-white/95 dark:bg-gray-900/95">
-            <CardHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
+            <CardHeader className="pb-1 border-b border-gray-100 dark:border-gray-800">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <Package className="h-5 w-5 text-primary" />
                 Product Details
@@ -430,155 +430,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                   className="space-y-8"
                 >
                   {/* Main Grid Layout */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Column 1: Basic Information */}
-                    <div className="space-y-6">
-                      <motion.div
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          Basic Information
-                        </h3>
-                        <div className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="productCode"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Product Code *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., 10079"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="productBrand"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Product Brand *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., MILKY BAR 5 RS"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Description *
-                                </FormLabel>
-                                <FormControl>
-                                  <Textarea
-                                    placeholder="Enter product description"
-                                    className="min-h-[100px] text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="hsnSacCode"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  HSN/SAC Code *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., 18069010"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="goodsOrServices"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Goods/Services *
-                                </FormLabel>
-                                <FormControl>
-                                  <RadioGroup
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    className="flex space-x-4"
-                                  >
-                                    <FormItem className="flex items-center space-x-2 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem
-                                          value="Goods"
-                                          className="h-4 w-4 text-primary"
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-xs cursor-pointer">
-                                        Goods
-                                      </FormLabel>
-                                    </FormItem>
-                                    <FormItem className="flex items-center space-x-2 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem
-                                          value="Services"
-                                          className="h-4 w-4 text-primary"
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-xs cursor-pointer">
-                                        Services
-                                      </FormLabel>
-                                    </FormItem>
-                                  </RadioGroup>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Column 1: Basic Information */}
+                      <div className="space-y-6">
+                        <motion.div
+                          initial={{ x: -20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            Basic Information
+                          </h3>
+                          <div className="space-y-4">
                             <FormField
                               control={form.control}
-                              name="weight"
+                              name="productCode"
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-xs font-medium">
-                                    Weight *
+                                    Product Code *
                                   </FormLabel>
                                   <FormControl>
                                     <Input
-                                      type="number"
-                                      step="0.01"
+                                      placeholder="e.g., 10079"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -590,11 +466,171 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
 
                             <FormField
                               control={form.control}
-                              name="unit"
+                              name="productBrand"
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-xs font-medium">
-                                    Unit *
+                                    Product Brand *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., MILKY BAR 5 RS"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="description"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Description *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Enter product description"
+                                      className="min-h-[100px] text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="hsnSacCode"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    HSN/SAC Code *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., 18069010"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="goodsOrServices"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Goods/Services *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <RadioGroup
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                      className="flex space-x-4"
+                                    >
+                                      <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem
+                                            value="Goods"
+                                            className="h-4 w-4 text-primary"
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-xs cursor-pointer">
+                                          Goods
+                                        </FormLabel>
+                                      </FormItem>
+                                      <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem
+                                            value="Services"
+                                            className="h-4 w-4 text-primary"
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-xs cursor-pointer">
+                                          Services
+                                        </FormLabel>
+                                      </FormItem>
+                                    </RadioGroup>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <FormField
+                                control={form.control}
+                                name="weight"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Weight *
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="unit"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Unit *
+                                    </FormLabel>
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                          <SelectValue placeholder="Select unit" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {unitOptions.map((unit) => (
+                                          <SelectItem
+                                            key={unit}
+                                            value={unit}
+                                            className="text-sm"
+                                          >
+                                            {unit}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="productGroup"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Product Group *
                                   </FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
@@ -602,17 +638,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                   >
                                     <FormControl>
                                       <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                        <SelectValue placeholder="Select unit" />
+                                        <SelectValue placeholder="Select group" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      {unitOptions.map((unit) => (
+                                      {productGroupOptions.map((group) => (
                                         <SelectItem
-                                          key={unit}
-                                          value={unit}
+                                          key={group}
+                                          value={group}
                                           className="text-sm"
                                         >
-                                          {unit}
+                                          {group}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -622,225 +658,151 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               )}
                             />
                           </div>
+                        </motion.div>
+                      </div>
 
-                          <FormField
-                            control={form.control}
-                            name="productGroup"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Product Group *
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                      <SelectValue placeholder="Select group" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {productGroupOptions.map((group) => (
-                                      <SelectItem
-                                        key={group}
-                                        value={group}
-                                        className="text-sm"
-                                      >
-                                        {group}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </motion.div>
-
-                      {/* Images Section */}
-                      <motion.div
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.4, delay: 0.1 }}
-                      >
-                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          Product Images
-                        </h3>
-                        <div className="space-y-4">
-                          <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Main Image
-                              </div>
-                              {mainImage && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={removeMainImage}
-                                  className="h-6 text-xs gap-1 hover:text-destructive"
-                                >
-                                  <X className="h-3 w-3" />
-                                  Remove
-                                </Button>
-                              )}
-                            </div>
-                            {mainImage ? (
-                              <div className="relative group">
-                                <img
-                                  src={URL.createObjectURL(mainImage)}
-                                  alt="Main product"
-                                  className="h-40 w-full object-cover rounded-lg border-2 border-primary/20 group-hover:border-primary transition-all duration-300"
-                                />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 rounded-lg" />
-                              </div>
-                            ) : (
-                              <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer hover:border-primary transition-all duration-300 group">
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <ImageIcon className="h-10 w-10 text-gray-400 group-hover:text-primary mb-2 transition-all duration-300" />
-                                  <p className="text-xs text-gray-500 group-hover:text-primary mb-1">
-                                    Click to upload main image
-                                  </p>
-                                  <p className="text-xs text-gray-400">
-                                    Recommended: 500x500px
-                                  </p>
-                                </div>
-                                <Input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleMainImageUpload}
-                                  className="hidden"
-                                />
-                              </label>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Related Images
-                              </div>
-                              <div>
-                                <Input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleRelatedImagesUpload}
-                                  className="hidden"
-                                  id="related-images-upload"
-                                  multiple
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    document
-                                      .getElementById("related-images-upload")
-                                      ?.click()
-                                  }
-                                  className="h-7 text-xs gap-1"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                  Add More
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <AnimatePresence>
-                                {relatedImages.map((image, index) => (
-                                  <motion.div
-                                    key={index}
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0.8, opacity: 0 }}
-                                    className="relative group"
-                                  >
-                                    <img
-                                      src={URL.createObjectURL(image)}
-                                      alt={`Related ${index + 1}`}
-                                      className="h-20 w-full object-cover rounded-lg border border-gray-200 dark:border-gray-800 group-hover:border-destructive transition-all duration-300"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="sm"
-                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-all duration-300"
-                                      onClick={() => removeRelatedImage(index)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </motion.div>
-                                ))}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-
-                    {/* Column 2: Additional Information */}
-                    <div className="space-y-6">
-                      <motion.div
-                        initial={{ x: -10, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                      >
-                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          Additional Information
-                        </h3>
-                        <div className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="productShortName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Product Short Name *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., MILKY BAR 5 RS"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="productCompany"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Product Company *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., Parle Agro Private Limited"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-2 gap-3">
+                      {/* Column 2: Additional Information */}
+                      <div className="space-y-6">
+                        <motion.div
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ duration: 0.4, delay: 0.2 }}
+                        >
+                          <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            Additional Information
+                          </h3>
+                          <div className="space-y-4">
                             <FormField
                               control={form.control}
-                              name="purchaseUnit"
+                              name="productShortName"
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-xs font-medium">
-                                    Purchase Unit *
+                                    Product Short Name *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., MILKY BAR 5 RS"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="productCompany"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Product Company *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., Parle Agro Private Limited"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <FormField
+                                control={form.control}
+                                name="purchaseUnit"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Purchase Unit *
+                                    </FormLabel>
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                          <SelectValue placeholder="Select unit" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {purchaseSaleUnitOptions.map((unit) => (
+                                          <SelectItem
+                                            key={unit}
+                                            value={unit}
+                                            className="text-sm"
+                                          >
+                                            {unit}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="conversionFactor"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Conversion Factor *
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="pricePerPCS"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Price per PCS *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
+                                        ₹
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="h-9 text-sm pl-8 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="saleUnit"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Sale Unit *
                                   </FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
@@ -868,412 +830,450 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               )}
                             />
 
-                            <FormField
-                              control={form.control}
-                              name="conversionFactor"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Conversion Factor *
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                            <div className="grid grid-cols-2 gap-3">
+                              <FormField
+                                control={form.control}
+                                name="cartonPack"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Carton Pack *
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        {...field}
+                                        className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="innerPack"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-medium">
+                                      Inner Pack
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        value={field.value || ""}
+                                        className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           </div>
+                        </motion.div>
 
-                          <FormField
-                            control={form.control}
-                            name="pricePerPCS"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Price per PCS *
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
-                                      ₹
-                                    </span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      className="h-9 text-sm pl-8 border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                        {/* Packaging & Insurance Tax */}
+                        <motion.div
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ duration: 0.4, delay: 0.3 }}
+                        >
+                          <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            Settings
+                          </h3>
+                          <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-xs font-medium">
+                                <Package className="h-3 w-3" />
+                                Packaging
+                              </div>
+                              <FormField
+                                control={form.control}
+                                name="packagingBasic"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-xs font-normal cursor-pointer">
+                                      BASIC
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="packagingMRP"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-xs font-normal cursor-pointer">
+                                      MRP
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
 
-                          <FormField
-                            control={form.control}
-                            name="saleUnit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  Sale Unit *
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                      <SelectValue placeholder="Select unit" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {purchaseSaleUnitOptions.map((unit) => (
-                                      <SelectItem
-                                        key={unit}
-                                        value={unit}
-                                        className="text-sm"
-                                      >
-                                        {unit}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <FormField
-                              control={form.control}
-                              name="cartonPack"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Carton Pack *
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      {...field}
-                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="innerPack"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Inner Pack
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      value={field.value || ""}
-                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-xs font-medium">
+                                <Shield className="h-3 w-3" />
+                                Insurance Tax %
+                              </div>
+                              <FormField
+                                control={form.control}
+                                name="insuranceTaxBasic"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-xs font-normal cursor-pointer">
+                                      BASIC
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="insuranceTaxMRP"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-xs font-normal cursor-pointer">
+                                      MRP
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </div>
 
-                      {/* Packaging & Insurance Tax */}
+                      {/* Column 3: GST Details */}
                       <motion.div
-                        initial={{ x: -10, opacity: 0 }}
+                        initial={{ x: 20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.4, delay: 0.3 }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                        className="space-y-6"
                       >
-                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          Settings
-                        </h3>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs font-medium">
-                              <Package className="h-3 w-3" />
-                              Packaging
-                            </div>
+                        <div>
+                          <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            GST Details
+                          </h3>
+                          <div className="space-y-4">
                             <FormField
                               control={form.control}
-                              name="packagingBasic"
+                              name="gstApplicability"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-xs font-normal cursor-pointer">
-                                    BASIC
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    GST Applicability *
                                   </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
+                                        <SelectValue placeholder="Select applicability" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {gstApplicabilityOptions.map((option) => (
+                                        <SelectItem
+                                          key={option}
+                                          value={option}
+                                          className="text-sm"
+                                        >
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
                                 </FormItem>
                               )}
                             />
-                            <FormField
-                              control={form.control}
-                              name="packagingMRP"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-xs font-normal cursor-pointer">
-                                    MRP
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
 
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs font-medium">
-                              <Shield className="h-3 w-3" />
-                              Insurance Tax %
+                            <FormField
+                              control={form.control}
+                              name="gstRate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    GST Rate (%) *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                                        <Percent className="h-3 w-3" />
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="cessRate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    CESS Rate (%)
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                                        <Percent className="h-3 w-3" />
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="hsnChapter"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    HSN Chapter
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., 18"
+                                      {...field}
+                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="gstInclusive"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-xs font-medium">
+                                      GST Inclusive
+                                    </FormLabel>
+                                    <div className="text-xs text-muted-foreground">
+                                      GST included in product price
+                                    </div>
+                                  </div>
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="h-5 w-5 data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* GST Summary */}
+                            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                              <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">
+                                GST Summary
+                              </div>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    Current GST Rate:
+                                  </span>
+                                  <span className="font-semibold text-primary">
+                                    {gstRate}%
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    CESS Rate:
+                                  </span>
+                                  <span className="font-semibold">
+                                    {form.watch("cessRate")}%
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    Applicability:
+                                  </span>
+                                  <span className="font-semibold">
+                                    {form.watch("gstApplicability")}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <FormField
-                              control={form.control}
-                              name="insuranceTaxBasic"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-xs font-normal cursor-pointer">
-                                    BASIC
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="insuranceTaxMRP"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                      className="h-4 w-4 border-gray-300 data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-xs font-normal cursor-pointer">
-                                    MRP
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
                           </div>
                         </div>
                       </motion.div>
                     </div>
-
-                    {/* Column 3: GST Details */}
+                    {/* Images Section */}
                     <motion.div
-                      initial={{ x: 20, opacity: 0 }}
+                      initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.4, delay: 0.2 }}
-                      className="space-y-6"
+                      transition={{ duration: 0.4, delay: 0.1 }}
                     >
-                      <div>
-                        <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          GST Details
-                        </h3>
-                        <div className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="gstApplicability"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  GST Applicability *
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
+                      <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        Product Images
+                      </h3>
+                      <div className="flex justify-between space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              Main Image
+                            </div>
+                            {mainImage && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeMainImage}
+                                className="h-6 text-xs gap-1 hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                          {mainImage ? (
+                            <div className="relative group w-20">
+                              <img
+                                src={URL.createObjectURL(mainImage)}
+                                alt="Main product"
+                                className="h-20 w-full object-cover rounded-lg border-2 border-primary/20 group-hover:border-primary transition-all duration-300"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 rounded-lg" />
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center h-20 w-20 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer hover:border-primary transition-all duration-300 group">
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <ImageIcon className="h-6 w-6 text-gray-400 group-hover:text-primary mb-2 transition-all duration-300" />
+                                <p className="text-[10px] text-gray-500 group-hover:text-primary mb-1">
+                                  Click to upload main image
+                                </p>
+                                {/* <p className="text-[10px] text-gray-400">
+                                  Recommended: 500x500px
+                                </p> */}
+                              </div>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleMainImageUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        <div className="w-[80%]">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              Related Images
+                            </div>
+                            <div>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleRelatedImagesUpload}
+                                className="hidden"
+                                id="related-images-upload"
+                                multiple
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  document
+                                    .getElementById("related-images-upload")
+                                    ?.click()
+                                }
+                                className="h-7 text-xs gap-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add More
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <AnimatePresence>
+                              {relatedImages.map((image, index) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ scale: 0.8, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  exit={{ scale: 0.8, opacity: 0 }}
+                                  className="relative group w-20"
                                 >
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                      <SelectValue placeholder="Select applicability" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {gstApplicabilityOptions.map((option) => (
-                                      <SelectItem
-                                        key={option}
-                                        value={option}
-                                        className="text-sm"
-                                      >
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="gstRate"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  GST Rate (%) *
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                      <Percent className="h-3 w-3" />
-                                    </span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="cessRate"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  CESS Rate (%)
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                      <Percent className="h-3 w-3" />
-                                    </span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="hsnChapter"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">
-                                  HSN Chapter
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., 18"
-                                    {...field}
-                                    className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                  <img
+                                    src={URL.createObjectURL(image)}
+                                    alt={`Related ${index + 1}`}
+                                    className="h-20 w-full object-cover rounded-lg border border-gray-200 dark:border-gray-800 group-hover:border-destructive transition-all duration-300"
                                   />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="gstInclusive"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-xs font-medium">
-                                    GST Inclusive
-                                  </FormLabel>
-                                  <div className="text-xs text-muted-foreground">
-                                    GST included in product price
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-5 w-5 data-[state=checked]:bg-primary"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          {/* GST Summary */}
-                          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
-                            <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">
-                              GST Summary
-                            </div>
-                            <div className="space-y-1 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Current GST Rate:
-                                </span>
-                                <span className="font-semibold text-primary">
-                                  {gstRate}%
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  CESS Rate:
-                                </span>
-                                <span className="font-semibold">
-                                  {form.watch("cessRate")}%
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Applicability:
-                                </span>
-                                <span className="font-semibold">
-                                  {form.watch("gstApplicability")}
-                                </span>
-                              </div>
-                            </div>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                    onClick={() => removeRelatedImage(index)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
                           </div>
                         </div>
                       </div>
                     </motion.div>
                   </div>
-
                   {/* Batch Details Section - Now at the bottom */}
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
