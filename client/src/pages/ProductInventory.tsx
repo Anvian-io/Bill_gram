@@ -1003,9 +1003,6 @@ export default function ProductInventory() {
                       <TableHead className="font-semibold">S.Rate</TableHead>
                       <TableHead className="font-semibold">Margin</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold text-right">
-                        Actions
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1054,13 +1051,13 @@ export default function ProductInventory() {
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}
-                            className="hover:bg-secondary/30"
+                            className="group border-1"
                             layout
                             transition={{
                               layout: { duration: 0.3 },
                             }}
                           >
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div>
                                 <p className="font-medium">
                                   {product.productName}
@@ -1070,7 +1067,7 @@ export default function ProductInventory() {
                                 </p>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.code
                                 className="text-xs bg-secondary px-2 py-1 rounded inline-block"
                                 whileHover={{ scale: 1.05 }}
@@ -1079,7 +1076,7 @@ export default function ProductInventory() {
                                 {product.bNo}
                               </motion.code>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               {product.mfgDate ? (
                                 <span className="text-sm">
                                   {product.mfgDate}
@@ -1090,7 +1087,7 @@ export default function ProductInventory() {
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               {product.expDate ? (
                                 <span className="text-sm">
                                   {product.expDate}
@@ -1101,7 +1098,7 @@ export default function ProductInventory() {
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.div
                                 variants={badgeVariants}
                                 whileHover="hover"
@@ -1111,7 +1108,7 @@ export default function ProductInventory() {
                                 </Badge>
                               </motion.div>
                             </TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium group-hover:bg-secondary/30 cursor-pointer ">
                               <motion.span
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -1120,7 +1117,7 @@ export default function ProductInventory() {
                                 ₹{product.basicPrice.toFixed(2)}
                               </motion.span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="flex items-center gap-2">
                                 <motion.span
                                   className={`inline-block w-2 h-2 rounded-full ${
@@ -1152,12 +1149,16 @@ export default function ProductInventory() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="font-semibold">
+                            <TableCell className="font-semibold group-hover:bg-secondary/30 cursor-pointer">
                               ₹{product.mrp.toFixed(2)}
                             </TableCell>
-                            <TableCell>₹{product.pRate.toFixed(2)}</TableCell>
-                            <TableCell>₹{product.sRate.toFixed(2)}</TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              ₹{product.pRate.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              ₹{product.sRate.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.div
                                 variants={badgeVariants}
                                 whileHover="hover"
@@ -1170,7 +1171,7 @@ export default function ProductInventory() {
                                 </Badge>
                               </motion.div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.div
                                 variants={badgeVariants}
                                 whileHover="hover"
@@ -1194,49 +1195,6 @@ export default function ProductInventory() {
                                   {product.status}
                                 </Badge>
                               </motion.div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <motion.div
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
-                                    title="View Details"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </motion.div>
-                                <motion.div
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
-                                    title="Edit Product"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </motion.div>
-                                <motion.div
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                                    title="Delete Product"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </motion.div>
-                              </div>
                             </TableCell>
                           </motion.tr>
                         ))
