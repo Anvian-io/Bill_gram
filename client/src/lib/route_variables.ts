@@ -4,10 +4,11 @@ import {
   ShoppingCart,
   Receipt,
   FileText,
-  Store,
+  // Store,
   Download,
   User,
   Settings,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,13 @@ export const navItems: NavItem[] = [
     href: "/",
     id: "dashboard",
     pages: "Home",
+  },
+  {
+    icon: Layers,
+    label: "Master",
+    href: "/master",
+    id: "master",
+    pages: "Home, Master",
   },
   {
     icon: Package,
@@ -55,13 +63,13 @@ export const navItems: NavItem[] = [
     id: "reports",
     pages: "Home, Reports",
   },
-  {
-    icon: Store,
-    label: "Shops",
-    href: "/shops",
-    id: "shops",
-    pages: "Home, Shops",
-  },
+  // {
+  //   icon: Store,
+  //   label: "Shops",
+  //   href: "/shops",
+  //   id: "shops",
+  //   pages: "Home, Shops",
+  // },
   // {
   //   icon: QrCode,
   //   label: "QR Payments",
