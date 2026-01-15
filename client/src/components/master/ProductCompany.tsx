@@ -1,4 +1,3 @@
-// Updated ProductCompany Component
 import { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -26,6 +25,7 @@ import {
   Globe,
   MapPin,
   User,
+  Calendar,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -65,6 +65,8 @@ interface ProductCompany {
   address: string;
   productCount: number;
   status: "Active" | "Inactive";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function ProductCompany() {
@@ -81,6 +83,8 @@ export default function ProductCompany() {
       address: "123 Business St, New York, NY",
       productCount: 58,
       status: "Active",
+      createdAt: "2024-01-15 09:30:00",
+      updatedAt: "2024-03-20 14:45:00",
     },
     {
       id: 2,
@@ -93,6 +97,8 @@ export default function ProductCompany() {
       address: "456 Industry Ave, Chicago, IL",
       productCount: 42,
       status: "Active",
+      createdAt: "2024-02-10 11:20:00",
+      updatedAt: "2024-03-18 10:15:00",
     },
     {
       id: 3,
@@ -105,6 +111,8 @@ export default function ProductCompany() {
       address: "789 Corporate Rd, Mumbai, India",
       productCount: 127,
       status: "Active",
+      createdAt: "2024-01-05 08:45:00",
+      updatedAt: "2024-03-22 16:30:00",
     },
     {
       id: 4,
@@ -117,6 +125,8 @@ export default function ProductCompany() {
       address: "321 Factory St, Delhi, India",
       productCount: 89,
       status: "Inactive",
+      createdAt: "2023-12-20 13:10:00",
+      updatedAt: "2024-02-28 09:25:00",
     },
     {
       id: 5,
@@ -129,6 +139,8 @@ export default function ProductCompany() {
       address: "654 Dairy Rd, Gujarat, India",
       productCount: 156,
       status: "Active",
+      createdAt: "2024-03-01 10:00:00",
+      updatedAt: "2024-03-15 11:45:00",
     },
     {
       id: 6,
@@ -141,6 +153,8 @@ export default function ProductCompany() {
       address: "789 Beverage Blvd, Atlanta, GA",
       productCount: 203,
       status: "Active",
+      createdAt: "2024-02-28 15:30:00",
+      updatedAt: "2024-03-10 14:20:00",
     },
     {
       id: 7,
@@ -153,6 +167,8 @@ export default function ProductCompany() {
       address: "987 Refreshment Rd, Purchase, NY",
       productCount: 178,
       status: "Active",
+      createdAt: "2024-01-25 12:15:00",
+      updatedAt: "2024-03-19 13:40:00",
     },
     {
       id: 8,
@@ -165,6 +181,8 @@ export default function ProductCompany() {
       address: "100 Victoria Embankment, London, UK",
       productCount: 312,
       status: "Active",
+      createdAt: "2024-03-10 09:00:00",
+      updatedAt: "2024-03-21 15:10:00",
     },
     {
       id: 9,
@@ -177,6 +195,8 @@ export default function ProductCompany() {
       address: "1 Procter & Gamble Plaza, Cincinnati, OH",
       productCount: 267,
       status: "Active",
+      createdAt: "2023-11-15 14:20:00",
+      updatedAt: "2024-01-30 10:55:00",
     },
     {
       id: 10,
@@ -189,6 +209,8 @@ export default function ProductCompany() {
       address: "1 Johnson & Johnson Plaza, New Brunswick, NJ",
       productCount: 189,
       status: "Inactive",
+      createdAt: "2024-01-12 08:30:00",
+      updatedAt: "2024-03-23 17:05:00",
     },
   ]);
 
@@ -324,6 +346,8 @@ export default function ProductCompany() {
 
   // Handle form save
   const handleSave = (data: ProductCompanyFormData, id?: number) => {
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
     if (id) {
       // Update existing company
       setCompanies((prev) =>
@@ -333,6 +357,7 @@ export default function ProductCompany() {
                 ...company,
                 ...data,
                 logo: `https://api.dicebear.com/7.x/initials/svg?seed=${data.name}`,
+                updatedAt: now,
               }
             : company
         )
@@ -346,6 +371,9 @@ export default function ProductCompany() {
         logo: `https://api.dicebear.com/7.x/initials/svg?seed=${data.name}`,
         productCount: 0,
         website: data.website ?? "",
+        status: "Active",
+        createdAt: now,
+        updatedAt: now,
       };
       setCompanies((prev) => [...prev, newCompany]);
       toast.success("Company created successfully!");
@@ -394,6 +422,18 @@ export default function ProductCompany() {
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) => key !== "search" && value && value !== "all"
   ).length;
+
+  // Format date for display
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -732,6 +772,7 @@ export default function ProductCompany() {
                         Products
                       </TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
                         Actions
                       </TableHead>
@@ -748,7 +789,7 @@ export default function ProductCompany() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -822,6 +863,9 @@ export default function ProductCompany() {
                                       {company.website}
                                     </a>
                                   </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    ID: {company.id}
+                                  </p>
                                 </div>
                               </div>
                             </TableCell>
@@ -891,6 +935,30 @@ export default function ProductCompany() {
                                   {company.status}
                                 </Badge>
                               </motion.div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="space-y-1">
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-medium text-green-400">
+                                      Created:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(company.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center">
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="text-xs font-medium text-orange-400">
+                                      Updated:
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {formatDateTime(company.updatedAt)}
+                                  </p>
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right group-hover:bg-secondary/30 cursor-pointer">
                               <div className="flex justify-end gap-2">
@@ -992,6 +1060,10 @@ export default function ProductCompany() {
                         <li>
                           • Website links provide quick access to company
                           information
+                        </li>
+                        <li>
+                          • Created/Updated timestamps track company record
+                          activity
                         </li>
                       </ul>
                     </div>
