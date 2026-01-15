@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 // Import Lottie JSON files
 import loginLottie from "@/assets/Login_lottie.json";
@@ -34,8 +35,10 @@ export default function Login() {
     const result = await login(email, password);
 
     if (result.success) {
+      toast.success("Login Successful");
       navigate("/");
     } else {
+      toast.error("Login Failed");
       console.error(result.error);
     }
 

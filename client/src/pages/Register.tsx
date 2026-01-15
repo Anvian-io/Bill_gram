@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Mail, Lock, User, Store, Phone, Eye, EyeOff } from "lucide-react";
-
+import { toast } from "sonner";
 // Import Lottie JSON files
 import registerLottie from "@/assets/Register_lottie.json";
 
@@ -62,8 +62,10 @@ export default function Register() {
     const result = await register(userData);
 
     if (result.success) {
+      toast.success("Registered Successfully!")
       navigate("/login");
     } else {
+      toast.error("Registeration Failed!");
       console.error(result.error);
     }
 

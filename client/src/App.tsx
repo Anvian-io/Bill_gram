@@ -18,6 +18,8 @@ import {
   ProductForm,
   MasterInventory
 } from "./pages";
+import { Toaster } from "@/components/ui/sonner";
+
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -115,6 +117,7 @@ function App() {
           </div>
         </Router>
       </ThemeProvider>
+      <Toaster/>
     </AuthProvider>
   );
 }
