@@ -180,7 +180,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
 
   // Initialize form with proper typing
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as any,
     defaultValues: isEditMode ? sampleProduct : defaultValues,
   });
 
