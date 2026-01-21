@@ -71,7 +71,7 @@ export const getProductGroups = asyncHandler(async (req, res) => {
     search = "",
     name = "",
     status,
-    showDeleted = "false",
+    showDeleted = "false", // This is the new parameter
     sortBy = "createdAt",
     sortOrder = "desc",
   } = req.query;
@@ -91,10 +91,11 @@ export const getProductGroups = asyncHandler(async (req, res) => {
   ----------------------------*/
   const andConditions = [];
 
-  // Deleted filter
+  // Deleted filter - UPDATED to conditionally filter based on showDeleted
   if (showDeleted !== "true") {
     andConditions.push({ deleted: false });
   }
+  // When showDeleted is "true", we don't add any condition for deleted, so all records (including deleted) are fetched
 
   // Status filter
   if (status !== undefined) {
@@ -159,7 +160,7 @@ export const getProductGroups = asyncHandler(async (req, res) => {
         name: true,
         description: true,
         status: true,
-        deleted: true,
+        deleted: true, // Make sure to include deleted field in response
         createdAt: true,
         updatedAt: true,
       },

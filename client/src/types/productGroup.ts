@@ -6,6 +6,7 @@ export interface ProductGroup {
   status: boolean;
   createdAt: string;
   updatedAt: string;
+  deleted:boolean
 }
 
 export interface ProductGroupFormData {

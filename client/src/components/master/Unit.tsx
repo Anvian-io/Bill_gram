@@ -21,6 +21,7 @@ import {
   X,
   Ruler,
   Calendar,
+  RefreshCw,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -415,9 +416,9 @@ export default function Unit() {
               <h1 className="text-3xl font-bold text-heading">
                 Units of Measurement
               </h1>
-              <p className="text-muted-foreground mt-2">
+              {/* <p className="text-muted-foreground mt-2">
                 Manage measurement units for your products
-              </p>
+              </p> */}
             </div>
 
             {/* Search Bar */}
@@ -470,7 +471,23 @@ export default function Unit() {
                   Export
                 </Button>
               </motion.div> */}
-
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  // onClick={handleRefresh}
+                  // disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${true ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </Button>
+              </motion.div>
               <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
@@ -610,7 +627,7 @@ export default function Unit() {
                           <Select
                             value={filters.baseUnit}
                             onValueChange={(
-                              value: "all" | "base" | "derived"
+                              value: "all" | "base" | "derived",
                             ) => handleFilterChange("baseUnit", value)}
                           >
                             <SelectTrigger id="type">
@@ -640,7 +657,7 @@ export default function Unit() {
                               onChange={(e) =>
                                 handleFilterChange(
                                   "minConversion",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="flex-1"
@@ -653,7 +670,7 @@ export default function Unit() {
                               onChange={(e) =>
                                 handleFilterChange(
                                   "maxConversion",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="flex-1"

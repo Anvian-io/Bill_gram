@@ -23,6 +23,9 @@ import {
   RefreshCw,
   ToggleLeft,
   ToggleRight,
+  Trash,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch"; // Add this import
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import ProductGroupForm from "@/components/forms/ProductGroupForm";
@@ -82,11 +86,12 @@ export default function ProductGroup() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ProductGroup | null>(null);
 
-  // Filter state
+  // Filter state - ADD showDeleted filter
   const [filters, setFilters] = useState({
     search: "",
     name: "",
     status: "all" as "all" | "active" | "inactive",
+    showDeleted: false, // NEW: Add showDeleted filter
   });
 
   // Pagination state
@@ -124,6 +129,11 @@ export default function ProductGroup() {
       if (filters.status !== "all") {
         // Convert string to boolean for API
         params.status = filters.status === "active";
+      }
+
+      // NEW: Add showDeleted parameter
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
       const response = await productGroupService.getProductGroups(
@@ -194,6 +204,7 @@ export default function ProductGroup() {
       search: "",
       name: "",
       status: "all",
+      showDeleted: false, // Reset showDeleted as well
     });
   };
 
@@ -201,7 +212,12 @@ export default function ProductGroup() {
   const clearFilter = (filterName: keyof typeof filters) => {
     setFilters((prev) => ({
       ...prev,
-      [filterName]: filterName === "status" ? "all" : "",
+      [filterName]:
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -301,9 +317,11 @@ export default function ProductGroup() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Active filters count
+  // Active filters count - UPDATED to include showDeleted
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all",
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
   // Format date for display
@@ -463,7 +481,9 @@ export default function ProductGroup() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                        {" "}
+                        {/* Changed to 4 columns */}
                         {/* Group Name Filter */}
                         <div className="space-y-2">
                           <Label
@@ -496,7 +516,6 @@ export default function ProductGroup() {
                             )}
                           </div>
                         </div>
-
                         {/* Status Filter */}
                         <div className="space-y-2">
                           <Label
@@ -522,6 +541,47 @@ export default function ProductGroup() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {/* NEW: Show Deleted Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="showDeleted"
+                            className="text-sm font-medium"
+                          >
+                            Show Deleted
+                          </Label>
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
+                              }
+                              disabled={isLoading}
+                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
+                          </div>
+                        </div>
+                        {/* Empty column for layout */}
+                        <div></div>
                       </div>
                     </motion.div>
                   )}
@@ -542,9 +602,13 @@ export default function ProductGroup() {
             ) : (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} groups
-                {filters.status !== "all" || filters.name || filters.search
+                {filters.status !== "all" ||
+                filters.name ||
+                filters.search ||
+                filters.showDeleted
                   ? " (filtered)"
                   : ""}
+                {filters.showDeleted && " (including deleted)"}
               </>
             )}
           </p>
@@ -675,6 +739,16 @@ export default function ProductGroup() {
                                 <div>
                                   <p className="font-medium text-heading">
                                     {group.name}
+                                    {/* Show deleted badge if group is deleted */}
+                                    {group.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        <Trash className="h-3 w-3 mr-1" />
+                                        Deleted
+                                      </Badge>
+                                    )}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     ID: {group.id}
@@ -722,21 +796,6 @@ export default function ProductGroup() {
                                     {group.status ? "Active" : "Inactive"}
                                   </Badge>
                                 </motion.div>
-                                {/* <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleToggleStatus(group.id)}
-                                  disabled={isTogglingStatus === group.id}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  {isTogglingStatus === group.id ? (
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                  ) : group.status ? (
-                                    <ToggleRight className="h-4 w-4 text-green-600" />
-                                  ) : (
-                                    <ToggleLeft className="h-4 w-4 text-gray-600" />
-                                  )}
-                                </Button> */}
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
@@ -775,6 +834,7 @@ export default function ProductGroup() {
                                     size="icon"
                                     onClick={() => handleEdit(group)}
                                     className="h-8 w-8"
+                                    disabled={group.deleted} // Disable edit for deleted items
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -789,6 +849,7 @@ export default function ProductGroup() {
                                     size="icon"
                                     onClick={() => confirmDelete(group)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={group.deleted} // Disable delete for already deleted items
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
