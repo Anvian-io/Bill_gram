@@ -1,7 +1,12 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db/database.js";
-import { sendResponse, asyncHandler, statusType } from "../utils/index.js";
+import {
+  sendResponse,
+  asyncHandler,
+  statusType,
+  getPrismaOrFail,
+} from "../utils/index.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -20,15 +25,8 @@ export const authController = {
       );
     }
 
-    const prisma = getDb();
-    if (!prisma) {
-      return sendResponse(
-        res,
-        statusType.INTERNAL_SERVER_ERROR,
-        null,
-        "Database not initialized",
-      );
-    }
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
 
     // Check if user exists
     const existingUser = await prisma.user.findFirst({
@@ -93,15 +91,8 @@ export const authController = {
       );
     }
 
-    const prisma = getDb();
-    if (!prisma) {
-      return sendResponse(
-        res,
-        statusType.INTERNAL_SERVER_ERROR,
-        null,
-        "Database not initialized",
-      );
-    }
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
 
     // Find user with password
     const user = await prisma.user.findUnique({
@@ -162,16 +153,8 @@ export const authController = {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      const prisma = getDb();
-
-      if (!prisma) {
-        return sendResponse(
-          res,
-          statusType.INTERNAL_SERVER_ERROR,
-          null,
-          "Database not initialized",
-        );
-      }
+      const prisma = getPrismaOrFail(res);
+      if (!prisma) return;
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
@@ -243,16 +226,8 @@ export const authController = {
 
     try {
       const decoded = jwt.verify(refreshToken, JWT_SECRET);
-      const prisma = getDb();
-
-      if (!prisma) {
-        return sendResponse(
-          res,
-          statusType.INTERNAL_SERVER_ERROR,
-          null,
-          "Database not initialized",
-        );
-      }
+      const prisma = getPrismaOrFail(res);
+      if (!prisma) return;
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
