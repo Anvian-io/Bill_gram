@@ -449,7 +449,7 @@ export default function Unit() {
 
             {/* Action Buttons */}
             <motion.div className="flex flex-wrap items-center gap-3">
-              <motion.div
+              {/* <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
@@ -458,9 +458,9 @@ export default function Unit() {
                   <Upload className="h-4 w-4" />
                   Import
                 </Button>
-              </motion.div>
+              </motion.div> */}
 
-              <motion.div
+              {/* <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
@@ -469,7 +469,7 @@ export default function Unit() {
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
-              </motion.div>
+              </motion.div> */}
 
               <motion.div
                 variants={buttonVariants}
