@@ -69,7 +69,9 @@ export const getProductGroups = asyncHandler(async (req, res) => {
     page = 1,
     limit = 10,
     search = "",
+    name = "",
     status,
+    showDeleted = "false",
     sortBy = "createdAt",
     sortOrder = "desc",
   } = req.query;
@@ -77,76 +79,95 @@ export const getProductGroups = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Validate pagination
   const { page: validatedPage, limit: validatedLimit } = validatePagination(
     page,
     limit,
   );
+
   const skip = (validatedPage - 1) * validatedLimit;
 
-  // Build where clause
-  const where = {
-    deleted: false,
-  };
+  /* ---------------------------
+     BUILD WHERE CLAUSE SAFELY
+  ----------------------------*/
+  const andConditions = [];
 
-  // Add search filter
-  if (search) {
-    where.OR = [
-      {
-        name: {
-          contains: search,
-          mode: "insensitive",
-        },
-      },
-      {
-        description: {
-          contains: search,
-          mode: "insensitive",
-        },
-      },
-    ];
+  // Deleted filter
+  if (showDeleted !== "true") {
+    andConditions.push({ deleted: false });
   }
 
-  // Add status filter
+  // Status filter
   if (status !== undefined) {
-    where.status = status === "true" || status === true;
+    andConditions.push({
+      status: status === "true" || status === true,
+    });
   }
 
-  // Build orderBy clause
-  const orderBy = {};
+  // Name-only filter
+  if (name) {
+    andConditions.push({
+      name: {
+        contains: name,
+      },
+    });
+  }
+
+  // Search in name + description
+  if (search) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: search,
+          },
+        },
+        {
+          description: {
+            contains: search,
+          },
+        },
+      ],
+    });
+  }
+
+  const where = andConditions.length ? { AND: andConditions } : {};
+
+  /* ---------------------------
+     SORTING
+  ----------------------------*/
   const validSortFields = ["name", "createdAt", "updatedAt"];
   const validSortOrder = ["asc", "desc"];
 
-  const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
-  const sortDir = validSortOrder.includes(sortOrder.toLowerCase())
-    ? sortOrder.toLowerCase()
-    : "desc";
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "createdAt"]:
+      validSortOrder.includes(sortOrder.toLowerCase())
+        ? sortOrder.toLowerCase()
+        : "desc",
+  };
 
-  orderBy[sortField] = sortDir;
-
-  // Execute query with pagination
+  /* ---------------------------
+     QUERY
+  ----------------------------*/
   const [productGroups, total] = await Promise.all([
     prisma.productGroup.findMany({
       where,
+      skip,
+      take: validatedLimit,
+      orderBy,
       select: {
         id: true,
         name: true,
         description: true,
         status: true,
+        deleted: true,
         createdAt: true,
         updatedAt: true,
       },
-      skip,
-      take: validatedLimit,
-      orderBy,
     }),
     prisma.productGroup.count({ where }),
   ]);
 
-  // Calculate pagination metadata
   const totalPages = Math.ceil(total / validatedLimit);
-  const hasNextPage = validatedPage < totalPages;
-  const hasPrevPage = validatedPage > 1;
 
   return sendResponse(
     res,
@@ -158,8 +179,8 @@ export const getProductGroups = asyncHandler(async (req, res) => {
         totalPages,
         currentPage: validatedPage,
         limit: validatedLimit,
-        hasNextPage,
-        hasPrevPage,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
       },
     },
     "Product groups retrieved successfully",
