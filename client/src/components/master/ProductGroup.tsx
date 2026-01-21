@@ -20,7 +20,9 @@ import {
   Search,
   X,
   Layers,
-  Calendar,
+  RefreshCw,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,9 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
-import ProductGroupForm, {
-  type ProductGroupFormData,
-} from "@/components/forms/ProductGroupForm";
+import ProductGroupForm from "@/components/forms/ProductGroupForm";
 import {
   containerVariants,
   itemVariants,
@@ -46,111 +46,33 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
-// Define type for product group
-interface ProductGroup {
-  id: number;
-  name: string;
-  description: string;
-  productCount: number;
-  status: "Active" | "Inactive";
-  createdAt: string;
-  updatedAt: string;
+import { productGroupService } from "@/services/productGroupService";
+import {
+  type ProductGroup,
+  type ProductGroupFormData,
+} from "@/types/productGroup";
+
+// Define the API response structure
+interface ProductGroupsResponse {
+  data: {
+    productGroups: ProductGroup[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
 export default function ProductGroup() {
   // State for product groups
-  const [productGroups, setProductGroups] = useState<ProductGroup[]>([
-    {
-      id: 1,
-      name: "ELITE",
-      description: "Premium product line with high-quality items",
-      productCount: 45,
-      status: "Active",
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      name: "PREMIUM",
-      description: "High quality products for discerning customers",
-      productCount: 32,
-      status: "Active",
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      name: "STANDARD",
-      description: "Regular product line for everyday use",
-      productCount: 67,
-      status: "Active",
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      name: "BASIC",
-      description: "Economy products with essential features",
-      productCount: 23,
-      status: "Inactive",
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      name: "SEASONAL",
-      description: "Seasonal offerings and limited-time products",
-      productCount: 12,
-      status: "Active",
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      name: "LIMITED EDITION",
-      description: "Exclusive limited edition products",
-      productCount: 8,
-      status: "Active",
-      createdAt: "2024-02-28 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 7,
-      name: "CLEARANCE",
-      description: "Clearance items and discounted products",
-      productCount: 15,
-      status: "Active",
-      createdAt: "2024-01-25 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 8,
-      name: "NEW ARRIVALS",
-      description: "Recently added products and new releases",
-      productCount: 28,
-      status: "Active",
-      createdAt: "2024-03-10 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 9,
-      name: "DISCONTINUED",
-      description: "Discontinued products and old stock",
-      productCount: 19,
-      status: "Inactive",
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 10,
-      name: "BEST SELLERS",
-      description: "Top selling products and customer favorites",
-      productCount: 52,
-      status: "Active",
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-  ]);
+  const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState<number | null>(null);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -164,64 +86,94 @@ export default function ProductGroup() {
   const [filters, setFilters] = useState({
     search: "",
     name: "",
-    status: "all" as "all" | "Active" | "Inactive",
-    minProductCount: "",
-    maxProductCount: "",
+    status: "all" as "all" | "active" | "inactive",
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter product groups
-  const filteredGroups = useMemo(() => {
-    return productGroups.filter((group) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !group.name.toLowerCase().includes(searchLower) &&
-        !group.description.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Safely handle product groups data
+  const displayGroups = useMemo(() => {
+    // Ensure productGroups is always an array
+    if (!productGroups || !Array.isArray(productGroups)) {
+      return [];
+    }
+    return productGroups;
+  }, [productGroups]);
+
+  // Fetch product groups
+  const fetchProductGroups = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.name) {
+        params.name = filters.name;
+      }
+      if (filters.status !== "all") {
+        // Convert string to boolean for API
+        params.status = filters.status === "active";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !group.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (filters.status !== "all" && group.status !== filters.status)
-        return false;
-      if (
-        filters.minProductCount &&
-        group.productCount < Number(filters.minProductCount)
-      )
-        return false;
-      if (
-        filters.maxProductCount &&
-        group.productCount > Number(filters.maxProductCount)
-      )
-        return false;
+      const response = await productGroupService.getProductGroups(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
 
-      return true;
-    });
-  }, [productGroups, filters]);
+      // Log the response to see the structure
+      console.log("API Response:", response);
 
-  // Paginated data
-  const paginatedGroups = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredGroups.slice(startIndex, endIndex);
-  }, [filteredGroups, currentPage, itemsPerPage]);
+      // Type the response as ProductGroupsResponse
+      const apiResponse = response as unknown as ProductGroupsResponse;
 
-  // Total pages
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredGroups.length / itemsPerPage)
-  );
+      if (apiResponse?.data) {
+        const groups = apiResponse.data.productGroups || [];
+        const pagination = apiResponse.data.pagination || {};
+
+        console.log("Groups data:", groups);
+        console.log("Pagination data:", pagination);
+
+        // Ensure we set an array
+        setProductGroups(Array.isArray(groups) ? groups : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        // If response structure is unexpected, set defaults
+        console.error("Unexpected response structure:", response);
+        setProductGroups([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Error fetching product groups:", error);
+      toast.error("Failed to fetch product groups", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      // Reset to empty array on error
+      setProductGroups([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchProductGroups();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -242,8 +194,6 @@ export default function ProductGroup() {
       search: "",
       name: "",
       status: "all",
-      minProductCount: "",
-      maxProductCount: "",
     });
   };
 
@@ -262,37 +212,27 @@ export default function ProductGroup() {
   };
 
   // Handle form save
-  const handleSave = (data: ProductGroupFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    if (id) {
-      // Update existing group
-      setProductGroups((prev) =>
-        prev.map((group) =>
-          group.id === id
-            ? {
-                ...group,
-                ...data,
-                updatedAt: now,
-              }
-            : group
-        )
-      );
-      toast.success("Product group updated successfully!");
-    } else {
-      // Add new group
-      const newGroup: ProductGroup = {
-        id: Math.max(...productGroups.map((g) => g.id)) + 1,
-        ...data,
-        productCount: 0,
-        status: "Active",
-        createdAt: now,
-        updatedAt: now,
-      };
-      setProductGroups((prev) => [...prev, newGroup]);
-      toast.success("Product group created successfully!");
+  const handleSave = async (data: ProductGroupFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        // Update existing group
+        await productGroupService.updateProductGroup(id, data);
+        toast.success("Product group updated successfully!");
+      } else {
+        // Add new group
+        await productGroupService.createProductGroup(data);
+        toast.success("Product group created successfully!");
+      }
+      setFormOpen(false);
+      fetchProductGroups(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save product group", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
@@ -308,14 +248,40 @@ export default function ProductGroup() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (groupToDelete) {
-      setProductGroups((prev) =>
-        prev.filter((group) => group.id !== groupToDelete.id)
-      );
-      toast.success("Product group deleted successfully!");
-      setGroupToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await productGroupService.deleteProductGroup(groupToDelete.id);
+        toast.success("Product group deleted successfully!");
+        fetchProductGroups(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete product group", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setGroupToDelete(null);
+        setDeleteOpen(false);
+      }
+    }
+  };
+
+  // Toggle status
+  const handleToggleStatus = async (id: number) => {
+    setIsTogglingStatus(id);
+    try {
+      const updatedGroup = await productGroupService.toggleStatus(id);
+      setProductGroups((prev) => {
+        // Ensure prev is an array
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((group) => (group.id === id ? updatedGroup : group));
+      });
+      toast.success("Status updated successfully!");
+    } catch (error: any) {
+      toast.error("Failed to update status", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsTogglingStatus(null);
     }
   };
 
@@ -325,25 +291,37 @@ export default function ProductGroup() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchProductGroups();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, filteredGroups.length);
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) => key !== "search" && value && value !== "all",
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
   return (
@@ -401,20 +379,16 @@ export default function ProductGroup() {
                 whileHover="hover"
                 whileTap="tap"
               >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
                 </Button>
               </motion.div>
 
@@ -429,6 +403,7 @@ export default function ProductGroup() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add Group
@@ -461,6 +436,7 @@ export default function ProductGroup() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -470,6 +446,7 @@ export default function ProductGroup() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -486,7 +463,7 @@ export default function ProductGroup() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                         {/* Group Name Filter */}
                         <div className="space-y-2">
                           <Label
@@ -504,6 +481,7 @@ export default function ProductGroup() {
                                 handleFilterChange("name", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.name && (
                               <Button
@@ -511,6 +489,7 @@ export default function ProductGroup() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("name")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -529,51 +508,19 @@ export default function ProductGroup() {
                           <Select
                             value={filters.status}
                             onValueChange={(
-                              value: "all" | "Active" | "Inactive"
+                              value: "all" | "active" | "inactive",
                             ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger id="status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                              <SelectItem value="Inactive">Inactive</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
-                        </div>
-
-                        {/* Product Count Range Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Product Count Range
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minProductCount}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "minProductCount",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxProductCount}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "maxProductCount",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -590,17 +537,26 @@ export default function ProductGroup() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredGroups.length} groups
-            {filteredGroups.length !== productGroups.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} groups
+                {filters.status !== "all" || filters.name || filters.search
+                  ? " (filtered)"
+                  : ""}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -638,7 +594,24 @@ export default function ProductGroup() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedGroups.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading product groups...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayGroups.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -676,7 +649,7 @@ export default function ProductGroup() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedGroups.map((group, index) => (
+                        displayGroups.map((group, index) => (
                           <motion.tr
                             key={group.id}
                             custom={index}
@@ -723,7 +696,7 @@ export default function ProductGroup() {
                                   variant="outline"
                                   className="font-semibold"
                                 >
-                                  {group.productCount}
+                                  {group.productCount || 0}
                                 </Badge>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   products
@@ -731,31 +704,45 @@ export default function ProductGroup() {
                               </motion.div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant={
-                                    group.status === "Active"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                  className={
-                                    group.status === "Active"
-                                      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
-                                      : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
-                                  }
+                              <div className="flex items-center gap-2">
+                                <motion.div
+                                  variants={badgeVariants}
+                                  whileHover="hover"
                                 >
-                                  {group.status}
-                                </Badge>
-                              </motion.div>
+                                  <Badge
+                                    variant={
+                                      group.status ? "default" : "secondary"
+                                    }
+                                    className={
+                                      group.status
+                                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                        : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
+                                    }
+                                  >
+                                    {group.status ? "Active" : "Inactive"}
+                                  </Badge>
+                                </motion.div>
+                                {/* <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(group.id)}
+                                  disabled={isTogglingStatus === group.id}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  {isTogglingStatus === group.id ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : group.status ? (
+                                    <ToggleRight className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <ToggleLeft className="h-4 w-4 text-gray-600" />
+                                  )}
+                                </Button> */}
+                              </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="space-y-1">
                                 <div className="flex items-center">
                                   <div className="flex items-center gap-1">
-                                    {/* <Calendar className="h-2 w-2 text-muted-foreground" /> */}
                                     <span className="text-xs font-medium text-green-400">
                                       Created:
                                     </span>
@@ -766,7 +753,6 @@ export default function ProductGroup() {
                                 </div>
                                 <div className="flex items-center">
                                   <div className="flex items-center gap-1 mt-1">
-                                    {/* <Calendar className="h-2 w-2 text-muted-foreground" /> */}
                                     <span className="text-xs font-medium text-orange-400">
                                       Updated:
                                     </span>
@@ -821,7 +807,7 @@ export default function ProductGroup() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredGroups.length > 0 && (
+        {!isLoading && displayGroups.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -841,6 +827,7 @@ export default function ProductGroup() {
           onOpenChange={setFormOpen}
           editingGroup={editingGroup}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}

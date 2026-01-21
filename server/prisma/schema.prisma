@@ -70,6 +70,18 @@ model Product {
   @@map("products")
 }
 
+model ProductGroup {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  status      Boolean  @default(true)
+  deleted     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("product_group")
+}
+
 model SchemaVersion {
   version Int @id @default(1)
 }

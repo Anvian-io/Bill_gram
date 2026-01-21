@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
+import productGroupRoutes from "./route/productGroupRoutes.js";
 import authRoutes from "./route/auth.js";
 
 const app = express();
@@ -28,7 +29,7 @@ const startServer = async () => {
 
     // Routes
     app.use("/api/auth", authRoutes);
-
+    app.use("/api/product-groups", productGroupRoutes);
     // Health check
     app.get("/api/health", (req, res) => {
       res.json({

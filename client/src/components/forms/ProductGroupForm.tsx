@@ -1,4 +1,3 @@
-// components/ProductGroupForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,9 +21,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { type ProductGroupFormData } from "@/types/productGroup";
 
-// Define the form schema
+// Define the form schema with boolean status
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Group name must be at least 2 characters.",
@@ -32,9 +38,8 @@ const formSchema = z.object({
   description: z.string().min(5, {
     message: "Description must be at least 5 characters.",
   }),
+  status: z.boolean(),
 });
-
-export type ProductGroupFormData = z.infer<typeof formSchema>;
 
 interface ProductGroupFormProps {
   open: boolean;
@@ -43,8 +48,10 @@ interface ProductGroupFormProps {
     id: number;
     name: string;
     description: string;
+    status: boolean;
   } | null;
   onSave: (data: ProductGroupFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function ProductGroupForm({
@@ -52,12 +59,14 @@ export default function ProductGroupForm({
   onOpenChange,
   editingGroup,
   onSave,
+  isSubmitting = false,
 }: ProductGroupFormProps) {
   const form = useForm<ProductGroupFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
+      status: true,
     },
   });
 
@@ -67,28 +76,19 @@ export default function ProductGroupForm({
       form.reset({
         name: editingGroup.name,
         description: editingGroup.description,
+        status: editingGroup.status,
       });
     } else {
       form.reset({
         name: "",
         description: "",
+        status: true,
       });
     }
   }, [editingGroup, form]);
 
   const onSubmit = (data: ProductGroupFormData) => {
-    try {
-      onSave(data, editingGroup?.id);
-      toast.success(
-        editingGroup
-          ? "Product group updated successfully!"
-          : "Product group created successfully!"
-      );
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      toast.error("Failed to save product group");
-    }
+    onSave(data, editingGroup?.id);
   };
 
   return (
@@ -114,7 +114,11 @@ export default function ProductGroupForm({
                 <FormItem>
                   <FormLabel>Group Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., ELITE, PREMIUM" {...field} />
+                    <Input
+                      placeholder="e.g., ELITE, PREMIUM"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -133,8 +137,37 @@ export default function ProductGroupForm({
                       className="resize-none"
                       rows={3}
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={(value: string) =>
+                      field.onChange(value === "true")
+                    }
+                    value={field.value ? "true" : "false"}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -145,11 +178,16 @@ export default function ProductGroupForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingGroup ? "Update Group" : "Create Group"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingGroup
+                    ? "Update Group"
+                    : "Create Group"}
               </Button>
             </DialogFooter>
           </form>
