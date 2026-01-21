@@ -1,3 +1,4 @@
+//server/src/route/productGroupRoutes.js
 import express from "express";
 import { productGroupController } from "../controllers/productGroupController.js";
 

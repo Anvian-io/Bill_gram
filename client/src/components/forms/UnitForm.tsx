@@ -1,4 +1,3 @@
-// components/UnitForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,10 +20,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { type UnitFormData } from "@/types/unit";
 
-// Define the form schema
+// Define the form schema (simplified - no baseUnit or conversionFactor)
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Unit name must be at least 2 characters.",
@@ -32,13 +37,8 @@ const formSchema = z.object({
   symbol: z.string().min(1, {
     message: "Symbol is required.",
   }),
-  baseUnit: z.boolean().default(false),
-  conversionFactor: z.number().min(0.0001, {
-    message: "Conversion factor must be greater than 0.",
-  }),
+  status: z.boolean(),
 });
-
-export type UnitFormData = z.infer<typeof formSchema>;
 
 interface UnitFormProps {
   open: boolean;
@@ -47,10 +47,10 @@ interface UnitFormProps {
     id: number;
     name: string;
     symbol: string;
-    baseUnit: boolean;
-    conversionFactor: number;
+    status: boolean;
   } | null;
   onSave: (data: UnitFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function UnitForm({
@@ -58,14 +58,14 @@ export default function UnitForm({
   onOpenChange,
   editingUnit,
   onSave,
+  isSubmitting = false,
 }: UnitFormProps) {
   const form = useForm<UnitFormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       symbol: "",
-      baseUnit: false,
-      conversionFactor: 1,
+      status: true,
     },
   });
 
@@ -75,32 +75,19 @@ export default function UnitForm({
       form.reset({
         name: editingUnit.name,
         symbol: editingUnit.symbol,
-        baseUnit: editingUnit.baseUnit,
-        conversionFactor: editingUnit.conversionFactor,
+        status: editingUnit.status,
       });
     } else {
       form.reset({
         name: "",
         symbol: "",
-        baseUnit: false,
-        conversionFactor: 1,
+        status: true,
       });
     }
   }, [editingUnit, form]);
 
   const onSubmit = (data: UnitFormData) => {
-    try {
-      onSave(data, editingUnit?.id);
-      toast.success(
-        editingUnit
-          ? "Unit updated successfully!"
-          : "Unit created successfully!"
-      );
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      toast.error("Failed to save unit");
-    }
+    onSave(data, editingUnit?.id);
   };
 
   return (
@@ -126,7 +113,11 @@ export default function UnitForm({
                 <FormItem>
                   <FormLabel>Unit Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kilogram, Liter" {...field} />
+                    <Input
+                      placeholder="e.g., Kilogram, Liter"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,7 +131,11 @@ export default function UnitForm({
                 <FormItem>
                   <FormLabel>Symbol *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., kg, L, pc" {...field} />
+                    <Input
+                      placeholder="e.g., kg, L, pc"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -149,48 +144,28 @@ export default function UnitForm({
 
             <FormField
               control={form.control}
-              name="conversionFactor"
+              name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Conversion Factor *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      placeholder="e.g., 1, 0.001"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 1)
-                      }
-                      value={field.value}
-                    />
-                  </FormControl>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={(value: string) =>
+                      field.onChange(value === "true")
+                    }
+                    value={field.value ? "true" : "false"}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
-                  <p className="text-xs text-muted-foreground">
-                    Base units should have factor = 1. Derived units: e.g., gram
-                    = 0.001 (1 g = 0.001 kg)
-                  </p>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="baseUnit"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Base Unit</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Mark this as a base measurement unit
-                    </p>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
                 </FormItem>
               )}
             />
@@ -200,11 +175,16 @@ export default function UnitForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingUnit ? "Update Unit" : "Create Unit"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingUnit
+                    ? "Update Unit"
+                    : "Create Unit"}
               </Button>
             </DialogFooter>
           </form>

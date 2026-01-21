@@ -3,6 +3,7 @@ import cors from "cors";
 import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
 import productGroupRoutes from "./route/productGroupRoutes.js";
 import authRoutes from "./route/auth.js";
+import unitRoutes from "./route/unitRoutes.js";
 
 const app = express();
 const PORT = 3001;
@@ -30,6 +31,7 @@ const startServer = async () => {
     // Routes
     app.use("/api/auth", authRoutes);
     app.use("/api/product-groups", productGroupRoutes);
+    app.use("/api/units", unitRoutes);
     // Health check
     app.get("/api/health", (req, res) => {
       res.json({

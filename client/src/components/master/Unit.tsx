@@ -12,16 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Plus,
   Edit,
   Trash2,
   Search,
   X,
   Ruler,
-  Calendar,
   RefreshCw,
+  Trash,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,9 +34,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
-import UnitForm, { type UnitFormData } from "@/components/forms/UnitForm";
+import UnitForm from "@/components/forms/UnitForm";
 import {
   containerVariants,
   itemVariants,
@@ -45,157 +46,29 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
+import { unitService } from "@/services/unitService";
+import { type Unit, type UnitFormData } from "@/types/unit";
 
-// Define type for unit
-interface Unit {
-  id: number;
-  name: string;
-  symbol: string;
-  baseUnit: boolean;
-  conversionFactor: number;
-  createdAt: string;
-  updatedAt: string;
+// Define the API response structure
+interface UnitsResponse {
+  data: {
+    units: Unit[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
-export default function Unit() {
+export default function UnitComponent() {
   // State for units
-  const [units, setUnits] = useState<Unit[]>([
-    {
-      id: 1,
-      name: "Piece",
-      symbol: "pc",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      name: "Kilogram",
-      symbol: "kg",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      name: "Gram",
-      symbol: "g",
-      baseUnit: false,
-      conversionFactor: 0.001,
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      name: "Liter",
-      symbol: "L",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      name: "Milliliter",
-      symbol: "ml",
-      baseUnit: false,
-      conversionFactor: 0.001,
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      name: "Meter",
-      symbol: "m",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-    {
-      id: 7,
-      name: "Centimeter",
-      symbol: "cm",
-      baseUnit: false,
-      conversionFactor: 0.01,
-      createdAt: "2024-02-28 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 8,
-      name: "Dozen",
-      symbol: "doz",
-      baseUnit: false,
-      conversionFactor: 12,
-      createdAt: "2024-01-25 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 9,
-      name: "Ton",
-      symbol: "t",
-      baseUnit: false,
-      conversionFactor: 1000,
-      createdAt: "2024-03-10 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 10,
-      name: "Pound",
-      symbol: "lb",
-      baseUnit: false,
-      conversionFactor: 0.453592,
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 11,
-      name: "Ounce",
-      symbol: "oz",
-      baseUnit: false,
-      conversionFactor: 0.0283495,
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 12,
-      name: "Gallon",
-      symbol: "gal",
-      baseUnit: false,
-      conversionFactor: 3.78541,
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 13,
-      name: "Box",
-      symbol: "box",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 14,
-      name: "Carton",
-      symbol: "ctn",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 15,
-      name: "Pack",
-      symbol: "pk",
-      baseUnit: true,
-      conversionFactor: 1,
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-  ]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -205,77 +78,99 @@ export default function Unit() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
 
+  // Bulk delete state
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
+
   // Filter state
   const [filters, setFilters] = useState({
     search: "",
     name: "",
     symbol: "",
-    baseUnit: "all" as "all" | "base" | "derived",
-    minConversion: "",
-    maxConversion: "",
+    status: "all" as "all" | "active" | "inactive",
+    showDeleted: false,
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter units
-  const filteredUnits = useMemo(() => {
-    return units.filter((unit) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !unit.name.toLowerCase().includes(searchLower) &&
-        !unit.symbol.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Safely handle units data
+  const displayUnits = useMemo(() => {
+    if (!units || !Array.isArray(units)) {
+      return [];
+    }
+    return units;
+  }, [units]);
+
+  // Fetch units
+  const fetchUnits = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.name) {
+        params.name = filters.name;
+      }
+      if (filters.symbol) {
+        params.symbol = filters.symbol;
+      }
+      if (filters.status !== "all") {
+        params.status = filters.status === "active";
+      }
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !unit.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (
-        filters.symbol &&
-        !unit.symbol.toLowerCase().includes(filters.symbol.toLowerCase())
-      )
-        return false;
-      if (filters.baseUnit !== "all") {
-        const isBaseUnit = unit.baseUnit;
-        if (filters.baseUnit === "base" && !isBaseUnit) return false;
-        if (filters.baseUnit === "derived" && isBaseUnit) return false;
+      const response = await unitService.getUnits(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
+
+      // Type the response as UnitsResponse
+      const apiResponse = response as unknown as UnitsResponse;
+
+      if (apiResponse?.data) {
+        const unitsData = apiResponse.data.units || [];
+        const pagination = apiResponse.data.pagination || {};
+
+        setUnits(Array.isArray(unitsData) ? unitsData : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        console.error("Unexpected response structure:", response);
+        setUnits([]);
+        setTotalItems(0);
+        setTotalPages(1);
       }
-      if (
-        filters.minConversion &&
-        unit.conversionFactor < Number(filters.minConversion)
-      )
-        return false;
-      if (
-        filters.maxConversion &&
-        unit.conversionFactor > Number(filters.maxConversion)
-      )
-        return false;
+    } catch (error: any) {
+      console.error("Error fetching units:", error);
+      toast.error("Failed to fetch units", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      setUnits([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      return true;
-    });
-  }, [units, filters]);
-
-  // Paginated data
-  const paginatedUnits = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredUnits.slice(startIndex, endIndex);
-  }, [filteredUnits, currentPage, itemsPerPage]);
-
-  // Total pages
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredUnits.length / itemsPerPage)
-  );
+  // Initial fetch
+  useEffect(() => {
+    fetchUnits();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -296,9 +191,8 @@ export default function Unit() {
       search: "",
       name: "",
       symbol: "",
-      baseUnit: "all",
-      minConversion: "",
-      maxConversion: "",
+      status: "all",
+      showDeleted: false,
     });
   };
 
@@ -306,7 +200,12 @@ export default function Unit() {
   const clearFilter = (filterName: keyof typeof filters) => {
     setFilters((prev) => ({
       ...prev,
-      [filterName]: filterName === "baseUnit" ? "all" : "",
+      [filterName]:
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -317,35 +216,27 @@ export default function Unit() {
   };
 
   // Handle form save
-  const handleSave = (data: UnitFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    if (id) {
-      // Update existing unit
-      setUnits((prev) =>
-        prev.map((unit) =>
-          unit.id === id
-            ? {
-                ...unit,
-                ...data,
-                updatedAt: now,
-              }
-            : unit
-        )
-      );
-      toast.success("Unit updated successfully!");
-    } else {
-      // Add new unit
-      const newUnit: Unit = {
-        id: Math.max(...units.map((u) => u.id)) + 1,
-        ...data,
-        createdAt: now,
-        updatedAt: now,
-      };
-      setUnits((prev) => [...prev, newUnit]);
-      toast.success("Unit created successfully!");
+  const handleSave = async (data: UnitFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        // Update existing unit
+        await unitService.updateUnit(id, data);
+        toast.success("Unit updated successfully!");
+      } else {
+        // Add new unit
+        await unitService.createUnit(data);
+        toast.success("Unit created successfully!");
+      }
+      setFormOpen(false);
+      fetchUnits(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save unit", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
@@ -361,12 +252,40 @@ export default function Unit() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (unitToDelete) {
-      setUnits((prev) => prev.filter((unit) => unit.id !== unitToDelete.id));
-      toast.success("Unit deleted successfully!");
-      setUnitToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await unitService.deleteUnit(unitToDelete.id);
+        toast.success("Unit deleted successfully!");
+        fetchUnits(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete unit", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setUnitToDelete(null);
+        setDeleteOpen(false);
+      }
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedUnits.length === 0) {
+      toast.warning("Please select units to delete");
+      return;
+    }
+
+    try {
+      const result = await unitService.bulkDeleteUnits(selectedUnits);
+      toast.success(result.message);
+      fetchUnits(); // Refresh the list
+      setSelectedUnits([]);
+      setBulkDeleteOpen(false);
+    } catch (error: any) {
+      toast.error("Failed to delete units", {
+        description: error.response?.data?.message || "Please try again",
+      });
     }
   };
 
@@ -376,25 +295,53 @@ export default function Unit() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchUnits();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, filteredUnits.length);
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  // Select all units on current page
+  const selectAllOnPage = () => {
+    const pageUnitIds = displayUnits.map((unit) => unit.id);
+    if (pageUnitIds.every((id) => selectedUnits.includes(id))) {
+      // If all are selected, deselect all
+      setSelectedUnits((prev) =>
+        prev.filter((id) => !pageUnitIds.includes(id)),
+      );
+    } else {
+      // Select all
+      setSelectedUnits((prev) => [...new Set([...prev, ...pageUnitIds])]);
+    }
   };
 
   return (
@@ -416,9 +363,6 @@ export default function Unit() {
               <h1 className="text-3xl font-bold text-heading">
                 Units of Measurement
               </h1>
-              {/* <p className="text-muted-foreground mt-2">
-                Manage measurement units for your products
-              </p> */}
             </div>
 
             {/* Search Bar */}
@@ -435,6 +379,7 @@ export default function Unit() {
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
+                disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -442,6 +387,7 @@ export default function Unit() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => handleFilterChange("search", "")}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -450,27 +396,24 @@ export default function Unit() {
 
             {/* Action Buttons */}
             <motion.div className="flex flex-wrap items-center gap-3">
-              {/* <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div> */}
+              {selectedUnits.length > 0 && (
+                <motion.div
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                >
+                  <Button
+                    variant="destructive"
+                    className="gap-2"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Selected ({selectedUnits.length})
+                  </Button>
+                </motion.div>
+              )}
 
-              {/* <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
-              </motion.div> */}
               <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
@@ -479,15 +422,16 @@ export default function Unit() {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  // onClick={handleRefresh}
-                  // disabled={isLoading}
+                  onClick={handleRefresh}
+                  disabled={isLoading}
                 >
                   <RefreshCw
-                    className={`h-4 w-4 ${true ? "animate-spin" : ""}`}
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
                   />
                   Refresh
                 </Button>
               </motion.div>
+
               <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
@@ -499,6 +443,7 @@ export default function Unit() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add Unit
@@ -531,6 +476,7 @@ export default function Unit() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -540,6 +486,7 @@ export default function Unit() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -574,6 +521,7 @@ export default function Unit() {
                                 handleFilterChange("name", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.name && (
                               <Button
@@ -581,6 +529,7 @@ export default function Unit() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("name")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -605,6 +554,7 @@ export default function Unit() {
                                 handleFilterChange("symbol", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.symbol && (
                               <Button
@@ -612,6 +562,7 @@ export default function Unit() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("symbol")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -619,62 +570,69 @@ export default function Unit() {
                           </div>
                         </div>
 
-                        {/* Type Filter */}
+                        {/* Status Filter */}
                         <div className="space-y-2">
-                          <Label htmlFor="type" className="text-sm font-medium">
-                            Type
+                          <Label
+                            htmlFor="status"
+                            className="text-sm font-medium"
+                          >
+                            Status
                           </Label>
                           <Select
-                            value={filters.baseUnit}
+                            value={filters.status}
                             onValueChange={(
-                              value: "all" | "base" | "derived",
-                            ) => handleFilterChange("baseUnit", value)}
+                              value: "all" | "active" | "inactive",
+                            ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
-                            <SelectTrigger id="type">
-                              <SelectValue placeholder="Select type" />
+                            <SelectTrigger id="status">
+                              <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All Types</SelectItem>
-                              <SelectItem value="base">Base Units</SelectItem>
-                              <SelectItem value="derived">
-                                Derived Units
-                              </SelectItem>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Conversion Factor Range Filter */}
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Conversion Factor Range
+                          <Label
+                            htmlFor="showDeleted"
+                            className="text-sm font-medium"
+                          >
+                            Show Deleted
                           </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              step="0.0001"
-                              value={filters.minConversion}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "minConversion",
-                                  e.target.value,
-                                )
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
                               }
-                              className="flex-1"
+                              disabled={isLoading}
                             />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              step="0.0001"
-                              value={filters.maxConversion}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "maxConversion",
-                                  e.target.value,
-                                )
-                              }
-                              className="flex-1"
-                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
                           </div>
                         </div>
                       </div>
@@ -692,17 +650,31 @@ export default function Unit() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredUnits.length} units
-            {filteredUnits.length !== units.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} units
+                {filters.status !== "all" ||
+                filters.name ||
+                filters.symbol ||
+                filters.search ||
+                filters.showDeleted
+                  ? " (filtered)"
+                  : ""}
+                {filters.showDeleted && " (including deleted)"}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -724,10 +696,7 @@ export default function Unit() {
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">Unit Name</TableHead>
                       <TableHead className="font-semibold">Symbol</TableHead>
-                      <TableHead className="font-semibold">Type</TableHead>
-                      <TableHead className="font-semibold text-right">
-                        Conversion Factor
-                      </TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
                         Actions
@@ -736,7 +705,24 @@ export default function Unit() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedUnits.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading units...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayUnits.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -772,7 +758,7 @@ export default function Unit() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedUnits.map((unit, index) => (
+                        displayUnits.map((unit, index) => (
                           <motion.tr
                             key={unit.id}
                             custom={index}
@@ -798,6 +784,15 @@ export default function Unit() {
                                 <div>
                                   <p className="font-medium text-heading">
                                     {unit.name}
+                                    {unit.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        <Trash className="h-3 w-3 mr-1" />
+                                        Deleted
+                                      </Badge>
+                                    )}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     ID: {unit.id}
@@ -816,43 +811,25 @@ export default function Unit() {
                               </motion.div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant={
-                                    unit.baseUnit ? "default" : "outline"
-                                  }
-                                  className={
-                                    unit.baseUnit
-                                      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
-                                      : "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"
-                                  }
+                              <div className="flex items-center gap-2">
+                                <motion.div
+                                  variants={badgeVariants}
+                                  whileHover="hover"
                                 >
-                                  {unit.baseUnit ? "Base Unit" : "Derived Unit"}
-                                </Badge>
-                              </motion.div>
-                            </TableCell>
-                            <TableCell className="text-right group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className="font-mono text-sm"
-                                >
-                                  {unit.conversionFactor === 1
-                                    ? "1"
-                                    : unit.conversionFactor
-                                        .toFixed(4)
-                                        .replace(/\.?0+$/, "")}
-                                </Badge>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  factor
-                                </p>
-                              </motion.div>
+                                  <Badge
+                                    variant={
+                                      unit.status ? "default" : "secondary"
+                                    }
+                                    className={
+                                      unit.status
+                                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                        : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
+                                    }
+                                  >
+                                    {unit.status ? "Active" : "Inactive"}
+                                  </Badge>
+                                </motion.div>
+                              </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="space-y-1">
@@ -890,6 +867,7 @@ export default function Unit() {
                                     size="icon"
                                     onClick={() => handleEdit(unit)}
                                     className="h-8 w-8"
+                                    disabled={unit.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -904,6 +882,7 @@ export default function Unit() {
                                     size="icon"
                                     onClick={() => confirmDelete(unit)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={unit.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -922,7 +901,7 @@ export default function Unit() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredUnits.length > 0 && (
+        {!isLoading && displayUnits.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -936,62 +915,13 @@ export default function Unit() {
           </motion.div>
         )}
 
-        {/* Information Card */}
-        <motion.div
-          variants={itemVariants}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Ruler className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-2">
-                    About Units of Measurement
-                  </h3>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-green-600">
-                        Base Units
-                      </span>{" "}
-                      are the fundamental measurement units that define the
-                      scale for a particular type of measurement.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-blue-600">
-                        Derived Units
-                      </span>{" "}
-                      are defined in relation to base units using conversion
-                      factors. For example: 1 kilogram = 1000 grams, so gram has
-                      a conversion factor of 0.001.
-                    </p>
-                    <div className="mt-3 p-3 bg-secondary/30 rounded-md">
-                      <p className="text-sm font-medium mb-1">Example:</p>
-                      <p className="text-xs text-muted-foreground">
-                        • Base Unit: Kilogram (kg) → Conversion Factor: 1<br />
-                        • Derived Unit: Gram (g) → Conversion Factor: 0.001 (1 g
-                        = 0.001 kg)
-                        <br />• Derived Unit: Milligram (mg) → Conversion
-                        Factor: 0.000001 (1 mg = 0.000001 kg)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* Unit Form Dialog */}
         <UnitForm
           open={formOpen}
           onOpenChange={setFormOpen}
           editingUnit={editingUnit}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}
@@ -1007,6 +937,20 @@ export default function Unit() {
           nextButtonText="Delete"
           cancelButtonText="Cancel"
           onNext={handleDelete}
+          variant="destructive"
+          showCancel={true}
+          className="sm:max-w-[425px]"
+        />
+
+        {/* Bulk Delete Confirmation */}
+        <CustomAlert
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          mainText="Delete Selected Units"
+          subText={`Are you sure you want to delete ${selectedUnits.length} unit(s)? This action cannot be undone.`}
+          nextButtonText={`Delete ${selectedUnits.length} Units`}
+          cancelButtonText="Cancel"
+          onNext={handleBulkDelete}
           variant="destructive"
           showCancel={true}
           className="sm:max-w-[425px]"
