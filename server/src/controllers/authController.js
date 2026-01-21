@@ -16,41 +16,57 @@ export const authController = {
         res,
         statusType.BAD_REQUEST,
         null,
-        "Missing required fields (username, email, password)"
+        "Missing required fields (username, email, password)",
       );
     }
 
-    const db = getDb();
+    const prisma = getDb();
+    if (!prisma) {
+      return sendResponse(
+        res,
+        statusType.INTERNAL_SERVER_ERROR,
+        null,
+        "Database not initialized",
+      );
+    }
 
     // Check if user exists
-    const existingUser = await db.get(
-      "SELECT id FROM users WHERE email = ? OR username = ?",
-      [email, username]
-    );
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
+    });
 
     if (existingUser) {
       return sendResponse(
         res,
         statusType.CONFLICT,
         null,
-        "User already exists"
+        "User already exists",
       );
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
-    const result = await db.run(
-      `INSERT INTO users (username, email, password, shop_name, phone) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [username, email, hashedPassword, shop_name || null, phone || null]
-    );
-
-    const user = await db.get(
-      "SELECT id, username, email, shop_name, phone FROM users WHERE id = ?",
-      [result.lastID]
-    );
+    // Create user using Prisma
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        shop_name,
+        phone,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        shop_name: true,
+        phone: true,
+        createdAt: true,
+      },
+    });
 
     return sendResponse(
       res,
@@ -60,7 +76,6 @@ export const authController = {
         user,
       },
       "Registration successful",
-      statusType.CREATED
     );
   }),
 
@@ -74,21 +89,31 @@ export const authController = {
         res,
         statusType.BAD_REQUEST,
         null,
-        "Email and password are required"
+        "Email and password are required",
       );
     }
 
-    const db = getDb();
+    const prisma = getDb();
+    if (!prisma) {
+      return sendResponse(
+        res,
+        statusType.INTERNAL_SERVER_ERROR,
+        null,
+        "Database not initialized",
+      );
+    }
 
-    // Find user
-    const user = await db.get("SELECT * FROM users WHERE email = ?", [email]);
+    // Find user with password
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
     if (!user) {
       return sendResponse(
         res,
         statusType.UNAUTHORIZED,
         null,
-        "Invalid credentials"
+        "Invalid credentials",
       );
     }
 
@@ -99,7 +124,7 @@ export const authController = {
         res,
         statusType.UNAUTHORIZED,
         null,
-        "Invalid credentials"
+        "Invalid credentials",
       );
     }
 
@@ -118,7 +143,7 @@ export const authController = {
         token,
         user: userWithoutPassword,
       },
-      "Login successful"
+      "Login successful",
     );
   }),
 
@@ -131,18 +156,34 @@ export const authController = {
         res,
         statusType.UNAUTHORIZED,
         null,
-        "No token provided"
+        "No token provided",
       );
     }
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      const db = getDb();
+      const prisma = getDb();
 
-      const user = await db.get(
-        "SELECT id, username, email, shop_name, phone FROM users WHERE id = ?",
-        [decoded.userId]
-      );
+      if (!prisma) {
+        return sendResponse(
+          res,
+          statusType.INTERNAL_SERVER_ERROR,
+          null,
+          "Database not initialized",
+        );
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          shop_name: true,
+          phone: true,
+          createdAt: true,
+        },
+      });
 
       if (!user) {
         return sendResponse(res, statusType.NOT_FOUND, null, "User not found");
@@ -157,14 +198,14 @@ export const authController = {
           res,
           statusType.UNAUTHORIZED,
           null,
-          "Invalid token"
+          "Invalid token",
         );
       } else if (error.name === "TokenExpiredError") {
         return sendResponse(
           res,
           statusType.UNAUTHORIZED,
           null,
-          "Token has expired"
+          "Token has expired",
         );
       }
 
@@ -172,7 +213,7 @@ export const authController = {
         res,
         statusType.INTERNAL_SERVER_ERROR,
         null,
-        "Authentication check failed"
+        "Authentication check failed",
       );
     }
   }),
@@ -183,11 +224,11 @@ export const authController = {
       res,
       statusType.OK,
       null,
-      "Logout successful (client should remove token)"
+      "Logout successful (client should remove token)",
     );
   }),
 
-  // Optional: Refresh token (if you implement token refreshing)
+  // Optional: Refresh token
   refreshToken: asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
 
@@ -196,24 +237,34 @@ export const authController = {
         res,
         statusType.BAD_REQUEST,
         null,
-        "Refresh token is required"
+        "Refresh token is required",
       );
     }
 
     try {
       const decoded = jwt.verify(refreshToken, JWT_SECRET);
-      const db = getDb();
+      const prisma = getDb();
 
-      const user = await db.get("SELECT id, email FROM users WHERE id = ?", [
-        decoded.userId,
-      ]);
+      if (!prisma) {
+        return sendResponse(
+          res,
+          statusType.INTERNAL_SERVER_ERROR,
+          null,
+          "Database not initialized",
+        );
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, email: true },
+      });
 
       if (!user) {
         return sendResponse(
           res,
           statusType.UNAUTHORIZED,
           null,
-          "Invalid refresh token"
+          "Invalid refresh token",
         );
       }
 
@@ -221,14 +272,14 @@ export const authController = {
       const newToken = jwt.sign(
         { userId: user.id, email: user.email },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       // Create new refresh token
       const newRefreshToken = jwt.sign(
         { userId: user.id, email: user.email },
         JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "7d" },
       );
 
       return sendResponse(
@@ -238,7 +289,7 @@ export const authController = {
           token: newToken,
           refreshToken: newRefreshToken,
         },
-        "Token refreshed successfully"
+        "Token refreshed successfully",
       );
     } catch (error) {
       console.error("Refresh token error:", error);
@@ -247,7 +298,7 @@ export const authController = {
         res,
         statusType.UNAUTHORIZED,
         null,
-        "Invalid or expired refresh token"
+        "Invalid or expired refresh token",
       );
     }
   }),

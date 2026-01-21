@@ -1,7 +1,6 @@
-//server/src/server.js
 import express from "express";
 import cors from "cors";
-import { initializeDatabase } from "./db/database.js";
+import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
 import authRoutes from "./route/auth.js";
 
 const app = express();
@@ -11,15 +10,21 @@ app.use(
   cors({
     origin: "http://localhost:5173",
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 
 // Initialize database and then start server
 const startServer = async () => {
   try {
-    // Initialize database
+    console.log("🚀 Starting server initialization...");
+
+    // Initialize database (this will create it if it doesn't exist)
     await initializeDatabase();
+
+    // Get database location for debugging
+    const dbLocation = getDatabaseLocation();
+    console.log(`📁 Final database location: ${dbLocation}`);
 
     // Routes
     app.use("/api/auth", authRoutes);
@@ -29,6 +34,8 @@ const startServer = async () => {
       res.json({
         status: "Backend running",
         database: "Connected",
+        location: dbLocation,
+        timestamp: new Date().toISOString(),
       });
     });
 

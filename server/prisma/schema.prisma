@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  shop_name  String?
+  phone      String?
+  products   Product[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Product {
+  id                 Int     @id @default(autoincrement())
+  productCode        String  @unique @map("product_code")
+  productBrand       String  @map("product_brand")
+  description        String
+  hsnSacCode        String  @map("hsn_sac_code")
+  goodsServices     String  @map("goods_services")
+  weight             Float
+  unit               String
+  productGroup       String  @map("product_group")
+  productShortName  String? @map("product_short_name")
+  brand              String?
+  purchaseUnit      String? @map("purchase_unit")
+  conversionFactor  Float?  @default(1) @map("conversion_factor")
+  pricePerPcs       Float?  @map("price_per_pcs")
+  productCompany    String? @map("product_company")
+  saleUnit          String? @map("sale_unit")
+  cartonPack        Int?    @default(1) @map("carton_pack")
+  innerPack         Int?    @map("inner_pack")
+  packaging         String?
+  insuranceTax      Float?  @map("insurance_tax")
+  basicPrice        Float?  @map("basic_price")
+  openingStock      Int?    @default(0) @map("opening_stock")
+  mrp               Float?
+  purchaseRate      Float?  @map("purchase_rate")
+  saleRate          Float?  @map("sale_rate")
+  margin            Float?
+  batchNumber       String? @map("batch_number")
+  mfgDate           String? @map("mfg_date")
+  expDate           String? @map("exp_date")
+  barcode           String?
+  imageUrl          String? @map("image_url")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+  userId            Int?
+  user              User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productCode])
+  @@index([productBrand])
+  @@map("products")
+}
+
+model SchemaVersion {
+  version Int @id @default(1)
+}
