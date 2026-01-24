@@ -1,4 +1,3 @@
-// components/forms/CustomerForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,50 +29,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Customer type options
+const customerTypeOptions = [
+  "Retail Store",
+  "Supermarket",
+  "Hypermarket",
+  "Chain Store",
+  "Kirana",
+  "Distributor",
+  "Wholesaler",
+  "Corporate",
+  "Online Store",
+  "Other",
+];
+
 // Define the form schema
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Customer name must be at least 2 characters.",
+  companyName: z.string().min(2, {
+    message: "Company name must be at least 2 characters.",
   }),
-  type: z.enum([
-    "Retail Store",
-    "Supermarket",
-    "Hypermarket",
-    "Chain Store",
-    "Kirana",
-    "Distributor",
-  ]),
-  contactPerson: z.string().min(2, {
-    message: "Contact person name must be at least 2 characters.",
+  personName: z.string().min(2, {
+    message: "Person name must be at least 2 characters.",
   }),
-  mobile: z.string().min(10, {
-    message: "Mobile number must be at least 10 digits.",
+  phoneNo: z.string().min(10, {
+    message: "Phone number must be at least 10 digits.",
   }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string().email().or(z.literal("")).optional(),
+  customerType: z.string().optional(),
+  city: z.string().optional(),
   address: z.string().min(5, {
     message: "Address must be at least 5 characters.",
   }),
-  city: z.string().min(2, {
-    message: "City must be at least 2 characters.",
-  }),
-  state: z.string().min(2, {
-    message: "State must be at least 2 characters.",
-  }),
-  pincode: z.string().min(6, {
-    message: "Pincode must be at least 6 characters.",
-  }),
-  creditLimit: z.coerce.number().min(0, {
-    message: "Credit limit must be a positive number.",
-  }),
-  outstandingBalance: z.coerce.number().min(0, {
-    message: "Outstanding balance must be a positive number.",
-  }),
-  salesman: z.string().min(2, {
-    message: "Salesman name must be at least 2 characters.",
-  }),
-  status: z.enum(["Active", "Inactive", "Credit Hold", "Blocked"]),
+  pincode: z.string().optional(),
+  status: z.boolean(),
 });
 
 export type CustomerFormData = z.infer<typeof formSchema>;
@@ -83,27 +71,18 @@ interface CustomerFormProps {
   onOpenChange: (open: boolean) => void;
   editingCustomer?: {
     id: number;
-    name: string;
-    type:
-      | "Retail Store"
-      | "Supermarket"
-      | "Hypermarket"
-      | "Chain Store"
-      | "Kirana"
-      | "Distributor";
-    contactPerson: string;
-    mobile: string;
+    companyName: string;
+    personName: string;
+    phoneNo: string;
     email: string;
+    customerType: string | null;
+    city: string | null;
     address: string;
-    city: string;
-    state: string;
-    pincode: string;
-    creditLimit: number;
-    outstandingBalance: number;
-    salesman: string;
-    status: "Active" | "Inactive" | "Credit Hold" | "Blocked";
+    pincode: string | null;
+    status: boolean;
   } | null;
   onSave: (data: CustomerFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function CustomerForm({
@@ -111,23 +90,20 @@ export default function CustomerForm({
   onOpenChange,
   editingCustomer,
   onSave,
+  isSubmitting = false,
 }: CustomerFormProps) {
   const form = useForm<CustomerFormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      type: "Retail Store",
-      contactPerson: "",
-      mobile: "",
+      companyName: "",
+      personName: "",
+      phoneNo: "",
       email: "",
-      address: "",
+      customerType: "",
       city: "",
-      state: "",
+      address: "",
       pincode: "",
-      creditLimit: 0,
-      outstandingBalance: 0,
-      salesman: "",
-      status: "Active",
+      status: true,
     },
   });
 
@@ -135,47 +111,33 @@ export default function CustomerForm({
   useEffect(() => {
     if (editingCustomer) {
       form.reset({
-        name: editingCustomer.name,
-        type: editingCustomer.type,
-        contactPerson: editingCustomer.contactPerson,
-        mobile: editingCustomer.mobile,
-        email: editingCustomer.email,
+        companyName: editingCustomer.companyName,
+        personName: editingCustomer.personName,
+        phoneNo: editingCustomer.phoneNo,
+        email: editingCustomer.email || "",
+        customerType: editingCustomer.customerType || "",
+        city: editingCustomer.city || "",
         address: editingCustomer.address,
-        city: editingCustomer.city,
-        state: editingCustomer.state,
-        pincode: editingCustomer.pincode,
-        creditLimit: editingCustomer.creditLimit,
-        outstandingBalance: editingCustomer.outstandingBalance,
-        salesman: editingCustomer.salesman,
+        pincode: editingCustomer.pincode || "",
         status: editingCustomer.status,
       });
     } else {
       form.reset({
-        name: "",
-        type: "Retail Store",
-        contactPerson: "",
-        mobile: "",
+        companyName: "",
+        personName: "",
+        phoneNo: "",
         email: "",
-        address: "",
+        customerType: "",
         city: "",
-        state: "",
+        address: "",
         pincode: "",
-        creditLimit: 0,
-        outstandingBalance: 0,
-        salesman: "",
-        status: "Active",
+        status: true,
       });
     }
   }, [editingCustomer, form]);
 
   const onSubmit = (data: CustomerFormData) => {
-    try {
-      onSave(data, editingCustomer?.id);
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Failed to save customer:", error);
-    }
+    onSave(data, editingCustomer?.id);
   };
 
   return (
@@ -187,56 +149,28 @@ export default function CustomerForm({
           </DialogTitle>
           <DialogDescription>
             {editingCustomer
-              ? "Update customer information and credit details."
-              : "Add a new customer to your database with contact and credit information."}
+              ? "Update customer information."
+              : "Add a new customer to your database with contact information."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Name */}
+              {/* Company Name */}
               <FormField
                 control={form.control}
-                name="name"
+                name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Name *</FormLabel>
+                    <FormLabel>Company Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Reliance Fresh" {...field} />
+                      <Input
+                        placeholder="e.g., Reliance Fresh"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Type *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Retail Store">
-                          Retail Store
-                        </SelectItem>
-                        <SelectItem value="Supermarket">Supermarket</SelectItem>
-                        <SelectItem value="Hypermarket">Hypermarket</SelectItem>
-                        <SelectItem value="Chain Store">Chain Store</SelectItem>
-                        <SelectItem value="Kirana">Kirana</SelectItem>
-                        <SelectItem value="Distributor">Distributor</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -245,27 +179,35 @@ export default function CustomerForm({
               {/* Contact Person */}
               <FormField
                 control={form.control}
-                name="contactPerson"
+                name="personName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contact Person *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Mr. Sharma" {...field} />
+                      <Input
+                        placeholder="e.g., Mr. Sharma"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Mobile */}
+              {/* Phone Number */}
               <FormField
                 control={form.control}
-                name="mobile"
+                name="phoneNo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile Number *</FormLabel>
+                    <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="+91 9876543210" {...field} />
+                      <Input
+                        placeholder="+91 9876543210"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -278,97 +220,45 @@ export default function CustomerForm({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address *</FormLabel>
+                    <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="customer@example.com" {...field} />
+                      <Input
+                        placeholder="customer@example.com"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Salesman */}
+              {/* Customer Type */}
               <FormField
                 control={form.control}
-                name="salesman"
+                name="customerType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Salesman *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Rajesh Kumar" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status *</FormLabel>
+                    <FormLabel>Customer Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                        <SelectItem value="Credit Hold">Credit Hold</SelectItem>
-                        <SelectItem value="Blocked">Blocked</SelectItem>
+                        <SelectItem value="">Not Specified</SelectItem>
+                        {customerTypeOptions.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Credit Limit */}
-              <FormField
-                control={form.control}
-                name="creditLimit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Credit Limit (₹) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="500000"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value))
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Outstanding Balance */}
-              <FormField
-                control={form.control}
-                name="outstandingBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Outstanding Balance (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value))
-                        }
-                      />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -380,24 +270,13 @@ export default function CustomerForm({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City *</FormLabel>
+                    <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Delhi" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* State */}
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Delhi" {...field} />
+                      <Input
+                        placeholder="e.g., Delhi"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -410,10 +289,43 @@ export default function CustomerForm({
                 name="pincode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pincode *</FormLabel>
+                    <FormLabel>Pincode</FormLabel>
                     <FormControl>
-                      <Input placeholder="110001" {...field} />
+                      <Input
+                        placeholder="110001"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Status */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={(value: string) =>
+                        field.onChange(value === "true")
+                      }
+                      value={field.value ? "true" : "false"}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="true">Active</SelectItem>
+                        <SelectItem value="false">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -433,6 +345,7 @@ export default function CustomerForm({
                       className="resize-none"
                       rows={3}
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -445,11 +358,16 @@ export default function CustomerForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingCustomer ? "Update Customer" : "Create Customer"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingCustomer
+                    ? "Update Customer"
+                    : "Create Customer"}
               </Button>
             </DialogFooter>
           </form>

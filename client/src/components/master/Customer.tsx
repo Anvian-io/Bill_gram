@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Plus,
   Edit,
   Trash2,
@@ -23,7 +21,9 @@ import {
   Phone,
   Mail,
   MapPin,
-  Calendar,
+  RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import CustomerForm, {
@@ -50,239 +51,43 @@ import {
   badgeVariants,
 } from "../FramerVariants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { customerService } from "@/services/customerService";
+import { type Customer, type CustomerFilters } from "@/types/customer";
 
-// Define type for customer
-interface Customer {
-  id: number;
-  name: string;
-  code: string;
-  type:
-    | "Retail Store"
-    | "Supermarket"
-    | "Hypermarket"
-    | "Chain Store"
-    | "Kirana"
-    | "Distributor";
-  contactPerson: string;
-  mobile: string;
-  email: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  creditLimit: number;
-  outstandingBalance: number;
-  creditUsedPercentage: number;
-  salesman: string;
-  status: "Active" | "Inactive" | "Credit Hold" | "Blocked";
-  createdAt: string;
-  updatedAt: string;
+// Define the API response structure
+interface CustomersResponse {
+  data: {
+    customers: Customer[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
-export default function Customer() {
+// Customer type options
+const customerTypeOptions = [
+  "Retail Store",
+  "Supermarket",
+  "Hypermarket",
+  "Chain Store",
+  "Kirana",
+  "Distributor",
+  "Wholesaler",
+  "Corporate",
+  "Online Store",
+  "Other",
+];
+
+export default function CustomerComponent() {
   // State for customers
-  const [customers, setCustomers] = useState<Customer[]>([
-    {
-      id: 1,
-      name: "Reliance Fresh",
-      code: "CUST001",
-      type: "Retail Store",
-      contactPerson: "Mr. Sharma",
-      mobile: "+91 9876543210",
-      email: "orders@reliance.com",
-      address: "Shop No. 12, Ground Floor",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110001",
-      creditLimit: 500000,
-      outstandingBalance: 125000,
-      creditUsedPercentage: 25,
-      salesman: "Rajesh Kumar",
-      status: "Active",
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      name: "Big Bazaar",
-      code: "CUST002",
-      type: "Supermarket",
-      contactPerson: "Ms. Gupta",
-      mobile: "+91 8765432109",
-      email: "purchase@bigbazaar.com",
-      address: "Rajouri Garden, Main Road",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110027",
-      creditLimit: 1000000,
-      outstandingBalance: 325000,
-      creditUsedPercentage: 32.5,
-      salesman: "Priya Sharma",
-      status: "Active",
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      name: "More Retail",
-      code: "CUST003",
-      type: "Hypermarket",
-      contactPerson: "Mr. Reddy",
-      mobile: "+91 7654321098",
-      email: "vendor@more.com",
-      address: "Saket, DLF Mall",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110017",
-      creditLimit: 750000,
-      outstandingBalance: 0,
-      creditUsedPercentage: 0,
-      salesman: "Amit Patel",
-      status: "Active",
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      name: "DMart",
-      code: "CUST004",
-      type: "Chain Store",
-      contactPerson: "Mr. Patel",
-      mobile: "+91 6543210987",
-      email: "suppliers@dmart.com",
-      address: "Sector 12, Dwarka",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110078",
-      creditLimit: 2000000,
-      outstandingBalance: 850000,
-      creditUsedPercentage: 42.5,
-      salesman: "Sneha Reddy",
-      status: "Credit Hold",
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      name: "Local Kirana Store",
-      code: "CUST005",
-      type: "Kirana",
-      contactPerson: "Mr. Singh",
-      mobile: "+91 5432109876",
-      email: "kirana@local.com",
-      address: "Gali No. 5, Karol Bagh",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110005",
-      creditLimit: 100000,
-      outstandingBalance: 25000,
-      creditUsedPercentage: 25,
-      salesman: "Vikram Singh",
-      status: "Active",
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      name: "Metro Cash & Carry",
-      code: "CUST006",
-      type: "Hypermarket",
-      contactPerson: "Ms. Verma",
-      mobile: "+91 4321098765",
-      email: "procurement@metro.com",
-      address: "Sector 18, Noida",
-      city: "Noida",
-      state: "Uttar Pradesh",
-      pincode: "201301",
-      creditLimit: 1500000,
-      outstandingBalance: 450000,
-      creditUsedPercentage: 30,
-      salesman: "Rajesh Kumar",
-      status: "Active",
-      createdAt: "2024-02-28 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 7,
-      name: "Spencer's Retail",
-      code: "CUST007",
-      type: "Supermarket",
-      contactPerson: "Mr. Joshi",
-      mobile: "+91 3210987654",
-      email: "vendors@spencers.com",
-      address: "MG Road, Gurgaon",
-      city: "Gurgaon",
-      state: "Haryana",
-      pincode: "122002",
-      creditLimit: 800000,
-      outstandingBalance: 200000,
-      creditUsedPercentage: 25,
-      salesman: "Priya Sharma",
-      status: "Active",
-      createdAt: "2024-01-25 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 8,
-      name: "Star Distributors",
-      code: "CUST008",
-      type: "Distributor",
-      contactPerson: "Mr. Agarwal",
-      mobile: "+91 2109876543",
-      email: "info@stardist.com",
-      address: "Industrial Area, Faridabad",
-      city: "Faridabad",
-      state: "Haryana",
-      pincode: "121003",
-      creditLimit: 3000000,
-      outstandingBalance: 1200000,
-      creditUsedPercentage: 40,
-      salesman: "Amit Patel",
-      status: "Credit Hold",
-      createdAt: "2024-03-10 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 9,
-      name: "Easy Day Store",
-      code: "CUST009",
-      type: "Retail Store",
-      contactPerson: "Ms. Kapoor",
-      mobile: "+91 1098765432",
-      email: "store@easyday.com",
-      address: "Sector 22, Chandigarh",
-      city: "Chandigarh",
-      state: "Chandigarh",
-      pincode: "160022",
-      creditLimit: 600000,
-      outstandingBalance: 180000,
-      creditUsedPercentage: 30,
-      salesman: "Sneha Reddy",
-      status: "Active",
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 10,
-      name: "Best Buy Mart",
-      code: "CUST010",
-      type: "Kirana",
-      contactPerson: "Mr. Tiwari",
-      mobile: "+91 0987654321",
-      email: "contact@bestbuymart.com",
-      address: "Lajpat Nagar, Delhi",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110024",
-      creditLimit: 150000,
-      outstandingBalance: 75000,
-      creditUsedPercentage: 50,
-      salesman: "Vikram Singh",
-      status: "Blocked",
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-  ]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -291,90 +96,110 @@ export default function Customer() {
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
-    null
+    null,
   );
 
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<CustomerFilters>({
     search: "",
-    name: "",
-    type: "all" as "all" | Customer["type"],
-    status: "all" as "all" | Customer["status"],
-    minCreditLimit: "",
-    maxCreditLimit: "",
+    companyName: "",
+    personName: "",
+    phoneNo: "",
     city: "",
-    salesman: "",
+    customerType: "",
+    status: "all",
+    showDeleted: false,
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter customers
-  const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !customer.name.toLowerCase().includes(searchLower) &&
-        !customer.code.toLowerCase().includes(searchLower) &&
-        !customer.contactPerson.toLowerCase().includes(searchLower) &&
-        !customer.mobile.includes(filters.search)
-      ) {
-        return false;
+  // Safely handle customers data
+  const displayCustomers = useMemo(() => {
+    if (!customers || !Array.isArray(customers)) {
+      return [];
+    }
+    return customers;
+  }, [customers]);
+
+  // Fetch customers
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.companyName) {
+        params.companyName = filters.companyName;
+      }
+      if (filters.personName) {
+        params.personName = filters.personName;
+      }
+      if (filters.phoneNo) {
+        params.phoneNo = filters.phoneNo;
+      }
+      if (filters.city) {
+        params.city = filters.city;
+      }
+      if (filters.customerType) {
+        params.customerType = filters.customerType;
+      }
+      if (filters.status !== "all") {
+        params.status = filters.status === "active";
+      }
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !customer.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (filters.type !== "all" && customer.type !== filters.type)
-        return false;
-      if (filters.status !== "all" && customer.status !== filters.status)
-        return false;
-      if (
-        filters.minCreditLimit &&
-        customer.creditLimit < Number(filters.minCreditLimit)
-      )
-        return false;
-      if (
-        filters.maxCreditLimit &&
-        customer.creditLimit > Number(filters.maxCreditLimit)
-      )
-        return false;
-      if (
-        filters.city &&
-        !customer.city.toLowerCase().includes(filters.city.toLowerCase())
-      )
-        return false;
-      if (
-        filters.salesman &&
-        !customer.salesman
-          .toLowerCase()
-          .includes(filters.salesman.toLowerCase())
-      )
-        return false;
+      const response = await customerService.getCustomers(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
 
-      return true;
-    });
-  }, [customers, filters]);
+      // Type the response as CustomersResponse
+      const apiResponse = response as unknown as CustomersResponse;
 
-  // Paginated data
-  const paginatedCustomers = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredCustomers.slice(startIndex, endIndex);
-  }, [filteredCustomers, currentPage, itemsPerPage]);
+      if (apiResponse?.data) {
+        const customersData = apiResponse.data.customers || [];
+        const pagination = apiResponse.data.pagination || {};
 
-  // Total pages
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredCustomers.length / itemsPerPage)
-  );
+        setCustomers(Array.isArray(customersData) ? customersData : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        console.error("Unexpected response structure:", response);
+        setCustomers([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to fetch customers", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      setCustomers([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCustomers();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -393,13 +218,13 @@ export default function Customer() {
   const clearFilters = () => {
     setFilters({
       search: "",
-      name: "",
-      type: "all",
-      status: "all",
-      minCreditLimit: "",
-      maxCreditLimit: "",
+      companyName: "",
+      personName: "",
+      phoneNo: "",
       city: "",
-      salesman: "",
+      customerType: "",
+      status: "all",
+      showDeleted: false,
     });
   };
 
@@ -408,7 +233,11 @@ export default function Customer() {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "type" || filterName === "status" ? "all" : "",
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -419,48 +248,27 @@ export default function Customer() {
   };
 
   // Handle form save
-  const handleSave = (data: CustomerFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    // Calculate credit used percentage
-    const creditUsedPercentage = data.outstandingBalance
-      ? (data.outstandingBalance / data.creditLimit) * 100
-      : 0;
-
-    if (id) {
-      // Update existing customer
-      setCustomers((prev) =>
-        prev.map((customer) =>
-          customer.id === id
-            ? {
-                ...customer,
-                ...data,
-                creditUsedPercentage,
-                updatedAt: now,
-              }
-            : customer
-        )
-      );
-      toast.success("Customer updated successfully!");
-    } else {
-      // Add new customer
-      const newCustomer: Customer = {
-        id: Math.max(...customers.map((c) => c.id)) + 1,
-        code: `CUST${String(
-          Math.max(
-            ...customers.map((c) => parseInt(c.code.replace("CUST", "")))
-          ) + 1
-        ).padStart(3, "0")}`,
-        ...data,
-        creditUsedPercentage,
-        status: "Active" as Customer["status"],
-        createdAt: now,
-        updatedAt: now,
-      };
-      setCustomers((prev) => [...prev, newCustomer]);
-      toast.success("Customer created successfully!");
+  const handleSave = async (data: CustomerFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        // Update existing customer
+        await customerService.updateCustomer(id, data);
+        toast.success("Customer updated successfully!");
+      } else {
+        // Add new customer
+        await customerService.createCustomer(data);
+        toast.success("Customer created successfully!");
+      }
+      setFormOpen(false);
+      fetchCustomers(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save customer", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
@@ -476,14 +284,20 @@ export default function Customer() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (customerToDelete) {
-      setCustomers((prev) =>
-        prev.filter((customer) => customer.id !== customerToDelete.id)
-      );
-      toast.success("Customer deleted successfully!");
-      setCustomerToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await customerService.deleteCustomer(customerToDelete.id);
+        toast.success("Customer deleted successfully!");
+        fetchCustomers(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete customer", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setCustomerToDelete(null);
+        setDeleteOpen(false);
+      }
     }
   };
 
@@ -493,40 +307,43 @@ export default function Customer() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchCustomers();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(
-    currentPage * itemsPerPage,
-    filteredCustomers.length
-  );
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) ||
+        (value && value !== "all" && value !== "")),
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Get initials for avatar
+  // Get avatar initials
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -537,66 +354,34 @@ export default function Customer() {
   };
 
   // Get status badge color
-  const getStatusColor = (status: Customer["status"]) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400";
-      case "Inactive":
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-      case "Credit Hold":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400";
-      case "Blocked":
-        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-    }
+  const getStatusColor = (status: boolean) => {
+    return status
+      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+      : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
   };
 
   // Get type badge color
-  const getTypeColor = (type: Customer["type"]) => {
-    switch (type) {
-      case "Retail Store":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400";
-      case "Supermarket":
-        return "bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400";
-      case "Hypermarket":
-        return "bg-indigo-100 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400";
-      case "Chain Store":
-        return "bg-pink-100 text-pink-800 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400";
-      case "Kirana":
-        return "bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400";
-      case "Distributor":
-        return "bg-teal-100 text-teal-800 hover:bg-teal-100 dark:bg-teal-900/20 dark:text-teal-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-    }
+  const getTypeColor = (type: string | null) => {
+    if (!type)
+      return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
+
+    const typeLower = type.toLowerCase();
+    if (typeLower.includes("retail"))
+      return "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400";
+    if (typeLower.includes("supermarket"))
+      return "bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400";
+    if (typeLower.includes("hypermarket"))
+      return "bg-indigo-100 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400";
+    if (typeLower.includes("chain"))
+      return "bg-pink-100 text-pink-800 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400";
+    if (typeLower.includes("kirana"))
+      return "bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400";
+    if (typeLower.includes("distributor") || typeLower.includes("wholesaler"))
+      return "bg-teal-100 text-teal-800 hover:bg-teal-100 dark:bg-teal-900/20 dark:text-teal-400";
+    if (typeLower.includes("corporate"))
+      return "bg-cyan-100 text-cyan-800 hover:bg-cyan-100 dark:bg-cyan-900/20 dark:text-cyan-400";
+    return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
   };
-
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalCustomers = customers.length;
-    const activeCustomers = customers.filter(
-      (c) => c.status === "Active"
-    ).length;
-    const totalCreditLimit = customers.reduce(
-      (sum, c) => sum + c.creditLimit,
-      0
-    );
-    const totalOutstanding = customers.reduce(
-      (sum, c) => sum + c.outstandingBalance,
-      0
-    );
-    const avgCreditLimit =
-      totalCustomers > 0 ? totalCreditLimit / totalCustomers : 0;
-
-    return {
-      totalCustomers,
-      activeCustomers,
-      totalCreditLimit,
-      totalOutstanding,
-      avgCreditLimit,
-    };
-  }, [customers]);
 
   return (
     <motion.div
@@ -627,10 +412,11 @@ export default function Customer() {
               <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search customers by name, code, or contact..."
+                placeholder="Search by company name, person, phone, or city..."
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
+                disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -638,6 +424,7 @@ export default function Customer() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => handleFilterChange("search", "")}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -651,20 +438,16 @@ export default function Customer() {
                 whileHover="hover"
                 whileTap="tap"
               >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
                 </Button>
               </motion.div>
 
@@ -679,6 +462,7 @@ export default function Customer() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add Customer
@@ -711,6 +495,7 @@ export default function Customer() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -720,6 +505,7 @@ export default function Customer() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -737,30 +523,35 @@ export default function Customer() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* Customer Name Filter */}
+                        {/* Company Name Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="customerName"
+                            htmlFor="companyName"
                             className="text-sm font-medium"
                           >
-                            Customer Name
+                            Company Name
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="customerName"
-                              placeholder="Enter customer name"
-                              value={filters.name}
+                              id="companyName"
+                              placeholder="Enter company name"
+                              value={filters.companyName}
                               onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
+                                handleFilterChange(
+                                  "companyName",
+                                  e.target.value,
+                                )
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.name && (
+                            {filters.companyName && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => clearFilter("companyName")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -768,40 +559,37 @@ export default function Customer() {
                           </div>
                         </div>
 
-                        {/* Type Filter */}
+                        {/* Person Name Filter */}
                         <div className="space-y-2">
-                          <Label htmlFor="type" className="text-sm font-medium">
-                            Type
-                          </Label>
-                          <Select
-                            value={filters.type}
-                            onValueChange={(value: "all" | Customer["type"]) =>
-                              handleFilterChange("type", value)
-                            }
+                          <Label
+                            htmlFor="personName"
+                            className="text-sm font-medium"
                           >
-                            <SelectTrigger id="type">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Types</SelectItem>
-                              <SelectItem value="Retail Store">
-                                Retail Store
-                              </SelectItem>
-                              <SelectItem value="Supermarket">
-                                Supermarket
-                              </SelectItem>
-                              <SelectItem value="Hypermarket">
-                                Hypermarket
-                              </SelectItem>
-                              <SelectItem value="Chain Store">
-                                Chain Store
-                              </SelectItem>
-                              <SelectItem value="Kirana">Kirana</SelectItem>
-                              <SelectItem value="Distributor">
-                                Distributor
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                            Contact Person
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="personName"
+                              placeholder="Enter person name"
+                              value={filters.personName}
+                              onChange={(e) =>
+                                handleFilterChange("personName", e.target.value)
+                              }
+                              className="flex-1"
+                              disabled={isLoading}
+                            />
+                            {filters.personName && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => clearFilter("personName")}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Status Filter */}
@@ -815,113 +603,58 @@ export default function Customer() {
                           <Select
                             value={filters.status}
                             onValueChange={(
-                              value: "all" | Customer["status"]
+                              value: "all" | "active" | "inactive",
                             ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger id="status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                              <SelectItem value="Inactive">Inactive</SelectItem>
-                              <SelectItem value="Credit Hold">
-                                Credit Hold
-                              </SelectItem>
-                              <SelectItem value="Blocked">Blocked</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Credit Limit Range Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Credit Limit Range (₹)
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minCreditLimit}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "minCreditLimit",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxCreditLimit}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "maxCreditLimit",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-
-                        {/* City Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm font-medium">
-                            City
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="city"
-                              placeholder="Enter city"
-                              value={filters.city}
-                              onChange={(e) =>
-                                handleFilterChange("city", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            {filters.city && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("city")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Salesman Filter */}
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="salesman"
+                            htmlFor="showDeleted"
                             className="text-sm font-medium"
                           >
-                            Salesman
+                            Show Deleted
                           </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="salesman"
-                              placeholder="Enter salesman name"
-                              value={filters.salesman}
-                              onChange={(e) =>
-                                handleFilterChange("salesman", e.target.value)
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
                               }
-                              className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.salesman && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("salesman")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
                           </div>
                         </div>
                       </div>
@@ -939,18 +672,34 @@ export default function Customer() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredCustomers.length}{" "}
-            customers
-            {filteredCustomers.length !== customers.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} customers
+                {filters.status !== "all" ||
+                filters.companyName ||
+                filters.personName ||
+                filters.phoneNo ||
+                filters.city ||
+                filters.customerType ||
+                filters.search ||
+                filters.showDeleted
+                  ? " (filtered)"
+                  : ""}
+                {filters.showDeleted && " (including deleted)"}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -975,10 +724,7 @@ export default function Customer() {
                         Contact Info
                       </TableHead>
                       <TableHead className="font-semibold">Type</TableHead>
-                      <TableHead className="font-semibold">
-                        Credit Information
-                      </TableHead>
-                      <TableHead className="font-semibold">Salesman</TableHead>
+                      <TableHead className="font-semibold">Address</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
@@ -988,7 +734,24 @@ export default function Customer() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedCustomers.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={7} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading customers...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayCustomers.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -997,7 +760,7 @@ export default function Customer() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={8}
+                            colSpan={7}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1024,7 +787,7 @@ export default function Customer() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedCustomers.map((customer, index) => (
+                        displayCustomers.map((customer, index) => (
                           <motion.tr
                             key={customer.id}
                             custom={index}
@@ -1046,27 +809,27 @@ export default function Customer() {
                                 >
                                   <Avatar className="h-10 w-10 border-2 border-primary/20">
                                     <AvatarFallback className="bg-primary/10 text-primary">
-                                      {getInitials(customer.name)}
+                                      {getInitials(customer.companyName)}
                                     </AvatarFallback>
                                   </Avatar>
                                 </motion.div>
                                 <div>
                                   <p className="font-medium text-heading">
-                                    {customer.name}
+                                    {customer.companyName}
+                                    {customer.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        Deleted
+                                      </Badge>
+                                    )}
                                   </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {customer.code}
-                                    </Badge>
-                                    <p className="text-xs text-muted-foreground">
-                                      {customer.city}, {customer.state}
-                                    </p>
-                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {customer.personName}
+                                  </p>
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    Contact: {customer.contactPerson}
+                                    ID: {customer.id}
                                   </p>
                                 </div>
                               </div>
@@ -1076,93 +839,14 @@ export default function Customer() {
                                 <div className="flex items-center gap-2">
                                   <Phone className="h-3 w-3 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {customer.mobile}
+                                    {customer.phoneNo}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Mail className="h-3 w-3 text-muted-foreground" />
                                   <span className="text-sm truncate">
-                                    {customer.email}
+                                    {customer.email || "No email"}
                                   </span>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
-                                  <span className="text-xs text-muted-foreground line-clamp-2">
-                                    {customer.address}
-                                  </span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge className={getTypeColor(customer.type)}>
-                                  {customer.type}
-                                </Badge>
-                              </motion.div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div className="space-y-2">
-                                <div>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                      Limit:
-                                    </span>
-                                    <span className="font-medium">
-                                      {formatCurrency(customer.creditLimit)}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between text-sm mt-1">
-                                    <span className="text-muted-foreground">
-                                      Outstanding:
-                                    </span>
-                                    <span
-                                      className={`font-medium ${
-                                        customer.outstandingBalance >
-                                        customer.creditLimit * 0.8
-                                          ? "text-red-600"
-                                          : customer.outstandingBalance > 0
-                                          ? "text-yellow-600"
-                                          : "text-green-600"
-                                      }`}
-                                    >
-                                      {formatCurrency(
-                                        customer.outstandingBalance
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex justify-between text-xs">
-                                    <span className="text-muted-foreground">
-                                      Used:
-                                    </span>
-                                    <span>
-                                      {customer.creditUsedPercentage.toFixed(1)}
-                                      %
-                                    </span>
-                                  </div>
-                                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                    <motion.div
-                                      className={`h-full ${
-                                        customer.creditUsedPercentage > 80
-                                          ? "bg-red-500"
-                                          : customer.creditUsedPercentage > 50
-                                          ? "bg-yellow-500"
-                                          : "bg-green-500"
-                                      }`}
-                                      initial={{ width: 0 }}
-                                      animate={{
-                                        width: `${customer.creditUsedPercentage}%`,
-                                      }}
-                                      transition={{
-                                        duration: 1,
-                                        delay: index * 0.1,
-                                      }}
-                                    />
-                                  </div>
                                 </div>
                               </div>
                             </TableCell>
@@ -1172,12 +856,30 @@ export default function Customer() {
                                 whileHover="hover"
                               >
                                 <Badge
-                                  variant="outline"
-                                  className="font-medium"
+                                  className={getTypeColor(
+                                    customer.customerType,
+                                  )}
                                 >
-                                  {customer.salesman}
+                                  {customer.customerType || "Not Specified"}
                                 </Badge>
                               </motion.div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="space-y-1">
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
+                                  <span className="text-xs text-muted-foreground line-clamp-2">
+                                    {customer.address}
+                                  </span>
+                                </div>
+                                {customer.city && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {customer.city}
+                                    {customer.pincode &&
+                                      ` - ${customer.pincode}`}
+                                  </p>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.div
@@ -1187,7 +889,7 @@ export default function Customer() {
                                 <Badge
                                   className={getStatusColor(customer.status)}
                                 >
-                                  {customer.status}
+                                  {customer.status ? "Active" : "Inactive"}
                                 </Badge>
                               </motion.div>
                             </TableCell>
@@ -1227,6 +929,7 @@ export default function Customer() {
                                     size="icon"
                                     onClick={() => handleEdit(customer)}
                                     className="h-8 w-8"
+                                    disabled={customer.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1241,6 +944,7 @@ export default function Customer() {
                                     size="icon"
                                     onClick={() => confirmDelete(customer)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={customer.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1259,7 +963,7 @@ export default function Customer() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredCustomers.length > 0 && (
+        {!isLoading && displayCustomers.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1279,6 +983,7 @@ export default function Customer() {
           onOpenChange={setFormOpen}
           editingCustomer={editingCustomer}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}
@@ -1288,7 +993,7 @@ export default function Customer() {
           mainText="Delete Customer"
           subText={
             customerToDelete
-              ? `Are you sure you want to delete "${customerToDelete.name}"? This action cannot be undone and will also delete associated transactions.`
+              ? `Are you sure you want to delete "${customerToDelete.companyName}"? This action cannot be undone.`
               : "This action cannot be undone."
           }
           nextButtonText="Delete"
