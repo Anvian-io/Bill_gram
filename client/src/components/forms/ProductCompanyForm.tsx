@@ -29,9 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 
-// Define the form schema
+// Define the form schema with boolean status
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Company name must be at least 2 characters.",
@@ -49,7 +48,7 @@ const formSchema = z.object({
   address: z.string().min(5, {
     message: "Address must be at least 5 characters.",
   }),
-  status: z.enum(["Active", "Inactive"]).default("Active"),
+  status: z.boolean(),
 });
 
 export type ProductCompanyFormData = z.infer<typeof formSchema>;
@@ -65,10 +64,10 @@ interface ProductCompanyFormProps {
     phone: string;
     website: string;
     address: string;
-    productCount: number;
-    status: "Active" | "Inactive";
+    status: boolean;
   } | null;
   onSave: (data: ProductCompanyFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function ProductCompanyForm({
@@ -76,9 +75,10 @@ export default function ProductCompanyForm({
   onOpenChange,
   editingCompany,
   onSave,
+  isSubmitting = false,
 }: ProductCompanyFormProps) {
   const form = useForm<ProductCompanyFormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       contactPerson: "",
@@ -86,7 +86,7 @@ export default function ProductCompanyForm({
       phone: "",
       website: "",
       address: "",
-      status: "Active",
+      status: true,
     },
   });
 
@@ -98,7 +98,7 @@ export default function ProductCompanyForm({
         contactPerson: editingCompany.contactPerson,
         email: editingCompany.email,
         phone: editingCompany.phone,
-        website: editingCompany.website,
+        website: editingCompany.website || "",
         address: editingCompany.address,
         status: editingCompany.status,
       });
@@ -110,24 +110,13 @@ export default function ProductCompanyForm({
         phone: "",
         website: "",
         address: "",
-        status: "Active",
+        status: true,
       });
     }
   }, [editingCompany, form]);
 
   const onSubmit = (data: ProductCompanyFormData) => {
-    try {
-      onSave(data, editingCompany?.id);
-      toast.success(
-        editingCompany
-          ? "Company updated successfully!"
-          : "Company created successfully!"
-      );
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      toast.error("Failed to save company");
-    }
+    onSave(data, editingCompany?.id);
   };
 
   return (
@@ -154,7 +143,11 @@ export default function ProductCompanyForm({
                   <FormItem>
                     <FormLabel>Company Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 137 Degrees" {...field} />
+                      <Input
+                        placeholder="e.g., 137 Degrees"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,7 +161,11 @@ export default function ProductCompanyForm({
                   <FormItem>
                     <FormLabel>Contact Person *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Smith" {...field} />
+                      <Input
+                        placeholder="e.g., John Smith"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -187,6 +184,7 @@ export default function ProductCompanyForm({
                       <Input
                         placeholder="e.g., contact@company.com"
                         {...field}
+                        disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />
@@ -201,7 +199,11 @@ export default function ProductCompanyForm({
                   <FormItem>
                     <FormLabel>Phone *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., +1 (555) 123-4567" {...field} />
+                      <Input
+                        placeholder="e.g., +1 (555) 123-4567"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -216,7 +218,11 @@ export default function ProductCompanyForm({
                 <FormItem>
                   <FormLabel>Website</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., www.company.com" {...field} />
+                    <Input
+                      placeholder="e.g., www.company.com"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -235,6 +241,7 @@ export default function ProductCompanyForm({
                       className="resize-none"
                       rows={3}
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -247,10 +254,13 @@ export default function ProductCompanyForm({
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status *</FormLabel>
+                  <FormLabel>Status</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    onValueChange={(value: string) =>
+                      field.onChange(value === "true")
+                    }
+                    value={field.value ? "true" : "false"}
+                    disabled={isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -258,8 +268,8 @@ export default function ProductCompanyForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -272,11 +282,16 @@ export default function ProductCompanyForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingCompany ? "Update Company" : "Create Company"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingCompany
+                    ? "Update Company"
+                    : "Create Company"}
               </Button>
             </DialogFooter>
           </form>

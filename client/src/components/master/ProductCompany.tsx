@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Plus,
   Edit,
   Trash2,
@@ -25,7 +23,9 @@ import {
   Globe,
   MapPin,
   User,
-  Calendar,
+  RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import ProductCompanyForm, {
@@ -52,257 +53,138 @@ import {
   badgeVariants,
 } from "../FramerVariants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { productCompanyService } from "@/services/productCompanyService";
+import {
+  type ProductCompany,
+  type ProductCompanyFilters,
+} from "@/types/productCompany";
 
-// Define type for product company
-interface ProductCompany {
-  id: number;
-  name: string;
-  logo: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  website: string;
-  address: string;
-  productCount: number;
-  status: "Active" | "Inactive";
-  createdAt: string;
-  updatedAt: string;
+// Define the API response structure
+interface ProductCompaniesResponse {
+  data: {
+    companies: ProductCompany[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
-export default function ProductCompany() {
+export default function ProductCompanyComponent() {
   // State for product companies
-  const [companies, setCompanies] = useState<ProductCompany[]>([
-    {
-      id: 1,
-      name: "137 Degrees",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=137",
-      contactPerson: "John Smith",
-      email: "john@137degrees.com",
-      phone: "+1 (555) 123-4567",
-      website: "www.137degrees.com",
-      address: "123 Business St, New York, NY",
-      productCount: 58,
-      status: "Active",
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      name: "Parle Agro",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Parle",
-      contactPerson: "Sarah Johnson",
-      email: "sarah@parle.com",
-      phone: "+1 (555) 987-6543",
-      website: "www.parleagro.com",
-      address: "456 Industry Ave, Chicago, IL",
-      productCount: 42,
-      status: "Active",
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      name: "Nestle India",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Nestle",
-      contactPerson: "Michael Chen",
-      email: "michael@nestle.in",
-      phone: "+91 9876543210",
-      website: "www.nestle.in",
-      address: "789 Corporate Rd, Mumbai, India",
-      productCount: 127,
-      status: "Active",
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      name: "Britannia Industries",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Britannia",
-      contactPerson: "Priya Sharma",
-      email: "priya@britannia.com",
-      phone: "+91 8765432109",
-      website: "www.britannia.com",
-      address: "321 Factory St, Delhi, India",
-      productCount: 89,
-      status: "Inactive",
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      name: "Amul",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Amul",
-      contactPerson: "Raj Patel",
-      email: "raj@amul.com",
-      phone: "+91 7654321098",
-      website: "www.amul.com",
-      address: "654 Dairy Rd, Gujarat, India",
-      productCount: 156,
-      status: "Active",
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      name: "Coca-Cola",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Coca",
-      contactPerson: "David Brown",
-      email: "david@cocacola.com",
-      phone: "+1 (555) 234-5678",
-      website: "www.coca-cola.com",
-      address: "789 Beverage Blvd, Atlanta, GA",
-      productCount: 203,
-      status: "Active",
-      createdAt: "2024-02-28 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 7,
-      name: "PepsiCo",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Pepsi",
-      contactPerson: "Lisa White",
-      email: "lisa@pepsico.com",
-      phone: "+1 (555) 345-6789",
-      website: "www.pepsico.com",
-      address: "987 Refreshment Rd, Purchase, NY",
-      productCount: 178,
-      status: "Active",
-      createdAt: "2024-01-25 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 8,
-      name: "Unilever",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=Unilever",
-      contactPerson: "Robert Green",
-      email: "robert@unilever.com",
-      phone: "+44 20 7822 5252",
-      website: "www.unilever.com",
-      address: "100 Victoria Embankment, London, UK",
-      productCount: 312,
-      status: "Active",
-      createdAt: "2024-03-10 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 9,
-      name: "Procter & Gamble",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=PG",
-      contactPerson: "Emily Davis",
-      email: "emily@pg.com",
-      phone: "+1 (513) 983-1100",
-      website: "www.pg.com",
-      address: "1 Procter & Gamble Plaza, Cincinnati, OH",
-      productCount: 267,
-      status: "Active",
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 10,
-      name: "Johnson & Johnson",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=JNJ",
-      contactPerson: "Thomas Wilson",
-      email: "thomas@jnj.com",
-      phone: "+1 (732) 524-0400",
-      website: "www.jnj.com",
-      address: "1 Johnson & Johnson Plaza, New Brunswick, NJ",
-      productCount: 189,
-      status: "Inactive",
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-  ]);
+  const [companies, setCompanies] = useState<ProductCompany[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<ProductCompany | null>(
-    null
+    null,
   );
 
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<ProductCompany | null>(
-    null
+    null,
   );
 
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<ProductCompanyFilters>({
     search: "",
     name: "",
     contactPerson: "",
     email: "",
-    status: "all" as "all" | "Active" | "Inactive",
-    minProducts: "",
-    maxProducts: "",
+    status: "all",
+    showDeleted: false,
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter companies
-  const filteredCompanies = useMemo(() => {
-    return companies.filter((company) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !company.name.toLowerCase().includes(searchLower) &&
-        !company.contactPerson.toLowerCase().includes(searchLower) &&
-        !company.email.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Safely handle companies data
+  const displayCompanies = useMemo(() => {
+    if (!companies || !Array.isArray(companies)) {
+      return [];
+    }
+    return companies;
+  }, [companies]);
+
+  // Fetch product companies
+  const fetchCompanies = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.name) {
+        params.name = filters.name;
+      }
+      if (filters.contactPerson) {
+        params.contactPerson = filters.contactPerson;
+      }
+      if (filters.email) {
+        params.email = filters.email;
+      }
+      if (filters.status !== "all") {
+        params.status = filters.status === "active";
+      }
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !company.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (
-        filters.contactPerson &&
-        !company.contactPerson
-          .toLowerCase()
-          .includes(filters.contactPerson.toLowerCase())
-      )
-        return false;
-      if (
-        filters.email &&
-        !company.email.toLowerCase().includes(filters.email.toLowerCase())
-      )
-        return false;
-      if (filters.status !== "all" && company.status !== filters.status)
-        return false;
-      if (
-        filters.minProducts &&
-        company.productCount < Number(filters.minProducts)
-      )
-        return false;
-      if (
-        filters.maxProducts &&
-        company.productCount > Number(filters.maxProducts)
-      )
-        return false;
+      const response = await productCompanyService.getProductCompanies(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
 
-      return true;
-    });
-  }, [companies, filters]);
+      // Type the response as ProductCompaniesResponse
+      const apiResponse = response as unknown as ProductCompaniesResponse;
 
-  // Paginated data
-  const paginatedCompanies = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredCompanies.slice(startIndex, endIndex);
-  }, [filteredCompanies, currentPage, itemsPerPage]);
+      if (apiResponse?.data) {
+        const companiesData = apiResponse.data.companies || [];
+        const pagination = apiResponse.data.pagination || {};
 
-  // Total pages
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredCompanies.length / itemsPerPage)
-  );
+        setCompanies(Array.isArray(companiesData) ? companiesData : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        console.error("Unexpected response structure:", response);
+        setCompanies([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Error fetching product companies:", error);
+      toast.error("Failed to fetch product companies", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      setCompanies([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCompanies();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -325,8 +207,7 @@ export default function ProductCompany() {
       contactPerson: "",
       email: "",
       status: "all",
-      minProducts: "",
-      maxProducts: "",
+      showDeleted: false,
     });
   };
 
@@ -334,7 +215,12 @@ export default function ProductCompany() {
   const clearFilter = (filterName: keyof typeof filters) => {
     setFilters((prev) => ({
       ...prev,
-      [filterName]: filterName === "status" ? "all" : "",
+      [filterName]:
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -345,45 +231,43 @@ export default function ProductCompany() {
   };
 
   // Handle form save
-  const handleSave = (data: ProductCompanyFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    if (id) {
-      // Update existing company
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === id
-            ? {
-                ...company,
-                ...data,
-                logo: `https://api.dicebear.com/7.x/initials/svg?seed=${data.name}`,
-                updatedAt: now,
-              }
-            : company
-        )
-      );
-      toast.success("Company updated successfully!");
-    } else {
-      // Add new company
-      const newCompany: ProductCompany = {
-        id: Math.max(...companies.map((c) => c.id)) + 1,
+  const handleSave = async (data: ProductCompanyFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      // Convert status from "Active"/"Inactive" to boolean
+      const formData = {
         ...data,
-        logo: `https://api.dicebear.com/7.x/initials/svg?seed=${data.name}`,
-        productCount: 0,
-        website: data.website ?? "",
-        status: "Active",
-        createdAt: now,
-        updatedAt: now,
+        status: data.status === true,
       };
-      setCompanies((prev) => [...prev, newCompany]);
-      toast.success("Company created successfully!");
+
+      if (id) {
+        // Update existing company
+        await productCompanyService.updateProductCompany(id, formData);
+        toast.success("Company updated successfully!");
+      } else {
+        // Add new company
+        await productCompanyService.createProductCompany(formData);
+        toast.success("Company created successfully!");
+      }
+      setFormOpen(false);
+      fetchCompanies(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save company", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
   const handleEdit = (company: ProductCompany) => {
-    setEditingCompany(company);
+    // Convert boolean status to "Active"/"Inactive" for the form
+    const companyForForm = {
+      ...company,
+      status: company.status ? "Active" : "Inactive",
+    };
+    setEditingCompany(companyForForm as any);
     setFormOpen(true);
   };
 
@@ -394,14 +278,20 @@ export default function ProductCompany() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (companyToDelete) {
-      setCompanies((prev) =>
-        prev.filter((company) => company.id !== companyToDelete.id)
-      );
-      toast.success("Company deleted successfully!");
-      setCompanyToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await productCompanyService.deleteProductCompany(companyToDelete.id);
+        toast.success("Company deleted successfully!");
+        fetchCompanies(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete company", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setCompanyToDelete(null);
+        setDeleteOpen(false);
+      }
     }
   };
 
@@ -411,48 +301,46 @@ export default function ProductCompany() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchCompanies();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(
-    currentPage * itemsPerPage,
-    filteredCompanies.length
-  );
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalCompanies = companies.length;
-    const activeCompanies = companies.filter(
-      (c) => c.status === "Active"
-    ).length;
-    const totalProducts = companies.reduce(
-      (sum, company) => sum + company.productCount,
-      0
-    );
-
-    return {
-      totalCompanies,
-      activeCompanies,
-      totalProducts,
-      inactiveCompanies: totalCompanies - activeCompanies,
-    };
-  }, [companies]);
+  // Generate logo URL from company name
+  const getCompanyLogo = (companyName: string) => {
+    const seed = companyName.replace(/[^a-zA-Z0-9]/g, "");
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
+  };
 
   return (
     <motion.div
@@ -489,6 +377,7 @@ export default function ProductCompany() {
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
+                disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -496,6 +385,7 @@ export default function ProductCompany() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => handleFilterChange("search", "")}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -509,20 +399,16 @@ export default function ProductCompany() {
                 whileHover="hover"
                 whileTap="tap"
               >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
                 </Button>
               </motion.div>
 
@@ -537,6 +423,7 @@ export default function ProductCompany() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add Company
@@ -569,6 +456,7 @@ export default function ProductCompany() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -578,6 +466,7 @@ export default function ProductCompany() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -612,6 +501,7 @@ export default function ProductCompany() {
                                 handleFilterChange("name", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.name && (
                               <Button
@@ -619,6 +509,7 @@ export default function ProductCompany() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("name")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -642,10 +533,11 @@ export default function ProductCompany() {
                               onChange={(e) =>
                                 handleFilterChange(
                                   "contactPerson",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.contactPerson && (
                               <Button
@@ -653,6 +545,7 @@ export default function ProductCompany() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("contactPerson")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -671,50 +564,58 @@ export default function ProductCompany() {
                           <Select
                             value={filters.status}
                             onValueChange={(
-                              value: "all" | "Active" | "Inactive"
+                              value: "all" | "active" | "inactive",
                             ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger id="status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                              <SelectItem value="Inactive">Inactive</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Product Count Range Filter */}
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Product Count Range
+                          <Label
+                            htmlFor="showDeleted"
+                            className="text-sm font-medium"
+                          >
+                            Show Deleted
                           </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minProducts}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "minProducts",
-                                  e.target.value
-                                )
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
                               }
-                              className="flex-1"
+                              disabled={isLoading}
                             />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxProducts}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "maxProducts",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
                           </div>
                         </div>
                       </div>
@@ -732,18 +633,32 @@ export default function ProductCompany() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredCompanies.length}{" "}
-            companies
-            {filteredCompanies.length !== companies.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} companies
+                {filters.status !== "all" ||
+                filters.name ||
+                filters.contactPerson ||
+                filters.email ||
+                filters.search ||
+                filters.showDeleted
+                  ? " (filtered)"
+                  : ""}
+                {filters.showDeleted && " (including deleted)"}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -768,9 +683,6 @@ export default function ProductCompany() {
                         Contact Info
                       </TableHead>
                       <TableHead className="font-semibold">Address</TableHead>
-                      <TableHead className="font-semibold text-center">
-                        Products
-                      </TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
@@ -780,7 +692,24 @@ export default function ProductCompany() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedCompanies.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading companies...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayCompanies.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -789,7 +718,7 @@ export default function ProductCompany() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -816,7 +745,7 @@ export default function ProductCompany() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedCompanies.map((company, index) => (
+                        displayCompanies.map((company, index) => (
                           <motion.tr
                             key={company.id}
                             custom={index}
@@ -839,7 +768,7 @@ export default function ProductCompany() {
                                 >
                                   <Avatar className="h-10 w-10">
                                     <AvatarImage
-                                      src={company.logo}
+                                      src={getCompanyLogo(company.name)}
                                       alt={company.name}
                                     />
                                     <AvatarFallback>
@@ -850,18 +779,32 @@ export default function ProductCompany() {
                                 <div>
                                   <p className="font-medium text-heading">
                                     {company.name}
+                                    {company.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        Deleted
+                                      </Badge>
+                                    )}
                                   </p>
                                   <div className="flex items-center gap-1 mt-1">
                                     <Globe className="h-3 w-3 text-muted-foreground" />
-                                    <a
-                                      href={`https://${company.website}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs text-blue-600 hover:underline"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {company.website}
-                                    </a>
+                                    {company.website ? (
+                                      <a
+                                        href={`https://${company.website}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {company.website}
+                                      </a>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">
+                                        No website
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-1">
                                     ID: {company.id}
@@ -899,22 +842,6 @@ export default function ProductCompany() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-center group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className="font-semibold"
-                                >
-                                  {company.productCount}
-                                </Badge>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  products
-                                </p>
-                              </motion.div>
-                            </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <motion.div
                                 variants={badgeVariants}
@@ -922,17 +849,15 @@ export default function ProductCompany() {
                               >
                                 <Badge
                                   variant={
-                                    company.status === "Active"
-                                      ? "default"
-                                      : "secondary"
+                                    company.status ? "default" : "secondary"
                                   }
                                   className={
-                                    company.status === "Active"
+                                    company.status
                                       ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
                                       : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
                                   }
                                 >
-                                  {company.status}
+                                  {company.status ? "Active" : "Inactive"}
                                 </Badge>
                               </motion.div>
                             </TableCell>
@@ -972,6 +897,7 @@ export default function ProductCompany() {
                                     size="icon"
                                     onClick={() => handleEdit(company)}
                                     className="h-8 w-8"
+                                    disabled={company.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -986,6 +912,7 @@ export default function ProductCompany() {
                                     size="icon"
                                     onClick={() => confirmDelete(company)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={company.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1004,7 +931,7 @@ export default function ProductCompany() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredCompanies.length > 0 && (
+        {!isLoading && displayCompanies.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1017,69 +944,13 @@ export default function ProductCompany() {
             />
           </motion.div>
         )}
-
-        {/* Information Card */}
-        <motion.div
-          variants={itemVariants}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Building className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-2">
-                    About Product Companies
-                  </h3>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Product Companies are manufacturers, suppliers, or brands
-                      that provide products for your inventory. Managing
-                      companies helps you track product origins, contact
-                      information, and supplier relationships.
-                    </p>
-                    <div className="mt-3 p-3 bg-secondary/30 rounded-md">
-                      <p className="text-sm font-medium mb-1">
-                        Key Information:
-                      </p>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>
-                          • Active companies are currently supplying products
-                        </li>
-                        <li>
-                          • Product count shows total products from each company
-                        </li>
-                        <li>
-                          • Contact information is essential for ordering and
-                          support
-                        </li>
-                        <li>
-                          • Website links provide quick access to company
-                          information
-                        </li>
-                        <li>
-                          • Created/Updated timestamps track company record
-                          activity
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* Product Company Form Dialog */}
         <ProductCompanyForm
           open={formOpen}
           onOpenChange={setFormOpen}
           editingCompany={editingCompany}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}
