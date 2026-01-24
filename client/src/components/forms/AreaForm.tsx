@@ -1,4 +1,3 @@
-// components/forms/AreaForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,34 +34,12 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Area name must be at least 2 characters.",
   }),
-  description: z.string().min(5, {
-    message: "Description must be at least 5 characters.",
-  }),
-  city: z.string().min(2, {
-    message: "City must be at least 2 characters.",
-  }),
-  state: z.string().min(2, {
-    message: "State must be at least 2 characters.",
-  }),
-  pincode: z.string().min(6, {
-    message: "Pincode must be at least 6 characters.",
-  }),
-  region: z.string().min(2, {
-    message: "Region must be at least 2 characters.",
-  }),
-  salesman: z.string().min(2, {
-    message: "Salesman name must be at least 2 characters.",
-  }),
-  customerCount: z.coerce.number().min(0, {
-    message: "Customer count must be a positive number.",
-  }),
-  salesTarget: z.coerce.number().min(0, {
-    message: "Sales target must be a positive number.",
-  }),
-  currentSales: z.coerce.number().min(0, {
-    message: "Current sales must be a positive number.",
-  }),
-  status: z.enum(["Active", "Inactive", "Under Review"]),
+  description: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  pincode: z.string().optional(),
+  region: z.string().optional(),
+  status: z.boolean(),
 });
 
 export type AreaFormData = z.infer<typeof formSchema>;
@@ -73,18 +50,15 @@ interface AreaFormProps {
   editingArea?: {
     id: number;
     name: string;
-    description: string;
-    city: string;
-    state: string;
-    pincode: string;
-    region: string;
-    salesman: string;
-    customerCount: number;
-    salesTarget: number;
-    currentSales: number;
-    status: "Active" | "Inactive" | "Under Review";
+    description: string | null;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
+    region: string | null;
+    status: boolean;
   } | null;
   onSave: (data: AreaFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function AreaForm({
@@ -92,9 +66,10 @@ export default function AreaForm({
   onOpenChange,
   editingArea,
   onSave,
+  isSubmitting = false,
 }: AreaFormProps) {
   const form = useForm<AreaFormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -102,11 +77,7 @@ export default function AreaForm({
       state: "",
       pincode: "",
       region: "",
-      salesman: "",
-      customerCount: 0,
-      salesTarget: 0,
-      currentSales: 0,
-      status: "Active",
+      status: true,
     },
   });
 
@@ -115,15 +86,11 @@ export default function AreaForm({
     if (editingArea) {
       form.reset({
         name: editingArea.name,
-        description: editingArea.description,
-        city: editingArea.city,
-        state: editingArea.state,
-        pincode: editingArea.pincode,
-        region: editingArea.region,
-        salesman: editingArea.salesman,
-        customerCount: editingArea.customerCount,
-        salesTarget: editingArea.salesTarget,
-        currentSales: editingArea.currentSales,
+        description: editingArea.description || "",
+        city: editingArea.city || "",
+        state: editingArea.state || "",
+        pincode: editingArea.pincode || "",
+        region: editingArea.region || "",
         status: editingArea.status,
       });
     } else {
@@ -134,23 +101,13 @@ export default function AreaForm({
         state: "",
         pincode: "",
         region: "",
-        salesman: "",
-        customerCount: 0,
-        salesTarget: 0,
-        currentSales: 0,
-        status: "Active",
+        status: true,
       });
     }
   }, [editingArea, form]);
 
   const onSubmit = (data: AreaFormData) => {
-    try {
-      onSave(data, editingArea?.id);
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Failed to save area:", error);
-    }
+    onSave(data, editingArea?.id);
   };
 
   return (
@@ -162,7 +119,7 @@ export default function AreaForm({
           </DialogTitle>
           <DialogDescription>
             {editingArea
-              ? "Update area information and performance metrics."
+              ? "Update area information."
               : "Add a new geographical area for sales and distribution management."}
           </DialogDescription>
         </DialogHeader>
@@ -178,7 +135,11 @@ export default function AreaForm({
                   <FormItem>
                     <FormLabel>Area Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., South Delhi" {...field} />
+                      <Input
+                        placeholder="e.g., South Delhi"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -191,9 +152,13 @@ export default function AreaForm({
                 name="region"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Region *</FormLabel>
+                    <FormLabel>Region</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Delhi NCR" {...field} />
+                      <Input
+                        placeholder="e.g., Delhi NCR"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -206,9 +171,13 @@ export default function AreaForm({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City *</FormLabel>
+                    <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Delhi" {...field} />
+                      <Input
+                        placeholder="e.g., Delhi"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -221,9 +190,13 @@ export default function AreaForm({
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>State *</FormLabel>
+                    <FormLabel>State</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Delhi" {...field} />
+                      <Input
+                        placeholder="e.g., Delhi"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -236,89 +209,12 @@ export default function AreaForm({
                 name="pincode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pincode *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="110001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Salesman */}
-              <FormField
-                control={form.control}
-                name="salesman"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Salesman *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Rajesh Kumar" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Customer Count */}
-              <FormField
-                control={form.control}
-                name="customerCount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Count</FormLabel>
+                    <FormLabel>Pincode</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        placeholder="0"
+                        placeholder="110001"
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Sales Target */}
-              <FormField
-                control={form.control}
-                name="salesTarget"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sales Target (₹) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="5000000"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Current Sales */}
-              <FormField
-                control={form.control}
-                name="currentSales"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Sales (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
+                        disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />
@@ -332,10 +228,13 @@ export default function AreaForm({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status *</FormLabel>
+                    <FormLabel>Status</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value: string) =>
+                        field.onChange(value === "true")
+                      }
+                      value={field.value ? "true" : "false"}
+                      disabled={isSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -343,11 +242,8 @@ export default function AreaForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                        <SelectItem value="Under Review">
-                          Under Review
-                        </SelectItem>
+                        <SelectItem value="true">Active</SelectItem>
+                        <SelectItem value="false">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -362,13 +258,14 @@ export default function AreaForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description *</FormLabel>
+                  <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Describe the area characteristics and market"
                       className="resize-none"
                       rows={3}
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -381,11 +278,16 @@ export default function AreaForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingArea ? "Update Area" : "Create Area"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingArea
+                    ? "Update Area"
+                    : "Create Area"}
               </Button>
             </DialogFooter>
           </form>

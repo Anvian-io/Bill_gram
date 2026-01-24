@@ -160,6 +160,7 @@ model Area {
   deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+  pincode     String?
 
   @@unique([name])
   @@index([state])

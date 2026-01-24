@@ -233,7 +233,7 @@ export default function CustomerForm({
                 )}
               />
 
-              {/* Customer Type */}
+              {/* Customer Type - FIXED */}
               <FormField
                 control={form.control}
                 name="customerType"
@@ -251,7 +251,6 @@ export default function CustomerForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Not Specified</SelectItem>
                         {customerTypeOptions.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}

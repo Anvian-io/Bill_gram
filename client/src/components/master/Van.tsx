@@ -12,17 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Plus,
   Edit,
   Trash2,
   Search,
   X,
   Truck,
-  Users,
   MapPin,
-  Calendar,
+  RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import VanForm, { type VanFormData } from "@/components/forms/VanForm";
@@ -46,211 +46,29 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
+import { vanService } from "@/services/vanService";
+import { type Van, type VanFilters } from "@/types/van";
 
-// Define type for van
-interface Van {
-  id: number;
-  registrationNumber: string;
-  name: string;
-  model: string;
-  capacity: number; // kg
-  driverName: string;
-  driverContact: string;
-  currentLocation: string;
-  assignedRoute: string;
-  lastServiceDate: string;
-  nextServiceDate: string;
-  maintenanceStatus: "OK" | "Due Soon" | "Overdue";
-  insuranceExpiry: string;
-  status: "Active" | "Inactive";
-  createdAt: string;
-  updatedAt: string;
+// Define the API response structure
+interface VansResponse {
+  data: {
+    vans: Van[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
-export default function Van() {
+export default function VanComponent() {
   // State for vans
-  const [vans, setVans] = useState<Van[]>([
-    {
-      id: 1,
-      registrationNumber: "DL01AB1234",
-      name: "Van Alpha",
-      model: "Tata Ace",
-      capacity: 1000,
-      driverName: "Ramesh Kumar",
-      driverContact: "+91 9876543210",
-      currentLocation: "South Delhi",
-      assignedRoute: "Route A",
-      lastServiceDate: "2024-01-15",
-      nextServiceDate: "2024-04-15",
-      maintenanceStatus: "OK",
-      insuranceExpiry: "2024-12-31",
-      status: "Active",
-      createdAt: "2024-01-15 09:30:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      registrationNumber: "DL01CD5678",
-      name: "Van Beta",
-      model: "Mahindra Supro",
-      capacity: 800,
-      driverName: "Suresh Patel",
-      driverContact: "+91 8765432109",
-      currentLocation: "Warehouse",
-      assignedRoute: "Route B",
-      lastServiceDate: "2024-02-01",
-      nextServiceDate: "2024-05-01",
-      maintenanceStatus: "Due Soon",
-      insuranceExpiry: "2025-01-15",
-      status: "Active",
-      createdAt: "2024-02-10 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      registrationNumber: "DL01EF9012",
-      name: "Van Gamma",
-      model: "Ashok Leyland Dost",
-      capacity: 1200,
-      driverName: "Mahesh Sharma",
-      driverContact: "+91 7654321098",
-      currentLocation: "North Delhi",
-      assignedRoute: "Route C",
-      lastServiceDate: "2024-01-20",
-      nextServiceDate: "2024-04-20",
-      maintenanceStatus: "OK",
-      insuranceExpiry: "2024-11-30",
-      status: "Active",
-      createdAt: "2024-01-05 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      registrationNumber: "DL01GH3456",
-      name: "Van Delta",
-      model: "Tata Intra",
-      capacity: 1500,
-      driverName: "Rajesh Yadav",
-      driverContact: "+91 6543210987",
-      currentLocation: "Service Center",
-      assignedRoute: "Route D",
-      lastServiceDate: "2024-02-10",
-      nextServiceDate: "2024-05-10",
-      maintenanceStatus: "Overdue",
-      insuranceExpiry: "2024-10-15",
-      status: "Inactive",
-      createdAt: "2023-12-20 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      registrationNumber: "DL01IJ7890",
-      name: "Van Epsilon",
-      model: "Mahindra Jeeto",
-      capacity: 600,
-      driverName: "Anil Verma",
-      driverContact: "+91 5432109876",
-      currentLocation: "Warehouse",
-      assignedRoute: "Route E",
-      lastServiceDate: "2024-01-25",
-      nextServiceDate: "2024-04-25",
-      maintenanceStatus: "OK",
-      insuranceExpiry: "2025-02-28",
-      status: "Active",
-      createdAt: "2024-03-01 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      registrationNumber: "DL01KL1234",
-      name: "Van Zeta",
-      model: "Tata Ace Gold",
-      capacity: 1100,
-      driverName: "Vikram Singh",
-      driverContact: "+91 4321098765",
-      currentLocation: "East Delhi",
-      assignedRoute: "Route F",
-      lastServiceDate: "2023-12-15",
-      nextServiceDate: "2024-03-15",
-      maintenanceStatus: "Overdue",
-      insuranceExpiry: "2024-09-30",
-      status: "Inactive",
-      createdAt: "2024-02-28 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 7,
-      registrationNumber: "DL01MN5678",
-      name: "Van Eta",
-      model: "Mahindra Supro Maxi",
-      capacity: 900,
-      driverName: "Priya Sharma",
-      driverContact: "+91 3210987654",
-      currentLocation: "West Delhi",
-      assignedRoute: "Route G",
-      lastServiceDate: "2024-02-20",
-      nextServiceDate: "2024-05-20",
-      maintenanceStatus: "Due Soon",
-      insuranceExpiry: "2024-12-15",
-      status: "Active",
-      createdAt: "2024-01-25 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 8,
-      registrationNumber: "DL01OP9012",
-      name: "Van Theta",
-      model: "Ashok Leyland Dost Plus",
-      capacity: 1300,
-      driverName: "Amit Patel",
-      driverContact: "+91 2109876543",
-      currentLocation: "Central Delhi",
-      assignedRoute: "Route H",
-      lastServiceDate: "2024-02-05",
-      nextServiceDate: "2024-05-05",
-      maintenanceStatus: "OK",
-      insuranceExpiry: "2025-03-31",
-      status: "Active",
-      createdAt: "2024-03-10 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 9,
-      registrationNumber: "DL01QR3456",
-      name: "Van Iota",
-      model: "Tata Intra V20",
-      capacity: 1600,
-      driverName: "Sneha Reddy",
-      driverContact: "+91 1098765432",
-      currentLocation: "South Delhi",
-      assignedRoute: "Route I",
-      lastServiceDate: "2024-01-10",
-      nextServiceDate: "2024-04-10",
-      maintenanceStatus: "OK",
-      insuranceExpiry: "2024-11-15",
-      status: "Active",
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 10,
-      registrationNumber: "DL01ST7890",
-      name: "Van Kappa",
-      model: "Mahindra Jeeto Plus",
-      capacity: 700,
-      driverName: "Rajesh Kumar",
-      driverContact: "+91 0987654321",
-      currentLocation: "North Delhi",
-      assignedRoute: "Route J",
-      lastServiceDate: "2024-02-28",
-      nextServiceDate: "2024-05-28",
-      maintenanceStatus: "Due Soon",
-      insuranceExpiry: "2025-01-31",
-      status: "Active",
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-  ]);
+  const [vans, setVans] = useState<Van[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -261,88 +79,106 @@ export default function Van() {
   const [vanToDelete, setVanToDelete] = useState<Van | null>(null);
 
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<VanFilters>({
     search: "",
     name: "",
-    registrationNumber: "",
+    vehicleNo: "",
     model: "",
-    status: "all" as "all" | Van["status"],
-    location: "",
-    driverName: "",
-    minCapacity: "",
-    maxCapacity: "",
+    area: "",
+    city: "",
+    status: "all",
+    showDeleted: false,
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter vans
-  const filteredVans = useMemo(() => {
-    return vans.filter((van) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !van.name.toLowerCase().includes(searchLower) &&
-        !van.registrationNumber.toLowerCase().includes(searchLower) &&
-        !van.driverName.toLowerCase().includes(searchLower) &&
-        !van.model.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Safely handle vans data
+  const displayVans = useMemo(() => {
+    if (!vans || !Array.isArray(vans)) {
+      return [];
+    }
+    return vans;
+  }, [vans]);
+
+  // Fetch vans
+  const fetchVans = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.name) {
+        params.name = filters.name;
+      }
+      if (filters.vehicleNo) {
+        params.vehicleNo = filters.vehicleNo;
+      }
+      if (filters.model) {
+        params.model = filters.model;
+      }
+      if (filters.area) {
+        params.area = filters.area;
+      }
+      if (filters.city) {
+        params.city = filters.city;
+      }
+      if (filters.status !== "all") {
+        params.status = filters.status === "active";
+      }
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !van.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (
-        filters.registrationNumber &&
-        !van.registrationNumber
-          .toLowerCase()
-          .includes(filters.registrationNumber.toLowerCase())
-      )
-        return false;
-      if (
-        filters.model &&
-        !van.model.toLowerCase().includes(filters.model.toLowerCase())
-      )
-        return false;
-      if (filters.status !== "all" && van.status !== filters.status)
-        return false;
-      if (
-        filters.location &&
-        !van.currentLocation
-          .toLowerCase()
-          .includes(filters.location.toLowerCase())
-      )
-        return false;
-      if (
-        filters.driverName &&
-        !van.driverName.toLowerCase().includes(filters.driverName.toLowerCase())
-      )
-        return false;
-      if (filters.minCapacity && van.capacity < Number(filters.minCapacity))
-        return false;
-      if (filters.maxCapacity && van.capacity > Number(filters.maxCapacity))
-        return false;
+      const response = await vanService.getVans(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
 
-      return true;
-    });
-  }, [vans, filters]);
+      // Type the response as VansResponse
+      const apiResponse = response as unknown as VansResponse;
 
-  // Paginated data
-  const paginatedVans = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredVans.slice(startIndex, endIndex);
-  }, [filteredVans, currentPage, itemsPerPage]);
+      if (apiResponse?.data) {
+        const vansData = apiResponse.data.vans || [];
+        const pagination = apiResponse.data.pagination || {};
 
-  // Total pages
-  const totalPages = Math.max(1, Math.ceil(filteredVans.length / itemsPerPage));
+        setVans(Array.isArray(vansData) ? vansData : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        console.error("Unexpected response structure:", response);
+        setVans([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Error fetching vans:", error);
+      toast.error("Failed to fetch vans", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      setVans([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchVans();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -362,13 +198,12 @@ export default function Van() {
     setFilters({
       search: "",
       name: "",
-      registrationNumber: "",
+      vehicleNo: "",
       model: "",
+      area: "",
+      city: "",
       status: "all",
-      location: "",
-      driverName: "",
-      minCapacity: "",
-      maxCapacity: "",
+      showDeleted: false,
     });
   };
 
@@ -376,7 +211,12 @@ export default function Van() {
   const clearFilter = (filterName: keyof typeof filters) => {
     setFilters((prev) => ({
       ...prev,
-      [filterName]: filterName === "status" ? "all" : "",
+      [filterName]:
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -387,36 +227,27 @@ export default function Van() {
   };
 
   // Handle form save
-  const handleSave = (data: VanFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    if (id) {
-      // Update existing van
-      setVans((prev) =>
-        prev.map((van) =>
-          van.id === id
-            ? {
-                ...van,
-                ...data,
-                updatedAt: now,
-              }
-            : van
-        )
-      );
-      toast.success("Van updated successfully!");
-    } else {
-      // Add new van
-      const newVan: Van = {
-        id: Math.max(...vans.map((v) => v.id)) + 1,
-        ...data,
-        status: "Active" as Van["status"],
-        createdAt: now,
-        updatedAt: now,
-      };
-      setVans((prev) => [...prev, newVan]);
-      toast.success("Van created successfully!");
+  const handleSave = async (data: VanFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        // Update existing van
+        await vanService.updateVan(id, data);
+        toast.success("Van updated successfully!");
+      } else {
+        // Add new van
+        await vanService.createVan(data);
+        toast.success("Van created successfully!");
+      }
+      setFormOpen(false);
+      fetchVans(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save van", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
@@ -432,12 +263,20 @@ export default function Van() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (vanToDelete) {
-      setVans((prev) => prev.filter((van) => van.id !== vanToDelete.id));
-      toast.success("Van deleted successfully!");
-      setVanToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await vanService.deleteVan(vanToDelete.id);
+        toast.success("Van deleted successfully!");
+        fetchVans(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete van", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setVanToDelete(null);
+        setDeleteOpen(false);
+      }
     }
   };
 
@@ -447,101 +286,40 @@ export default function Van() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchVans();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, filteredVans.length);
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Format simple date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Get status badge color
-  const getStatusColor = (status: Van["status"]) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400";
-      case "Inactive":
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
     }
   };
-
-  // Get maintenance status badge color
-  const getMaintenanceStatusColor = (status: Van["maintenanceStatus"]) => {
-    switch (status) {
-      case "OK":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400";
-      case "Due Soon":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400";
-      case "Overdue":
-        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-    }
-  };
-
-  // Check if insurance is expiring soon (within 30 days)
-  const isInsuranceExpiringSoon = (expiryDate: string) => {
-    const expiry = new Date(expiryDate);
-    const today = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
-    return expiry <= thirtyDaysFromNow && expiry >= today;
-  };
-
-  // Check if insurance is expired
-  const isInsuranceExpired = (expiryDate: string) => {
-    const expiry = new Date(expiryDate);
-    const today = new Date();
-    return expiry < today;
-  };
-
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalVans = vans.length;
-    const activeVans = vans.filter((v) => v.status === "Active").length;
-    const totalCapacity = vans.reduce((sum, v) => sum + v.capacity, 0);
-    const avgCapacity = totalVans > 0 ? totalCapacity / totalVans : 0;
-    const overdueMaintenance = vans.filter(
-      (v) => v.maintenanceStatus === "Overdue"
-    ).length;
-    const insuranceExpiringSoon = vans.filter((v) =>
-      isInsuranceExpiringSoon(v.insuranceExpiry)
-    ).length;
-
-    return {
-      totalVans,
-      activeVans,
-      totalCapacity,
-      avgCapacity,
-      overdueMaintenance,
-      insuranceExpiringSoon,
-    };
-  }, [vans]);
 
   return (
     <motion.div
@@ -572,10 +350,11 @@ export default function Van() {
               <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search vans by registration, name, or driver..."
+                placeholder="Search vans by name, vehicle no, or location..."
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
+                disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -583,6 +362,7 @@ export default function Van() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => handleFilterChange("search", "")}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -596,20 +376,16 @@ export default function Van() {
                 whileHover="hover"
                 whileTap="tap"
               >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
                 </Button>
               </motion.div>
 
@@ -624,6 +400,7 @@ export default function Van() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add New Van
@@ -656,6 +433,7 @@ export default function Van() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -665,6 +443,7 @@ export default function Van() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -682,23 +461,21 @@ export default function Van() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* Van Name Filter */}
+                        {/* Name Filter */}
                         <div className="space-y-2">
-                          <Label
-                            htmlFor="vanName"
-                            className="text-sm font-medium"
-                          >
+                          <Label htmlFor="name" className="text-sm font-medium">
                             Van Name
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="vanName"
+                              id="name"
                               placeholder="Enter van name"
                               value={filters.name}
                               onChange={(e) =>
                                 handleFilterChange("name", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
                             {filters.name && (
                               <Button
@@ -706,6 +483,7 @@ export default function Van() {
                                 size="icon"
                                 className="h-10 w-10"
                                 onClick={() => clearFilter("name")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -713,35 +491,32 @@ export default function Van() {
                           </div>
                         </div>
 
-                        {/* Registration Number Filter */}
+                        {/* Vehicle Number Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="registrationNumber"
+                            htmlFor="vehicleNo"
                             className="text-sm font-medium"
                           >
-                            Registration Number
+                            Vehicle Number
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="registrationNumber"
+                              id="vehicleNo"
                               placeholder="DL01AB1234"
-                              value={filters.registrationNumber}
+                              value={filters.vehicleNo}
                               onChange={(e) =>
-                                handleFilterChange(
-                                  "registrationNumber",
-                                  e.target.value
-                                )
+                                handleFilterChange("vehicleNo", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.registrationNumber && (
+                            {filters.vehicleNo && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() =>
-                                  clearFilter("registrationNumber")
-                                }
+                                onClick={() => clearFilter("vehicleNo")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -759,45 +534,85 @@ export default function Van() {
                           </Label>
                           <Select
                             value={filters.status}
-                            onValueChange={(value: "all" | Van["status"]) =>
-                              handleFilterChange("status", value)
-                            }
+                            onValueChange={(
+                              value: "all" | "active" | "inactive",
+                            ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger id="status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                              <SelectItem value="Inactive">Inactive</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Model Filter */}
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="model"
+                            htmlFor="showDeleted"
                             className="text-sm font-medium"
                           >
-                            Model
+                            Show Deleted
+                          </Label>
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
+                              }
+                              disabled={isLoading}
+                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
+                          </div>
+                        </div>
+
+                        {/* Area Filter */}
+                        <div className="space-y-2">
+                          <Label htmlFor="area" className="text-sm font-medium">
+                            Area
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="model"
-                              placeholder="Enter model"
-                              value={filters.model}
+                              id="area"
+                              placeholder="Enter area"
+                              value={filters.area}
                               onChange={(e) =>
-                                handleFilterChange("model", e.target.value)
+                                handleFilterChange("area", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.model && (
+                            {filters.area && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("model")}
+                                onClick={() => clearFilter("area")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -805,98 +620,33 @@ export default function Van() {
                           </div>
                         </div>
 
-                        {/* Location Filter */}
+                        {/* City Filter */}
                         <div className="space-y-2">
-                          <Label
-                            htmlFor="location"
-                            className="text-sm font-medium"
-                          >
-                            Current Location
+                          <Label htmlFor="city" className="text-sm font-medium">
+                            City
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="location"
-                              placeholder="Enter location"
-                              value={filters.location}
+                              id="city"
+                              placeholder="Enter city"
+                              value={filters.city}
                               onChange={(e) =>
-                                handleFilterChange("location", e.target.value)
+                                handleFilterChange("city", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.location && (
+                            {filters.city && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("location")}
+                                onClick={() => clearFilter("city")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
-                          </div>
-                        </div>
-
-                        {/* Driver Name Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="driverName"
-                            className="text-sm font-medium"
-                          >
-                            Driver Name
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="driverName"
-                              placeholder="Enter driver name"
-                              value={filters.driverName}
-                              onChange={(e) =>
-                                handleFilterChange("driverName", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            {filters.driverName && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("driverName")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Capacity Range Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Capacity Range (kg)
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minCapacity}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "minCapacity",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxCapacity}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "maxCapacity",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
                           </div>
                         </div>
                       </div>
@@ -914,17 +664,34 @@ export default function Van() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredVans.length} vans
-            {filteredVans.length !== vans.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} vans
+                {filters.status !== "all" ||
+                filters.name ||
+                filters.vehicleNo ||
+                filters.model ||
+                filters.area ||
+                filters.city ||
+                filters.search ||
+                filters.showDeleted
+                  ? " (filtered)"
+                  : ""}
+                {filters.showDeleted && " (including deleted)"}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -948,14 +715,9 @@ export default function Van() {
                         Van Details
                       </TableHead>
                       <TableHead className="font-semibold">
-                        Driver & Location
+                        Vehicle Info
                       </TableHead>
-                      <TableHead className="font-semibold">
-                        Specifications
-                      </TableHead>
-                      <TableHead className="font-semibold">
-                        Maintenance & Insurance
-                      </TableHead>
+                      <TableHead className="font-semibold">Location</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
@@ -965,7 +727,24 @@ export default function Van() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedVans.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading vans...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayVans.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -974,7 +753,7 @@ export default function Van() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1001,7 +780,7 @@ export default function Van() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedVans.map((van, index) => (
+                        displayVans.map((van, index) => (
                           <motion.tr
                             key={van.id}
                             custom={index}
@@ -1027,21 +806,38 @@ export default function Van() {
                                 <div>
                                   <p className="font-medium text-heading">
                                     {van.name}
+                                    {van.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        Deleted
+                                      </Badge>
+                                    )}
                                   </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {van.registrationNumber}
-                                    </Badge>
-                                    <p className="text-xs text-muted-foreground">
-                                      {van.model}
-                                    </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ID: {van.id}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="space-y-2">
+                                <div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Vehicle No
                                   </div>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Assigned: {van.assignedRoute}
-                                  </p>
+                                  <div className="font-medium">
+                                    {van.vehicleNo || "Not set"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Model
+                                  </div>
+                                  <div className="text-sm">
+                                    {van.model || "Not set"}
+                                  </div>
                                 </div>
                               </div>
                             </TableCell>
@@ -1049,83 +845,18 @@ export default function Van() {
                               <div className="space-y-2">
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <Users className="h-3 w-3 text-muted-foreground" />
-                                    <span className="font-medium text-sm">
-                                      {van.driverName}
+                                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-sm">
+                                      {van.area || "Not set"}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-muted-foreground ml-5">
-                                    {van.driverContact}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-sm">
-                                    {van.currentLocation}
-                                  </span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div className="space-y-2">
-                                <div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Capacity
-                                  </div>
-                                  <div className="font-medium">
-                                    {van.capacity.toLocaleString()} kg
-                                  </div>
                                 </div>
                                 <div>
                                   <div className="text-xs text-muted-foreground">
-                                    Last Service
+                                    City
                                   </div>
                                   <div className="text-sm">
-                                    {formatDate(van.lastServiceDate)}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div className="space-y-2">
-                                <div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-muted-foreground">
-                                      Maintenance
-                                    </span>
-                                    <Badge
-                                      className={getMaintenanceStatusColor(
-                                        van.maintenanceStatus
-                                      )}
-                                    >
-                                      {van.maintenanceStatus}
-                                    </Badge>
-                                  </div>
-                                  <div className="text-xs mt-1">
-                                    Next: {formatDate(van.nextServiceDate)}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Insurance
-                                  </div>
-                                  <div
-                                    className={`text-sm ${
-                                      isInsuranceExpired(van.insuranceExpiry)
-                                        ? "text-red-600"
-                                        : isInsuranceExpiringSoon(
-                                            van.insuranceExpiry
-                                          )
-                                        ? "text-yellow-600"
-                                        : "text-green-600"
-                                    }`}
-                                  >
-                                    Expires: {formatDate(van.insuranceExpiry)}
-                                    {isInsuranceExpired(
-                                      van.insuranceExpiry
-                                    ) && (
-                                      <span className="text-xs ml-1">⚠️</span>
-                                    )}
+                                    {van.city || "Not set"}
                                   </div>
                                 </div>
                               </div>
@@ -1135,8 +866,15 @@ export default function Van() {
                                 variants={badgeVariants}
                                 whileHover="hover"
                               >
-                                <Badge className={getStatusColor(van.status)}>
-                                  {van.status}
+                                <Badge
+                                  variant={van.status ? "default" : "secondary"}
+                                  className={
+                                    van.status
+                                      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                      : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
+                                  }
+                                >
+                                  {van.status ? "Active" : "Inactive"}
                                 </Badge>
                               </motion.div>
                             </TableCell>
@@ -1176,6 +914,7 @@ export default function Van() {
                                     size="icon"
                                     onClick={() => handleEdit(van)}
                                     className="h-8 w-8"
+                                    disabled={van.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1190,6 +929,7 @@ export default function Van() {
                                     size="icon"
                                     onClick={() => confirmDelete(van)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={van.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1208,7 +948,7 @@ export default function Van() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredVans.length > 0 && (
+        {!isLoading && displayVans.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1228,6 +968,7 @@ export default function Van() {
           onOpenChange={setFormOpen}
           editingVan={editingVan}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}
@@ -1237,7 +978,7 @@ export default function Van() {
           mainText="Delete Van"
           subText={
             vanToDelete
-              ? `Are you sure you want to delete "${vanToDelete.name}" (${vanToDelete.registrationNumber})? This action cannot be undone and will remove all associated records.`
+              ? `Are you sure you want to delete "${vanToDelete.name}"? This action cannot be undone.`
               : "This action cannot be undone."
           }
           nextButtonText="Delete"
