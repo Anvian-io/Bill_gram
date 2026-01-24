@@ -113,6 +113,21 @@ model ProductCompany {
   @@map("product_companies")
 }
 
+model Salesman {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phoneNo   String
+  email     String?
+  area      String
+  status    Boolean   @default(true)
+  deleted   Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([phoneNo])
+  @@map("salesmen")
+}
+
 
 
 model SchemaVersion {
