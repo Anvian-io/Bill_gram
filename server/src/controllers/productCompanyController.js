@@ -131,7 +131,6 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
     andConditions.push({
       name: {
         contains: name,
-        mode: "insensitive",
       },
     });
   }
@@ -141,7 +140,6 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
     andConditions.push({
       contactPerson: {
         contains: contactPerson,
-        mode: "insensitive",
       },
     });
   }
@@ -151,7 +149,6 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
     andConditions.push({
       email: {
         contains: email,
-        mode: "insensitive",
       },
     });
   }
@@ -163,19 +160,16 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
         {
           name: {
             contains: search,
-            mode: "insensitive",
           },
         },
         {
           contactPerson: {
             contains: search,
-            mode: "insensitive",
           },
         },
         {
           email: {
             contains: search,
-            mode: "insensitive",
           },
         },
       ],

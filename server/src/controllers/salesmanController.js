@@ -117,7 +117,6 @@ export const getSalesmen = asyncHandler(async (req, res) => {
     andConditions.push({
       name: {
         contains: name,
-        mode: "insensitive",
       },
     });
   }
@@ -127,7 +126,6 @@ export const getSalesmen = asyncHandler(async (req, res) => {
     andConditions.push({
       area: {
         contains: area,
-        mode: "insensitive",
       },
     });
   }
@@ -139,25 +137,21 @@ export const getSalesmen = asyncHandler(async (req, res) => {
         {
           name: {
             contains: search,
-            mode: "insensitive",
           },
         },
         {
           phoneNo: {
             contains: search,
-            mode: "insensitive",
           },
         },
         {
           area: {
             contains: search,
-            mode: "insensitive",
           },
         },
         {
           email: {
             contains: search,
-            mode: "insensitive",
           },
         },
       ],
