@@ -96,6 +96,24 @@ model Unit {
   @@map("units")
 }
 
+// Add this to your prisma/schema.prisma file
+model ProductCompany {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  contactPerson String
+  email         String
+  phone         String
+  website       String?
+  address       String
+  status        Boolean  @default(true)
+  deleted       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("product_companies")
+}
+
+
 
 model SchemaVersion {
   version Int @id @default(1)
