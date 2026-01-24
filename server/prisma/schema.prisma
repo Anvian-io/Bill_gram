@@ -149,6 +149,43 @@ model Customer {
   @@map("customers")
 }
 
+model Area {
+  id          Int       @id @default(autoincrement())
+  name        String
+  state       String?
+  region      String?
+  city        String?
+  description String?
+  status      Boolean   @default(true)
+  deleted     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([name])
+  @@index([state])
+  @@index([region])
+  @@index([city])
+  @@map("areas")
+}
+
+model Van {
+  id          Int       @id @default(autoincrement())
+  name        String
+  vehicleNo   String?   @map("vehicle_no")
+  model       String?
+  area        String?
+  city        String?
+  status      Boolean   @default(true)
+  deleted     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([vehicleNo])
+  @@index([area])
+  @@index([city])
+  @@map("vans")
+}
+
 
 model SchemaVersion {
   version Int @id @default(1)
