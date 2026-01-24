@@ -1,4 +1,3 @@
-// components/forms/SalesmanForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +20,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -30,30 +28,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Define the form schema
+// Define the form schema with boolean status
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  mobile: z.string().regex(/^\+?[\d\s-]+$/, {
-    message: "Please enter a valid mobile number.",
+  phoneNo: z.string().min(10, {
+    message: "Phone number must be at least 10 digits.",
   }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string().email().or(z.literal("")).optional(),
   area: z.string().min(2, {
     message: "Area must be at least 2 characters.",
   }),
-  target: z.string().min(1, {
-    message: "Target is required.",
-  }),
-  achieved: z.string().min(1, {
-    message: "Achieved amount is required.",
-  }),
-  commission: z.string().min(1, {
-    message: "Commission rate is required.",
-  }),
-  status: z.enum(["Active", "Inactive", "On Leave"]),
+  status: z.boolean(),
 });
 
 export type SalesmanFormData = z.infer<typeof formSchema>;
@@ -64,15 +51,13 @@ interface SalesmanFormProps {
   editingSalesman?: {
     id: number;
     name: string;
-    mobile: string;
+    phoneNo: string;
     email: string;
     area: string;
-    target: number;
-    achieved: number;
-    commission: number;
-    status: "Active" | "Inactive" | "On Leave";
+    status: boolean;
   } | null;
   onSave: (data: SalesmanFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function SalesmanForm({
@@ -80,18 +65,16 @@ export default function SalesmanForm({
   onOpenChange,
   editingSalesman,
   onSave,
+  isSubmitting = false,
 }: SalesmanFormProps) {
   const form = useForm<SalesmanFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      mobile: "",
+      phoneNo: "",
       email: "",
       area: "",
-      target: "",
-      achieved: "",
-      commission: "",
-      status: "Active",
+      status: true,
     },
   });
 
@@ -100,36 +83,24 @@ export default function SalesmanForm({
     if (editingSalesman) {
       form.reset({
         name: editingSalesman.name,
-        mobile: editingSalesman.mobile,
-        email: editingSalesman.email,
+        phoneNo: editingSalesman.phoneNo,
+        email: editingSalesman.email || "",
         area: editingSalesman.area,
-        target: editingSalesman.target.toString(),
-        achieved: editingSalesman.achieved.toString(),
-        commission: editingSalesman.commission.toString(),
         status: editingSalesman.status,
       });
     } else {
       form.reset({
         name: "",
-        mobile: "",
+        phoneNo: "",
         email: "",
         area: "",
-        target: "",
-        achieved: "",
-        commission: "",
-        status: "Active",
+        status: true,
       });
     }
   }, [editingSalesman, form]);
 
   const onSubmit = (data: SalesmanFormData) => {
-    try {
-      onSave(data, editingSalesman?.id);
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Failed to save salesman:", error);
-    }
+    onSave(data, editingSalesman?.id);
   };
 
   return (
@@ -141,22 +112,44 @@ export default function SalesmanForm({
           </DialogTitle>
           <DialogDescription>
             {editingSalesman
-              ? "Update the salesman's details and performance metrics."
-              : "Add a new salesman to your sales team with their contact information and targets."}
+              ? "Update the salesman's details."
+              : "Add a new salesman to your sales team with contact information and area."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="John Doe"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="phoneNo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name *</FormLabel>
+                    <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input
+                        placeholder="+91 9876543210"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -165,12 +158,16 @@ export default function SalesmanForm({
 
               <FormField
                 control={form.control}
-                name="mobile"
+                name="area"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile Number *</FormLabel>
+                    <FormLabel>Sales Area *</FormLabel>
                     <FormControl>
-                      <Input placeholder="+91 9876543210" {...field} />
+                      <Input
+                        placeholder="e.g., South Delhi"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -183,77 +180,18 @@ export default function SalesmanForm({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address *</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="john@example.com" {...field} />
+                    <Input
+                      placeholder="john@example.com"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="area"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sales Area *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., South Delhi, Noida" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="target"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Target (₹) *</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="500000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="achieved"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Achieved (₹) *</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="425000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="commission"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Commission (%) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="8.5"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
@@ -262,8 +200,11 @@ export default function SalesmanForm({
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    onValueChange={(value: string) =>
+                      field.onChange(value === "true")
+                    }
+                    value={field.value ? "true" : "false"}
+                    disabled={isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -271,9 +212,8 @@ export default function SalesmanForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                      <SelectItem value="On Leave">On Leave</SelectItem>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -286,11 +226,16 @@ export default function SalesmanForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingSalesman ? "Update Salesman" : "Create Salesman"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingSalesman
+                    ? "Update Salesman"
+                    : "Create Salesman"}
               </Button>
             </DialogFooter>
           </form>
