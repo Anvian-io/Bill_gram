@@ -128,6 +128,26 @@ model Salesman {
   @@map("salesmen")
 }
 
+model Customer {
+  id           Int       @id @default(autoincrement())
+  companyName  String    @map("company_name")
+  personName   String    @map("person_name")
+  phoneNo      String    @map("phone_no")
+  email        String?
+  customerType String?   @map("customer_type")
+  city         String?
+  address      String
+  pincode      String?
+  status       Boolean   @default(true)
+  deleted      Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([phoneNo])
+  @@index([companyName])
+  @@index([personName])
+  @@map("customers")
+}
 
 
 model SchemaVersion {
