@@ -70,23 +70,23 @@ const monthlySalesData = [
   { month: "Dec", sales: 82000, purchases: 52000, profit: 30000 },
 ];
 
-const productPerformanceData = [
-  { name: "MILKY BAR 5 RS", sales: 450, revenue: 67500 },
-  { name: "CHOCO DELIGHT", sales: 380, revenue: 53200 },
-  { name: "NUTTY CRUNCH", sales: 290, revenue: 34800 },
-  { name: "CARAMEL BLAST", sales: 520, revenue: 156000 },
-  { name: "FRUITY SWIRL", sales: 310, revenue: 54250 },
-  { name: "VANILLA DREAM", sales: 420, revenue: 42840 },
-];
+// const productPerformanceData = [
+//   { name: "MILKY BAR 5 RS", sales: 450, revenue: 67500 },
+//   { name: "CHOCO DELIGHT", sales: 380, revenue: 53200 },
+//   { name: "NUTTY CRUNCH", sales: 290, revenue: 34800 },
+//   { name: "CARAMEL BLAST", sales: 520, revenue: 156000 },
+//   { name: "FRUITY SWIRL", sales: 310, revenue: 54250 },
+//   { name: "VANILLA DREAM", sales: 420, revenue: 42840 },
+// ];
 
-const expenseBreakdownData = [
-  { name: "Inventory", value: 42000, color: "#3b82f6" },
-  { name: "Salaries", value: 25000, color: "#10b981" },
-  { name: "Rent", value: 15000, color: "#f59e0b" },
-  { name: "Utilities", value: 8000, color: "#ef4444" },
-  { name: "Marketing", value: 12000, color: "#8b5cf6" },
-  { name: "Maintenance", value: 5000, color: "#6366f1" },
-];
+// const expenseBreakdownData = [
+//   { name: "Inventory", value: 42000, color: "#3b82f6" },
+//   { name: "Salaries", value: 25000, color: "#10b981" },
+//   { name: "Rent", value: 15000, color: "#f59e0b" },
+//   { name: "Utilities", value: 8000, color: "#ef4444" },
+//   { name: "Marketing", value: 12000, color: "#8b5cf6" },
+//   { name: "Maintenance", value: 5000, color: "#6366f1" },
+// ];
 
 const dailySalesData = [
   { day: "Mon", sales: 8500 },
@@ -119,16 +119,16 @@ export default function Dashboard() {
     (sum, item) => sum + item.profit,
     0
   );
-  const avgMonthlyProfit = Math.round(totalProfit / 12);
+  // const avgMonthlyProfit = Math.round(totalProfit / 12);
   const profitMargin = ((totalProfit / totalSales) * 100).toFixed(1);
 
   // Find best and worst months
-  const bestMonth = monthlySalesData.reduce((prev, current) =>
-    prev.profit > current.profit ? prev : current
-  );
-  const worstMonth = monthlySalesData.reduce((prev, current) =>
-    prev.profit < current.profit ? prev : current
-  );
+  // const bestMonth = monthlySalesData.reduce((prev, current) =>
+  //   prev.profit > current.profit ? prev : current
+  // );
+  // const worstMonth = monthlySalesData.reduce((prev, current) =>
+  //   prev.profit < current.profit ? prev : current
+  // );
 
   const handleBackupDatabase = async () => {
     try {

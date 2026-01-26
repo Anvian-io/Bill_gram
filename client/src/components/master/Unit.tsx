@@ -331,18 +331,18 @@ export default function UnitComponent() {
   };
 
   // Select all units on current page
-  const selectAllOnPage = () => {
-    const pageUnitIds = displayUnits.map((unit) => unit.id);
-    if (pageUnitIds.every((id) => selectedUnits.includes(id))) {
-      // If all are selected, deselect all
-      setSelectedUnits((prev) =>
-        prev.filter((id) => !pageUnitIds.includes(id)),
-      );
-    } else {
-      // Select all
-      setSelectedUnits((prev) => [...new Set([...prev, ...pageUnitIds])]);
-    }
-  };
+  // const selectAllOnPage = () => {
+  //   const pageUnitIds = displayUnits.map((unit) => unit.id);
+  //   if (pageUnitIds.every((id) => selectedUnits.includes(id))) {
+  //     // If all are selected, deselect all
+  //     setSelectedUnits((prev) =>
+  //       prev.filter((id) => !pageUnitIds.includes(id)),
+  //     );
+  //   } else {
+  //     // Select all
+  //     setSelectedUnits((prev) => [...new Set([...prev, ...pageUnitIds])]);
+  //   }
+  // };
 
   return (
     <motion.div

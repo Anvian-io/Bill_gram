@@ -229,7 +229,7 @@ export default function ProductFormModal({
 }: ProductFormModalProps) {
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [relatedImages, setRelatedImages] = useState<File[]>([]);
-  const { units, productCompanies, isLoading, error } = useActiveLists();
+  const { units } = useActiveLists();
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
     defaultValues,

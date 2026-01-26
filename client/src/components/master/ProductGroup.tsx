@@ -76,7 +76,7 @@ export default function ProductGroup() {
   const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isTogglingStatus, setIsTogglingStatus] = useState<number | null>(null);
+  // const [isTogglingStatus, setIsTogglingStatus] = useState<number | null>(null);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -282,24 +282,24 @@ export default function ProductGroup() {
   };
 
   // Toggle status
-  const handleToggleStatus = async (id: number) => {
-    setIsTogglingStatus(id);
-    try {
-      const updatedGroup = await productGroupService.toggleStatus(id);
-      setProductGroups((prev) => {
-        // Ensure prev is an array
-        if (!Array.isArray(prev)) return prev;
-        return prev.map((group) => (group.id === id ? updatedGroup : group));
-      });
-      toast.success("Status updated successfully!");
-    } catch (error: any) {
-      toast.error("Failed to update status", {
-        description: error.response?.data?.message || "Please try again",
-      });
-    } finally {
-      setIsTogglingStatus(null);
-    }
-  };
+  // const handleToggleStatus = async (id: number) => {
+  //   // setIsTogglingStatus(id);
+  //   try {
+  //     const updatedGroup = await productGroupService.toggleStatus(id);
+  //     setProductGroups((prev) => {
+  //       // Ensure prev is an array
+  //       if (!Array.isArray(prev)) return prev;
+  //       return prev.map((group) => (group.id === id ? updatedGroup : group));
+  //     });
+  //     toast.success("Status updated successfully!");
+  //   } catch (error: any) {
+  //     toast.error("Failed to update status", {
+  //       description: error.response?.data?.message || "Please try again",
+  //     });
+  //   } finally {
+  //     // setIsTogglingStatus(null);
+  //   }
+  // };
 
   // Confirm delete
   const confirmDelete = (group: ProductGroup) => {
