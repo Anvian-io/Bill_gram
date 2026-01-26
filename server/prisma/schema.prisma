@@ -187,6 +187,23 @@ model Van {
   @@map("vans")
 }
 
+model Account {
+  id             Int       @id @default(autoincrement())
+  accountHolder  String    @map("account_holder")
+  ifscCode       String    @map("ifsc_code")
+  bankName       String    @map("bank_name")
+  description    String?
+  qrCode         String?   @map("qr_code")
+  gpayNo         String?   @map("gpay_no")
+  status         Boolean   @default(true)
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([ifscCode])
+  @@index([bankName])
+  @@map("accounts")
+}
 
 model SchemaVersion {
   version Int @id @default(1)
