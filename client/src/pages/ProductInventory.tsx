@@ -20,9 +20,9 @@ import {
   Search,
   X,
   Calendar,
+  Plus,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -49,6 +49,8 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../components/FramerVariants";
+import ProductFormModal from "@/components/forms/ProductForm"; // Import the modal
+
 // Define the type for product data
 interface Product {
   id: string;
@@ -71,7 +73,6 @@ interface Product {
 
 export default function ProductInventory() {
   // Sample data based on the screenshot
-  const navigate = useNavigate();
   const initialData: Product[] = [
     {
       id: "1",
@@ -163,7 +164,6 @@ export default function ProductInventory() {
       productGroup: "ELITE",
       status: "Low Stock",
     },
-    // Add more sample data for pagination testing
     {
       id: "6",
       bNo: "1602770024182",
@@ -273,6 +273,11 @@ export default function ProductInventory() {
     expDateTo: undefined as Date | undefined,
   });
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(5);
@@ -352,7 +357,7 @@ export default function ProductInventory() {
   // Calculate total pages
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredProducts.length / itemsPerPage)
+    Math.ceil(filteredProducts.length / itemsPerPage),
   );
 
   // Reset to first page when filters change
@@ -409,11 +414,146 @@ export default function ProductInventory() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(
     currentPage * itemsPerPage,
-    filteredProducts.length
+    filteredProducts.length,
   );
 
+  // Handle Add Product - Open Modal
   const handleAddProduct = () => {
-    navigate("/product-inventory/new");
+    setEditingProduct(null);
+    setIsModalOpen(true);
+  };
+
+  // Handle Edit Product
+  const handleEditProduct = (product: Product) => {
+    // Convert product data to match the form structure
+    const formProduct = {
+      id: parseInt(product.id),
+      productCode: product.id,
+      productBrand: product.productName,
+      description: `${product.productName} - ${product.brand}`,
+      hsnSacCode: product.hsnCode,
+      goodsOrServices: "Goods" as "Goods",
+      weight: 1,
+      unit: "GM",
+      productGroup: product.productGroup,
+      productShortName: product.productName,
+      purchaseUnit: "PCS",
+      conversionFactor: 1,
+      pricePerPCS: product.basicPrice,
+      productCompany: product.brand,
+      saleUnit: "PCS",
+      cartonPack: 24,
+      innerPack: "",
+      packagingBasic: true,
+      packagingMRP: false,
+      insuranceTaxBasic: true,
+      insuranceTaxMRP: false,
+      gstRate: 18,
+      gstInclusive: true,
+      cessRate: 0,
+      hsnChapter: "",
+      gstApplicability: "Regular" as "Regular",
+      batches: [
+        {
+          bNo: product.bNo,
+          mfgDate: product.mfgDate,
+          expDate: product.expDate,
+          barcode: product.barcode,
+          basicPrice: product.basicPrice,
+          openingStock: product.openingStock,
+          mrp: product.mrp,
+          pRate: product.pRate,
+          sRate: product.sRate,
+          margin: product.margin,
+          gstAmount: 0,
+        },
+      ],
+    };
+    setEditingProduct(formProduct);
+    setIsModalOpen(true);
+  };
+
+  // Handle Delete Product
+  const handleDeleteProduct = (productId: string) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      setProducts(products.filter((p) => p.id !== productId));
+    }
+  };
+
+  // Handle View Product
+  const handleViewProduct = (product: Product) => {
+    // For view mode, we could open the same modal in read-only mode
+    // For now, just edit it
+    handleEditProduct(product);
+  };
+
+  // Handle Save Product (from modal)
+  const handleSaveProduct = async (data: any, id?: number) => {
+    setIsSubmitting(true);
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (id) {
+        // Update existing product
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === id.toString()
+              ? {
+                  ...p,
+                  productName: data.productBrand,
+                  brand: data.productCompany,
+                  hsnCode: data.hsnSacCode,
+                  productGroup: data.productGroup,
+                  bNo: data.batches[0]?.bNo || p.bNo,
+                  barcode: data.batches[0]?.barcode || p.barcode,
+                  mfgDate: data.batches[0]?.mfgDate || p.mfgDate,
+                  expDate: data.batches[0]?.expDate || p.expDate,
+                  basicPrice: data.batches[0]?.basicPrice || p.basicPrice,
+                  openingStock: data.batches[0]?.openingStock || p.openingStock,
+                  mrp: data.batches[0]?.mrp || p.mrp,
+                  pRate: data.batches[0]?.pRate || p.pRate,
+                  sRate: data.batches[0]?.sRate || p.sRate,
+                  margin: data.batches[0]?.margin || p.margin,
+                }
+              : p,
+          ),
+        );
+      } else {
+        // Add new product
+        const newProduct: Product = {
+          id: (products.length + 1).toString(),
+          productName: data.productBrand,
+          brand: data.productCompany,
+          hsnCode: data.hsnSacCode,
+          productGroup: data.productGroup,
+          bNo: data.batches[0]?.bNo || "",
+          barcode: data.batches[0]?.barcode || "",
+          mfgDate: data.batches[0]?.mfgDate || null,
+          expDate: data.batches[0]?.expDate || null,
+          basicPrice: data.batches[0]?.basicPrice || 0,
+          openingStock: data.batches[0]?.openingStock || 0,
+          mrp: data.batches[0]?.mrp || 0,
+          pRate: data.batches[0]?.pRate || 0,
+          sRate: data.batches[0]?.sRate || 0,
+          margin: data.batches[0]?.margin || 0,
+          status:
+            data.batches[0]?.openingStock > 10
+              ? "In Stock"
+              : data.batches[0]?.openingStock > 0
+                ? "Low Stock"
+                : "Out of Stock",
+        };
+        setProducts((prev) => [newProduct, ...prev]);
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error saving product:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Active filters count
@@ -425,756 +565,809 @@ export default function ProductInventory() {
       !(
         value instanceof Date &&
         value.toString() === new Date(undefined as any).toString()
-      )
+      ),
   ).length;
 
   return (
-    <motion.div
-      className="min-h-screen bg-background p-3"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      <div className="max-w-8xl mx-auto">
-        {/* Header */}
-        <motion.div
-          className="flex flex-col gap-6 mb-6 w-full"
-          variants={headerVariants}
-        >
-          <div className="flex justify-between gap-4">
-            {/* Title */}
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Product Inventory
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
+    <>
+      <motion.div
+        className="min-h-screen bg-background p-3"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <div className="max-w-8xl mx-auto">
+          {/* Header */}
+          <motion.div
+            className="flex flex-col gap-6 mb-6 w-full"
+            variants={headerVariants}
+          >
+            <div className="flex justify-between gap-4">
+              {/* Title */}
+              <div>
+                <h1 className="text-3xl font-bold text-heading">
+                  Product Inventory
+                </h1>
+                <motion.p
+                  className="text-muted-foreground mt-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  Manage and track your product inventory
+                </motion.p>
+              </div>
+
+              {/* Search Bar */}
+              <motion.div
+                className="relative w-100"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
               >
-                Manage and track your product inventory
-              </motion.p>
+                <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search products by name, brand, barcode, B.No, HSN Code, or group..."
+                  className="pl-10 py-6 text-base"
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
+                />
+                {filters.search && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => handleFilterChange("search", "")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div className="flex flex-wrap items-center gap-3">
+                <motion.div
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                >
+                  <Button variant="outline" className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Import
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                >
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Button
+                    onClick={handleAddProduct}
+                    className="gap-2 bg-primary hover:bg-primary/90"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </Button>
+                </motion.div>
+              </motion.div>
             </div>
+          </motion.div>
 
-            {/* 🔍 Search Bar (between header & buttons) */}
-            <motion.div
-              className="relative w-100"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products by name, brand, barcode, B.No, HSN Code, or group..."
-                className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-              />
-              {filters.search && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </motion.div>
-
-            {/* Action Buttons */}
-            <motion.div className="flex flex-wrap items-center gap-3">
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Button
-                  onClick={handleAddProduct}
-                  className="gap-2 bg-primary hover:bg-primary/90"
-                >
-                  + Add Product
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Filter Section */}
-        <motion.div className="mb-2" variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
-                {/* Filter Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Filters</h3>
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {activeFiltersCount} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {activeFiltersCount > 0 && (
+          {/* Filter Section */}
+          <motion.div className="mb-2" variants={itemVariants}>
+            <Card className="overflow-hidden">
+              <CardContent className="p-1">
+                <div className="flex flex-col gap-4">
+                  {/* Filter Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="font-semibold">Filters</h3>
+                      {activeFiltersCount > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {activeFiltersCount} active
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeFiltersCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="h-8 text-muted-foreground"
+                        >
+                          Clear all
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={clearFilters}
-                        className="h-8 text-muted-foreground"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="h-8"
                       >
-                        Clear all
+                        {showFilters ? "Hide" : "Show"} Filters
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="h-8"
-                    >
-                      {showFilters ? "Hide" : "Show"} Filters
-                    </Button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Filter Controls */}
-                <AnimatePresence>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* B.No Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="bNo" className="text-sm font-medium">
-                            B.No
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="bNo"
-                              placeholder="Enter B.No"
-                              value={filters.bNo}
-                              onChange={(e) =>
-                                handleFilterChange("bNo", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            {filters.bNo && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("bNo")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Barcode Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="barcode"
-                            className="text-sm font-medium"
-                          >
-                            Barcode
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="barcode"
-                              placeholder="Enter barcode"
-                              value={filters.barcode}
-                              onChange={(e) =>
-                                handleFilterChange("barcode", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            {filters.barcode && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("barcode")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Product Name Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="productName"
-                            className="text-sm font-medium"
-                          >
-                            Product Name
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="productName"
-                              placeholder="Enter product name"
-                              value={filters.productName}
-                              onChange={(e) =>
-                                handleFilterChange(
-                                  "productName",
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1"
-                            />
-                            {filters.productName && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("productName")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Brand Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="brand"
-                            className="text-sm font-medium"
-                          >
-                            Brand
-                          </Label>
-                          <Select
-                            value={filters.brand}
-                            onValueChange={(value) =>
-                              handleFilterChange("brand", value)
-                            }
-                          >
-                            <SelectTrigger id="brand">
-                              <SelectValue placeholder="Select brand" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Brands</SelectItem>
-                              {uniqueBrands.map((brand) => (
-                                <SelectItem key={brand} value={brand}>
-                                  {brand}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Product Group Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="productGroup"
-                            className="text-sm font-medium"
-                          >
-                            Product Group
-                          </Label>
-                          <Select
-                            value={filters.productGroup}
-                            onValueChange={(value) =>
-                              handleFilterChange("productGroup", value)
-                            }
-                          >
-                            <SelectTrigger id="productGroup">
-                              <SelectValue placeholder="Select group" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Groups</SelectItem>
-                              {uniqueGroups.map((group) => (
-                                <SelectItem key={group} value={group}>
-                                  {group}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Stock Range Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Stock Range
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minStock}
-                              onChange={(e) =>
-                                handleFilterChange("minStock", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxStock}
-                              onChange={(e) =>
-                                handleFilterChange("maxStock", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Manufacturing Date Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Manufacturing Date
-                          </Label>
-                          <div className="flex gap-2">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-[150px] justify-start text-left font-normal",
-                                    !filters.mfgDateFrom &&
-                                      "text-muted-foreground"
-                                  )}
-                                >
-                                  <Calendar className="mr-2 h-4 w-4" />
-                                  {filters.mfgDateFrom ? (
-                                    format(filters.mfgDateFrom, "dd/MM/yyyy") // Changed from "PPP"
-                                  ) : (
-                                    <span>From</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={filters.mfgDateFrom}
-                                  onSelect={(date) =>
-                                    handleFilterChange("mfgDateFrom", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-[150px] justify-start text-left font-normal",
-                                    !filters.mfgDateTo &&
-                                      "text-muted-foreground"
-                                  )}
-                                >
-                                  <Calendar className="mr-2 h-4 w-4" />
-                                  {filters.mfgDateTo ? (
-                                    format(filters.mfgDateTo, "dd/MM/yyyy") // Changed from "PPP"
-                                  ) : (
-                                    <span>To</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={filters.mfgDateTo}
-                                  onSelect={(date) =>
-                                    handleFilterChange("mfgDateTo", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-
-                        {/* Expiry Date Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Expiry Date
-                          </Label>
-                          <div className="flex gap-2">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-[150px] justify-start text-left font-normal",
-                                    !filters.expDateFrom &&
-                                      "text-muted-foreground"
-                                  )}
-                                >
-                                  <Calendar className="mr-2 h-4 w-4" />
-                                  {filters.expDateFrom ? (
-                                    format(filters.expDateFrom, "dd/MM/yyyy") // Changed from "PPP"
-                                  ) : (
-                                    <span>From</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={filters.expDateFrom}
-                                  onSelect={(date) =>
-                                    handleFilterChange("expDateFrom", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-[150px] justify-start text-left font-normal",
-                                    !filters.expDateTo &&
-                                      "text-muted-foreground"
-                                  )}
-                                >
-                                  <Calendar className="mr-2 h-4 w-4" />
-                                  {filters.expDateTo ? (
-                                    format(filters.expDateTo, "dd/MM/yyyy") // Changed from "PPP"
-                                  ) : (
-                                    <span>To</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={filters.expDateTo}
-                                  onSelect={(date) =>
-                                    handleFilterChange("expDateTo", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Results Count */}
-        <motion.div
-          className="flex justify-between items-center mb-4"
-          variants={itemVariants}
-        >
-          <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredProducts.length}{" "}
-            products
-            {filteredProducts.length !== products.length && " (filtered)"}
-          </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              Sorted by: <span className="font-medium">Latest Added</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">
-                Items per page:
-              </div>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => setItemsPerPage(Number(value))}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder="5" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Product Table */}
-        <motion.div variants={itemVariants}>
-          <Card className="mb-6 overflow-hidden">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-secondary/50">
-                      <TableHead className="font-semibold">
-                        Product Name
-                      </TableHead>
-                      <TableHead className="font-semibold">B No.</TableHead>
-                      <TableHead className="font-semibold">MFG Date</TableHead>
-                      <TableHead className="font-semibold">EXP Date</TableHead>
-                      <TableHead className="font-semibold">Barcode</TableHead>
-                      <TableHead className="font-semibold">
-                        Basic Price
-                      </TableHead>
-                      <TableHead className="font-semibold">
-                        Opening Stock
-                      </TableHead>
-                      <TableHead className="font-semibold">MRP</TableHead>
-                      <TableHead className="font-semibold">P.Rate</TableHead>
-                      <TableHead className="font-semibold">S.Rate</TableHead>
-                      <TableHead className="font-semibold">Margin</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence mode="wait">
-                      {paginatedProducts.length === 0 ? (
-                        <motion.tr
-                          key="no-data"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <TableCell
-                            colSpan={13}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            <motion.div
-                              className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              transition={{ delay: 0.1 }}
+                  {/* Filter Controls */}
+                  <AnimatePresence>
+                    {showFilters && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                          {/* B.No Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="bNo"
+                              className="text-sm font-medium"
                             >
-                              <Filter className="h-12 w-12 text-muted-foreground/50 mb-2" />
-                              <p>No products found matching your filters.</p>
-                              <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                              >
+                              B.No
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="bNo"
+                                placeholder="Enter B.No"
+                                value={filters.bNo}
+                                onChange={(e) =>
+                                  handleFilterChange("bNo", e.target.value)
+                                }
+                                className="flex-1"
+                              />
+                              {filters.bNo && (
                                 <Button
-                                  variant="link"
-                                  onClick={clearFilters}
-                                  className="mt-2"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => clearFilter("bNo")}
                                 >
-                                  Clear all filters
+                                  <X className="h-4 w-4" />
                                 </Button>
-                              </motion.div>
-                            </motion.div>
-                          </TableCell>
-                        </motion.tr>
-                      ) : (
-                        paginatedProducts.map((product, index) => (
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Barcode Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="barcode"
+                              className="text-sm font-medium"
+                            >
+                              Barcode
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="barcode"
+                                placeholder="Enter barcode"
+                                value={filters.barcode}
+                                onChange={(e) =>
+                                  handleFilterChange("barcode", e.target.value)
+                                }
+                                className="flex-1"
+                              />
+                              {filters.barcode && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => clearFilter("barcode")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Product Name Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="productName"
+                              className="text-sm font-medium"
+                            >
+                              Product Name
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="productName"
+                                placeholder="Enter product name"
+                                value={filters.productName}
+                                onChange={(e) =>
+                                  handleFilterChange(
+                                    "productName",
+                                    e.target.value,
+                                  )
+                                }
+                                className="flex-1"
+                              />
+                              {filters.productName && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => clearFilter("productName")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Brand Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="brand"
+                              className="text-sm font-medium"
+                            >
+                              Brand
+                            </Label>
+                            <Select
+                              value={filters.brand}
+                              onValueChange={(value) =>
+                                handleFilterChange("brand", value)
+                              }
+                            >
+                              <SelectTrigger id="brand">
+                                <SelectValue placeholder="Select brand" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Brands</SelectItem>
+                                {uniqueBrands.map((brand) => (
+                                  <SelectItem key={brand} value={brand}>
+                                    {brand}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Product Group Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="productGroup"
+                              className="text-sm font-medium"
+                            >
+                              Product Group
+                            </Label>
+                            <Select
+                              value={filters.productGroup}
+                              onValueChange={(value) =>
+                                handleFilterChange("productGroup", value)
+                              }
+                            >
+                              <SelectTrigger id="productGroup">
+                                <SelectValue placeholder="Select group" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Groups</SelectItem>
+                                {uniqueGroups.map((group) => (
+                                  <SelectItem key={group} value={group}>
+                                    {group}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Stock Range Filter */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Stock Range
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="Min"
+                                type="number"
+                                value={filters.minStock}
+                                onChange={(e) =>
+                                  handleFilterChange("minStock", e.target.value)
+                                }
+                                className="flex-1"
+                              />
+                              <Input
+                                placeholder="Max"
+                                type="number"
+                                value={filters.maxStock}
+                                onChange={(e) =>
+                                  handleFilterChange("maxStock", e.target.value)
+                                }
+                                className="flex-1"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Manufacturing Date Filter */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Manufacturing Date
+                            </Label>
+                            <div className="flex gap-2">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[150px] justify-start text-left font-normal",
+                                      !filters.mfgDateFrom &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {filters.mfgDateFrom ? (
+                                      format(filters.mfgDateFrom, "dd/MM/yyyy")
+                                    ) : (
+                                      <span>From</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.mfgDateFrom}
+                                    onSelect={(date) =>
+                                      handleFilterChange("mfgDateFrom", date)
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[150px] justify-start text-left font-normal",
+                                      !filters.mfgDateTo &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {filters.mfgDateTo ? (
+                                      format(filters.mfgDateTo, "dd/MM/yyyy")
+                                    ) : (
+                                      <span>To</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.mfgDateTo}
+                                    onSelect={(date) =>
+                                      handleFilterChange("mfgDateTo", date)
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+
+                          {/* Expiry Date Filter */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Expiry Date
+                            </Label>
+                            <div className="flex gap-2">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[150px] justify-start text-left font-normal",
+                                      !filters.expDateFrom &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {filters.expDateFrom ? (
+                                      format(filters.expDateFrom, "dd/MM/yyyy")
+                                    ) : (
+                                      <span>From</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.expDateFrom}
+                                    onSelect={(date) =>
+                                      handleFilterChange("expDateFrom", date)
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[150px] justify-start text-left font-normal",
+                                      !filters.expDateTo &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {filters.expDateTo ? (
+                                      format(filters.expDateTo, "dd/MM/yyyy")
+                                    ) : (
+                                      <span>To</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.expDateTo}
+                                    onSelect={(date) =>
+                                      handleFilterChange("expDateTo", date)
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Results Count */}
+          <motion.div
+            className="flex justify-between items-center mb-4"
+            variants={itemVariants}
+          >
+            <p className="text-sm text-muted-foreground">
+              Showing {startIndex} to {endIndex} of {filteredProducts.length}{" "}
+              products
+              {filteredProducts.length !== products.length && " (filtered)"}
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                Sorted by: <span className="font-medium">Latest Added</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Items per page:
+                </div>
+                <Select
+                  value={itemsPerPage.toString()}
+                  onValueChange={(value) => setItemsPerPage(Number(value))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue placeholder="5" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Product Table */}
+          <motion.div variants={itemVariants}>
+            <Card className="mb-6 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-secondary/50">
+                        <TableHead className="font-semibold">
+                          Product Name
+                        </TableHead>
+                        <TableHead className="font-semibold">B No.</TableHead>
+                        <TableHead className="font-semibold">
+                          MFG Date
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          EXP Date
+                        </TableHead>
+                        <TableHead className="font-semibold">Barcode</TableHead>
+                        <TableHead className="font-semibold">
+                          Basic Price
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Opening Stock
+                        </TableHead>
+                        <TableHead className="font-semibold">MRP</TableHead>
+                        <TableHead className="font-semibold">P.Rate</TableHead>
+                        <TableHead className="font-semibold">S.Rate</TableHead>
+                        <TableHead className="font-semibold">Margin</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence mode="wait">
+                        {paginatedProducts.length === 0 ? (
                           <motion.tr
-                            key={product.id}
-                            custom={index}
-                            initial="hidden"
-                            animate="visible"
-                            whileHover="hover"
-                            variants={rowVariants}
-                            className="group border-1"
-                            layout
-                            transition={{
-                              layout: { duration: 0.3 },
-                            }}
+                            key="no-data"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
                           >
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div>
-                                <p className="font-medium">
-                                  {product.productName}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {product.brand} • {product.hsnCode}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.code
-                                className="text-xs bg-secondary px-2 py-1 rounded inline-block"
-                                whileHover={{ scale: 1.05 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                {product.bNo}
-                              </motion.code>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              {product.mfgDate ? (
-                                <span className="text-sm">
-                                  {product.mfgDate}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">
-                                  Not set
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              {product.expDate ? (
-                                <span className="text-sm">
-                                  {product.expDate}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">
-                                  Not set
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                            <TableCell
+                              colSpan={13}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
+                                className="flex flex-col items-center justify-center"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.1 }}
                               >
-                                <Badge variant="outline" className="font-mono">
-                                  {product.barcode}
-                                </Badge>
-                              </motion.div>
-                            </TableCell>
-                            <TableCell className="font-medium group-hover:bg-secondary/30 cursor-pointer ">
-                              <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: index * 0.1 }}
-                              >
-                                ₹{product.basicPrice.toFixed(2)}
-                              </motion.span>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div className="flex items-center gap-2">
-                                <motion.span
-                                  className={`inline-block w-2 h-2 rounded-full ${
-                                    product.openingStock > 10
-                                      ? "bg-green-500"
-                                      : product.openingStock > 0
-                                      ? "bg-yellow-500"
-                                      : "bg-red-500"
-                                  }`}
-                                  animate={{
-                                    scale: [1, 1.2, 1],
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    repeatDelay: 1,
-                                  }}
-                                />
-                                <span
-                                  className={
-                                    product.openingStock <= 3
-                                      ? "text-red-600 font-semibold"
-                                      : product.openingStock <= 10
-                                      ? "text-yellow-600 font-semibold"
-                                      : ""
-                                  }
+                                <Filter className="h-12 w-12 text-muted-foreground/50 mb-2" />
+                                <p>No products found matching your filters.</p>
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
                                 >
-                                  {product.openingStock}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-semibold group-hover:bg-secondary/30 cursor-pointer">
-                              ₹{product.mrp.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              ₹{product.pRate.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              ₹{product.sRate.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                                >
-                                  ₹{product.margin.toFixed(2)}
-                                </Badge>
-                              </motion.div>
-                            </TableCell>
-                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <motion.div
-                                variants={badgeVariants}
-                                whileHover="hover"
-                              >
-                                <Badge
-                                  variant={
-                                    product.status === "In Stock"
-                                      ? "default"
-                                      : product.status === "Low Stock"
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className={
-                                    product.status === "In Stock"
-                                      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
-                                      : product.status === "Low Stock"
-                                      ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400"
-                                      : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                                  }
-                                >
-                                  {product.status}
-                                </Badge>
+                                  <Button
+                                    variant="link"
+                                    onClick={clearFilters}
+                                    className="mt-2"
+                                  >
+                                    Clear all filters
+                                  </Button>
+                                </motion.div>
                               </motion.div>
                             </TableCell>
                           </motion.tr>
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Custom Pagination */}
-        {filteredProducts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+                        ) : (
+                          paginatedProducts.map((product, index) => (
+                            <motion.tr
+                              key={product.id}
+                              custom={index}
+                              initial="hidden"
+                              animate="visible"
+                              whileHover="hover"
+                              variants={rowVariants}
+                              className="group border-1"
+                              layout
+                              transition={{
+                                layout: { duration: 0.3 },
+                              }}
+                            >
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <div>
+                                  <p className="font-medium">
+                                    {product.productName}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {product.brand} • {product.hsnCode}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <motion.code
+                                  className="text-xs bg-secondary px-2 py-1 rounded inline-block"
+                                  whileHover={{ scale: 1.05 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  {product.bNo}
+                                </motion.code>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                {product.mfgDate ? (
+                                  <span className="text-sm">
+                                    {product.mfgDate}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">
+                                    Not set
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                {product.expDate ? (
+                                  <span className="text-sm">
+                                    {product.expDate}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">
+                                    Not set
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <motion.div
+                                  variants={badgeVariants}
+                                  whileHover="hover"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className="font-mono"
+                                  >
+                                    {product.barcode}
+                                  </Badge>
+                                </motion.div>
+                              </TableCell>
+                              <TableCell className="font-medium group-hover:bg-secondary/30 cursor-pointer ">
+                                <motion.span
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: index * 0.1 }}
+                                >
+                                  ₹{product.basicPrice.toFixed(2)}
+                                </motion.span>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                  <motion.span
+                                    className={`inline-block w-2 h-2 rounded-full ${
+                                      product.openingStock > 10
+                                        ? "bg-green-500"
+                                        : product.openingStock > 0
+                                          ? "bg-yellow-500"
+                                          : "bg-red-500"
+                                    }`}
+                                    animate={{
+                                      scale: [1, 1.2, 1],
+                                    }}
+                                    transition={{
+                                      duration: 2,
+                                      repeat: Infinity,
+                                      repeatDelay: 1,
+                                    }}
+                                  />
+                                  <span
+                                    className={
+                                      product.openingStock <= 3
+                                        ? "text-red-600 font-semibold"
+                                        : product.openingStock <= 10
+                                          ? "text-yellow-600 font-semibold"
+                                          : ""
+                                    }
+                                  >
+                                    {product.openingStock}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-semibold group-hover:bg-secondary/30 cursor-pointer">
+                                ₹{product.mrp.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                ₹{product.pRate.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                ₹{product.sRate.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <motion.div
+                                  variants={badgeVariants}
+                                  whileHover="hover"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                                  >
+                                    ₹{product.margin.toFixed(2)}
+                                  </Badge>
+                                </motion.div>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <motion.div
+                                  variants={badgeVariants}
+                                  whileHover="hover"
+                                >
+                                  <Badge
+                                    variant={
+                                      product.status === "In Stock"
+                                        ? "default"
+                                        : product.status === "Low Stock"
+                                          ? "secondary"
+                                          : "destructive"
+                                    }
+                                    className={
+                                      product.status === "In Stock"
+                                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                        : product.status === "Low Stock"
+                                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400"
+                                          : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                                    }
+                                  >
+                                    {product.status}
+                                  </Badge>
+                                </motion.div>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30">
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewProduct(product)}
+                                    className="h-8 w-8 hover:bg-blue-100"
+                                  >
+                                    <Eye className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditProduct(product)}
+                                    className="h-8 w-8 hover:bg-green-100"
+                                  >
+                                    <Edit className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      handleDeleteProduct(product.id)
+                                    }
+                                    className="h-8 w-8 hover:bg-red-100"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
-        )}
-      </div>
-    </motion.div>
+
+          {/* Custom Pagination */}
+          {filteredProducts.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <CustomPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Product Form Modal */}
+      <ProductFormModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        editingProduct={editingProduct}
+        onSave={handleSaveProduct}
+        isSubmitting={isSubmitting}
+      />
+    </>
   );
 }

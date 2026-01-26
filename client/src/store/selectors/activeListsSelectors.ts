@@ -43,7 +43,7 @@ export const selectActiveSalesmenData = createSelector(
 
 export const selectActiveUnitsData = createSelector(
   selectActiveUnits,
-  (units) => units.data,
+  (units) => units.data
 );
 
 export const selectActiveVansData = createSelector(
