@@ -12,16 +12,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Plus,
   Edit,
   Trash2,
   Search,
   X,
   CreditCard,
-  FileText,
-  Calendar,
+  Banknote,
+  QrCode,
+  Phone,
+  RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import AccountForm, {
@@ -47,222 +50,29 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
+import { accountService } from "@/services/accountService";
+import { type Account, type AccountFilters } from "@/types/account";
 
-// Define type for account
-interface Account {
-  id: number;
-  code: string;
-  name: string;
-  type: "Asset" | "Liability" | "Revenue" | "Expense" | "Equity";
-  group: string;
-  subGroup?: string;
-  description: string;
-  openingBalance: number;
-  currentBalance: number;
-  debitTotal: number;
-  creditTotal: number;
-  creditLimit: number;
-  status: "Active" | "Inactive" | "Closed";
-  transactionCount: number;
-  lastTransactionDate: string;
-  createdAt: string;
-  updatedAt: string;
+// Define the API response structure
+interface AccountsResponse {
+  data: {
+    accounts: Account[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
 }
 
-export default function Account() {
+export default function AccountComponent() {
   // State for accounts
-  const [accounts, setAccounts] = useState<Account[]>([
-    {
-      id: 1,
-      code: "ACC001",
-      name: "Cash Account",
-      type: "Asset",
-      group: "Current Assets",
-      subGroup: "Cash & Cash Equivalents",
-      description: "Main cash account for daily transactions",
-      openingBalance: 1000000,
-      currentBalance: 1250000,
-      debitTotal: 3500000,
-      creditTotal: 2250000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 245,
-      lastTransactionDate: "2024-02-15",
-      createdAt: "2024-01-01 09:00:00",
-      updatedAt: "2024-03-20 14:45:00",
-    },
-    {
-      id: 2,
-      code: "ACC002",
-      name: "Bank of India",
-      type: "Asset",
-      group: "Bank Accounts",
-      subGroup: "Current Account",
-      description: "Primary business bank account",
-      openingBalance: 3000000,
-      currentBalance: 3250000,
-      debitTotal: 5200000,
-      creditTotal: 4950000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 156,
-      lastTransactionDate: "2024-02-14",
-      createdAt: "2024-01-02 11:20:00",
-      updatedAt: "2024-03-18 10:15:00",
-    },
-    {
-      id: 3,
-      code: "ACC003",
-      name: "Accounts Receivable",
-      type: "Asset",
-      group: "Current Assets",
-      subGroup: "Trade Receivables",
-      description: "Amounts owed by customers",
-      openingBalance: 1500000,
-      currentBalance: 1850000,
-      debitTotal: 2800000,
-      creditTotal: 2450000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 324,
-      lastTransactionDate: "2024-02-15",
-      createdAt: "2024-01-03 08:45:00",
-      updatedAt: "2024-03-22 16:30:00",
-    },
-    {
-      id: 4,
-      code: "ACC004",
-      name: "Inventory Account",
-      type: "Asset",
-      group: "Current Assets",
-      subGroup: "Stock Inventory",
-      description: "Value of goods held for sale",
-      openingBalance: 2500000,
-      currentBalance: 2750000,
-      debitTotal: 3200000,
-      creditTotal: 2950000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 189,
-      lastTransactionDate: "2024-02-13",
-      createdAt: "2024-01-04 13:10:00",
-      updatedAt: "2024-02-28 09:25:00",
-    },
-    {
-      id: 5,
-      code: "ACC005",
-      name: "Accounts Payable",
-      type: "Liability",
-      group: "Current Liabilities",
-      subGroup: "Trade Payables",
-      description: "Amounts owed to suppliers",
-      openingBalance: 1000000,
-      currentBalance: 850000,
-      debitTotal: 1200000,
-      creditTotal: 1050000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 278,
-      lastTransactionDate: "2024-02-15",
-      createdAt: "2024-01-05 10:00:00",
-      updatedAt: "2024-03-15 11:45:00",
-    },
-    {
-      id: 6,
-      code: "ACC006",
-      name: "Sales Revenue",
-      type: "Revenue",
-      group: "Operating Revenue",
-      subGroup: "Product Sales",
-      description: "Revenue from product sales",
-      openingBalance: 0,
-      currentBalance: 9850000,
-      debitTotal: 0,
-      creditTotal: 9850000,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 456,
-      lastTransactionDate: "2024-02-15",
-      createdAt: "2024-01-06 15:30:00",
-      updatedAt: "2024-03-10 14:20:00",
-    },
-    {
-      id: 7,
-      code: "ACC007",
-      name: "Purchase Account",
-      type: "Expense",
-      group: "Cost of Goods Sold",
-      subGroup: "Direct Materials",
-      description: "Cost of inventory purchases",
-      openingBalance: 0,
-      currentBalance: 6250000,
-      debitTotal: 6250000,
-      creditTotal: 0,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 312,
-      lastTransactionDate: "2024-02-14",
-      createdAt: "2024-01-07 12:15:00",
-      updatedAt: "2024-03-19 13:40:00",
-    },
-    {
-      id: 8,
-      code: "ACC008",
-      name: "Salary Expense",
-      type: "Expense",
-      group: "Operating Expenses",
-      subGroup: "Employee Compensation",
-      description: "Employee salaries and wages",
-      openingBalance: 0,
-      currentBalance: 1250000,
-      debitTotal: 1250000,
-      creditTotal: 0,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 45,
-      lastTransactionDate: "2024-02-10",
-      createdAt: "2024-01-08 09:00:00",
-      updatedAt: "2024-03-21 15:10:00",
-    },
-    {
-      id: 9,
-      code: "ACC009",
-      name: "Loan Payable",
-      type: "Liability",
-      group: "Long-term Liabilities",
-      subGroup: "Bank Loans",
-      description: "Long-term business loan",
-      openingBalance: 5000000,
-      currentBalance: 4800000,
-      debitTotal: 200000,
-      creditTotal: 0,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 12,
-      lastTransactionDate: "2024-01-31",
-      createdAt: "2023-11-15 14:20:00",
-      updatedAt: "2024-01-30 10:55:00",
-    },
-    {
-      id: 10,
-      code: "ACC010",
-      name: "Owner's Equity",
-      type: "Equity",
-      group: "Shareholder's Equity",
-      subGroup: "Capital",
-      description: "Owner's investment in the business",
-      openingBalance: 5000000,
-      currentBalance: 5000000,
-      debitTotal: 0,
-      creditTotal: 0,
-      creditLimit: 0,
-      status: "Active",
-      transactionCount: 2,
-      lastTransactionDate: "2024-01-01",
-      createdAt: "2024-01-12 08:30:00",
-      updatedAt: "2024-03-23 17:05:00",
-    },
-  ]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -273,83 +83,98 @@ export default function Account() {
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<AccountFilters>({
     search: "",
-    name: "",
-    code: "",
-    type: "all" as "all" | Account["type"],
-    group: "",
-    status: "all" as "all" | Account["status"],
-    minBalance: "",
-    maxBalance: "",
+    accountHolder: "",
+    bankName: "",
+    ifscCode: "",
+    status: "all",
+    showDeleted: false,
   });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Filter accounts
-  const filteredAccounts = useMemo(() => {
-    return accounts.filter((account) => {
-      // Global search
-      const searchLower = filters.search.toLowerCase();
-      if (
-        filters.search &&
-        !account.name.toLowerCase().includes(searchLower) &&
-        !account.code.toLowerCase().includes(searchLower) &&
-        !account.description.toLowerCase().includes(searchLower) &&
-        !account.group.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Safely handle accounts data
+  const displayAccounts = useMemo(() => {
+    if (!accounts || !Array.isArray(accounts)) {
+      return [];
+    }
+    return accounts;
+  }, [accounts]);
+
+  // Fetch accounts
+  const fetchAccounts = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.accountHolder) {
+        params.accountHolder = filters.accountHolder;
+      }
+      if (filters.bankName) {
+        params.bankName = filters.bankName;
+      }
+      if (filters.ifscCode) {
+        params.ifscCode = filters.ifscCode;
+      }
+      if (filters.status !== "all") {
+        params.status = filters.status === "active";
+      }
+      if (filters.showDeleted) {
+        params.showDeleted = "true";
       }
 
-      // Individual filters
-      if (
-        filters.name &&
-        !account.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
-        return false;
-      if (
-        filters.code &&
-        !account.code.toLowerCase().includes(filters.code.toLowerCase())
-      )
-        return false;
-      if (filters.type !== "all" && account.type !== filters.type) return false;
-      if (
-        filters.group &&
-        !account.group.toLowerCase().includes(filters.group.toLowerCase())
-      )
-        return false;
-      if (filters.status !== "all" && account.status !== filters.status)
-        return false;
-      if (
-        filters.minBalance &&
-        Math.abs(account.currentBalance) < Number(filters.minBalance)
-      )
-        return false;
-      if (
-        filters.maxBalance &&
-        Math.abs(account.currentBalance) > Number(filters.maxBalance)
-      )
-        return false;
+      const response = await accountService.getAccounts(
+        currentPage,
+        itemsPerPage,
+        params,
+      );
 
-      return true;
-    });
-  }, [accounts, filters]);
+      // Type the response as AccountsResponse
+      const apiResponse = response as unknown as AccountsResponse;
 
-  // Paginated data
-  const paginatedAccounts = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredAccounts.slice(startIndex, endIndex);
-  }, [filteredAccounts, currentPage, itemsPerPage]);
+      if (apiResponse?.data) {
+        const accountsData = apiResponse.data.accounts || [];
+        const pagination = apiResponse.data.pagination || {};
 
-  // Total pages
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredAccounts.length / itemsPerPage)
-  );
+        setAccounts(Array.isArray(accountsData) ? accountsData : []);
+        setTotalItems(pagination.total || 0);
+        setTotalPages(pagination.totalPages || 1);
+      } else {
+        console.error("Unexpected response structure:", response);
+        setAccounts([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Error fetching accounts:", error);
+      toast.error("Failed to fetch accounts", {
+        description: error.response?.data?.message || "Please try again later",
+      });
+      setAccounts([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchAccounts();
+  }, [currentPage, itemsPerPage, filters]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -368,13 +193,11 @@ export default function Account() {
   const clearFilters = () => {
     setFilters({
       search: "",
-      name: "",
-      code: "",
-      type: "all",
-      group: "",
+      accountHolder: "",
+      bankName: "",
+      ifscCode: "",
       status: "all",
-      minBalance: "",
-      maxBalance: "",
+      showDeleted: false,
     });
   };
 
@@ -383,7 +206,11 @@ export default function Account() {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "type" || filterName === "status" ? "all" : "",
+        filterName === "status"
+          ? "all"
+          : filterName === "showDeleted"
+            ? false
+            : "",
     }));
   };
 
@@ -394,47 +221,27 @@ export default function Account() {
   };
 
   // Handle form save
-  const handleSave = (data: AccountFormData, id?: number) => {
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    if (id) {
-      // Update existing account
-      setAccounts((prev) =>
-        prev.map((account) =>
-          account.id === id
-            ? {
-                ...account,
-                ...data,
-                updatedAt: now,
-              }
-            : account
-        )
-      );
-      toast.success("Account updated successfully!");
-    } else {
-      // Add new account
-      const newAccount: Account = {
-        id: Math.max(...accounts.map((a) => a.id)) + 1,
-        code: `ACC${String(
-          Math.max(
-            ...accounts.map((a) => parseInt(a.code.replace("ACC", "")))
-          ) + 1
-        ).padStart(3, "0")}`,
-        ...data,
-        openingBalance: data.openingBalance || 0,
-        currentBalance: data.currentBalance || 0,
-        debitTotal: 0,
-        creditTotal: 0,
-        transactionCount: 0,
-        lastTransactionDate: now.split(" ")[0],
-        status: "Active" as Account["status"],
-        createdAt: now,
-        updatedAt: now,
-      };
-      setAccounts((prev) => [...prev, newAccount]);
-      toast.success("Account created successfully!");
+  const handleSave = async (data: AccountFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        // Update existing account
+        await accountService.updateAccount(id, data);
+        toast.success("Account updated successfully!");
+      } else {
+        // Add new account
+        await accountService.createAccount(data);
+        toast.success("Account created successfully!");
+      }
+      setFormOpen(false);
+      fetchAccounts(); // Refresh the list
+    } catch (error: any) {
+      toast.error("Failed to save account", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   // Handle edit
@@ -450,14 +257,20 @@ export default function Account() {
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (accountToDelete) {
-      setAccounts((prev) =>
-        prev.filter((account) => account.id !== accountToDelete.id)
-      );
-      toast.success("Account deleted successfully!");
-      setAccountToDelete(null);
-      setDeleteOpen(false);
+      try {
+        await accountService.deleteAccount(accountToDelete.id);
+        toast.success("Account deleted successfully!");
+        fetchAccounts(); // Refresh the list
+      } catch (error: any) {
+        toast.error("Failed to delete account", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      } finally {
+        setAccountToDelete(null);
+        setDeleteOpen(false);
+      }
     }
   };
 
@@ -467,118 +280,40 @@ export default function Account() {
     setDeleteOpen(true);
   };
 
+  // Refresh data
+  const handleRefresh = () => {
+    fetchAccounts();
+    toast.info("Refreshing data...");
+  };
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(
-    currentPage * itemsPerPage,
-    filteredAccounts.length
-  );
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== "search" && value && value !== "all"
+    ([key, value]) =>
+      key !== "search" &&
+      ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Format simple date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Get account type badge color
-  const getAccountTypeColor = (type: Account["type"]) => {
-    switch (type) {
-      case "Asset":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400";
-      case "Liability":
-        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400";
-      case "Revenue":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400";
-      case "Expense":
-        return "bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400";
-      case "Equity":
-        return "bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
     }
   };
-
-  // Get status badge color
-  const getStatusColor = (status: Account["status"]) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400";
-      case "Inactive":
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-      case "Closed":
-        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
-    }
-  };
-
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalAccounts = accounts.length;
-    const activeAccounts = accounts.filter((a) => a.status === "Active").length;
-    const totalAssets = accounts
-      .filter((a) => a.type === "Asset")
-      .reduce((sum, a) => sum + Math.abs(a.currentBalance), 0);
-    const totalLiabilities = accounts
-      .filter((a) => a.type === "Liability")
-      .reduce((sum, a) => sum + Math.abs(a.currentBalance), 0);
-    const totalRevenue = accounts
-      .filter((a) => a.type === "Revenue")
-      .reduce((sum, a) => sum + Math.abs(a.currentBalance), 0);
-    const totalExpenses = accounts
-      .filter((a) => a.type === "Expense")
-      .reduce((sum, a) => sum + Math.abs(a.currentBalance), 0);
-    const totalEquity = accounts
-      .filter((a) => a.type === "Equity")
-      .reduce((sum, a) => sum + Math.abs(a.currentBalance), 0);
-    const netProfit = totalRevenue - totalExpenses;
-    const totalTransactions = accounts.reduce(
-      (sum, a) => sum + a.transactionCount,
-      0
-    );
-
-    return {
-      totalAccounts,
-      activeAccounts,
-      totalAssets,
-      totalLiabilities,
-      totalRevenue,
-      totalExpenses,
-      totalEquity,
-      netProfit,
-      totalTransactions,
-    };
-  }, [accounts]);
 
   return (
     <motion.div
@@ -596,7 +331,7 @@ export default function Account() {
           <div className="flex justify-between gap-4">
             {/* Title */}
             <div>
-              <h1 className="text-3xl font-bold text-heading">Account Heads</h1>
+              <h1 className="text-3xl font-bold text-heading">Bank Accounts</h1>
             </div>
 
             {/* Search Bar */}
@@ -609,10 +344,11 @@ export default function Account() {
               <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search accounts by name, code, or description..."
+                placeholder="Search accounts by holder, bank, or IFSC..."
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
+                disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -620,6 +356,7 @@ export default function Account() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => handleFilterChange("search", "")}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -633,20 +370,16 @@ export default function Account() {
                 whileHover="hover"
                 whileTap="tap"
               >
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
-              </motion.div>
-
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
                 </Button>
               </motion.div>
 
@@ -661,6 +394,7 @@ export default function Account() {
                 <Button
                   onClick={handleAddNew}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={isLoading}
                 >
                   <Plus className="h-4 w-4" />
                   Add Account
@@ -693,6 +427,7 @@ export default function Account() {
                         size="sm"
                         onClick={clearFilters}
                         className="h-8 text-muted-foreground"
+                        disabled={isLoading}
                       >
                         Clear all
                       </Button>
@@ -702,6 +437,7 @@ export default function Account() {
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
                       className="h-8"
+                      disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
@@ -719,30 +455,35 @@ export default function Account() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* Account Name Filter */}
+                        {/* Account Holder Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="accountName"
+                            htmlFor="accountHolder"
                             className="text-sm font-medium"
                           >
-                            Account Name
+                            Account Holder
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="accountName"
-                              placeholder="Enter account name"
-                              value={filters.name}
+                              id="accountHolder"
+                              placeholder="Enter account holder name"
+                              value={filters.accountHolder}
                               onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
+                                handleFilterChange(
+                                  "accountHolder",
+                                  e.target.value,
+                                )
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.name && (
+                            {filters.accountHolder && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => clearFilter("accountHolder")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -750,30 +491,32 @@ export default function Account() {
                           </div>
                         </div>
 
-                        {/* Account Code Filter */}
+                        {/* Bank Name Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="accountCode"
+                            htmlFor="bankName"
                             className="text-sm font-medium"
                           >
-                            Account Code
+                            Bank Name
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="accountCode"
-                              placeholder="ACC001"
-                              value={filters.code}
+                              id="bankName"
+                              placeholder="Enter bank name"
+                              value={filters.bankName}
                               onChange={(e) =>
-                                handleFilterChange("code", e.target.value)
+                                handleFilterChange("bankName", e.target.value)
                               }
                               className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.code && (
+                            {filters.bankName && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("code")}
+                                onClick={() => clearFilter("bankName")}
+                                disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -781,31 +524,37 @@ export default function Account() {
                           </div>
                         </div>
 
-                        {/* Type Filter */}
+                        {/* IFSC Code Filter */}
                         <div className="space-y-2">
-                          <Label htmlFor="type" className="text-sm font-medium">
-                            Type
-                          </Label>
-                          <Select
-                            value={filters.type}
-                            onValueChange={(value: "all" | Account["type"]) =>
-                              handleFilterChange("type", value)
-                            }
+                          <Label
+                            htmlFor="ifscCode"
+                            className="text-sm font-medium"
                           >
-                            <SelectTrigger id="type">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Types</SelectItem>
-                              <SelectItem value="Asset">Asset</SelectItem>
-                              <SelectItem value="Liability">
-                                Liability
-                              </SelectItem>
-                              <SelectItem value="Revenue">Revenue</SelectItem>
-                              <SelectItem value="Expense">Expense</SelectItem>
-                              <SelectItem value="Equity">Equity</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            IFSC Code
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="ifscCode"
+                              placeholder="Enter IFSC code"
+                              value={filters.ifscCode}
+                              onChange={(e) =>
+                                handleFilterChange("ifscCode", e.target.value)
+                              }
+                              className="flex-1"
+                              disabled={isLoading}
+                            />
+                            {filters.ifscCode && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => clearFilter("ifscCode")}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Status Filter */}
@@ -818,77 +567,59 @@ export default function Account() {
                           </Label>
                           <Select
                             value={filters.status}
-                            onValueChange={(value: "all" | Account["status"]) =>
-                              handleFilterChange("status", value)
-                            }
+                            onValueChange={(
+                              value: "all" | "active" | "inactive",
+                            ) => handleFilterChange("status", value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger id="status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                              <SelectItem value="Inactive">Inactive</SelectItem>
-                              <SelectItem value="Closed">Closed</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Group Filter */}
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
                           <Label
-                            htmlFor="group"
+                            htmlFor="showDeleted"
                             className="text-sm font-medium"
                           >
-                            Group
+                            Show Deleted
                           </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="group"
-                              placeholder="Current Assets"
-                              value={filters.group}
-                              onChange={(e) =>
-                                handleFilterChange("group", e.target.value)
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
                               }
-                              className="flex-1"
+                              disabled={isLoading}
                             />
-                            {filters.group && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("group")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Balance Range Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Balance Range (₹)
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Min"
-                              type="number"
-                              value={filters.minBalance}
-                              onChange={(e) =>
-                                handleFilterChange("minBalance", e.target.value)
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              placeholder="Max"
-                              type="number"
-                              value={filters.maxBalance}
-                              onChange={(e) =>
-                                handleFilterChange("maxBalance", e.target.value)
-                              }
-                              className="flex-1"
-                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted ? (
+                                <div className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  Showing Deleted
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="h-4 w-4" />
+                                  Hide Deleted
+                                </div>
+                              )}
+                            </Label>
                           </div>
                         </div>
                       </div>
@@ -906,18 +637,32 @@ export default function Account() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {filteredAccounts.length}{" "}
-            accounts
-            {filteredAccounts.length !== accounts.length && " (filtered)"}
+            {isLoading ? (
+              "Loading..."
+            ) : (
+              <>
+                Showing {startIndex} to {endIndex} of {totalItems} accounts
+                {filters.status !== "all" ||
+                filters.accountHolder ||
+                filters.bankName ||
+                filters.ifscCode ||
+                filters.search ||
+                filters.showDeleted
+                  ? " (filtered)"
+                  : ""}
+                {filters.showDeleted && " (including deleted)"}
+              </>
+            )}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => setItemsPerPage(Number(value))}
+              disabled={isLoading}
             >
               <SelectTrigger className="w-20">
-                <SelectValue placeholder="5" />
+                <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -941,10 +686,10 @@ export default function Account() {
                         Account Details
                       </TableHead>
                       <TableHead className="font-semibold">
-                        Type & Group
+                        Bank Information
                       </TableHead>
                       <TableHead className="font-semibold">
-                        Transactions
+                        Digital Payment
                       </TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
@@ -955,7 +700,24 @@ export default function Account() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="wait">
-                      {paginatedAccounts.length === 0 ? (
+                      {isLoading ? (
+                        <motion.tr
+                          key="loading"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <TableCell colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Loading accounts...
+                              </p>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ) : displayAccounts.length === 0 ? (
                         <motion.tr
                           key="no-data"
                           initial={{ opacity: 0 }}
@@ -991,7 +753,7 @@ export default function Account() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedAccounts.map((account, index) => (
+                        displayAccounts.map((account, index) => (
                           <motion.tr
                             key={account.id}
                             custom={index}
@@ -1016,21 +778,19 @@ export default function Account() {
                                 </motion.div>
                                 <div>
                                   <p className="font-medium text-heading">
-                                    {account.name}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {account.code}
-                                    </Badge>
-                                    {account.subGroup && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {account.subGroup}
-                                      </p>
+                                    {account.accountHolder}
+                                    {account.deleted && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2 text-xs"
+                                      >
+                                        Deleted
+                                      </Badge>
                                     )}
-                                  </div>
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ID: {account.id}
+                                  </p>
                                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                                     {account.description}
                                   </p>
@@ -1039,43 +799,47 @@ export default function Account() {
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="space-y-2">
-                                <motion.div
-                                  variants={badgeVariants}
-                                  whileHover="hover"
-                                >
-                                  <Badge
-                                    className={getAccountTypeColor(
-                                      account.type
-                                    )}
-                                  >
-                                    {account.type}
-                                  </Badge>
-                                </motion.div>
-                                <div className="text-sm text-muted-foreground">
-                                  {account.group}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <Banknote className="h-3 w-3 text-muted-foreground" />
+                                    <span className="font-medium text-sm">
+                                      {account.bankName}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-muted-foreground">
+                                    IFSC Code
+                                  </div>
+                                  <code className="text-sm font-mono bg-secondary px-2 py-1 rounded">
+                                    {account.ifscCode}
+                                  </code>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-3 w-3 text-muted-foreground" />
-                                  <span className="font-medium">
-                                    {account.transactionCount}
+                              <div className="space-y-2">
+                                {account.qrCode && (
+                                  <div className="flex items-center gap-2">
+                                    <QrCode className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-sm">
+                                      QR Code Available
+                                    </span>
+                                  </div>
+                                )}
+                                {account.gpayNo && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-sm">
+                                      GPay: {account.gpayNo}
+                                    </span>
+                                  </div>
+                                )}
+                                {!account.qrCode && !account.gpayNo && (
+                                  <span className="text-sm text-muted-foreground">
+                                    No digital payment info
                                   </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Last:{" "}
-                                  {formatDate(account.lastTransactionDate)}
-                                </div>
-                                <div className="flex gap-1 text-xs">
-                                  <span className="text-green-600">
-                                    Dr: {formatCurrency(account.debitTotal)}
-                                  </span>
-                                  <span className="text-red-600">
-                                    Cr: {formatCurrency(account.creditTotal)}
-                                  </span>
-                                </div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
@@ -1084,9 +848,16 @@ export default function Account() {
                                 whileHover="hover"
                               >
                                 <Badge
-                                  className={getStatusColor(account.status)}
+                                  variant={
+                                    account.status ? "default" : "secondary"
+                                  }
+                                  className={
+                                    account.status
+                                      ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                      : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400"
+                                  }
                                 >
-                                  {account.status}
+                                  {account.status ? "Active" : "Inactive"}
                                 </Badge>
                               </motion.div>
                             </TableCell>
@@ -1126,6 +897,7 @@ export default function Account() {
                                     size="icon"
                                     onClick={() => handleEdit(account)}
                                     className="h-8 w-8"
+                                    disabled={account.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1140,6 +912,7 @@ export default function Account() {
                                     size="icon"
                                     onClick={() => confirmDelete(account)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                    disabled={account.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1158,7 +931,7 @@ export default function Account() {
         </motion.div>
 
         {/* Custom Pagination */}
-        {filteredAccounts.length > 0 && (
+        {!isLoading && displayAccounts.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1178,6 +951,7 @@ export default function Account() {
           onOpenChange={setFormOpen}
           editingAccount={editingAccount}
           onSave={handleSave}
+          isSubmitting={isSubmitting}
         />
 
         {/* Delete Confirmation */}
@@ -1187,7 +961,7 @@ export default function Account() {
           mainText="Delete Account"
           subText={
             accountToDelete
-              ? `Are you sure you want to delete "${accountToDelete.name}" (${accountToDelete.code})? This action cannot be undone and will affect all related transactions.`
+              ? `Are you sure you want to delete "${accountToDelete.accountHolder}" account? This action cannot be undone.`
               : "This action cannot be undone."
           }
           nextButtonText="Delete"

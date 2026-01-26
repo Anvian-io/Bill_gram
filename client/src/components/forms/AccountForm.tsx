@@ -1,4 +1,3 @@
-// components/forms/AccountForm.tsx
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,29 +29,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Define the form schema
+// Define the form schema with boolean status
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Account name must be at least 2 characters.",
+  accountHolder: z.string().min(2, {
+    message: "Account holder name must be at least 2 characters.",
   }),
-  type: z.enum(["Asset", "Liability", "Revenue", "Expense", "Equity"]),
-  group: z.string().min(2, {
-    message: "Group must be at least 2 characters.",
+  ifscCode: z.string().min(5, {
+    message: "IFSC code must be at least 5 characters.",
   }),
-  subGroup: z.string().optional(),
-  description: z.string().min(5, {
-    message: "Description must be at least 5 characters.",
+  bankName: z.string().min(2, {
+    message: "Bank name must be at least 2 characters.",
   }),
-  openingBalance: z.coerce.number({
-    message: "Opening balance must be a number.",
-  }),
-  currentBalance: z.coerce.number({
-    message: "Current balance must be a number.",
-  }),
-  creditLimit: z.coerce.number().min(0, {
-    message: "Credit limit must be a positive number.",
-  }),
-  status: z.enum(["Active", "Inactive", "Closed"]),
+  description: z.string().optional(),
+  qrCode: z.string().optional(),
+  gpayNo: z.string().optional(),
+  status: z.boolean(),
 });
 
 export type AccountFormData = z.infer<typeof formSchema>;
@@ -62,17 +53,16 @@ interface AccountFormProps {
   onOpenChange: (open: boolean) => void;
   editingAccount?: {
     id: number;
-    name: string;
-    type: "Asset" | "Liability" | "Revenue" | "Expense" | "Equity";
-    group: string;
-    subGroup?: string;
+    accountHolder: string;
+    ifscCode: string;
+    bankName: string;
     description: string;
-    openingBalance: number;
-    currentBalance: number;
-    creditLimit: number;
-    status: "Active" | "Inactive" | "Closed";
+    qrCode: string | null;
+    gpayNo: string | null;
+    status: boolean;
   } | null;
   onSave: (data: AccountFormData, id?: number) => void;
+  isSubmitting?: boolean;
 }
 
 export default function AccountForm({
@@ -80,19 +70,18 @@ export default function AccountForm({
   onOpenChange,
   editingAccount,
   onSave,
+  isSubmitting = false,
 }: AccountFormProps) {
   const form = useForm<AccountFormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      type: "Asset",
-      group: "",
-      subGroup: "",
+      accountHolder: "",
+      ifscCode: "",
+      bankName: "",
       description: "",
-      openingBalance: 0,
-      currentBalance: 0,
-      creditLimit: 0,
-      status: "Active",
+      qrCode: "",
+      gpayNo: "",
+      status: true,
     },
   });
 
@@ -100,242 +89,58 @@ export default function AccountForm({
   useEffect(() => {
     if (editingAccount) {
       form.reset({
-        name: editingAccount.name,
-        type: editingAccount.type,
-        group: editingAccount.group,
-        subGroup: editingAccount.subGroup || "",
-        description: editingAccount.description,
-        openingBalance: editingAccount.openingBalance,
-        currentBalance: editingAccount.currentBalance,
-        creditLimit: editingAccount.creditLimit,
+        accountHolder: editingAccount.accountHolder,
+        ifscCode: editingAccount.ifscCode,
+        bankName: editingAccount.bankName,
+        description: editingAccount.description || "",
+        qrCode: editingAccount.qrCode || "",
+        gpayNo: editingAccount.gpayNo || "",
         status: editingAccount.status,
       });
     } else {
       form.reset({
-        name: "",
-        type: "Asset",
-        group: "",
-        subGroup: "",
+        accountHolder: "",
+        ifscCode: "",
+        bankName: "",
         description: "",
-        openingBalance: 0,
-        currentBalance: 0,
-        creditLimit: 0,
-        status: "Active",
+        qrCode: "",
+        gpayNo: "",
+        status: true,
       });
     }
   }, [editingAccount, form]);
 
   const onSubmit = (data: AccountFormData) => {
-    try {
-      onSave(data, editingAccount?.id);
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Failed to save account:", error);
-    }
+    onSave(data, editingAccount?.id);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingAccount ? "Edit Account" : "Add New Account"}
           </DialogTitle>
           <DialogDescription>
             {editingAccount
-              ? "Update account information and financial details."
-              : "Add a new account to your chart of accounts."}
+              ? "Update bank account information and digital payment details."
+              : "Add a new bank account to your financial records."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Account Name */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Cash Account" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Account Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Type *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Asset">Asset</SelectItem>
-                        <SelectItem value="Liability">Liability</SelectItem>
-                        <SelectItem value="Revenue">Revenue</SelectItem>
-                        <SelectItem value="Expense">Expense</SelectItem>
-                        <SelectItem value="Equity">Equity</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Group */}
-              <FormField
-                control={form.control}
-                name="group"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Group *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Current Assets" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Sub Group */}
-              <FormField
-                control={form.control}
-                name="subGroup"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sub Group (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Cash & Cash Equivalents"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Opening Balance */}
-              <FormField
-                control={form.control}
-                name="openingBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Opening Balance (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Current Balance */}
-              <FormField
-                control={form.control}
-                name="currentBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Balance (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Credit Limit */}
-              <FormField
-                control={form.control}
-                name="creditLimit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Credit Limit (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                        <SelectItem value="Closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Description */}
             <FormField
               control={form.control}
-              name="description"
+              name="accountHolder"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description *</FormLabel>
+                  <FormLabel>Account Holder *</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Describe the purpose of this account..."
-                      className="resize-none"
-                      rows={3}
+                    <Input
+                      placeholder="e.g., John Doe"
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -343,16 +148,145 @@ export default function AccountForm({
               )}
             />
 
-            <DialogFooter>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="ifscCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IFSC Code *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="SBIN0001234"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bankName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bank Name *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="State Bank of India"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe the purpose of this account..."
+                      className="resize-none"
+                      rows={3}
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="qrCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>QR Code URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://qrcode.example.com/..."
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gpayNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GPay Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="+91 9876543210"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={(value: string) =>
+                      field.onChange(value === "true")
+                    }
+                    value={field.value ? "true" : "false"}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingAccount ? "Update Account" : "Create Account"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingAccount
+                    ? "Update Account"
+                    : "Create Account"}
               </Button>
             </DialogFooter>
           </form>

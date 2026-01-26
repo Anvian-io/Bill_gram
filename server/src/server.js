@@ -9,6 +9,7 @@ import salesmanRoutes from "./route/salesmanRoutes.js";
 import customerRoutes from "./route/customerRoutes.js";
 import areaRoutes from "./route/areaRoutes.js";
 import vanRoutes from "./route/vanRoutes.js";
+import accountRoutes from "./route/accountRoutes.js";
 
 const app = express();
 const PORT = 3001;
@@ -42,6 +43,7 @@ const startServer = async () => {
     app.use("/api/customers", customerRoutes);
     app.use("/api/areas", areaRoutes);
     app.use("/api/vans", vanRoutes);
+    app.use("/api/accounts", accountRoutes);
 
     // Health check
     app.get("/api/health", (req, res) => {
