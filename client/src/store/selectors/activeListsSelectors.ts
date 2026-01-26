@@ -1,0 +1,83 @@
+// src/store/selectors/activeListsSelectors.ts
+import { createSelector } from "@reduxjs/toolkit";
+import { type RootState } from "../index";
+
+// Basic selectors
+export const selectActiveAccounts = (state: RootState) =>
+  state.activeLists.accounts;
+export const selectActiveAreas = (state: RootState) => state.activeLists.areas;
+export const selectActiveCustomers = (state: RootState) =>
+  state.activeLists.customers;
+export const selectActiveProductCompanies = (state: RootState) =>
+  state.activeLists.productCompanies;
+export const selectActiveSalesmen = (state: RootState) =>
+  state.activeLists.salesmen;
+export const selectActiveUnits = (state: RootState) => state.activeLists.units;
+export const selectActiveVans = (state: RootState) => state.activeLists.vans;
+
+// Memoized selectors for data only
+export const selectActiveAccountsData = createSelector(
+  selectActiveAccounts,
+  (accounts) => accounts.data,
+);
+
+export const selectActiveAreasData = createSelector(
+  selectActiveAreas,
+  (areas) => areas.data,
+);
+
+export const selectActiveCustomersData = createSelector(
+  selectActiveCustomers,
+  (customers) => customers.data,
+);
+
+export const selectActiveProductCompaniesData = createSelector(
+  selectActiveProductCompanies,
+  (companies) => companies.data,
+);
+
+export const selectActiveSalesmenData = createSelector(
+  selectActiveSalesmen,
+  (salesmen) => salesmen.data,
+);
+
+export const selectActiveUnitsData = createSelector(
+  selectActiveUnits,
+  (units) => units.data,
+);
+
+export const selectActiveVansData = createSelector(
+  selectActiveVans,
+  (vans) => vans.data,
+);
+
+// Loading selectors
+export const selectIsLoading = createSelector(
+  [
+    selectActiveAccounts,
+    selectActiveAreas,
+    selectActiveCustomers,
+    selectActiveProductCompanies,
+    selectActiveSalesmen,
+    selectActiveUnits,
+    selectActiveVans,
+  ],
+  (...lists) => lists.some((list) => list.loading),
+);
+
+// Error selector (get first error if any)
+export const selectAnyError = createSelector(
+  [
+    selectActiveAccounts,
+    selectActiveAreas,
+    selectActiveCustomers,
+    selectActiveProductCompanies,
+    selectActiveSalesmen,
+    selectActiveUnits,
+    selectActiveVans,
+  ],
+  (...lists) => {
+    const errors = lists.map((list) => list.error).filter(Boolean);
+    return errors.length > 0 ? errors[0] : null;
+  },
+);
