@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
+  // Download,
+  // Upload,
   Plus,
   Edit,
   Trash2,
@@ -21,8 +21,8 @@ import {
   X,
   Layers,
   RefreshCw,
-  ToggleLeft,
-  ToggleRight,
+  // ToggleLeft,
+  // ToggleRight,
   Trash,
   Eye,
   EyeOff,

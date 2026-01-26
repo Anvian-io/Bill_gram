@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -50,7 +50,7 @@ import {
   buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { customerService } from "@/services/customerService";
 import { type Customer, type CustomerFilters } from "@/types/customer";
 
@@ -70,18 +70,18 @@ interface CustomersResponse {
 }
 
 // Customer type options
-const customerTypeOptions = [
-  "Retail Store",
-  "Supermarket",
-  "Hypermarket",
-  "Chain Store",
-  "Kirana",
-  "Distributor",
-  "Wholesaler",
-  "Corporate",
-  "Online Store",
-  "Other",
-];
+// const customerTypeOptions = [
+//   "Retail Store",
+//   "Supermarket",
+//   "Hypermarket",
+//   "Chain Store",
+//   "Kirana",
+//   "Distributor",
+//   "Wholesaler",
+//   "Corporate",
+//   "Online Store",
+//   "Other",
+// ];
 
 export default function CustomerComponent() {
   // State for customers

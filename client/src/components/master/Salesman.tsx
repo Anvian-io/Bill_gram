@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -42,7 +42,7 @@ import { CustomAlert } from "@/components/custom_ui";
 import SalesmanForm, {
   type SalesmanFormData,
 } from "@/components/forms/SalesmanForm";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   containerVariants,
   itemVariants,
