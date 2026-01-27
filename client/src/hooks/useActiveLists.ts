@@ -10,6 +10,7 @@ import {
   selectActiveVansData,
   selectIsLoading,
   selectAnyError,
+  selectActiveProductGroupsData
 } from "@/store/selectors/activeListsSelectors";
 import { fetchAllActiveLists } from "@/store/slices/activeListsSlice";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ export const useActiveLists = () => {
   const vans = useAppSelector(selectActiveVansData);
   const isLoading = useAppSelector(selectIsLoading);
   const error = useAppSelector(selectAnyError);
-
+  const groups = useAppSelector(selectActiveProductGroupsData)
   // Refresh all active lists
   const refresh = async (showToast: boolean = true) => {
     try {
@@ -53,6 +54,7 @@ export const useActiveLists = () => {
     salesmen,
     units,
     vans,
+    groups,
 
     // State
     isLoading,

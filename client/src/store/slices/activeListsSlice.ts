@@ -15,7 +15,9 @@ import {
   type Salesman,
   type Unit,
   type Van,
+  type ProductGroup,
 } from "@/types";
+import { productGroupService } from "@/services/productGroupService";
 
 interface ActiveListsState {
   accounts: {
@@ -53,6 +55,11 @@ interface ActiveListsState {
     loading: boolean;
     error: string | null;
   };
+  groups: {
+    data: ProductGroup[];
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 const initialState: ActiveListsState = {
@@ -63,6 +70,7 @@ const initialState: ActiveListsState = {
   salesmen: { data: [], loading: false, error: null },
   units: { data: [], loading: false, error: null },
   vans: { data: [], loading: false, error: null },
+  groups: { data: [], loading: false, error: null },
 };
 
 // Async thunks for each resource
@@ -157,6 +165,19 @@ export const fetchActiveVans = createAsyncThunk(
   },
 );
 
+export const fetchActiveProductGroups = createAsyncThunk(
+  "activeLists/fetchActiveProductGroups",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await productGroupService.getActiveProductGroups();
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch product groups",
+      );
+    }
+  },
+);
+
 // Master thunk to fetch all active lists
 export const fetchAllActiveLists = createAsyncThunk(
   "activeLists/fetchAllActiveLists",
@@ -169,6 +190,7 @@ export const fetchAllActiveLists = createAsyncThunk(
       dispatch(fetchActiveSalesmen()),
       dispatch(fetchActiveUnits()),
       dispatch(fetchActiveVans()),
+      dispatch(fetchActiveProductGroups()),
     ]);
   },
 );
@@ -201,6 +223,9 @@ const activeListsSlice = createSlice({
     },
     resetVans: (state) => {
       state.vans = initialState.vans;
+    },
+    resetGroups: (state) => {
+      state.groups = initialState.groups;
     },
   },
   extraReducers: (builder) => {
@@ -308,6 +333,21 @@ const activeListsSlice = createSlice({
         state.vans.loading = false;
         state.vans.error = action.payload as string;
       });
+
+    //Groups
+    builder
+      .addCase(fetchActiveProductGroups.pending, (state) => {
+        state.groups.loading = true;
+        state.groups.error = null;
+      })
+      .addCase(fetchActiveProductGroups.fulfilled, (state, action) => {
+        state.groups.loading = false;
+        state.groups.data = action.payload;
+      })
+      .addCase(fetchActiveProductGroups.rejected, (state, action) => {
+        state.groups.loading = false;
+        state.groups.error = action.payload as string;
+      });
   },
 });
 
@@ -320,6 +360,7 @@ export const {
   resetSalesmen,
   resetUnits,
   resetVans,
+  resetGroups
 } = activeListsSlice.actions;
 
 export default activeListsSlice.reducer;

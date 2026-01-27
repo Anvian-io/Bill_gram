@@ -7,6 +7,8 @@ const router = express.Router();
 // Create a new product group
 router.post("/", productGroupController.createProductGroup);
 
+router.get("/active", productGroupController.getActiveProductGroups);
+
 // Get all product groups with pagination and filters
 router.get("/", productGroupController.getProductGroups);
 

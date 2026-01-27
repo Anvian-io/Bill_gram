@@ -472,6 +472,33 @@ export const updateProductGroupStatus = asyncHandler(async (req, res) => {
   );
 });
 
+export const getActiveProductGroups = asyncHandler(async (req, res) => {
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+  console.log('oifewofiewh')
+  const productGroups = await prisma.productGroup.findMany({
+    where: {
+      status: true,
+      deleted: false,
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+
+  return sendResponse(
+    res,
+    statusType.OK,
+    { productGroups },
+    "Active product groups retrieved successfully",
+  );
+});
+
 // Export all functions
 export const productGroupController = {
   createProductGroup,
@@ -481,4 +508,5 @@ export const productGroupController = {
   deleteProductGroup,
   bulkDeleteProductGroups,
   updateProductGroupStatus,
+  getActiveProductGroups,
 };

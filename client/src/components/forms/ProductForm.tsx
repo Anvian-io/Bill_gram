@@ -229,7 +229,7 @@ export default function ProductFormModal({
 }: ProductFormModalProps) {
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [relatedImages, setRelatedImages] = useState<File[]>([]);
-  const { units } = useActiveLists();
+  const { units,productCompanies,groups } = useActiveLists();
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
     defaultValues,
@@ -585,9 +585,9 @@ export default function ProductFormModal({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {productGroupOptions.map((group) => (
-                                <SelectItem key={group} value={group}>
-                                  {group}
+                              {groups.map((group) => (
+                                <SelectItem key={group.id} value={group.name}>
+                                  {group.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
