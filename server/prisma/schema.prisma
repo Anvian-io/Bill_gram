@@ -27,6 +27,7 @@ model User {
   @@map("users")
 }
 
+// Update the Product model to use foreign keys
 model Product {
   id                  Int               @id @default(autoincrement())
   productCode         String            @unique @map("product_code")
@@ -35,13 +36,16 @@ model Product {
   hsnSacCode          String            @map("hsn_sac_code")
   goodsServices       String            @map("goods_services")
   weight              Float
-  unit                String
-  productGroup        String            @map("product_group")
+  unitId              Int?              @map("unit_id")
+  unit                Unit?             @relation(fields: [unitId], references: [id])
+  productGroupId      Int?              @map("product_group_id")
+  productGroup        ProductGroup?     @relation(fields: [productGroupId], references: [id])
   productShortName    String?           @map("product_short_name")
   purchaseUnit        String?           @map("purchase_unit")
   conversionFactor    Float?            @default(1) @map("conversion_factor")
   pricePerPcs         Float?            @map("price_per_pcs")
-  productCompany      String?           @map("product_company")
+  productCompanyId    Int?              @map("product_company_id")
+  productCompany      ProductCompany?   @relation(fields: [productCompanyId], references: [id])
   saleUnit            String?           @map("sale_unit")
   cartonPack          Int?              @default(1) @map("carton_pack")
   innerPack           String?           @map("inner_pack")
@@ -66,12 +70,18 @@ model Product {
   batches            Batch[]
   relatedImages      ProductImage[]
   
+  // Soft delete
+  deleted            Boolean           @default(false)
+  
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([productCode])
   @@index([productBrand])
+  @@index([unitId])
+  @@index([productGroupId])
+  @@index([productCompanyId])
   @@map("products")
 }
 
@@ -120,25 +130,28 @@ model ProductImage {
 }
 
 model ProductGroup {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String?
-  status      Boolean  @default(true)
-  deleted     Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  status      Boolean   @default(true)
+  deleted     Boolean   @default(false)
+  products    Product[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@map("product_group")
 }
 
+// Update Unit model to include products relation
 model Unit {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
   symbol    String
-  status    Boolean  @default(true)
-  deleted   Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  status    Boolean   @default(true)
+  deleted   Boolean   @default(false)
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@unique([name])
   @@unique([symbol])
@@ -147,17 +160,18 @@ model Unit {
 
 // Add this to your prisma/schema.prisma file
 model ProductCompany {
-  id            Int      @id @default(autoincrement())
-  name          String   @unique
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
   contactPerson String
   email         String
   phone         String
   website       String?
   address       String
-  status        Boolean  @default(true)
-  deleted       Boolean  @default(false)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  status        Boolean   @default(true)
+  deleted       Boolean   @default(false)
+  products      Product[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("product_companies")
 }
