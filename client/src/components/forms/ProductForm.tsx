@@ -731,13 +731,27 @@ export default function ProductFormModal({
                           <FormLabel className="text-sm">
                             Product Company *
                           </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Parle Agro Private Limited"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
+                          <Select
+                            disabled={isSubmitting}
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a product company" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {productCompanies.map((company) => (
+                                <SelectItem
+                                  key={company.id}
+                                  value={company.id.toString()}
+                                >
+                                  {company.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -854,9 +868,9 @@ export default function ProductFormModal({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {purchaseSaleUnitOptions.map((unit) => (
-                                <SelectItem key={unit} value={unit}>
-                                  {unit}
+                              {units.map((unit) => (
+                                <SelectItem key={unit.id} value={unit.id.toString()}>
+                                  {unit.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

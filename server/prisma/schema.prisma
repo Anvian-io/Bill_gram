@@ -28,46 +28,95 @@ model User {
 }
 
 model Product {
-  id                 Int     @id @default(autoincrement())
-  productCode        String  @unique @map("product_code")
-  productBrand       String  @map("product_brand")
-  description        String
-  hsnSacCode        String  @map("hsn_sac_code")
-  goodsServices     String  @map("goods_services")
-  weight             Float
-  unit               String
-  productGroup       String  @map("product_group")
-  productShortName  String? @map("product_short_name")
-  brand              String?
-  purchaseUnit      String? @map("purchase_unit")
-  conversionFactor  Float?  @default(1) @map("conversion_factor")
-  pricePerPcs       Float?  @map("price_per_pcs")
-  productCompany    String? @map("product_company")
-  saleUnit          String? @map("sale_unit")
-  cartonPack        Int?    @default(1) @map("carton_pack")
-  innerPack         Int?    @map("inner_pack")
-  packaging         String?
-  insuranceTax      Float?  @map("insurance_tax")
-  basicPrice        Float?  @map("basic_price")
-  openingStock      Int?    @default(0) @map("opening_stock")
-  mrp               Float?
-  purchaseRate      Float?  @map("purchase_rate")
-  saleRate          Float?  @map("sale_rate")
-  margin            Float?
-  batchNumber       String? @map("batch_number")
-  mfgDate           String? @map("mfg_date")
-  expDate           String? @map("exp_date")
-  barcode           String?
-  imageUrl          String? @map("image_url")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
-  userId            Int?
-  user              User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  Int               @id @default(autoincrement())
+  productCode         String            @unique @map("product_code")
+  productBrand        String            @map("product_brand")
+  description         String
+  hsnSacCode          String            @map("hsn_sac_code")
+  goodsServices       String            @map("goods_services")
+  weight              Float
+  unit                String
+  productGroup        String            @map("product_group")
+  productShortName    String?           @map("product_short_name")
+  purchaseUnit        String?           @map("purchase_unit")
+  conversionFactor    Float?            @default(1) @map("conversion_factor")
+  pricePerPcs         Float?            @map("price_per_pcs")
+  productCompany      String?           @map("product_company")
+  saleUnit            String?           @map("sale_unit")
+  cartonPack          Int?              @default(1) @map("carton_pack")
+  innerPack           String?           @map("inner_pack")
+  packagingBasic      Boolean           @default(false) @map("packaging_basic")
+  packagingMRP        Boolean           @default(false) @map("packaging_mrp")
+  insuranceTaxBasic   Boolean           @default(false) @map("insurance_tax_basic")
+  insuranceTaxMRP     Boolean           @default(false) @map("insurance_tax_mrp")
+  
+  // GST Details
+  gstRate            Float?            @default(18) @map("gst_rate")
+  gstInclusive       Boolean           @default(true) @map("gst_inclusive")
+  cessRate           Float?            @default(0) @map("cess_rate")
+  hsnChapter         String?           @map("hsn_chapter")
+  gstApplicability   String?           @default("Regular") @map("gst_applicability")
+  
+  // Main Image
+  mainImage          String?           @map("main_image")
+  
+  // Relations
+  userId             Int?
+  user               User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batches            Batch[]
+  relatedImages      ProductImage[]
+  
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([productCode])
   @@index([productBrand])
   @@map("products")
+}
+
+model Batch {
+  id           Int      @id @default(autoincrement())
+  batchNo      String   @unique @map("batch_no")
+  mfgDate      String?  @map("mfg_date")
+  expDate      String?  @map("exp_date")
+  barcode      String
+  basicPrice   Float    @map("basic_price")
+  openingStock Int      @default(0) @map("opening_stock")
+  mrp          Float
+  purchaseRate Float    @map("purchase_rate")
+  saleRate     Float    @map("sale_rate")
+  margin       Float
+  gstAmount    Float?   @default(0) @map("gst_amount")
+  
+  // Relations
+  productId    Int
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@index([batchNo])
+  @@index([barcode])
+  @@map("batches")
+}
+
+model ProductImage {
+  id         Int      @id @default(autoincrement())
+  imageUrl   String   @map("image_url")
+  imageType  String?  @default("related") @map("image_type") // 'main' or 'related'
+  sortOrder  Int?     @default(0) @map("sort_order")
+  
+  // Relations
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@map("product_images")
 }
 
 model ProductGroup {
