@@ -345,6 +345,12 @@ export const getProducts = asyncHandler(async (req, res) => {
     showDeleted = "false",
     sortBy = "createdAt",
     sortOrder = "desc",
+    minStock,
+    maxStock,
+    mfgDateFrom,
+    mfgDateTo,
+    expDateFrom,
+    expDateTo,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -404,6 +410,64 @@ export const getProducts = asyncHandler(async (req, res) => {
     });
   }
 
+  // Stock Range Filter (Min/Max Total Opening Stock)
+  if (minStock !== undefined && minStock !== "" || maxStock !== undefined && maxStock !== "") {
+    const min = minStock !== undefined && minStock !== "" ? parseInt(minStock) : 0;
+    const max = maxStock !== undefined && maxStock !== "" ? parseInt(maxStock) : 999999999;
+    
+    // Use raw query to get product IDs with stock in range
+    const productsWithStock = await prisma.$queryRaw`
+      SELECT productId 
+      FROM batches 
+      GROUP BY productId 
+      HAVING SUM(opening_stock) >= ${min} 
+      AND SUM(opening_stock) <= ${max}
+    `;
+    
+    const productIds = productsWithStock.map(p => p.productId);
+    
+    if (productIds.length > 0) {
+      andConditions.push({
+        id: { in: productIds }
+      });
+    } else {
+      // If no products match stock criteria, return empty results
+      andConditions.push({
+        id: { in: [] }
+      });
+    }
+  }
+
+  // Manufacturing Date Range Filter
+  if (mfgDateFrom || mfgDateTo) {
+    const dateFilter = {};
+    if (mfgDateFrom) dateFilter.gte = mfgDateFrom;
+    if (mfgDateTo) dateFilter.lte = mfgDateTo;
+    
+    andConditions.push({
+      batches: {
+        some: {
+          mfgDate: dateFilter
+        }
+      }
+    });
+  }
+
+  // Expiry Date Range Filter
+  if (expDateFrom || expDateTo) {
+    const dateFilter = {};
+    if (expDateFrom) dateFilter.gte = expDateFrom;
+    if (expDateTo) dateFilter.lte = expDateTo;
+    
+    andConditions.push({
+      batches: {
+        some: {
+          expDate: dateFilter
+        }
+      }
+    });
+  }
+
   // Search in multiple fields
   if (search) {
     andConditions.push({
@@ -456,6 +520,19 @@ export const getProducts = asyncHandler(async (req, res) => {
         : "desc",
   };
 
+  // Build batch where condition for the include to filter returned batches
+  const batchWhere = {};
+  if (mfgDateFrom || mfgDateTo) {
+    batchWhere.mfgDate = {};
+    if (mfgDateFrom) batchWhere.mfgDate.gte = mfgDateFrom;
+    if (mfgDateTo) batchWhere.mfgDate.lte = mfgDateTo;
+  }
+  if (expDateFrom || expDateTo) {
+    batchWhere.expDate = {};
+    if (expDateFrom) batchWhere.expDate.gte = expDateFrom;
+    if (expDateTo) batchWhere.expDate.lte = expDateTo;
+  }
+
   // Query with relations - INCLUDING RELATED IMAGES
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -485,6 +562,7 @@ export const getProducts = asyncHandler(async (req, res) => {
         },
         batches: {
           orderBy: { createdAt: "desc" },
+          where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
         },
         relatedImages: {
           orderBy: { sortOrder: "asc" },

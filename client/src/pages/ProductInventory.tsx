@@ -236,6 +236,12 @@ export default function ProductInventory() {
     }
   };
 
+  // Format date for API (YYYY-MM-DD)
+  const formatDateForAPI = (date: Date | undefined): string | undefined => {
+    if (!date) return undefined;
+    return date.toISOString().split("T")[0];
+  };
+
   // Calculate total opening stock for a product
   const calculateTotalOpeningStock = (product: Product) => {
     if (!product.batches || !Array.isArray(product.batches)) return 0;
@@ -288,17 +294,24 @@ export default function ProductInventory() {
       if (filters.maxStock) {
         params.maxStock = filters.maxStock;
       }
-      if (filters.mfgDateFrom) {
-        params.mfgDateFrom = filters.mfgDateFrom.toISOString().split("T")[0];
+
+      // Date filters
+      const mfgDateFromStr = formatDateForAPI(filters.mfgDateFrom);
+      const mfgDateToStr = formatDateForAPI(filters.mfgDateTo);
+      const expDateFromStr = formatDateForAPI(filters.expDateFrom);
+      const expDateToStr = formatDateForAPI(filters.expDateTo);
+
+      if (mfgDateFromStr) {
+        params.mfgDateFrom = mfgDateFromStr;
       }
-      if (filters.mfgDateTo) {
-        params.mfgDateTo = filters.mfgDateTo.toISOString().split("T")[0];
+      if (mfgDateToStr) {
+        params.mfgDateTo = mfgDateToStr;
       }
-      if (filters.expDateFrom) {
-        params.expDateFrom = filters.expDateFrom.toISOString().split("T")[0];
+      if (expDateFromStr) {
+        params.expDateFrom = expDateFromStr;
       }
-      if (filters.expDateTo) {
-        params.expDateTo = filters.expDateTo.toISOString().split("T")[0];
+      if (expDateToStr) {
+        params.expDateTo = expDateToStr;
       }
 
       const response = await productService.getProducts(
@@ -343,7 +356,24 @@ export default function ProductInventory() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, itemsPerPage]);
+  }, [
+    filters.search,
+    filters.productCode,
+    filters.productBrand,
+    filters.barcode,
+    filters.productName,
+    filters.brand,
+    filters.productGroup,
+    filters.minStock,
+    filters.maxStock,
+    filters.mfgDateFrom,
+    filters.mfgDateTo,
+    filters.expDateFrom,
+    filters.expDateTo,
+    filters.status,
+    filters.showDeleted,
+    itemsPerPage,
+  ]);
 
   // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
@@ -392,7 +422,12 @@ export default function ProductInventory() {
           ? "all"
           : filterName === "showDeleted"
             ? false
-            : "",
+            : filterName === "mfgDateFrom" ||
+                filterName === "mfgDateTo" ||
+                filterName === "expDateFrom" ||
+                filterName === "expDateTo"
+              ? undefined
+              : "",
     }));
 
     // Also clear the corresponding input state
@@ -518,17 +553,25 @@ export default function ProductInventory() {
   };
 
   // Active filters count
-  const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
-      key !== "search" &&
-      value &&
-      value !== "all" &&
-      !(key === "showDeleted" && !value) &&
-      !(
-        value instanceof Date &&
-        value.toString() === new Date(undefined as any).toString()
-      ),
-  ).length;
+  const activeFiltersCount =
+    Object.entries(filters).filter(
+      ([key, value]) =>
+        key !== "search" &&
+        value &&
+        value !== "all" &&
+        !(key === "showDeleted" && !value) &&
+        !(
+          key === "mfgDateFrom" ||
+          key === "mfgDateTo" ||
+          key === "expDateFrom" ||
+          key === "expDateTo"
+        ) &&
+        !(value instanceof Date),
+    ).length +
+    (filters.mfgDateFrom ? 1 : 0) +
+    (filters.mfgDateTo ? 1 : 0) +
+    (filters.expDateFrom ? 1 : 0) +
+    (filters.expDateTo ? 1 : 0);
 
   return (
     <>
@@ -870,6 +913,190 @@ export default function ProductInventory() {
                                 className="flex-1"
                               />
                             </div>
+                          </div>
+
+                          {/* Manufacturing Date From */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Mfg Date From
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !filters.mfgDateFrom &&
+                                      "text-muted-foreground",
+                                  )}
+                                  disabled={isLoading}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {filters.mfgDateFrom ? (
+                                    format(filters.mfgDateFrom, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  {filters.mfgDateFrom && (
+                                    <X
+                                      className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        clearFilter("mfgDateFrom");
+                                      }}
+                                    />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={filters.mfgDateFrom}
+                                  onSelect={(date) =>
+                                    handleFilterChange("mfgDateFrom", date)
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Manufacturing Date To */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Mfg Date To
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !filters.mfgDateTo &&
+                                      "text-muted-foreground",
+                                  )}
+                                  disabled={isLoading}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {filters.mfgDateTo ? (
+                                    format(filters.mfgDateTo, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  {filters.mfgDateTo && (
+                                    <X
+                                      className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        clearFilter("mfgDateTo");
+                                      }}
+                                    />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={filters.mfgDateTo}
+                                  onSelect={(date) =>
+                                    handleFilterChange("mfgDateTo", date)
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Expiry Date From */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Exp Date From
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !filters.expDateFrom &&
+                                      "text-muted-foreground",
+                                  )}
+                                  disabled={isLoading}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {filters.expDateFrom ? (
+                                    format(filters.expDateFrom, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  {filters.expDateFrom && (
+                                    <X
+                                      className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        clearFilter("expDateFrom");
+                                      }}
+                                    />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={filters.expDateFrom}
+                                  onSelect={(date) =>
+                                    handleFilterChange("expDateFrom", date)
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Expiry Date To */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Exp Date To
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !filters.expDateTo &&
+                                      "text-muted-foreground",
+                                  )}
+                                  disabled={isLoading}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {filters.expDateTo ? (
+                                    format(filters.expDateTo, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  {filters.expDateTo && (
+                                    <X
+                                      className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        clearFilter("expDateTo");
+                                      }}
+                                    />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={filters.expDateTo}
+                                  onSelect={(date) =>
+                                    handleFilterChange("expDateTo", date)
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
                           {/* Show Deleted Filter */}
