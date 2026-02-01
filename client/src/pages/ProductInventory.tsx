@@ -57,6 +57,7 @@ import { CustomAlert } from "@/components/custom_ui";
 import { productService } from "@/services/productService";
 import { type Product, type ProductFormData } from "@/types/product";
 import { useActiveLists } from "@/hooks/useActiveLists";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface ProductsResponse {
@@ -113,6 +114,86 @@ export default function ProductInventory() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [productCodeInput, setProductCodeInput] = useState<string>("");
+  const [productBrandInput, setProductBrandInput] = useState<string>("");
+  const [barcodeInput, setBarcodeInput] = useState<string>("");
+  const [productNameInput, setProductNameInput] = useState<string>("");
+  const [minStockInput, setMinStockInput] = useState<string>("");
+  const [maxStockInput, setMaxStockInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetProductCode = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, productCode: value }));
+  }, 300);
+
+  const debouncedSetProductBrand = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, productBrand: value }));
+  }, 300);
+
+  const debouncedSetBarcode = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, barcode: value }));
+  }, 300);
+
+  const debouncedSetProductName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, productName: value }));
+  }, 300);
+
+  const debouncedSetMinStock = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, minStock: value }));
+  }, 300);
+
+  const debouncedSetMaxStock = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, maxStock: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle product code input change with debounce
+  const handleProductCodeChange = (value: string) => {
+    setProductCodeInput(value);
+    debouncedSetProductCode(value);
+  };
+
+  // Handle product brand input change with debounce
+  const handleProductBrandChange = (value: string) => {
+    setProductBrandInput(value);
+    debouncedSetProductBrand(value);
+  };
+
+  // Handle barcode input change with debounce
+  const handleBarcodeChange = (value: string) => {
+    setBarcodeInput(value);
+    debouncedSetBarcode(value);
+  };
+
+  // Handle product name input change with debounce
+  const handleProductNameChange = (value: string) => {
+    setProductNameInput(value);
+    debouncedSetProductName(value);
+  };
+
+  // Handle min stock input change with debounce
+  const handleMinStockChange = (value: string) => {
+    setMinStockInput(value);
+    debouncedSetMinStock(value);
+  };
+
+  // Handle max stock input change with debounce
+  const handleMaxStockChange = (value: string) => {
+    setMaxStockInput(value);
+    debouncedSetMaxStock(value);
+  };
+
   const { productCompanies, groups } = useActiveLists();
 
   // Safely handle products data
@@ -150,6 +231,12 @@ export default function ProductInventory() {
       }
       if (filters.productBrand) {
         params.productBrand = filters.productBrand;
+      }
+      if (filters.barcode) {
+        params.barcode = filters.barcode;
+      }
+      if (filters.productName) {
+        params.productName = filters.productName;
       }
       if (filters.brand !== "all") {
         params.productCompanyId = filters.brand;
@@ -226,7 +313,7 @@ export default function ProductInventory() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -253,6 +340,13 @@ export default function ProductInventory() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setProductCodeInput("");
+    setProductBrandInput("");
+    setBarcodeInput("");
+    setProductNameInput("");
+    setMinStockInput("");
+    setMaxStockInput("");
   };
 
   // Clear specific filter
@@ -268,6 +362,31 @@ export default function ProductInventory() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "productCode":
+        setProductCodeInput("");
+        break;
+      case "productBrand":
+        setProductBrandInput("");
+        break;
+      case "barcode":
+        setBarcodeInput("");
+        break;
+      case "productName":
+        setProductNameInput("");
+        break;
+      case "minStock":
+        setMinStockInput("");
+        break;
+      case "maxStock":
+        setMaxStockInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -421,16 +540,19 @@ export default function ProductInventory() {
                   type="search"
                   placeholder="Search products by name, brand, barcode, HSN Code, or group..."
                   className="pl-10 py-6 text-base"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   // disabled={isLoading}
                 />
-                {filters.search && (
+                {searchInput && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => handleFilterChange("search", "")}
+                    onClick={() => {
+                      setSearchInput("");
+                      handleFilterChange("search", "");
+                    }}
                     disabled={isLoading}
                   >
                     <X className="h-4 w-4" />
@@ -542,22 +664,22 @@ export default function ProductInventory() {
                               <Input
                                 id="productCode"
                                 placeholder="Enter product code"
-                                value={filters.productCode}
+                                value={productCodeInput}
                                 onChange={(e) =>
-                                  handleFilterChange(
-                                    "productCode",
-                                    e.target.value,
-                                  )
+                                  handleProductCodeChange(e.target.value)
                                 }
                                 className="flex-1"
                                 // disabled={isLoading}
                               />
-                              {filters.productCode && (
+                              {productCodeInput && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => clearFilter("productCode")}
+                                  onClick={() => {
+                                    setProductCodeInput("");
+                                    clearFilter("productCode");
+                                  }}
                                   disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
@@ -578,22 +700,94 @@ export default function ProductInventory() {
                               <Input
                                 id="productBrand"
                                 placeholder="Enter product brand"
-                                value={filters.productBrand}
+                                value={productBrandInput}
                                 onChange={(e) =>
-                                  handleFilterChange(
-                                    "productBrand",
-                                    e.target.value,
-                                  )
+                                  handleProductBrandChange(e.target.value)
                                 }
                                 className="flex-1"
                                 // disabled={isLoading}
                               />
-                              {filters.productBrand && (
+                              {productBrandInput && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => clearFilter("productBrand")}
+                                  onClick={() => {
+                                    setProductBrandInput("");
+                                    clearFilter("productBrand");
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Barcode Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="barcode"
+                              className="text-sm font-medium"
+                            >
+                              Barcode
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="barcode"
+                                placeholder="Enter barcode"
+                                value={barcodeInput}
+                                onChange={(e) =>
+                                  handleBarcodeChange(e.target.value)
+                                }
+                                className="flex-1"
+                                // disabled={isLoading}
+                              />
+                              {barcodeInput && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => {
+                                    setBarcodeInput("");
+                                    clearFilter("barcode");
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Product Name Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="productName"
+                              className="text-sm font-medium"
+                            >
+                              Product Name
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="productName"
+                                placeholder="Enter product name"
+                                value={productNameInput}
+                                onChange={(e) =>
+                                  handleProductNameChange(e.target.value)
+                                }
+                                className="flex-1"
+                                // disabled={isLoading}
+                              />
+                              {productNameInput && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => {
+                                    setProductNameInput("");
+                                    clearFilter("productName");
+                                  }}
                                   disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
@@ -703,9 +897,9 @@ export default function ProductInventory() {
                               <Input
                                 placeholder="Min"
                                 type="number"
-                                value={filters.minStock}
+                                value={minStockInput}
                                 onChange={(e) =>
-                                  handleFilterChange("minStock", e.target.value)
+                                  handleMinStockChange(e.target.value)
                                 }
                                 className="flex-1"
                                 // disabled={isLoading}
@@ -713,9 +907,9 @@ export default function ProductInventory() {
                               <Input
                                 placeholder="Max"
                                 type="number"
-                                value={filters.maxStock}
+                                value={maxStockInput}
                                 onChange={(e) =>
-                                  handleFilterChange("maxStock", e.target.value)
+                                  handleMaxStockChange(e.target.value)
                                 }
                                 className="flex-1"
                                 // disabled={isLoading}
@@ -860,6 +1054,40 @@ export default function ProductInventory() {
                               </Popover>
                             </div>
                           </div>
+
+                          {/* Show Deleted Filter */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Show Deleted
+                            </Label>
+                            <div className="flex items-center gap-3 pt-2">
+                              <input
+                                type="checkbox"
+                                id="showDeleted"
+                                checked={filters.showDeleted}
+                                onChange={(e) =>
+                                  handleFilterChange(
+                                    "showDeleted",
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={isLoading}
+                                className="h-4 w-4"
+                              />
+                              <Label
+                                htmlFor="showDeleted"
+                                className={`text-sm cursor-pointer ${
+                                  filters.showDeleted
+                                    ? "text-red-600"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                {filters.showDeleted
+                                  ? "Showing Deleted"
+                                  : "Hide Deleted"}
+                              </Label>
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -875,14 +1103,16 @@ export default function ProductInventory() {
             variants={itemVariants}
           >
             <p className="text-sm text-muted-foreground">
-              {isLoading ? (
+              {/* {isLoading ? (
                 "Loading..."
-              ) : (
+              ) :  */}
+              (
                 <>
                   Showing {startIndex} to {endIndex} of {totalItems} products
                   {activeFiltersCount > 0 && " (filtered)"}
                 </>
-              )}
+              )
+              {/* } */}
             </p>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
