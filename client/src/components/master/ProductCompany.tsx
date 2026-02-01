@@ -58,6 +58,7 @@ import {
   type ProductCompany,
   type ProductCompanyFilters,
 } from "@/types/productCompany";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface ProductCompaniesResponse {
@@ -108,6 +109,53 @@ export default function ProductCompanyComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [nameInput, setNameInput] = useState<string>("");
+  const [contactPersonInput, setContactPersonInput] = useState<string>("");
+  const [emailInput, setEmailInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  const debouncedSetContactPerson = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, contactPerson: value }));
+  }, 300);
+
+  const debouncedSetEmail = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, email: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle name input change with debounce
+  const handleNameChange = (value: string) => {
+    setNameInput(value);
+    debouncedSetName(value);
+  };
+
+  // Handle contact person input change with debounce
+  const handleContactPersonChange = (value: string) => {
+    setContactPersonInput(value);
+    debouncedSetContactPerson(value);
+  };
+
+  // Handle email input change with debounce
+  const handleEmailChange = (value: string) => {
+    setEmailInput(value);
+    debouncedSetEmail(value);
+  };
 
   // Safely handle companies data
   const displayCompanies = useMemo(() => {
@@ -191,7 +239,7 @@ export default function ProductCompanyComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -209,6 +257,10 @@ export default function ProductCompanyComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setNameInput("");
+    setContactPersonInput("");
+    setEmailInput("");
   };
 
   // Clear specific filter
@@ -222,6 +274,22 @@ export default function ProductCompanyComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "name":
+        setNameInput("");
+        break;
+      case "contactPerson":
+        setContactPersonInput("");
+        break;
+      case "email":
+        setEmailInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -375,16 +443,19 @@ export default function ProductCompanyComponent() {
                 type="search"
                 placeholder="Search companies by name, contact, or email..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -496,19 +567,20 @@ export default function ProductCompanyComponent() {
                             <Input
                               id="companyName"
                               placeholder="Enter company name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={nameInput}
+                              onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.name && (
+                            {nameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => {
+                                  setNameInput("");
+                                  clearFilter("name");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -529,22 +601,58 @@ export default function ProductCompanyComponent() {
                             <Input
                               id="contactPerson"
                               placeholder="Enter contact person"
-                              value={filters.contactPerson}
+                              value={contactPersonInput}
                               onChange={(e) =>
-                                handleFilterChange(
-                                  "contactPerson",
-                                  e.target.value,
-                                )
+                                handleContactPersonChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.contactPerson && (
+                            {contactPersonInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("contactPerson")}
+                                onClick={() => {
+                                  setContactPersonInput("");
+                                  clearFilter("contactPerson");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Email Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="email"
+                            className="text-sm font-medium"
+                          >
+                            Email
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="email"
+                              placeholder="Enter email"
+                              value={emailInput}
+                              onChange={(e) =>
+                                handleEmailChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {emailInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setEmailInput("");
+                                  clearFilter("email");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
