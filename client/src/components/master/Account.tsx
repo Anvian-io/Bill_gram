@@ -348,7 +348,7 @@ export default function AccountComponent() {
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                disabled={isLoading}
+                // disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -408,7 +408,7 @@ export default function AccountComponent() {
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -475,7 +475,7 @@ export default function AccountComponent() {
                                 )
                               }
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
                             {filters.accountHolder && (
                               <Button
@@ -508,7 +508,7 @@ export default function AccountComponent() {
                                 handleFilterChange("bankName", e.target.value)
                               }
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
                             {filters.bankName && (
                               <Button
@@ -541,7 +541,7 @@ export default function AccountComponent() {
                                 handleFilterChange("ifscCode", e.target.value)
                               }
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
                             {filters.ifscCode && (
                               <Button

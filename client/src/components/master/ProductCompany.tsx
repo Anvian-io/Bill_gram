@@ -377,7 +377,7 @@ export default function ProductCompanyComponent() {
                 className="pl-10 py-6 text-base"
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                disabled={isLoading}
+                // disabled={isLoading}
               />
               {filters.search && (
                 <Button
@@ -437,7 +437,7 @@ export default function ProductCompanyComponent() {
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function ProductCompanyComponent() {
                                 handleFilterChange("name", e.target.value)
                               }
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
                             {filters.name && (
                               <Button
@@ -537,7 +537,7 @@ export default function ProductCompanyComponent() {
                                 )
                               }
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
                             {filters.contactPerson && (
                               <Button
