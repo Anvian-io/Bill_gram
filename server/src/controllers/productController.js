@@ -10,7 +10,7 @@ import fs from "fs";
 import { getDatabasePath } from "../db/database.js";
 
 /**
- * Get products directory path
+ * Get products directory path (kept for potential future use)
  */
 function getProductsImageDirectory() {
   const dbPath = getDatabasePath();
@@ -26,13 +26,12 @@ function getProductsImageDirectory() {
 }
 
 /**
- * Generate unique image filename
+ * Helper function to convert filename to public URL
  */
-function generateImageFilename(originalname) {
-  const timestamp = Date.now();
-  const random = Math.floor(1000 + Math.random() * 9000);
-  const ext = path.extname(originalname) || ".jpg";
-  return `${timestamp}-${random}${ext}`;
+function getImageUrl(filename) {
+  if (!filename) return null;
+  // Return public API URL path
+  return `/api/images/${filename}`;
 }
 
 /**
@@ -276,12 +275,22 @@ export const createProduct = asyncHandler(async (req, res) => {
       },
     });
 
+    // Convert image paths to URLs
+    const productWithUrls = {
+      ...completeProduct,
+      mainImage: getImageUrl(completeProduct.mainImage),
+      relatedImages: completeProduct.relatedImages.map((img) => ({
+        ...img,
+        imageUrl: getImageUrl(img.imageUrl),
+      })),
+    };
+
     return sendResponse(
       res,
       statusType.CREATED,
       {
         message: "Product created successfully",
-        product: completeProduct,
+        product: productWithUrls,
       },
       "Product created",
     );
@@ -451,7 +460,7 @@ export const getProducts = asyncHandler(async (req, res) => {
           },
         },
         batches: {
-          take: 1, // Get first batch for summary
+          // take: 1, // Get first batch for summary
           orderBy: { createdAt: "desc" },
         },
         _count: {
@@ -465,14 +474,12 @@ export const getProducts = asyncHandler(async (req, res) => {
     prisma.product.count({ where }),
   ]);
 
-  // Add full image paths
-  const productsWithFullPaths = products.map((product) => {
-    const imagesDir = getProductsImageDirectory();
+  // Convert to public URLs instead of file paths
+  const productsWithUrls = products.map((product) => {
+    // console.log("Product Main Image:", product.mainImage);
     return {
       ...product,
-      mainImage: product.mainImage
-        ? path.join(imagesDir, product.mainImage)
-        : null,
+      mainImage: getImageUrl(product.mainImage),
       // Note: relatedImages are not loaded in this query for performance
     };
   });
@@ -483,7 +490,7 @@ export const getProducts = asyncHandler(async (req, res) => {
     res,
     statusType.OK,
     {
-      products: productsWithFullPaths,
+      products: productsWithUrls,
       pagination: {
         total,
         totalPages,
@@ -516,6 +523,7 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
       productShortName: true,
       description: true,
       pricePerPcs: true,
+      mainImage: true,
       unit: {
         select: {
           id: true,
@@ -541,10 +549,16 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
     },
   });
 
+  // Convert image paths to URLs
+  const productsWithUrls = products.map((product) => ({
+    ...product,
+    mainImage: getImageUrl(product.mainImage),
+  }));
+
   return sendResponse(
     res,
     statusType.OK,
-    { products },
+    { products: productsWithUrls },
     "Active products retrieved successfully",
   );
 });
@@ -601,23 +615,20 @@ export const getProductById = asyncHandler(async (req, res) => {
     return sendResponse(res, statusType.NOT_FOUND, null, "Product not found");
   }
 
-  // Add full image paths
-  const imagesDir = getProductsImageDirectory();
-  const productWithFullPaths = {
+  // Convert image paths to public URLs
+  const productWithUrls = {
     ...product,
-    mainImage: product.mainImage
-      ? path.join(imagesDir, product.mainImage)
-      : null,
+    mainImage: getImageUrl(product.mainImage),
     relatedImages: product.relatedImages.map((image) => ({
       ...image,
-      imageUrl: path.join(imagesDir, image.imageUrl),
+      imageUrl: getImageUrl(image.imageUrl),
     })),
   };
 
   return sendResponse(
     res,
     statusType.OK,
-    { product: productWithFullPaths },
+    { product: productWithUrls },
     "Product retrieved successfully",
   );
 });
@@ -873,12 +884,22 @@ export const updateProduct = asyncHandler(async (req, res) => {
       },
     });
 
+    // Convert image paths to public URLs
+    const productWithUrls = {
+      ...completeProduct,
+      mainImage: getImageUrl(completeProduct.mainImage),
+      relatedImages: completeProduct.relatedImages.map((image) => ({
+        ...image,
+        imageUrl: getImageUrl(image.imageUrl),
+      })),
+    };
+
     return sendResponse(
       res,
       statusType.OK,
       {
         message: "Product updated successfully",
-        product: completeProduct,
+        product: productWithUrls,
       },
       "Product updated",
     );

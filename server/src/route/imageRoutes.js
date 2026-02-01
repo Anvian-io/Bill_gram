@@ -29,6 +29,9 @@ const upload = multer({
 // Upload image
 router.post("/upload", upload.single("image"), imageController.uploadImage);
 
+// Serve image - NEW ROUTE
+router.get("/:imageName", imageController.serveImage);
+
 // Delete image
 router.delete("/:imageName", imageController.deleteImage);
 

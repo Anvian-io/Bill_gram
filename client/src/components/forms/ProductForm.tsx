@@ -54,6 +54,9 @@ import {
   type Product,
 } from "@/types/product";
 
+// API Base URL - Adjust according to your environment
+const API_BASE_URL = "http://localhost:3001";
+
 // Define the schema for form validation
 const productSchema = z.object({
   // Basic Info
@@ -134,6 +137,13 @@ interface ProductFormModalProps {
   onSave: (data: ImportedProductFormData, id?: number) => Promise<void>;
   isSubmitting?: boolean;
 }
+
+// Helper function to get full image URL for display
+const getImageUrl = (filename: string | null | undefined): string => {
+  if (!filename) return "";
+  // Return the full URL for display
+  return `${API_BASE_URL}/api/images/${filename}`;
+};
 
 // Initial form values
 const defaultValues: ProductFormData = {
@@ -269,12 +279,25 @@ export default function ProductFormModal({
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
 
+  // Clean up object URLs
+  useEffect(() => {
+    return () => {
+      if (mainImageFile) {
+        URL.revokeObjectURL(URL.createObjectURL(mainImageFile));
+      }
+      relatedImageFiles.forEach((file) => {
+        URL.revokeObjectURL(URL.createObjectURL(file));
+      });
+    };
+  }, [mainImageFile, relatedImageFiles]);
+
   // Load sample data into form
   const loadSampleData = () => {
     // Get first available options from dropdowns
     const firstUnit = units.length > 0 ? units[0].id : 0;
     const firstGroup = groups.length > 0 ? groups[0].id : 0;
-    const firstCompany = productCompanies.length > 0 ? productCompanies[0].id : 0;
+    const firstCompany =
+      productCompanies.length > 0 ? productCompanies[0].id : 0;
 
     const sampleWithFirstOptions = {
       ...sampleData,
@@ -290,14 +313,25 @@ export default function ProductFormModal({
     setRelatedImageFiles([]);
     setUploadedMainImage("");
     setUploadedRelatedImages([]);
-    
+
     toast.success("Sample data loaded. Images will remain empty.", {
-      description: "Fill in real data before submitting."
+      description: "Fill in real data before submitting.",
     });
   };
 
   // Reset form when editingProduct changes
   useEffect(() => {
+    // Function to extract filename from URL if it's a full URL
+    const extractFilename = (url: string): string => {
+      if (!url) return "";
+      // If it's a full URL, extract the filename
+      if (url.includes("/")) {
+        return url.split("/").pop() || url;
+      }
+      // If it's already just a filename, return as is
+      return url;
+    };
+
     if (editingProduct) {
       form.reset({
         productCode: editingProduct.productCode,
@@ -329,9 +363,13 @@ export default function ProductFormModal({
           | "Composition"
           | "Exempt",
         status: editingProduct.status,
-        mainImage: editingProduct.mainImage || "",
+        // Extract filename from main image URL
+        mainImage: extractFilename(editingProduct.mainImage || ""),
+        // Extract filenames from related images URLs
         relatedImages:
-          editingProduct.relatedImages?.map((img) => img.imageUrl) || [],
+          editingProduct.relatedImages?.map((img) =>
+            extractFilename(img.imageUrl),
+          ) || [],
         batches:
           editingProduct.batches?.map((batch) => ({
             bNo: batch.batchNo,
@@ -348,10 +386,15 @@ export default function ProductFormModal({
           })) || [],
       });
 
-      setUploadedMainImage(editingProduct.mainImage || "");
-      setUploadedRelatedImages(
-        editingProduct.relatedImages?.map((img) => img.imageUrl) || [],
-      );
+      // Set uploaded images for display (store only filenames)
+      const mainImg = extractFilename(editingProduct.mainImage || "");
+      setUploadedMainImage(mainImg);
+
+      const relatedImgs =
+        editingProduct.relatedImages?.map((img) =>
+          extractFilename(img.imageUrl),
+        ) || [];
+      setUploadedRelatedImages(relatedImgs);
     } else {
       form.reset(defaultValues);
       setMainImageFile(null);
@@ -430,6 +473,7 @@ export default function ProductFormModal({
       try {
         setMainImageFile(file);
         const filename = await imageService.uploadImage(file);
+        // Store only the filename
         setUploadedMainImage(filename);
         form.setValue("mainImage", filename);
         toast.success("Main image uploaded successfully");
@@ -452,7 +496,7 @@ export default function ProductFormModal({
         const uploadedFilenames: string[] = [];
         for (const file of files) {
           const filename = await imageService.uploadImage(file);
-          uploadedFilenames.push(filename);
+          uploadedFilenames.push(filename); // Store only filename
         }
 
         const newRelatedImages = [
@@ -485,6 +529,7 @@ export default function ProductFormModal({
     const imageToRemove = uploadedRelatedImages[index];
     if (imageToRemove) {
       try {
+        // No need to extract filename since we're storing only filename
         await imageService.deleteImage(imageToRemove);
         const newImages = uploadedRelatedImages.filter((_, i) => i !== index);
         setUploadedRelatedImages(newImages);
@@ -541,7 +586,7 @@ export default function ProductFormModal({
               <Package className="h-6 w-6" />
               {editingProduct ? "Edit Product" : "Add New Product"}
             </DialogTitle>
-            
+
             {/* Sample Data Toggle Button */}
             {!editingProduct && (
               <Button
@@ -557,7 +602,7 @@ export default function ProductFormModal({
               </Button>
             )}
           </div>
-          
+
           <DialogDescription>
             {editingProduct
               ? "Update product details and inventory information"
@@ -1054,9 +1099,9 @@ export default function ProductFormModal({
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -1137,7 +1182,7 @@ export default function ProductFormModal({
                   </div>
                 </div>
 
-                {/* Images Section */}
+                {/* Images Section - UPDATED TO DISPLAY ACTUAL IMAGES */}
                 <div className="rounded-lg border p-4">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <ImageIcon className="h-4 w-4" />
@@ -1162,21 +1207,21 @@ export default function ProductFormModal({
                           </Button>
                         )}
                       </div>
-                      {mainImageFile || uploadedMainImage ? (
+                      {mainImageFile ? (
                         <div className="relative group">
-                          {mainImageFile ? (
-                            <img
-                              src={URL.createObjectURL(mainImageFile)}
-                              alt="Main product"
-                              className="h-32 w-full object-cover rounded-lg border"
-                            />
-                          ) : (
-                            <div className="h-32 w-full bg-gray-100 rounded-lg border flex items-center justify-center">
-                              <span className="text-sm text-gray-600">
-                                Image uploaded: {uploadedMainImage}
-                              </span>
-                            </div>
-                          )}
+                          <img
+                            src={URL.createObjectURL(mainImageFile)}
+                            alt="Main product"
+                            className="h-32 w-full object-cover rounded-lg border"
+                          />
+                        </div>
+                      ) : uploadedMainImage ? (
+                        <div className="relative group">
+                          <img
+                            src={getImageUrl(uploadedMainImage)}
+                            alt="Main product"
+                            className="h-32 w-full object-cover rounded-lg border"
+                          />
                         </div>
                       ) : (
                         <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary transition-colors">
@@ -1197,7 +1242,7 @@ export default function ProductFormModal({
                       )}
                     </div>
 
-                    {/* Related Images */}
+                    {/* Related Images - UPDATED TO DISPLAY ACTUAL IMAGES */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">
@@ -1259,8 +1304,10 @@ export default function ProductFormModal({
                           ))}
 
                           {uploadedRelatedImages
-                            .filter((_, index) => !relatedImageFiles[index])
-                            .map((imageName, index) => (
+                            .filter(
+                              (_, index) => index >= relatedImageFiles.length,
+                            )
+                            .map((filename, index) => (
                               <motion.div
                                 key={`uploaded-${index}`}
                                 initial={{ scale: 0.8, opacity: 0 }}
@@ -1268,17 +1315,21 @@ export default function ProductFormModal({
                                 exit={{ scale: 0.8, opacity: 0 }}
                                 className="relative w-16 h-16"
                               >
-                                <div className="h-16 w-16 bg-gray-100 rounded-lg border flex items-center justify-center">
-                                  <span className="text-xs text-center p-1">
-                                    {imageName}
-                                  </span>
-                                </div>
+                                <img
+                                  src={getImageUrl(filename)}
+                                  alt={`Related ${index + 1}`}
+                                  className="h-16 w-16 object-cover rounded-lg border"
+                                />
                                 <Button
                                   type="button"
                                   variant="destructive"
                                   size="sm"
                                   className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
-                                  onClick={() => removeRelatedImage(index)}
+                                  onClick={() =>
+                                    removeRelatedImage(
+                                      relatedImageFiles.length + index,
+                                    )
+                                  }
                                   disabled={isSubmitting}
                                 >
                                   <X className="h-3 w-3" />
@@ -1351,8 +1402,8 @@ export default function ProductFormModal({
                                 className="pl-9"
                                 disabled={isSubmitting}
                               />
-                              </div>
-                            </FormControl>
+                            </div>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
