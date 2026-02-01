@@ -90,7 +90,8 @@ model Product {
 
 model Batch {
   id           Int      @id @default(autoincrement())
-  batchNo      String   @unique @map("batch_no")
+  // batchNo      String   @unique @map("batch_no")
+  batchNo      String?
   mfgDate      String?  @map("mfg_date")
   expDate      String?  @map("exp_date")
   barcode      String

@@ -33,29 +33,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import {
-  // Upload,
   X,
   Image as ImageIcon,
   Plus,
   Trash2,
-  // Save,
-  // ArrowLeft,
   Percent,
   Package,
   Shield,
-  // Calendar,
   Hash,
-  // Barcode,
-  // Layers,
-  // DollarSign,
-  // PackageOpen,
-  // Scale,
-  // Briefcase,
   Tag,
   FileText,
   Box,
+  Database,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
+import { toast } from "sonner";
+import { imageService } from "@/services/imageService";
+import {
+  type ProductFormData as ImportedProductFormData,
+  type Product,
+} from "@/types/product";
 
 // Define the schema for form validation
 const productSchema = z.object({
@@ -64,12 +61,12 @@ const productSchema = z.object({
   productBrand: z.string().min(1, "Product brand is required"),
   description: z.string().min(1, "Description is required"),
   hsnSacCode: z.string().min(1, "HSN/SAC code is required"),
-  goodsOrServices: z.enum(["Goods", "Services"], {
+  goodsServices: z.enum(["Goods", "Services"], {
     message: "Please select Goods or Services",
   }),
   weight: z.coerce.number().positive("Weight must be positive"),
-  unit: z.string().min(1, "Unit is required"),
-  productGroup: z.string().min(1, "Product group is required"),
+  unitId: z.coerce.number().min(1, "Unit is required"),
+  productGroupId: z.coerce.number().min(1, "Product group is required"),
 
   // Additional Info
   productShortName: z.string().min(1, "Short name is required"),
@@ -77,8 +74,8 @@ const productSchema = z.object({
   conversionFactor: z.coerce
     .number()
     .positive("Conversion factor must be positive"),
-  pricePerPCS: z.coerce.number().positive("Price must be positive"),
-  productCompany: z.string().min(1, "Product company is required"),
+  pricePerPcs: z.coerce.number().positive("Price must be positive"),
+  productCompanyId: z.coerce.number().min(1, "Product company is required"),
   saleUnit: z.string().min(1, "Sale unit is required"),
   cartonPack: z.coerce.number().positive("Carton pack must be positive"),
   innerPack: z.string().optional(),
@@ -100,6 +97,13 @@ const productSchema = z.object({
     .enum(["Regular", "Composition", "Exempt"])
     .default("Regular"),
 
+  // Status
+  status: z.boolean().default(true),
+
+  // Images
+  mainImage: z.string().optional(),
+  relatedImages: z.array(z.string()).default([]),
+
   // Batch Details
   batches: z
     .array(
@@ -120,53 +124,14 @@ const productSchema = z.object({
     .default([]),
 });
 
-export type ProductFormData = z.infer<typeof productSchema>;
+// Use the inferred type from schema
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingProduct?: {
-    id: number;
-    productCode: string;
-    productBrand: string;
-    description: string;
-    hsnSacCode: string;
-    goodsOrServices: "Goods" | "Services";
-    weight: number;
-    unit: string;
-    productGroup: string;
-    productShortName: string;
-    purchaseUnit: string;
-    conversionFactor: number;
-    pricePerPCS: number;
-    productCompany: string;
-    saleUnit: string;
-    cartonPack: number;
-    innerPack?: string;
-    packagingBasic: boolean;
-    packagingMRP: boolean;
-    insuranceTaxBasic: boolean;
-    insuranceTaxMRP: boolean;
-    gstRate: number;
-    gstInclusive: boolean;
-    cessRate: number;
-    hsnChapter?: string;
-    gstApplicability: "Regular" | "Composition" | "Exempt";
-    batches: Array<{
-      bNo: string;
-      mfgDate: string | null;
-      expDate: string | null;
-      barcode: string;
-      basicPrice: number;
-      openingStock: number;
-      mrp: number;
-      pRate: number;
-      sRate: number;
-      margin: number;
-      gstAmount: number;
-    }>;
-  } | null;
-  onSave: (data: ProductFormData, id?: number) => void;
+  editingProduct?: Product | null;
+  onSave: (data: ImportedProductFormData, id?: number) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -176,16 +141,16 @@ const defaultValues: ProductFormData = {
   productBrand: "",
   description: "",
   hsnSacCode: "",
-  goodsOrServices: "Goods",
+  goodsServices: "Goods",
   weight: 1,
-  unit: "GM",
-  productGroup: "",
+  unitId: 0,
+  productGroupId: 0,
   productShortName: "",
-  purchaseUnit: "PCS",
+  purchaseUnit: "",
   conversionFactor: 1,
-  pricePerPCS: 0,
-  productCompany: "",
-  saleUnit: "PCS",
+  pricePerPcs: 0,
+  productCompanyId: 0,
+  saleUnit: "",
   cartonPack: 24,
   innerPack: "",
   packagingBasic: true,
@@ -197,6 +162,9 @@ const defaultValues: ProductFormData = {
   cessRate: 0,
   hsnChapter: "",
   gstApplicability: "Regular",
+  status: true,
+  mainImage: "",
+  relatedImages: [],
   batches: [
     {
       bNo: "",
@@ -214,10 +182,67 @@ const defaultValues: ProductFormData = {
   ],
 };
 
-// Units options
-const unitOptions = ["GM", "KG", "PCS", "L", "ML", "M", "CM", "MM"];
-const productGroupOptions = ["ELITE", "PREMIUM", "STANDARD", "BASIC"];
-const purchaseSaleUnitOptions = ["PCS", "BOX", "CARTON", "KG", "GM", "L"];
+// Sample data for testing
+const sampleData: ProductFormData = {
+  productCode: "SAMPLE001",
+  productBrand: "Sample Brand Deluxe",
+  description: "High-quality sample product for demonstration purposes",
+  hsnSacCode: "18069010",
+  goodsServices: "Goods",
+  weight: 0.5,
+  unitId: 1, // Will be set to first available unit
+  productGroupId: 1, // Will be set to first available group
+  productShortName: "Sample Deluxe",
+  purchaseUnit: "1", // Will be set to first available unit
+  conversionFactor: 1.5,
+  pricePerPcs: 299.99,
+  productCompanyId: 1, // Will be set to first available company
+  saleUnit: "2", // Will be set to first available unit
+  cartonPack: 24,
+  innerPack: "6 units per inner pack",
+  packagingBasic: true,
+  packagingMRP: true,
+  insuranceTaxBasic: false,
+  insuranceTaxMRP: true,
+  gstRate: 18,
+  gstInclusive: true,
+  cessRate: 2.5,
+  hsnChapter: "18",
+  gstApplicability: "Regular",
+  status: true,
+  mainImage: "",
+  relatedImages: [],
+  batches: [
+    {
+      bNo: "BATCH001",
+      mfgDate: "2024-01-15",
+      expDate: "2025-01-14",
+      barcode: "123456789012",
+      basicPrice: 199.99,
+      openingStock: 1000,
+      mrp: 349.99,
+      pRate: 199.99,
+      sRate: 299.99,
+      margin: 100,
+      gstAmount: 36,
+    },
+    {
+      bNo: "BATCH002",
+      mfgDate: "2024-02-01",
+      expDate: "2025-01-31",
+      barcode: "123456789013",
+      basicPrice: 205.5,
+      openingStock: 750,
+      mrp: 359.99,
+      pRate: 205.5,
+      sRate: 315.5,
+      margin: 110,
+      gstAmount: 37,
+    },
+  ],
+};
+
+// GST options
 const gstApplicabilityOptions = ["Regular", "Composition", "Exempt"];
 
 export default function ProductFormModal({
@@ -227,9 +252,14 @@ export default function ProductFormModal({
   onSave,
   isSubmitting = false,
 }: ProductFormModalProps) {
-  const [mainImage, setMainImage] = useState<File | null>(null);
-  const [relatedImages, setRelatedImages] = useState<File[]>([]);
-  const { units,productCompanies,groups } = useActiveLists();
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [relatedImageFiles, setRelatedImageFiles] = useState<File[]>([]);
+  const [uploadedMainImage, setUploadedMainImage] = useState<string>("");
+  const [uploadedRelatedImages, setUploadedRelatedImages] = useState<string[]>(
+    [],
+  );
+  const { units, productCompanies, groups } = useActiveLists();
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
     defaultValues,
@@ -239,6 +269,33 @@ export default function ProductFormModal({
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
 
+  // Load sample data into form
+  const loadSampleData = () => {
+    // Get first available options from dropdowns
+    const firstUnit = units.length > 0 ? units[0].id : 0;
+    const firstGroup = groups.length > 0 ? groups[0].id : 0;
+    const firstCompany = productCompanies.length > 0 ? productCompanies[0].id : 0;
+
+    const sampleWithFirstOptions = {
+      ...sampleData,
+      unitId: firstUnit,
+      productGroupId: firstGroup,
+      productCompanyId: firstCompany,
+      purchaseUnit: firstUnit.toString(),
+      saleUnit: firstUnit.toString(),
+    };
+
+    form.reset(sampleWithFirstOptions);
+    setMainImageFile(null);
+    setRelatedImageFiles([]);
+    setUploadedMainImage("");
+    setUploadedRelatedImages([]);
+    
+    toast.success("Sample data loaded. Images will remain empty.", {
+      description: "Fill in real data before submitting."
+    });
+  };
+
   // Reset form when editingProduct changes
   useEffect(() => {
     if (editingProduct) {
@@ -247,33 +304,60 @@ export default function ProductFormModal({
         productBrand: editingProduct.productBrand,
         description: editingProduct.description,
         hsnSacCode: editingProduct.hsnSacCode,
-        goodsOrServices: editingProduct.goodsOrServices,
+        goodsServices: editingProduct.goodsServices as "Goods" | "Services",
         weight: editingProduct.weight,
-        unit: editingProduct.unit,
-        productGroup: editingProduct.productGroup,
-        productShortName: editingProduct.productShortName,
-        purchaseUnit: editingProduct.purchaseUnit,
-        conversionFactor: editingProduct.conversionFactor,
-        pricePerPCS: editingProduct.pricePerPCS,
-        productCompany: editingProduct.productCompany,
-        saleUnit: editingProduct.saleUnit,
-        cartonPack: editingProduct.cartonPack,
+        unitId: editingProduct.unitId || 0,
+        productGroupId: editingProduct.productGroupId || 0,
+        productShortName: editingProduct.productShortName || "",
+        purchaseUnit: editingProduct.purchaseUnit || "",
+        conversionFactor: editingProduct.conversionFactor || 1,
+        pricePerPcs: editingProduct.pricePerPcs || 0,
+        productCompanyId: editingProduct.productCompanyId || 0,
+        saleUnit: editingProduct.saleUnit || "",
+        cartonPack: editingProduct.cartonPack || 24,
         innerPack: editingProduct.innerPack || "",
         packagingBasic: editingProduct.packagingBasic,
         packagingMRP: editingProduct.packagingMRP,
         insuranceTaxBasic: editingProduct.insuranceTaxBasic,
         insuranceTaxMRP: editingProduct.insuranceTaxMRP,
-        gstRate: editingProduct.gstRate,
+        gstRate: editingProduct.gstRate || 18,
         gstInclusive: editingProduct.gstInclusive,
-        cessRate: editingProduct.cessRate,
+        cessRate: editingProduct.cessRate || 0,
         hsnChapter: editingProduct.hsnChapter || "",
-        gstApplicability: editingProduct.gstApplicability,
-        batches: editingProduct.batches,
+        gstApplicability: editingProduct.gstApplicability as
+          | "Regular"
+          | "Composition"
+          | "Exempt",
+        status: editingProduct.status,
+        mainImage: editingProduct.mainImage || "",
+        relatedImages:
+          editingProduct.relatedImages?.map((img) => img.imageUrl) || [],
+        batches:
+          editingProduct.batches?.map((batch) => ({
+            bNo: batch.batchNo,
+            mfgDate: batch.mfgDate,
+            expDate: batch.expDate,
+            barcode: batch.barcode,
+            basicPrice: batch.basicPrice,
+            openingStock: batch.openingStock,
+            mrp: batch.mrp,
+            pRate: batch.purchaseRate,
+            sRate: batch.saleRate,
+            margin: batch.margin,
+            gstAmount: batch.gstAmount || 0,
+          })) || [],
       });
+
+      setUploadedMainImage(editingProduct.mainImage || "");
+      setUploadedRelatedImages(
+        editingProduct.relatedImages?.map((img) => img.imageUrl) || [],
+      );
     } else {
       form.reset(defaultValues);
-      setMainImage(null);
-      setRelatedImages([]);
+      setMainImageFile(null);
+      setRelatedImageFiles([]);
+      setUploadedMainImage("");
+      setUploadedRelatedImages([]);
     }
   }, [editingProduct, form]);
 
@@ -337,41 +421,143 @@ export default function ProductFormModal({
     }
   };
 
-  // Handle image upload
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle main image upload
+  const handleMainImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      setMainImage(file);
+      try {
+        setMainImageFile(file);
+        const filename = await imageService.uploadImage(file);
+        setUploadedMainImage(filename);
+        form.setValue("mainImage", filename);
+        toast.success("Main image uploaded successfully");
+      } catch (error: any) {
+        toast.error("Failed to upload main image", {
+          description: error.response?.data?.message || "Please try again",
+        });
+        setMainImageFile(null);
+      }
     }
   };
 
-  const handleRelatedImagesUpload = (
+  // Handle related images upload
+  const handleRelatedImagesUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(e.target.files || []);
-    setRelatedImages([...relatedImages, ...files]);
+    if (files.length > 0) {
+      try {
+        const uploadedFilenames: string[] = [];
+        for (const file of files) {
+          const filename = await imageService.uploadImage(file);
+          uploadedFilenames.push(filename);
+        }
+
+        const newRelatedImages = [
+          ...uploadedRelatedImages,
+          ...uploadedFilenames,
+        ];
+        setUploadedRelatedImages(newRelatedImages);
+        setRelatedImageFiles((prev) => [...prev, ...files]);
+        form.setValue("relatedImages", newRelatedImages);
+
+        toast.success(`${files.length} image(s) uploaded successfully`);
+      } catch (error: any) {
+        toast.error("Failed to upload images", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      }
+    }
   };
 
+  // Remove main image
   const removeMainImage = () => {
-    setMainImage(null);
+    setMainImageFile(null);
+    setUploadedMainImage("");
+    form.setValue("mainImage", "");
+    toast.info("Main image removed");
   };
 
-  const removeRelatedImage = (index: number) => {
-    setRelatedImages(relatedImages.filter((_, i) => i !== index));
+  // Remove related image
+  const removeRelatedImage = async (index: number) => {
+    const imageToRemove = uploadedRelatedImages[index];
+    if (imageToRemove) {
+      try {
+        await imageService.deleteImage(imageToRemove);
+        const newImages = uploadedRelatedImages.filter((_, i) => i !== index);
+        setUploadedRelatedImages(newImages);
+        setRelatedImageFiles((prev) => prev.filter((_, i) => i !== index));
+        form.setValue("relatedImages", newImages);
+
+        toast.success("Image removed successfully");
+      } catch (error: any) {
+        toast.error("Failed to remove image", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      }
+    }
   };
 
-  const onSubmit = (data: ProductFormData) => {
-    onSave(data, editingProduct?.id);
+  const onSubmit = async (data: ProductFormData) => {
+    console.log("Form submitted with data:", data);
+
+    try {
+      // Convert to ImportedProductFormData
+      const formData: ImportedProductFormData = {
+        ...data,
+        goodsServices: data.goodsServices,
+        gstApplicability: data.gstApplicability,
+        batches: data.batches.map((batch) => ({
+          ...batch,
+          mfgDate: batch.mfgDate ?? null,
+          expDate: batch.expDate ?? null,
+          gstAmount: batch.gstAmount || 0,
+        })),
+      };
+
+      console.log("Converted form data:", formData);
+
+      await onSave(formData, editingProduct?.id);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast.error("Failed to save product. Please try again.");
+    }
+  };
+
+  // Also, add an onError handler to see validation errors
+  const onError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    toast.error("Please fix all validation errors before submitting.");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="min-w-[90vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            {editingProduct ? "Edit Product" : "Add New Product"}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Package className="h-6 w-6" />
+              {editingProduct ? "Edit Product" : "Add New Product"}
+            </DialogTitle>
+            
+            {/* Sample Data Toggle Button */}
+            {!editingProduct && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadSampleData}
+                disabled={isSubmitting}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                Load Sample Data
+              </Button>
+            )}
+          </div>
+          
           <DialogDescription>
             {editingProduct
               ? "Update product details and inventory information"
@@ -380,7 +566,10 @@ export default function ProductFormModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, onError)}
+            className="space-y-6"
+          >
             {/* Main Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Column 1: Basic Information */}
@@ -474,7 +663,7 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="goodsOrServices"
+                      name="goodsServices"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
@@ -538,13 +727,15 @@ export default function ProductFormModal({
 
                       <FormField
                         control={form.control}
-                        name="unit"
+                        name="unitId"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm">Unit *</FormLabel>
                             <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              onValueChange={(value) =>
+                                field.onChange(parseInt(value))
+                              }
+                              value={field.value?.toString() || ""}
                               disabled={isSubmitting}
                             >
                               <FormControl>
@@ -553,9 +744,21 @@ export default function ProductFormModal({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {unitOptions.map((unit) => (
-                                  <SelectItem key={unit} value={unit}>
-                                    {unit}
+                                {units.map((unit) => (
+                                  <SelectItem
+                                    key={unit.id}
+                                    value={unit.id.toString()}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-lg font-bold">
+                                        {unit.symbol}
+                                      </span>
+                                      <div className="flex flex-col">
+                                        <span className="text-[12px] text-muted-foreground">
+                                          {unit.name}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -568,15 +771,17 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="productGroup"
+                      name="productGroupId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
                             Product Group *
                           </FormLabel>
                           <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
+                            value={field.value?.toString() || ""}
                             disabled={isSubmitting}
                           >
                             <FormControl>
@@ -586,7 +791,10 @@ export default function ProductFormModal({
                             </FormControl>
                             <SelectContent>
                               {groups.map((group) => (
-                                <SelectItem key={group.id} value={group.name}>
+                                <SelectItem
+                                  key={group.id}
+                                  value={group.id.toString()}
+                                >
                                   {group.name}
                                 </SelectItem>
                               ))}
@@ -725,7 +933,7 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="productCompany"
+                      name="productCompanyId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
@@ -733,8 +941,10 @@ export default function ProductFormModal({
                           </FormLabel>
                           <Select
                             disabled={isSubmitting}
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
+                            value={field.value?.toString() || ""}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -826,7 +1036,7 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="pricePerPCS"
+                      name="pricePerPcs"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
@@ -844,9 +1054,9 @@ export default function ProductFormModal({
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -869,7 +1079,10 @@ export default function ProductFormModal({
                             </FormControl>
                             <SelectContent>
                               {units.map((unit) => (
-                                <SelectItem key={unit.id} value={unit.id.toString()}>
+                                <SelectItem
+                                  key={unit.id}
+                                  value={unit.id.toString()}
+                                >
                                   {unit.name}
                                 </SelectItem>
                               ))}
@@ -935,7 +1148,7 @@ export default function ProductFormModal({
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">Main Image</div>
-                        {mainImage && (
+                        {(mainImageFile || uploadedMainImage) && (
                           <Button
                             type="button"
                             variant="ghost"
@@ -949,13 +1162,21 @@ export default function ProductFormModal({
                           </Button>
                         )}
                       </div>
-                      {mainImage ? (
+                      {mainImageFile || uploadedMainImage ? (
                         <div className="relative group">
-                          <img
-                            src={URL.createObjectURL(mainImage)}
-                            alt="Main product"
-                            className="h-32 w-full object-cover rounded-lg border"
-                          />
+                          {mainImageFile ? (
+                            <img
+                              src={URL.createObjectURL(mainImageFile)}
+                              alt="Main product"
+                              className="h-32 w-full object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="h-32 w-full bg-gray-100 rounded-lg border flex items-center justify-center">
+                              <span className="text-sm text-gray-600">
+                                Image uploaded: {uploadedMainImage}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary transition-colors">
@@ -980,7 +1201,7 @@ export default function ProductFormModal({
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">
-                          Related Images
+                          Related Images ({uploadedRelatedImages.length})
                         </div>
                         <div>
                           <Input
@@ -1011,9 +1232,9 @@ export default function ProductFormModal({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <AnimatePresence>
-                          {relatedImages.map((image, index) => (
+                          {relatedImageFiles.map((image, index) => (
                             <motion.div
-                              key={index}
+                              key={`file-${index}`}
                               initial={{ scale: 0.8, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               exit={{ scale: 0.8, opacity: 0 }}
@@ -1036,6 +1257,34 @@ export default function ProductFormModal({
                               </Button>
                             </motion.div>
                           ))}
+
+                          {uploadedRelatedImages
+                            .filter((_, index) => !relatedImageFiles[index])
+                            .map((imageName, index) => (
+                              <motion.div
+                                key={`uploaded-${index}`}
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                className="relative w-16 h-16"
+                              >
+                                <div className="h-16 w-16 bg-gray-100 rounded-lg border flex items-center justify-center">
+                                  <span className="text-xs text-center p-1">
+                                    {imageName}
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+                                  onClick={() => removeRelatedImage(index)}
+                                  disabled={isSubmitting}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </motion.div>
+                            ))}
                         </AnimatePresence>
                       </div>
                     </div>
@@ -1102,8 +1351,8 @@ export default function ProductFormModal({
                                 className="pl-9"
                                 disabled={isSubmitting}
                               />
-                            </div>
-                          </FormControl>
+                              </div>
+                            </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
