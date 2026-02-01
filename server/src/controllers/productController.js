@@ -26,6 +26,20 @@ function getProductsImageDirectory() {
 }
 
 /**
+ * Helper function to extract filename from URL
+ */
+function extractFilename(url) {
+  if (!url) return null;
+
+  // Extract filename from URL (e.g., /api/images/filename.jpg -> filename.jpg)
+  // or just return the filename if it's already just a filename
+  if (url.includes("/")) {
+    return url.split("/").pop();
+  }
+  return url;
+}
+
+/**
  * Helper function to convert filename to public URL
  */
 function getImageUrl(filename) {
@@ -160,6 +174,9 @@ export const createProduct = asyncHandler(async (req, res) => {
   }
 
   try {
+    // Extract filename from main image (if it's a URL)
+    const mainImageFilename = extractFilename(mainImage);
+
     // Create product with batches and images in transaction
     const product = await prisma.$transaction(async (tx) => {
       // Create product
@@ -193,7 +210,7 @@ export const createProduct = asyncHandler(async (req, res) => {
           hsnChapter,
           gstApplicability: gstApplicability || "Regular",
           status,
-          mainImage,
+          mainImage: mainImageFilename, // Store only filename
           userId: req.user?.id || null,
         },
       });
@@ -225,16 +242,22 @@ export const createProduct = asyncHandler(async (req, res) => {
       // Create related images if provided
       if (relatedImages && relatedImages.length > 0) {
         await Promise.all(
-          relatedImages.map((imageUrl, index) =>
-            tx.productImage.create({
-              data: {
-                imageUrl,
-                imageType: "related",
-                sortOrder: index,
-                productId: newProduct.id,
-              },
-            }),
-          ),
+          relatedImages
+            .map((imageUrl, index) => {
+              // Extract filename from URL
+              const filename = extractFilename(imageUrl);
+              if (!filename) return null;
+
+              return tx.productImage.create({
+                data: {
+                  imageUrl: filename, // Store only filename
+                  imageType: "related",
+                  sortOrder: index,
+                  productId: newProduct.id,
+                },
+              });
+            })
+            .filter(Boolean), // Filter out null entries
         );
       }
 
@@ -432,7 +455,7 @@ export const getProducts = asyncHandler(async (req, res) => {
         : "desc",
   };
 
-  // Query with relations
+  // Query with relations - INCLUDING RELATED IMAGES
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
@@ -460,8 +483,16 @@ export const getProducts = asyncHandler(async (req, res) => {
           },
         },
         batches: {
-          // take: 1, // Get first batch for summary
           orderBy: { createdAt: "desc" },
+        },
+        relatedImages: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            imageUrl: true,
+            imageType: true,
+            sortOrder: true,
+          },
         },
         _count: {
           select: {
@@ -476,11 +507,13 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Convert to public URLs instead of file paths
   const productsWithUrls = products.map((product) => {
-    // console.log("Product Main Image:", product.mainImage);
     return {
       ...product,
       mainImage: getImageUrl(product.mainImage),
-      // Note: relatedImages are not loaded in this query for performance
+      relatedImages: product.relatedImages.map((img) => ({
+        ...img,
+        imageUrl: getImageUrl(img.imageUrl),
+      })),
     };
   });
 
@@ -721,6 +754,12 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
 
   try {
+    // Extract filename from main image (if it's a URL)
+    const mainImageFilename =
+      mainImage !== undefined
+        ? extractFilename(mainImage)
+        : existingProduct.mainImage;
+
     // Update product with batches and images in transaction
     const updatedProduct = await prisma.$transaction(async (tx) => {
       // Update product
@@ -794,8 +833,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
           gstApplicability:
             gstApplicability || existingProduct.gstApplicability,
           status: status !== undefined ? status : existingProduct.status,
-          mainImage:
-            mainImage !== undefined ? mainImage : existingProduct.mainImage,
+          mainImage: mainImageFilename, // Store only filename
         },
       });
 
@@ -833,18 +871,27 @@ export const updateProduct = asyncHandler(async (req, res) => {
           where: { productId: parseInt(id) },
         });
 
-        await Promise.all(
-          relatedImages.map((imageUrl, index) =>
-            tx.productImage.create({
-              data: {
-                imageUrl,
-                imageType: "related",
-                sortOrder: index,
-                productId: parseInt(id),
-              },
-            }),
-          ),
-        );
+        // Create new related images if provided
+        if (relatedImages.length > 0) {
+          await Promise.all(
+            relatedImages
+              .map((imageUrl, index) => {
+                // Extract filename from URL
+                const filename = extractFilename(imageUrl);
+                if (!filename) return null;
+
+                return tx.productImage.create({
+                  data: {
+                    imageUrl: filename, // Store only filename
+                    imageType: "related",
+                    sortOrder: index,
+                    productId: parseInt(id),
+                  },
+                });
+              })
+              .filter(Boolean), // Filter out null entries
+          );
+        }
       }
 
       return product;

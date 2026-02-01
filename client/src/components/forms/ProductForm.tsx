@@ -115,7 +115,7 @@ const productSchema = z.object({
         mfgDate: z.string().optional().nullable(),
         expDate: z.string().optional().nullable(),
         barcode: z.string().min(1, "Barcode is required"),
-        basicPrice: z.coerce.number().positive("Basic price must be positive"),
+        basicPrice: z.coerce.number("Basic price must be positive"),
         openingStock: z.coerce.number().min(0, "Stock cannot be negative"),
         mrp: z.coerce.number().positive("MRP must be positive"),
         pRate: z.coerce.number().positive("Purchase rate must be positive"),
