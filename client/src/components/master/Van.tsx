@@ -48,6 +48,7 @@ import {
 } from "../FramerVariants";
 import { vanService } from "@/services/vanService";
 import { type Van, type VanFilters } from "@/types/van";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface VansResponse {
@@ -96,6 +97,75 @@ export default function VanComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [nameInput, setNameInput] = useState<string>("");
+  const [vehicleNoInput, setVehicleNoInput] = useState<string>("");
+  const [modelInput, setModelInput] = useState<string>("");
+  const [areaInput, setAreaInput] = useState<string>("");
+  const [cityInput, setCityInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  const debouncedSetVehicleNo = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, vehicleNo: value }));
+  }, 300);
+
+  const debouncedSetModel = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, model: value }));
+  }, 300);
+
+  const debouncedSetArea = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, area: value }));
+  }, 300);
+
+  const debouncedSetCity = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, city: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle name input change with debounce
+  const handleNameChange = (value: string) => {
+    setNameInput(value);
+    debouncedSetName(value);
+  };
+
+  // Handle vehicle number input change with debounce
+  const handleVehicleNoChange = (value: string) => {
+    setVehicleNoInput(value);
+    debouncedSetVehicleNo(value);
+  };
+
+  // Handle model input change with debounce
+  const handleModelChange = (value: string) => {
+    setModelInput(value);
+    debouncedSetModel(value);
+  };
+
+  // Handle area input change with debounce
+  const handleAreaChange = (value: string) => {
+    setAreaInput(value);
+    debouncedSetArea(value);
+  };
+
+  // Handle city input change with debounce
+  const handleCityChange = (value: string) => {
+    setCityInput(value);
+    debouncedSetCity(value);
+  };
 
   // Safely handle vans data
   const displayVans = useMemo(() => {
@@ -185,7 +255,7 @@ export default function VanComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -205,6 +275,12 @@ export default function VanComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setNameInput("");
+    setVehicleNoInput("");
+    setModelInput("");
+    setAreaInput("");
+    setCityInput("");
   };
 
   // Clear specific filter
@@ -218,6 +294,28 @@ export default function VanComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "name":
+        setNameInput("");
+        break;
+      case "vehicleNo":
+        setVehicleNoInput("");
+        break;
+      case "model":
+        setModelInput("");
+        break;
+      case "area":
+        setAreaInput("");
+        break;
+      case "city":
+        setCityInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -352,16 +450,19 @@ export default function VanComponent() {
                 type="search"
                 placeholder="Search vans by name, vehicle no, or location..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -470,19 +571,20 @@ export default function VanComponent() {
                             <Input
                               id="name"
                               placeholder="Enter van name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={nameInput}
+                              onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.name && (
+                            {nameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => {
+                                  setNameInput("");
+                                  clearFilter("name");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -503,19 +605,120 @@ export default function VanComponent() {
                             <Input
                               id="vehicleNo"
                               placeholder="DL01AB1234"
-                              value={filters.vehicleNo}
+                              value={vehicleNoInput}
                               onChange={(e) =>
-                                handleFilterChange("vehicleNo", e.target.value)
+                                handleVehicleNoChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.vehicleNo && (
+                            {vehicleNoInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("vehicleNo")}
+                                onClick={() => {
+                                  setVehicleNoInput("");
+                                  clearFilter("vehicleNo");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Model Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="model"
+                            className="text-sm font-medium"
+                          >
+                            Model
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="model"
+                              placeholder="Enter model"
+                              value={modelInput}
+                              onChange={(e) =>
+                                handleModelChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {modelInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setModelInput("");
+                                  clearFilter("model");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Area Filter */}
+                        <div className="space-y-2">
+                          <Label htmlFor="area" className="text-sm font-medium">
+                            Area
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="area"
+                              placeholder="Enter area"
+                              value={areaInput}
+                              onChange={(e) => handleAreaChange(e.target.value)}
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {areaInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setAreaInput("");
+                                  clearFilter("area");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* City Filter */}
+                        <div className="space-y-2">
+                          <Label htmlFor="city" className="text-sm font-medium">
+                            City
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="city"
+                              placeholder="Enter city"
+                              value={cityInput}
+                              onChange={(e) => handleCityChange(e.target.value)}
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {cityInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setCityInput("");
+                                  clearFilter("city");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -589,66 +792,6 @@ export default function VanComponent() {
                             </Label>
                           </div>
                         </div>
-
-                        {/* Area Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="area" className="text-sm font-medium">
-                            Area
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="area"
-                              placeholder="Enter area"
-                              value={filters.area}
-                              onChange={(e) =>
-                                handleFilterChange("area", e.target.value)
-                              }
-                              className="flex-1"
-                              // disabled={isLoading}
-                            />
-                            {filters.area && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("area")}
-                                disabled={isLoading}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* City Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm font-medium">
-                            City
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="city"
-                              placeholder="Enter city"
-                              value={filters.city}
-                              onChange={(e) =>
-                                handleFilterChange("city", e.target.value)
-                              }
-                              className="flex-1"
-                              // disabled={isLoading}
-                            />
-                            {filters.city && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("city")}
-                                disabled={isLoading}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -664,9 +807,10 @@ export default function VanComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} vans
                 {filters.status !== "all" ||
@@ -681,7 +825,8 @@ export default function VanComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

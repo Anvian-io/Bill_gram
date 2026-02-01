@@ -53,6 +53,7 @@ import {
 } from "../FramerVariants";
 import { salesmanService } from "@/services/salesmanService";
 import { type Salesman, type SalesmanFilters } from "@/types/salesman";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface SalesmenResponse {
@@ -100,6 +101,42 @@ export default function SalesmanComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [nameInput, setNameInput] = useState<string>("");
+  const [areaInput, setAreaInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  const debouncedSetArea = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, area: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle name input change with debounce
+  const handleNameChange = (value: string) => {
+    setNameInput(value);
+    debouncedSetName(value);
+  };
+
+  // Handle area input change with debounce
+  const handleAreaChange = (value: string) => {
+    setAreaInput(value);
+    debouncedSetArea(value);
+  };
 
   // Safely handle salesmen data
   const displaySalesmen = useMemo(() => {
@@ -180,7 +217,7 @@ export default function SalesmanComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -197,6 +234,9 @@ export default function SalesmanComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setNameInput("");
+    setAreaInput("");
   };
 
   // Clear specific filter
@@ -210,6 +250,19 @@ export default function SalesmanComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "name":
+        setNameInput("");
+        break;
+      case "area":
+        setAreaInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -373,16 +426,19 @@ export default function SalesmanComponent() {
                 type="search"
                 placeholder="Search by name, phone, area, or email..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -491,19 +547,20 @@ export default function SalesmanComponent() {
                             <Input
                               id="name"
                               placeholder="Enter name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={nameInput}
+                              onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.name && (
+                            {nameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => {
+                                  setNameInput("");
+                                  clearFilter("name");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -521,19 +578,20 @@ export default function SalesmanComponent() {
                             <Input
                               id="area"
                               placeholder="Enter area"
-                              value={filters.area}
-                              onChange={(e) =>
-                                handleFilterChange("area", e.target.value)
-                              }
+                              value={areaInput}
+                              onChange={(e) => handleAreaChange(e.target.value)}
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.area && (
+                            {areaInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("area")}
+                                onClick={() => {
+                                  setAreaInput("");
+                                  clearFilter("area");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -622,9 +680,10 @@ export default function SalesmanComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} salesmen
                 {filters.status !== "all" ||
@@ -636,7 +695,8 @@ export default function SalesmanComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

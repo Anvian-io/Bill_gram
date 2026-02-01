@@ -53,6 +53,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { customerService } from "@/services/customerService";
 import { type Customer, type CustomerFilters } from "@/types/customer";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface CustomersResponse {
@@ -68,20 +69,6 @@ interface CustomersResponse {
     };
   };
 }
-
-// Customer type options
-// const customerTypeOptions = [
-//   "Retail Store",
-//   "Supermarket",
-//   "Hypermarket",
-//   "Chain Store",
-//   "Kirana",
-//   "Distributor",
-//   "Wholesaler",
-//   "Corporate",
-//   "Online Store",
-//   "Other",
-// ];
 
 export default function CustomerComponent() {
   // State for customers
@@ -117,6 +104,75 @@ export default function CustomerComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [companyNameInput, setCompanyNameInput] = useState<string>("");
+  const [personNameInput, setPersonNameInput] = useState<string>("");
+  const [phoneNoInput, setPhoneNoInput] = useState<string>("");
+  const [cityInput, setCityInput] = useState<string>("");
+  const [customerTypeInput, setCustomerTypeInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetCompanyName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, companyName: value }));
+  }, 300);
+
+  const debouncedSetPersonName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, personName: value }));
+  }, 300);
+
+  const debouncedSetPhoneNo = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, phoneNo: value }));
+  }, 300);
+
+  const debouncedSetCity = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, city: value }));
+  }, 300);
+
+  const debouncedSetCustomerType = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, customerType: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle company name input change with debounce
+  const handleCompanyNameChange = (value: string) => {
+    setCompanyNameInput(value);
+    debouncedSetCompanyName(value);
+  };
+
+  // Handle person name input change with debounce
+  const handlePersonNameChange = (value: string) => {
+    setPersonNameInput(value);
+    debouncedSetPersonName(value);
+  };
+
+  // Handle phone number input change with debounce
+  const handlePhoneNoChange = (value: string) => {
+    setPhoneNoInput(value);
+    debouncedSetPhoneNo(value);
+  };
+
+  // Handle city input change with debounce
+  const handleCityChange = (value: string) => {
+    setCityInput(value);
+    debouncedSetCity(value);
+  };
+
+  // Handle customer type input change with debounce
+  const handleCustomerTypeChange = (value: string) => {
+    setCustomerTypeInput(value);
+    debouncedSetCustomerType(value);
+  };
 
   // Safely handle customers data
   const displayCustomers = useMemo(() => {
@@ -206,7 +262,7 @@ export default function CustomerComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -226,6 +282,12 @@ export default function CustomerComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setCompanyNameInput("");
+    setPersonNameInput("");
+    setPhoneNoInput("");
+    setCityInput("");
+    setCustomerTypeInput("");
   };
 
   // Clear specific filter
@@ -239,6 +301,28 @@ export default function CustomerComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "companyName":
+        setCompanyNameInput("");
+        break;
+      case "personName":
+        setPersonNameInput("");
+        break;
+      case "phoneNo":
+        setPhoneNoInput("");
+        break;
+      case "city":
+        setCityInput("");
+        break;
+      case "customerType":
+        setCustomerTypeInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -414,16 +498,19 @@ export default function CustomerComponent() {
                 type="search"
                 placeholder="Search by company name, person, phone, or city..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -535,22 +622,22 @@ export default function CustomerComponent() {
                             <Input
                               id="companyName"
                               placeholder="Enter company name"
-                              value={filters.companyName}
+                              value={companyNameInput}
                               onChange={(e) =>
-                                handleFilterChange(
-                                  "companyName",
-                                  e.target.value,
-                                )
+                                handleCompanyNameChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
+                              disabled={isLoading}
                             />
-                            {filters.companyName && (
+                            {companyNameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("companyName")}
+                                onClick={() => {
+                                  setCompanyNameInput("");
+                                  clearFilter("companyName");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -571,19 +658,125 @@ export default function CustomerComponent() {
                             <Input
                               id="personName"
                               placeholder="Enter person name"
-                              value={filters.personName}
+                              value={personNameInput}
                               onChange={(e) =>
-                                handleFilterChange("personName", e.target.value)
+                                handlePersonNameChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.personName && (
+                            {personNameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("personName")}
+                                onClick={() => {
+                                  setPersonNameInput("");
+                                  clearFilter("personName");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Phone Number Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="phoneNo"
+                            className="text-sm font-medium"
+                          >
+                            Phone Number
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="phoneNo"
+                              placeholder="Enter phone number"
+                              value={phoneNoInput}
+                              onChange={(e) =>
+                                handlePhoneNoChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {phoneNoInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setPhoneNoInput("");
+                                  clearFilter("phoneNo");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* City Filter */}
+                        <div className="space-y-2">
+                          <Label htmlFor="city" className="text-sm font-medium">
+                            City
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="city"
+                              placeholder="Enter city"
+                              value={cityInput}
+                              onChange={(e) => handleCityChange(e.target.value)}
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {cityInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setCityInput("");
+                                  clearFilter("city");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Customer Type Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="customerType"
+                            className="text-sm font-medium"
+                          >
+                            Customer Type
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="customerType"
+                              placeholder="Enter customer type"
+                              value={customerTypeInput}
+                              onChange={(e) =>
+                                handleCustomerTypeChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {customerTypeInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setCustomerTypeInput("");
+                                  clearFilter("customerType");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -672,9 +865,10 @@ export default function CustomerComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} customers
                 {filters.status !== "all" ||
@@ -689,7 +883,8 @@ export default function CustomerComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

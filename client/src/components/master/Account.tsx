@@ -52,6 +52,7 @@ import {
 } from "../FramerVariants";
 import { accountService } from "@/services/accountService";
 import { type Account, type AccountFilters } from "@/types/account";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface AccountsResponse {
@@ -98,6 +99,53 @@ export default function AccountComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [accountHolderInput, setAccountHolderInput] = useState<string>("");
+  const [bankNameInput, setBankNameInput] = useState<string>("");
+  const [ifscCodeInput, setIfscCodeInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetAccountHolder = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, accountHolder: value }));
+  }, 300);
+
+  const debouncedSetBankName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, bankName: value }));
+  }, 300);
+
+  const debouncedSetIfscCode = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, ifscCode: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle account holder input change with debounce
+  const handleAccountHolderChange = (value: string) => {
+    setAccountHolderInput(value);
+    debouncedSetAccountHolder(value);
+  };
+
+  // Handle bank name input change with debounce
+  const handleBankNameChange = (value: string) => {
+    setBankNameInput(value);
+    debouncedSetBankName(value);
+  };
+
+  // Handle IFSC code input change with debounce
+  const handleIfscCodeChange = (value: string) => {
+    setIfscCodeInput(value);
+    debouncedSetIfscCode(value);
+  };
 
   // Safely handle accounts data
   const displayAccounts = useMemo(() => {
@@ -181,7 +229,7 @@ export default function AccountComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -199,6 +247,10 @@ export default function AccountComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setAccountHolderInput("");
+    setBankNameInput("");
+    setIfscCodeInput("");
   };
 
   // Clear specific filter
@@ -212,6 +264,22 @@ export default function AccountComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "accountHolder":
+        setAccountHolderInput("");
+        break;
+      case "bankName":
+        setBankNameInput("");
+        break;
+      case "ifscCode":
+        setIfscCodeInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -325,7 +393,7 @@ export default function AccountComponent() {
       <div className="max-w-8xl mx-auto">
         {/* Header */}
         <motion.div
-          className="flex flex-col gap-6 mb-6 w-full"
+          className="flex flex-col gap=6 mb-6 w-full"
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
@@ -346,16 +414,19 @@ export default function AccountComponent() {
                 type="search"
                 placeholder="Search accounts by holder, bank, or IFSC..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -411,7 +482,7 @@ export default function AccountComponent() {
               <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap=2">
                     <Filter className="h-5 w-5 text-muted-foreground" />
                     <h3 className="font-semibold">Filters</h3>
                     {activeFiltersCount > 0 && (
@@ -467,22 +538,22 @@ export default function AccountComponent() {
                             <Input
                               id="accountHolder"
                               placeholder="Enter account holder name"
-                              value={filters.accountHolder}
+                              value={accountHolderInput}
                               onChange={(e) =>
-                                handleFilterChange(
-                                  "accountHolder",
-                                  e.target.value,
-                                )
+                                handleAccountHolderChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.accountHolder && (
+                            {accountHolderInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("accountHolder")}
+                                onClick={() => {
+                                  setAccountHolderInput("");
+                                  clearFilter("accountHolder");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -503,19 +574,22 @@ export default function AccountComponent() {
                             <Input
                               id="bankName"
                               placeholder="Enter bank name"
-                              value={filters.bankName}
+                              value={bankNameInput}
                               onChange={(e) =>
-                                handleFilterChange("bankName", e.target.value)
+                                handleBankNameChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.bankName && (
+                            {bankNameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("bankName")}
+                                onClick={() => {
+                                  setBankNameInput("");
+                                  clearFilter("bankName");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -536,19 +610,22 @@ export default function AccountComponent() {
                             <Input
                               id="ifscCode"
                               placeholder="Enter IFSC code"
-                              value={filters.ifscCode}
+                              value={ifscCodeInput}
                               onChange={(e) =>
-                                handleFilterChange("ifscCode", e.target.value)
+                                handleIfscCodeChange(e.target.value)
                               }
                               className="flex-1"
                               // disabled={isLoading}
                             />
-                            {filters.ifscCode && (
+                            {ifscCodeInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("ifscCode")}
+                                onClick={() => {
+                                  setIfscCodeInput("");
+                                  clearFilter("ifscCode");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -614,7 +691,7 @@ export default function AccountComponent() {
                                   Showing Deleted
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap=2">
                                   <EyeOff className="h-4 w-4" />
                                   Hide Deleted
                                 </div>
@@ -637,9 +714,10 @@ export default function AccountComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} accounts
                 {filters.status !== "all" ||
@@ -652,7 +730,8 @@ export default function AccountComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -820,7 +899,7 @@ export default function AccountComponent() {
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="space-y-2">
                                 {account.qrCode && (
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap=2">
                                     <QrCode className="h-3 w-3 text-muted-foreground" />
                                     <span className="text-sm">
                                       QR Code Available
@@ -828,7 +907,7 @@ export default function AccountComponent() {
                                   </div>
                                 )}
                                 {account.gpayNo && (
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap=2">
                                     <Phone className="h-3 w-3 text-muted-foreground" />
                                     <span className="text-sm">
                                       GPay: {account.gpayNo}
@@ -864,7 +943,7 @@ export default function AccountComponent() {
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                               <div className="space-y-1">
                                 <div className="flex items-center">
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap=1">
                                     <span className="text-xs font-medium text-green-400">
                                       Created:
                                     </span>
