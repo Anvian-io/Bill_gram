@@ -53,7 +53,7 @@ import {
   type ProductFormData as ImportedProductFormData,
   type Product,
 } from "@/types/product";
-
+import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
 // API Base URL - Adjust according to your environment
 const API_BASE_URL = "http://localhost:3001";
 
@@ -137,13 +137,6 @@ interface ProductFormModalProps {
   onSave: (data: ImportedProductFormData, id?: number) => Promise<void>;
   isSubmitting?: boolean;
 }
-
-// Helper function to get full image URL for display
-const getImageUrl = (filename: string | null | undefined): string => {
-  if (!filename) return "";
-  // Return the full URL for display
-  return `${API_BASE_URL}/api/images/${filename}`;
-};
 
 // Initial form values
 const defaultValues: ProductFormData = {
@@ -321,16 +314,6 @@ export default function ProductFormModal({
 
   // Reset form when editingProduct changes
   useEffect(() => {
-    // Function to extract filename from URL if it's a full URL
-    const extractFilename = (url: string): string => {
-      if (!url) return "";
-      // If it's a full URL, extract the filename
-      if (url.includes("/")) {
-        return url.split("/").pop() || url;
-      }
-      // If it's already just a filename, return as is
-      return url;
-    };
 
     if (editingProduct) {
       form.reset({
@@ -1218,7 +1201,7 @@ export default function ProductFormModal({
                       ) : uploadedMainImage ? (
                         <div className="relative group">
                           <img
-                            src={getImageUrl(uploadedMainImage)}
+                            src={getFullImageUrl(uploadedMainImage)}
                             alt="Main product"
                             className="h-32 w-full object-cover rounded-lg border"
                           />
@@ -1316,7 +1299,7 @@ export default function ProductFormModal({
                                 className="relative w-16 h-16"
                               >
                                 <img
-                                  src={getImageUrl(filename)}
+                                  src={getFullImageUrl(filename)}
                                   alt={`Related ${index + 1}`}
                                   className="h-16 w-16 object-cover rounded-lg border"
                                 />

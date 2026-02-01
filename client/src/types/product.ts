@@ -59,7 +59,6 @@ export interface ProductCompany {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface Product {
   id: number;
   productCode: string;
@@ -102,6 +101,9 @@ export interface Product {
   };
   createdAt: string;
   updatedAt: string;
+  
+  // Add this field for total opening stock
+  totalOpeningStock?: number;
 }
 
 export interface ProductFormData {

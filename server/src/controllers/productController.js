@@ -45,7 +45,8 @@ function extractFilename(url) {
 function getImageUrl(filename) {
   if (!filename) return null;
   // Return public API URL path
-  return `/api/images/${filename}`;
+  // return `/api/images/${filename}`;
+  return `${filename}`;
 }
 
 /**
@@ -507,8 +508,15 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Convert to public URLs instead of file paths
   const productsWithUrls = products.map((product) => {
+    // Calculate total opening stock from all batches
+    const totalOpeningStock = product.batches.reduce(
+      (sum, batch) => sum + (batch.openingStock || 0),
+      0,
+    );
+
     return {
       ...product,
+      totalOpeningStock,
       mainImage: getImageUrl(product.mainImage),
       relatedImages: product.relatedImages.map((img) => ({
         ...img,
@@ -538,7 +546,7 @@ export const getProducts = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get Active Products (for dropdowns)
+ * Get Active Products (for dropdown) - Now returns separate rows for each batch
  */
 export const getActiveProducts = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
@@ -549,14 +557,7 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
       status: true,
       deleted: false,
     },
-    select: {
-      id: true,
-      productCode: true,
-      productBrand: true,
-      productShortName: true,
-      description: true,
-      pricePerPcs: true,
-      mainImage: true,
+    include: {
       unit: {
         select: {
           id: true,
@@ -564,17 +565,17 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
           symbol: true,
         },
       },
+      productCompany: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       batches: {
         where: {
           openingStock: { gt: 0 },
         },
-        take: 1,
         orderBy: { createdAt: "desc" },
-        select: {
-          openingStock: true,
-          mrp: true,
-          saleRate: true,
-        },
       },
     },
     orderBy: {
@@ -582,16 +583,61 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
     },
   });
 
-  // Convert image paths to URLs
-  const productsWithUrls = products.map((product) => ({
-    ...product,
-    mainImage: getImageUrl(product.mainImage),
-  }));
+  // Flatten the products to create separate entries for each batch
+  const productBatchEntries = products.flatMap((product) => {
+    if (!product.batches || product.batches.length === 0) {
+      // Return product even if no batches (for dropdown display)
+      return [
+        {
+          ...product,
+          mainImage: getImageUrl(product.mainImage),
+          batch: null,
+          batchId: null,
+          batchNo: null,
+          mfgDate: null,
+          expDate: null,
+          barcode: null,
+          basicPrice: null,
+          openingStock: 0,
+          mrp: null,
+          purchaseRate: null,
+          saleRate: null,
+          margin: null,
+          gstAmount: null,
+        },
+      ];
+    }
+
+    return product.batches.map((batch) => ({
+      id: product.id,
+      productCode: product.productCode,
+      productBrand: product.productBrand,
+      productShortName: product.productShortName,
+      description: product.description,
+      pricePerPcs: product.pricePerPcs,
+      mainImage: getImageUrl(product.mainImage),
+      unit: product.unit,
+      productCompany: product.productCompany,
+      // Batch details
+      batchId: batch.id,
+      batchNo: batch.batchNo,
+      mfgDate: batch.mfgDate,
+      expDate: batch.expDate,
+      barcode: batch.barcode,
+      basicPrice: batch.basicPrice,
+      openingStock: batch.openingStock,
+      mrp: batch.mrp,
+      purchaseRate: batch.purchaseRate,
+      saleRate: batch.saleRate,
+      margin: batch.margin,
+      gstAmount: batch.gstAmount,
+    }));
+  });
 
   return sendResponse(
     res,
     statusType.OK,
-    { products: productsWithUrls },
+    { products: productBatchEntries },
     "Active products retrieved successfully",
   );
 });
@@ -648,9 +694,16 @@ export const getProductById = asyncHandler(async (req, res) => {
     return sendResponse(res, statusType.NOT_FOUND, null, "Product not found");
   }
 
+  // Calculate total opening stock from all batches
+  const totalOpeningStock = product.batches.reduce(
+    (sum, batch) => sum + (batch.openingStock || 0),
+    0,
+  );
+
   // Convert image paths to public URLs
   const productWithUrls = {
     ...product,
+    totalOpeningStock,
     mainImage: getImageUrl(product.mainImage),
     relatedImages: product.relatedImages.map((image) => ({
       ...image,
@@ -931,9 +984,16 @@ export const updateProduct = asyncHandler(async (req, res) => {
       },
     });
 
+    // Calculate total opening stock from all batches
+    const totalOpeningStock = completeProduct.batches.reduce(
+      (sum, batch) => sum + (batch.openingStock || 0),
+      0,
+    );
+
     // Convert image paths to public URLs
     const productWithUrls = {
       ...completeProduct,
+      totalOpeningStock,
       mainImage: getImageUrl(completeProduct.mainImage),
       relatedImages: completeProduct.relatedImages.map((image) => ({
         ...image,

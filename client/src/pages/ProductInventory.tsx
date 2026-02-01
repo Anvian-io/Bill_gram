@@ -23,6 +23,11 @@ import {
   Plus,
   Package,
   RefreshCw,
+  Image as ImageIcon,
+  Layers,
+  Building,
+  Package2,
+  Percent,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,13 +57,13 @@ import {
   badgeVariants,
 } from "../components/FramerVariants";
 import ProductFormModal from "@/components/forms/ProductForm";
-import { toast } from "sonner"; // Updated import
+import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import { productService } from "@/services/productService";
 import { type Product, type ProductFormData } from "@/types/product";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { useDebounce } from "@/utils/debounce";
-
+import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
 // Define the API response structure
 interface ProductsResponse {
   data: {
@@ -204,13 +209,40 @@ export default function ProductInventory() {
     return products;
   }, [products]);
 
-  // Get product status based on stock
+  // Get product status based on total stock
   const getProductStatus = (
-    openingStock: number,
+    totalStock: number,
   ): "In Stock" | "Low Stock" | "Out of Stock" => {
-    if (openingStock === 0) return "Out of Stock";
-    if (openingStock <= 10) return "Low Stock";
+    if (totalStock === 0) return "Out of Stock";
+    if (totalStock <= 10) return "Low Stock";
     return "In Stock";
+  };
+
+  // Format date for display
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  // Calculate total opening stock for a product
+  const calculateTotalOpeningStock = (product: Product) => {
+    if (!product.batches || !Array.isArray(product.batches)) return 0;
+    return product.batches.reduce(
+      (sum, batch) => sum + (batch.openingStock || 0),
+      0,
+    );
   };
 
   // Fetch products
@@ -542,7 +574,6 @@ export default function ProductInventory() {
                   className="pl-10 py-6 text-base"
                   value={searchInput}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  // disabled={isLoading}
                 />
                 {searchInput && (
                   <Button
@@ -669,7 +700,6 @@ export default function ProductInventory() {
                                   handleProductCodeChange(e.target.value)
                                 }
                                 className="flex-1"
-                                // disabled={isLoading}
                               />
                               {productCodeInput && (
                                 <Button
@@ -705,7 +735,6 @@ export default function ProductInventory() {
                                   handleProductBrandChange(e.target.value)
                                 }
                                 className="flex-1"
-                                // disabled={isLoading}
                               />
                               {productBrandInput && (
                                 <Button
@@ -715,78 +744,6 @@ export default function ProductInventory() {
                                   onClick={() => {
                                     setProductBrandInput("");
                                     clearFilter("productBrand");
-                                  }}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Barcode Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="barcode"
-                              className="text-sm font-medium"
-                            >
-                              Barcode
-                            </Label>
-                            <div className="flex gap-2">
-                              <Input
-                                id="barcode"
-                                placeholder="Enter barcode"
-                                value={barcodeInput}
-                                onChange={(e) =>
-                                  handleBarcodeChange(e.target.value)
-                                }
-                                className="flex-1"
-                                // disabled={isLoading}
-                              />
-                              {barcodeInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => {
-                                    setBarcodeInput("");
-                                    clearFilter("barcode");
-                                  }}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Product Name Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="productName"
-                              className="text-sm font-medium"
-                            >
-                              Product Name
-                            </Label>
-                            <div className="flex gap-2">
-                              <Input
-                                id="productName"
-                                placeholder="Enter product name"
-                                value={productNameInput}
-                                onChange={(e) =>
-                                  handleProductNameChange(e.target.value)
-                                }
-                                className="flex-1"
-                                // disabled={isLoading}
-                              />
-                              {productNameInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => {
-                                    setProductNameInput("");
-                                    clearFilter("productName");
                                   }}
                                   disabled={isLoading}
                                 >
@@ -902,7 +859,6 @@ export default function ProductInventory() {
                                   handleMinStockChange(e.target.value)
                                 }
                                 className="flex-1"
-                                // disabled={isLoading}
                               />
                               <Input
                                 placeholder="Max"
@@ -912,146 +868,7 @@ export default function ProductInventory() {
                                   handleMaxStockChange(e.target.value)
                                 }
                                 className="flex-1"
-                                // disabled={isLoading}
                               />
-                            </div>
-                          </div>
-
-                          {/* Manufacturing Date Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Manufacturing Date
-                            </Label>
-                            <div className="flex gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-[150px] justify-start text-left font-normal",
-                                      !filters.mfgDateFrom &&
-                                        "text-muted-foreground",
-                                    )}
-                                    disabled={isLoading}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    {filters.mfgDateFrom ? (
-                                      format(filters.mfgDateFrom, "dd/MM/yyyy")
-                                    ) : (
-                                      <span>From</span>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.mfgDateFrom}
-                                    onSelect={(date) =>
-                                      handleFilterChange("mfgDateFrom", date)
-                                    }
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-[150px] justify-start text-left font-normal",
-                                      !filters.mfgDateTo &&
-                                        "text-muted-foreground",
-                                    )}
-                                    disabled={isLoading}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    {filters.mfgDateTo ? (
-                                      format(filters.mfgDateTo, "dd/MM/yyyy")
-                                    ) : (
-                                      <span>To</span>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.mfgDateTo}
-                                    onSelect={(date) =>
-                                      handleFilterChange("mfgDateTo", date)
-                                    }
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          </div>
-
-                          {/* Expiry Date Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Expiry Date
-                            </Label>
-                            <div className="flex gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-[150px] justify-start text-left font-normal",
-                                      !filters.expDateFrom &&
-                                        "text-muted-foreground",
-                                    )}
-                                    disabled={isLoading}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    {filters.expDateFrom ? (
-                                      format(filters.expDateFrom, "dd/MM/yyyy")
-                                    ) : (
-                                      <span>From</span>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.expDateFrom}
-                                    onSelect={(date) =>
-                                      handleFilterChange("expDateFrom", date)
-                                    }
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-[150px] justify-start text-left font-normal",
-                                      !filters.expDateTo &&
-                                        "text-muted-foreground",
-                                    )}
-                                    disabled={isLoading}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    {filters.expDateTo ? (
-                                      format(filters.expDateTo, "dd/MM/yyyy")
-                                    ) : (
-                                      <span>To</span>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.expDateTo}
-                                    onSelect={(date) =>
-                                      handleFilterChange("expDateTo", date)
-                                    }
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
                             </div>
                           </div>
 
@@ -1103,16 +920,8 @@ export default function ProductInventory() {
             variants={itemVariants}
           >
             <p className="text-sm text-muted-foreground">
-              {/* {isLoading ? (
-                "Loading..."
-              ) :  */}
-              (
-                <>
-                  Showing {startIndex} to {endIndex} of {totalItems} products
-                  {activeFiltersCount > 0 && " (filtered)"}
-                </>
-              )
-              {/* } */}
+              Showing {startIndex} to {endIndex} of {totalItems} products
+              {activeFiltersCount > 0 && " (filtered)"}
             </p>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -1146,28 +955,25 @@ export default function ProductInventory() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
+                        <TableHead className="font-semibold">Product</TableHead>
                         <TableHead className="font-semibold">
-                          Product Name
+                          Description
                         </TableHead>
-                        <TableHead className="font-semibold">B No.</TableHead>
+                        <TableHead className="font-semibold">Company</TableHead>
                         <TableHead className="font-semibold">
-                          MFG Date
-                        </TableHead>
-                        <TableHead className="font-semibold">
-                          EXP Date
-                        </TableHead>
-                        <TableHead className="font-semibold">Barcode</TableHead>
-                        <TableHead className="font-semibold">
-                          Basic Price
+                          Carton Unit
                         </TableHead>
                         <TableHead className="font-semibold">
-                          Opening Stock
+                          GST Rate
                         </TableHead>
-                        <TableHead className="font-semibold">MRP</TableHead>
-                        <TableHead className="font-semibold">P.Rate</TableHead>
-                        <TableHead className="font-semibold">S.Rate</TableHead>
-                        <TableHead className="font-semibold">Margin</TableHead>
+                        <TableHead className="font-semibold">Batches</TableHead>
+                        <TableHead className="font-semibold">
+                          Total Stock
+                        </TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">
+                          Created & Updated
+                        </TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1182,7 +988,7 @@ export default function ProductInventory() {
                             transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={13}
+                              colSpan={10}
                               className="text-center py-12"
                             >
                               <div className="flex flex-col items-center justify-center">
@@ -1202,7 +1008,7 @@ export default function ProductInventory() {
                             transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={13}
+                              colSpan={10}
                               className="text-center py-8 text-muted-foreground"
                             >
                               <motion.div
@@ -1230,9 +1036,14 @@ export default function ProductInventory() {
                           </motion.tr>
                         ) : (
                           displayProducts.map((product, index) => {
-                            const firstBatch = product.batches?.[0];
-                            const openingStock = firstBatch?.openingStock || 0;
-                            const status = getProductStatus(openingStock);
+                            const totalOpeningStock =
+                              product.totalOpeningStock ||
+                              calculateTotalOpeningStock(product);
+                            const status = getProductStatus(totalOpeningStock);
+                            const batchCount =
+                              product.batches?.length ||
+                              product._count?.batches ||
+                              0;
 
                             return (
                               <motion.tr
@@ -1249,25 +1060,53 @@ export default function ProductInventory() {
                                 }}
                               >
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <div>
-                                    <p className="font-medium">
-                                      {product.productBrand}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {product.productCompany?.name} •{" "}
-                                      {product.hsnSacCode}
-                                    </p>
+                                  <div className="flex items-center gap-3">
+                                    {product.mainImage ? (
+                                      <motion.div
+                                        className="relative h-12 w-12 rounded-md overflow-hidden"
+                                        whileHover={{ scale: 1.05 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
+                                        <img
+                                          src={getFullImageUrl(
+                                            product.mainImage,
+                                          )}
+                                          alt={product.productBrand}
+                                          className="h-full w-full object-cover"
+                                        />
+                                      </motion.div>
+                                    ) : (
+                                      <motion.div
+                                        className="h-12 w-12 rounded-md bg-secondary flex items-center justify-center"
+                                        whileHover={{ rotate: 5 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
+                                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                      </motion.div>
+                                    )}
+                                    <div>
+                                      <p className="font-medium">
+                                        {product.productBrand}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {product.productCode}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-xs">
+                                  <div className="line-clamp-2 text-sm">
+                                    {product.description || "No description"}
                                   </div>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  {firstBatch?.batchNo ? (
-                                    <motion.code
-                                      className="text-xs bg-secondary px-2 py-1 rounded inline-block"
-                                      whileHover={{ scale: 1.05 }}
-                                      transition={{ duration: 0.2 }}
-                                    >
-                                      {firstBatch.batchNo}
-                                    </motion.code>
+                                  {product.productCompany ? (
+                                    <div className="flex items-center gap-2">
+                                      <Building className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-sm">
+                                        {product.productCompany.name}
+                                      </span>
+                                    </div>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">
                                       -
@@ -1275,29 +1114,7 @@ export default function ProductInventory() {
                                   )}
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  {firstBatch?.mfgDate ? (
-                                    <span className="text-sm">
-                                      {firstBatch.mfgDate}
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground text-sm">
-                                      Not set
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  {firstBatch?.expDate ? (
-                                    <span className="text-sm">
-                                      {firstBatch.expDate}
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground text-sm">
-                                      Not set
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  {firstBatch?.barcode ? (
+                                  {product.cartonPack ? (
                                     <motion.div
                                       variants={badgeVariants}
                                       whileHover="hover"
@@ -1306,7 +1123,7 @@ export default function ProductInventory() {
                                         variant="outline"
                                         className="font-mono"
                                       >
-                                        {firstBatch.barcode}
+                                        {product.cartonPack}
                                       </Badge>
                                     </motion.div>
                                   ) : (
@@ -1315,24 +1132,37 @@ export default function ProductInventory() {
                                     </span>
                                   )}
                                 </TableCell>
-                                <TableCell className="font-medium group-hover:bg-secondary/30 cursor-pointer">
-                                  <motion.span
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: index * 0.1 }}
-                                  >
-                                    ₹
-                                    {firstBatch?.basicPrice?.toFixed(2) ||
-                                      "0.00"}
-                                  </motion.span>
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Percent className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">
+                                      {product.gstRate || 0}%
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="h-4 w-4 text-muted-foreground" />
+                                    <motion.div
+                                      variants={badgeVariants}
+                                      whileHover="hover"
+                                    >
+                                      <Badge
+                                        variant="outline"
+                                        className="font-mono"
+                                      >
+                                        {batchCount}
+                                      </Badge>
+                                    </motion.div>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                   <div className="flex items-center gap-2">
                                     <motion.span
                                       className={`inline-block w-2 h-2 rounded-full ${
-                                        openingStock > 10
+                                        totalOpeningStock > 10
                                           ? "bg-green-500"
-                                          : openingStock > 0
+                                          : totalOpeningStock > 0
                                             ? "bg-yellow-500"
                                             : "bg-red-500"
                                       }`}
@@ -1347,41 +1177,16 @@ export default function ProductInventory() {
                                     />
                                     <span
                                       className={
-                                        openingStock <= 3
+                                        totalOpeningStock <= 3
                                           ? "text-red-600 font-semibold"
-                                          : openingStock <= 10
+                                          : totalOpeningStock <= 10
                                             ? "text-yellow-600 font-semibold"
                                             : ""
                                       }
                                     >
-                                      {openingStock}
+                                      {totalOpeningStock}
                                     </span>
                                   </div>
-                                </TableCell>
-                                <TableCell className="font-semibold group-hover:bg-secondary/30 cursor-pointer">
-                                  ₹{firstBatch?.mrp?.toFixed(2) || "0.00"}
-                                </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  ₹
-                                  {firstBatch?.purchaseRate?.toFixed(2) ||
-                                    "0.00"}
-                                </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  ₹{firstBatch?.saleRate?.toFixed(2) || "0.00"}
-                                </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <motion.div
-                                    variants={badgeVariants}
-                                    whileHover="hover"
-                                  >
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                                    >
-                                      ₹
-                                      {firstBatch?.margin?.toFixed(2) || "0.00"}
-                                    </Badge>
-                                  </motion.div>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                   <motion.div
@@ -1407,6 +1212,26 @@ export default function ProductInventory() {
                                       {status}
                                     </Badge>
                                   </motion.div>
+                                </TableCell>
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center">
+                                      <span className="text-xs font-medium text-green-400">
+                                        Created:
+                                      </span>
+                                      <p className="text-xs text-muted-foreground ml-1">
+                                        {formatDateTime(product.createdAt)}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <span className="text-xs font-medium text-orange-400">
+                                        Updated:
+                                      </span>
+                                      <p className="text-xs text-muted-foreground ml-1">
+                                        {formatDateTime(product.updatedAt)}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30">
                                   <div className="flex gap-2">
