@@ -981,26 +981,40 @@ export default function ProductInventory() {
                               Manufacturing Date
                             </Label>
                             <div className="flex gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Input
-                                    value={mfgDateInput}
-                                    onChange={(e) =>
-                                      handleMfgDateInputChange(e.target.value)
-                                    }
-                                    placeholder="dd/mm/yyyy"
-                                    className="flex-1"
-                                  />
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.mfgDate}
-                                    onSelect={handleMfgDateSelect}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
+                              <div className="relative flex-1">
+                                <Input
+                                  value={mfgDateInput}
+                                  onChange={(e) =>
+                                    handleMfgDateInputChange(e.target.value)
+                                  }
+                                  placeholder="dd/mm/yyyy or select"
+                                  className="pr-10"
+                                  // disabled={isLoading}
+                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                      // disabled={isLoading}
+                                    >
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="end"
+                                  >
+                                    <CalendarComponent
+                                      mode="single"
+                                      selected={filters.mfgDate}
+                                      onSelect={handleMfgDateSelect}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                               {mfgDateInput && (
                                 <Button
                                   variant="ghost"
@@ -1010,7 +1024,7 @@ export default function ProductInventory() {
                                     setMfgDateInput("");
                                     clearFilter("mfgDate");
                                   }}
-                                  disabled={isLoading}
+                                  // disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1024,26 +1038,40 @@ export default function ProductInventory() {
                               Expiry Date
                             </Label>
                             <div className="flex gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Input
-                                    value={expDateInput}
-                                    onChange={(e) =>
-                                      handleExpDateInputChange(e.target.value)
-                                    }
-                                    placeholder="dd/mm/yyyy"
-                                    className="flex-1"
-                                  />
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.expDate}
-                                    onSelect={handleExpDateSelect}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
+                              <div className="relative flex-1">
+                                <Input
+                                  value={expDateInput}
+                                  onChange={(e) =>
+                                    handleExpDateInputChange(e.target.value)
+                                  }
+                                  placeholder="dd/mm/yyyy or select"
+                                  className="pr-10"
+                                  // disabled={isLoading}
+                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                      // disabled={isLoading}
+                                    >
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="end"
+                                  >
+                                    <CalendarComponent
+                                      mode="single"
+                                      selected={filters.expDate}
+                                      onSelect={handleExpDateSelect}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                               {expDateInput && (
                                 <Button
                                   variant="ghost"
@@ -1053,7 +1081,7 @@ export default function ProductInventory() {
                                     setExpDateInput("");
                                     clearFilter("expDate");
                                   }}
-                                  disabled={isLoading}
+                                  // disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
