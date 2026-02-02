@@ -347,10 +347,8 @@ export const getProducts = asyncHandler(async (req, res) => {
     sortOrder = "desc",
     minStock,
     maxStock,
-    mfgDateFrom,
-    mfgDateTo,
-    expDateFrom,
-    expDateTo,
+    mfgDate,
+    expDate,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -438,31 +436,27 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  // Manufacturing Date Range Filter
-  if (mfgDateFrom || mfgDateTo) {
-    const dateFilter = {};
-    if (mfgDateFrom) dateFilter.gte = mfgDateFrom;
-    if (mfgDateTo) dateFilter.lte = mfgDateTo;
-    
+  // Manufacturing Date Filter - handle as string
+  if (mfgDate) {
+    // The date comes in YYYY-MM-DD format from frontend
+    // We need to use string comparison since the field is likely a string
     andConditions.push({
       batches: {
         some: {
-          mfgDate: dateFilter
+          mfgDate: mfgDate  // Direct string comparison
         }
       }
     });
   }
 
-  // Expiry Date Range Filter
-  if (expDateFrom || expDateTo) {
-    const dateFilter = {};
-    if (expDateFrom) dateFilter.gte = expDateFrom;
-    if (expDateTo) dateFilter.lte = expDateTo;
-    
+  // Expiry Date Filter - handle as string
+  if (expDate) {
+    // The date comes in YYYY-MM-DD format from frontend
+    // We need to use string comparison since the field is likely a string
     andConditions.push({
       batches: {
         some: {
-          expDate: dateFilter
+          expDate: expDate  // Direct string comparison
         }
       }
     });
@@ -522,15 +516,11 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Build batch where condition for the include to filter returned batches
   const batchWhere = {};
-  if (mfgDateFrom || mfgDateTo) {
-    batchWhere.mfgDate = {};
-    if (mfgDateFrom) batchWhere.mfgDate.gte = mfgDateFrom;
-    if (mfgDateTo) batchWhere.mfgDate.lte = mfgDateTo;
+  if (mfgDate) {
+    batchWhere.mfgDate = mfgDate;  // String comparison
   }
-  if (expDateFrom || expDateTo) {
-    batchWhere.expDate = {};
-    if (expDateFrom) batchWhere.expDate.gte = expDateFrom;
-    if (expDateTo) batchWhere.expDate.lte = expDateTo;
+  if (expDate) {
+    batchWhere.expDate = expDate;  // String comparison
   }
 
   // Query with relations - INCLUDING RELATED IMAGES
