@@ -33,7 +33,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import {
-  X,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, X } from "lucide-react";
+import {
+  X as XIcon,
   Image as ImageIcon,
   Plus,
   Trash2,
@@ -54,6 +61,9 @@ import {
   type Product,
 } from "@/types/product";
 import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { format, parse, isValid, isDate } from "date-fns";
+import { CustomDateInput } from "../custom_ui/CustomDateInput";
+
 // API Base URL - Adjust according to your environment
 const API_BASE_URL = "http://localhost:3001";
 
@@ -314,7 +324,6 @@ export default function ProductFormModal({
 
   // Reset form when editingProduct changes
   useEffect(() => {
-
     if (editingProduct) {
       form.reset({
         productCode: editingProduct.productCode,
@@ -1185,7 +1194,7 @@ export default function ProductFormModal({
                             disabled={isSubmitting}
                             className="h-6 text-xs gap-1"
                           >
-                            <X className="h-3 w-3" />
+                            <XIcon className="h-3 w-3" />
                             Remove
                           </Button>
                         )}
@@ -1281,7 +1290,7 @@ export default function ProductFormModal({
                                 onClick={() => removeRelatedImage(index)}
                                 disabled={isSubmitting}
                               >
-                                <X className="h-3 w-3" />
+                                <XIcon className="h-3 w-3" />
                               </Button>
                             </motion.div>
                           ))}
@@ -1315,7 +1324,7 @@ export default function ProductFormModal({
                                   }
                                   disabled={isSubmitting}
                                 >
-                                  <X className="h-3 w-3" />
+                                  <XIcon className="h-3 w-3" />
                                 </Button>
                               </motion.div>
                             ))}
@@ -1583,42 +1592,26 @@ export default function ProductFormModal({
                           </div>
                         </div>
 
-                        {/* Dates */}
+                        {/* Dates - UPDATED TO USE CUSTOM DATE INPUT */}
                         <div className="space-y-3">
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              MFG Date
-                            </label>
-                            <Input
-                              type="date"
-                              value={batch.mfgDate || ""}
-                              onChange={(e) =>
-                                handleBatchChange(
-                                  index,
-                                  "mfgDate",
-                                  e.target.value || null,
-                                )
-                              }
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              EXP Date
-                            </label>
-                            <Input
-                              type="date"
-                              value={batch.expDate || ""}
-                              onChange={(e) =>
-                                handleBatchChange(
-                                  index,
-                                  "expDate",
-                                  e.target.value || null,
-                                )
-                              }
-                              disabled={isSubmitting}
-                            />
-                          </div>
+                          <CustomDateInput
+                            value={batch.mfgDate}
+                            onChange={(value) =>
+                              handleBatchChange(index, "mfgDate", value)
+                            }
+                            placeholder="dd/mm/yyyy or select"
+                            disabled={isSubmitting}
+                            label="MFG Date"
+                          />
+                          <CustomDateInput
+                            value={batch.expDate}
+                            onChange={(value) =>
+                              handleBatchChange(index, "expDate", value)
+                            }
+                            placeholder="dd/mm/yyyy or select"
+                            disabled={isSubmitting}
+                            label="EXP Date"
+                          />
                         </div>
 
                         {/* Pricing */}
