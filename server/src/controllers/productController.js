@@ -614,7 +614,7 @@ export const getProducts = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get Active Products (for dropdown) - Now returns separate rows for each batch
+ * Get Active Products (for dropdown) - Returns products with their batches as arrays
  */
 export const getActiveProducts = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
@@ -633,10 +633,19 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
           symbol: true,
         },
       },
+      productGroup: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       productCompany: {
         select: {
           id: true,
           name: true,
+          contactPerson: true,
+          email: true,
+          phone: true,
         },
       },
       batches: {
@@ -644,6 +653,31 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
           openingStock: { gt: 0 },
         },
         orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          batchNo: true,
+          mfgDate: true,
+          expDate: true,
+          barcode: true,
+          basicPrice: true,
+          openingStock: true,
+          mrp: true,
+          purchaseRate: true,
+          saleRate: true,
+          margin: true,
+          gstAmount: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      relatedImages: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          imageUrl: true,
+          imageType: true,
+          sortOrder: true,
+        },
       },
     },
     orderBy: {
@@ -651,61 +685,73 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
     },
   });
 
-  // Flatten the products to create separate entries for each batch
-  const productBatchEntries = products.flatMap((product) => {
-    if (!product.batches || product.batches.length === 0) {
-      // Return product even if no batches (for dropdown display)
-      return [
-        {
-          ...product,
-          mainImage: getImageUrl(product.mainImage),
-          batch: null,
-          batchId: null,
-          batchNo: null,
-          mfgDate: null,
-          expDate: null,
-          barcode: null,
-          basicPrice: null,
-          openingStock: 0,
-          mrp: null,
-          purchaseRate: null,
-          saleRate: null,
-          margin: null,
-          gstAmount: null,
-        },
-      ];
-    }
+  // Calculate total stock for each product
+  const productsWithStock = products.map((product) => {
+    // Calculate total opening stock from all batches
+    const totalOpeningStock = product.batches.reduce(
+      (sum, batch) => sum + (batch.openingStock || 0),
+      0,
+    );
 
-    return product.batches.map((batch) => ({
+    // Calculate available batches count
+    const availableBatchesCount = product.batches.length;
+
+    // Convert image paths to public URLs
+    const relatedImages = product.relatedImages.map((img) => ({
+      ...img,
+      imageUrl: getImageUrl(img.imageUrl),
+    }));
+
+    return {
       id: product.id,
       productCode: product.productCode,
       productBrand: product.productBrand,
       productShortName: product.productShortName,
       description: product.description,
+      hsnSacCode: product.hsnSacCode,
+      goodsServices: product.goodsServices,
+      weight: product.weight,
       pricePerPcs: product.pricePerPcs,
+      gstRate: product.gstRate,
+      gstInclusive: product.gstInclusive,
+      cessRate: product.cessRate,
       mainImage: getImageUrl(product.mainImage),
       unit: product.unit,
+      productGroup: product.productGroup,
       productCompany: product.productCompany,
-      // Batch details
-      batchId: batch.id,
-      batchNo: batch.batchNo,
-      mfgDate: batch.mfgDate,
-      expDate: batch.expDate,
-      barcode: batch.barcode,
-      basicPrice: batch.basicPrice,
-      openingStock: batch.openingStock,
-      mrp: batch.mrp,
-      purchaseRate: batch.purchaseRate,
-      saleRate: batch.saleRate,
-      margin: batch.margin,
-      gstAmount: batch.gstAmount,
-    }));
+      relatedImages,
+      // Batches as array
+      batches: product.batches,
+      // Stock summary
+      totalOpeningStock,
+      availableBatchesCount,
+      // Additional useful fields
+      cartonPack: product.cartonPack,
+      innerPack: product.innerPack,
+      saleUnit: product.saleUnit,
+      purchaseUnit: product.purchaseUnit,
+      status: product.status,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
   });
+
+  // Filter out products that have no available stock if needed
+  // Optional: If you want to show only products with stock
+  // const productsWithStockAvailable = productsWithStock.filter(product => product.totalOpeningStock > 0);
 
   return sendResponse(
     res,
     statusType.OK,
-    { products: productBatchEntries },
+    { 
+      products: productsWithStock,
+      count: productsWithStock.length,
+      // summary: {
+      //   totalProducts: productsWithStock.length,
+      //   productsWithStock: productsWithStock.filter(p => p.totalOpeningStock > 0).length,
+      //   totalStockQuantity: productsWithStock.reduce((sum, p) => sum + p.totalOpeningStock, 0)
+      // }
+    },
     "Active products retrieved successfully",
   );
 });

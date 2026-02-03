@@ -44,6 +44,7 @@ export const productService = {
       await apiClient.get<ApiResponse<{ products: Product[] }>>(
         "/products/active",
       );
+      console.log('date',response.data)
     return response.data.data.products || [];
   },
 

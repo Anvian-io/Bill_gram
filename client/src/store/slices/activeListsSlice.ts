@@ -1,12 +1,18 @@
 // src/store/slices/activeListsSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { accountService } from "@/services/accountService";
-import { areaService } from "@/services/areaService";
-import { customerService } from "@/services/customerService";
-import { productCompanyService } from "@/services/productCompanyService";
-import { salesmanService } from "@/services/salesmanService";
-import { unitService } from "@/services/unitService";
-import { vanService } from "@/services/vanService";
+import {
+  areaService,
+  customerService,
+  // imageService,
+  productService,
+  productGroupService,
+  supplierService,
+  unitService,
+  productCompanyService,
+  salesmanService,
+  vanService,
+  accountService
+} from "@/services";
 import {
   type Account,
   type Area,
@@ -16,8 +22,8 @@ import {
   type Unit,
   type Van,
   type ProductGroup,
+  type Product,
 } from "@/types";
-import { productGroupService } from "@/services/productGroupService";
 
 interface ActiveListsState {
   accounts: {
@@ -60,6 +66,11 @@ interface ActiveListsState {
     loading: boolean;
     error: string | null;
   };
+  products: {
+    data: Product[];
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 const initialState: ActiveListsState = {
@@ -71,6 +82,7 @@ const initialState: ActiveListsState = {
   units: { data: [], loading: false, error: null },
   vans: { data: [], loading: false, error: null },
   groups: { data: [], loading: false, error: null },
+  products:{data:[],loading:false,error:null}
 };
 
 // Async thunks for each resource
@@ -177,6 +189,18 @@ export const fetchActiveProductGroups = createAsyncThunk(
     }
   },
 );
+export const fetchActiveProducts = createAsyncThunk(
+  "activeLists/fetchActiveProducts",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await productService.getActiveProducts();
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch products",
+      );
+    }
+  },
+);
 
 // Master thunk to fetch all active lists
 export const fetchAllActiveLists = createAsyncThunk(
@@ -191,6 +215,7 @@ export const fetchAllActiveLists = createAsyncThunk(
       dispatch(fetchActiveUnits()),
       dispatch(fetchActiveVans()),
       dispatch(fetchActiveProductGroups()),
+      dispatch(fetchActiveProducts())
     ]);
   },
 );
@@ -227,6 +252,9 @@ const activeListsSlice = createSlice({
     resetGroups: (state) => {
       state.groups = initialState.groups;
     },
+    resetProducts:(state)=>{
+      state.products = initialState.products;
+    }
   },
   extraReducers: (builder) => {
     // Accounts
@@ -348,7 +376,22 @@ const activeListsSlice = createSlice({
         state.groups.loading = false;
         state.groups.error = action.payload as string;
       });
-  },
+
+    //Products
+    builder
+      .addCase(fetchActiveProducts.pending, (state) => {
+        state.products.loading = true;
+        state.products.error = null;
+      })
+      .addCase(fetchActiveProducts.fulfilled, (state, action) => {
+        state.products.loading = false;
+        state.products.data = action.payload;
+      })
+      .addCase(fetchActiveProducts.rejected, (state, action) => {
+        state.products.loading = false;
+        state.products.error = action.payload as string;
+      });
+    },
 });
 
 export const {
@@ -360,7 +403,7 @@ export const {
   resetSalesmen,
   resetUnits,
   resetVans,
-  resetGroups
+  resetGroups,
 } = activeListsSlice.actions;
 
 export default activeListsSlice.reducer;
