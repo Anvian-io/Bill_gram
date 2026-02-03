@@ -16,7 +16,8 @@ import {
   Register,
   ProductInventory,
   ProductForm,
-  MasterInventory
+  MasterInventory,
+  Purchase,
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -112,12 +113,25 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/purchases"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Purchase />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
         </Router>
       </ThemeProvider>
-      <Toaster/>
+      <Toaster />
     </AuthProvider>
   );
 }
