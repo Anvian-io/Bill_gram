@@ -22,9 +22,10 @@ export const createAccount = asyncHandler(async (req, res) => {
   if (!accountHolder || !ifscCode || !bankName) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Account holder, IFSC code, and bank name are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -42,9 +43,10 @@ export const createAccount = asyncHandler(async (req, res) => {
   if (existingAccount) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Account with this IFSC code already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -75,12 +77,13 @@ export const createAccount = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Account created successfully",
       account,
     },
     "Account created",
+    statusType.CREATED,
   );
 });
 
@@ -232,7 +235,7 @@ export const getAccounts = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       accounts,
       pagination: {
@@ -245,6 +248,7 @@ export const getAccounts = asyncHandler(async (req, res) => {
       },
     },
     "Accounts retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -275,14 +279,21 @@ export const getAccountById = asyncHandler(async (req, res) => {
   });
 
   if (!account) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Account not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Account not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { account },
     "Account retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -311,7 +322,13 @@ export const updateAccount = asyncHandler(async (req, res) => {
   });
 
   if (!existingAccount) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Account not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Account not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new IFSC code conflicts with other accounts
@@ -329,9 +346,10 @@ export const updateAccount = asyncHandler(async (req, res) => {
     if (ifscConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Account with this IFSC code already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -367,12 +385,13 @@ export const updateAccount = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Account updated successfully",
       account: updatedAccount,
     },
     "Account updated",
+    statusType.OK,
   );
 });
 
@@ -392,7 +411,13 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   });
 
   if (!existingAccount) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Account not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Account not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if account is being used in transactions (if you have this relation)
@@ -405,9 +430,10 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   // if (transactionUsingAccount) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete account. It is being used in transactions."
+  //     "Cannot delete account. It is being used in transactions.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -424,9 +450,10 @@ export const deleteAccount = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Account deleted successfully" },
     "Account deleted",
+    statusType.OK,
   );
 });
 
@@ -453,9 +480,10 @@ export const getActiveAccounts = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { accounts },
     "Active accounts retrieved successfully",
+    statusType.OK,
   );
 });
 
