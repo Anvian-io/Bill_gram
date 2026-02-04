@@ -19,13 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -37,8 +30,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, X } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   X as XIcon,
   Image as ImageIcon,
@@ -52,6 +51,8 @@ import {
   FileText,
   Box,
   Database,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { toast } from "sonner";
@@ -61,7 +62,7 @@ import {
   type Product,
 } from "@/types/product";
 import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
-import { format, parse, isValid, isDate } from "date-fns";
+import { cn } from "@/lib/utils";
 import { CustomDateInput } from "../custom_ui/CustomDateInput";
 
 // API Base URL - Adjust according to your environment
@@ -125,7 +126,7 @@ const productSchema = z.object({
         mfgDate: z.string().optional().nullable(),
         expDate: z.string().optional().nullable(),
         barcode: z.string().min(1, "Barcode is required"),
-        basicPrice: z.coerce.number("Basic price must be positive"),
+        basicPrice: z.coerce.number().positive("Basic price must be positive"),
         openingStock: z.coerce.number().min(0, "Stock cannot be negative"),
         mrp: z.coerce.number().positive("MRP must be positive"),
         pRate: z.coerce.number().positive("Purchase rate must be positive"),
@@ -203,14 +204,14 @@ const sampleData: ProductFormData = {
   hsnSacCode: "18069010",
   goodsServices: "Goods",
   weight: 0.5,
-  unitId: 1, // Will be set to first available unit
-  productGroupId: 1, // Will be set to first available group
+  unitId: 1,
+  productGroupId: 1,
   productShortName: "Sample Deluxe",
-  purchaseUnit: "1", // Will be set to first available unit
+  purchaseUnit: "1",
   conversionFactor: 1.5,
   pricePerPcs: 299.99,
-  productCompanyId: 1, // Will be set to first available company
-  saleUnit: "2", // Will be set to first available unit
+  productCompanyId: 1,
+  saleUnit: "2",
   cartonPack: 24,
   innerPack: "6 units per inner pack",
   packagingBasic: true,
@@ -256,7 +257,11 @@ const sampleData: ProductFormData = {
 };
 
 // GST options
-const gstApplicabilityOptions = ["Regular", "Composition", "Exempt"];
+const gstApplicabilityOptions = [
+  { value: "Regular", label: "Regular" },
+  { value: "Composition", label: "Composition" },
+  { value: "Exempt", label: "Exempt" },
+];
 
 export default function ProductFormModal({
   open,
@@ -271,6 +276,15 @@ export default function ProductFormModal({
   const [uploadedRelatedImages, setUploadedRelatedImages] = useState<string[]>(
     [],
   );
+
+  // State for dropdown open/close
+  const [unitIdOpen, setUnitIdOpen] = useState(false);
+  const [productGroupIdOpen, setProductGroupIdOpen] = useState(false);
+  const [productCompanyIdOpen, setProductCompanyIdOpen] = useState(false);
+  const [purchaseUnitOpen, setPurchaseUnitOpen] = useState(false);
+  const [saleUnitOpen, setSaleUnitOpen] = useState(false);
+  const [gstApplicabilityOpen, setGstApplicabilityOpen] = useState(false);
+
   const { units, productCompanies, groups } = useActiveLists();
 
   const form = useForm<ProductFormData>({
@@ -296,7 +310,6 @@ export default function ProductFormModal({
 
   // Load sample data into form
   const loadSampleData = () => {
-    // Get first available options from dropdowns
     const firstUnit = units.length > 0 ? units[0].id : 0;
     const firstGroup = groups.length > 0 ? groups[0].id : 0;
     const firstCompany =
@@ -355,9 +368,7 @@ export default function ProductFormModal({
           | "Composition"
           | "Exempt",
         status: editingProduct.status,
-        // Extract filename from main image URL
         mainImage: extractFilename(editingProduct.mainImage || ""),
-        // Extract filenames from related images URLs
         relatedImages:
           editingProduct.relatedImages?.map((img) =>
             extractFilename(img.imageUrl),
@@ -378,7 +389,6 @@ export default function ProductFormModal({
           })) || [],
       });
 
-      // Set uploaded images for display (store only filenames)
       const mainImg = extractFilename(editingProduct.mainImage || "");
       setUploadedMainImage(mainImg);
 
@@ -396,12 +406,31 @@ export default function ProductFormModal({
     }
   }, [editingProduct, form]);
 
-  // Calculate margin for a batch
+  // Helper functions
+  const findUnitName = (unitId: number) => {
+    const unit = units.find((u) => u.id === unitId);
+    return unit ? `${unit.symbol} (${unit.name})` : "Select unit";
+  };
+
+  const findGroupName = (groupId: number) => {
+    const group = groups.find((g) => g.id === groupId);
+    return group ? group.name : "Select group";
+  };
+
+  const findCompanyName = (companyId: number) => {
+    const company = productCompanies.find((c) => c.id === companyId);
+    return company ? company.name : "Select company";
+  };
+
+  const findGstApplicabilityLabel = (value: string) => {
+    const option = gstApplicabilityOptions.find((opt) => opt.value === value);
+    return option ? option.label : "Select GST applicability";
+  };
+
   const calculateMargin = (pRate: number, sRate: number) => {
     return sRate - pRate;
   };
 
-  // Calculate GST amount
   const calculateGST = (amount: number) => {
     return (amount * gstRate) / 100;
   };
@@ -415,13 +444,11 @@ export default function ProductFormModal({
     const updatedBatches = [...batches];
     updatedBatches[index] = { ...updatedBatches[index], [field]: value };
 
-    // Calculate margin if pRate or sRate changes
     if (field === "pRate" || field === "sRate") {
       const pRate = field === "pRate" ? value : updatedBatches[index].pRate;
       const sRate = field === "sRate" ? value : updatedBatches[index].sRate;
       updatedBatches[index].margin = calculateMargin(pRate, sRate);
 
-      // Update GST amount if GST inclusive
       if (form.getValues("gstInclusive")) {
         updatedBatches[index].gstAmount = calculateGST(pRate);
       }
@@ -465,7 +492,6 @@ export default function ProductFormModal({
       try {
         setMainImageFile(file);
         const filename = await imageService.uploadImage(file);
-        // Store only the filename
         setUploadedMainImage(filename);
         form.setValue("mainImage", filename);
         toast.success("Main image uploaded successfully");
@@ -488,7 +514,7 @@ export default function ProductFormModal({
         const uploadedFilenames: string[] = [];
         for (const file of files) {
           const filename = await imageService.uploadImage(file);
-          uploadedFilenames.push(filename); // Store only filename
+          uploadedFilenames.push(filename);
         }
 
         const newRelatedImages = [
@@ -521,7 +547,6 @@ export default function ProductFormModal({
     const imageToRemove = uploadedRelatedImages[index];
     if (imageToRemove) {
       try {
-        // No need to extract filename since we're storing only filename
         await imageService.deleteImage(imageToRemove);
         const newImages = uploadedRelatedImages.filter((_, i) => i !== index);
         setUploadedRelatedImages(newImages);
@@ -541,7 +566,6 @@ export default function ProductFormModal({
     console.log("Form submitted with data:", data);
 
     try {
-      // Convert to ImportedProductFormData
       const formData: ImportedProductFormData = {
         ...data,
         goodsServices: data.goodsServices,
@@ -563,7 +587,6 @@ export default function ProductFormModal({
     }
   };
 
-  // Also, add an onError handler to see validation errors
   const onError = (errors: any) => {
     console.error("Form validation errors:", errors);
     toast.error("Please fix all validation errors before submitting.");
@@ -579,7 +602,6 @@ export default function ProductFormModal({
               {editingProduct ? "Edit Product" : "Add New Product"}
             </DialogTitle>
 
-            {/* Sample Data Toggle Button */}
             {!editingProduct && (
               <Button
                 type="button"
@@ -762,81 +784,145 @@ export default function ProductFormModal({
                         )}
                       />
 
+                      {/* Unit Dropdown using Command */}
                       <FormField
                         control={form.control}
                         name="unitId"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel className="text-sm">Unit *</FormLabel>
-                            <Select
-                              onValueChange={(value) =>
-                                field.onChange(parseInt(value))
-                              }
-                              value={field.value?.toString() || ""}
-                              disabled={isSubmitting}
+                            <Popover
+                              open={unitIdOpen}
+                              onOpenChange={setUnitIdOpen}
                             >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {units.map((unit) => (
-                                  <SelectItem
-                                    key={unit.id}
-                                    value={unit.id.toString()}
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={unitIdOpen}
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !field.value && "text-muted-foreground",
+                                    )}
+                                    disabled={isSubmitting}
                                   >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-lg font-bold">
-                                        {unit.symbol}
-                                      </span>
-                                      <div className="flex flex-col">
-                                        <span className="text-[12px] text-muted-foreground">
-                                          {unit.name}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                    {field.value
+                                      ? findUnitName(field.value)
+                                      : "Select unit"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search units..." />
+                                  <CommandList>
+                                    <CommandEmpty>No unit found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {units.map((unit) => (
+                                        <CommandItem
+                                          key={unit.id}
+                                          value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                          onSelect={() => {
+                                            field.onChange(unit.id);
+                                            setUnitIdOpen(false);
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-lg font-bold">
+                                              {unit.symbol}
+                                            </span>
+                                            <div className="flex flex-col">
+                                              <span className="text-[12px] text-muted-foreground">
+                                                {unit.name}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <Check
+                                            className={cn(
+                                              "ml-auto h-4 w-4",
+                                              unit.id === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
 
+                    {/* Product Group Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="productGroupId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             Product Group *
                           </FormLabel>
-                          <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            value={field.value?.toString() || ""}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={productGroupIdOpen}
+                            onOpenChange={setProductGroupIdOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select group" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {groups.map((group) => (
-                                <SelectItem
-                                  key={group.id}
-                                  value={group.id.toString()}
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={productGroupIdOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
                                 >
-                                  {group.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  {field.value
+                                    ? findGroupName(field.value)
+                                    : "Select group"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search groups..." />
+                                <CommandList>
+                                  <CommandEmpty>No group found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {groups.map((group) => (
+                                      <CommandItem
+                                        key={group.id}
+                                        value={`${group.id} ${group.name}`}
+                                        onSelect={() => {
+                                          field.onChange(group.id);
+                                          setProductGroupIdOpen(false);
+                                        }}
+                                      >
+                                        {group.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            group.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -968,82 +1054,147 @@ export default function ProductFormModal({
                       )}
                     />
 
+                    {/* Product Company Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="productCompanyId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             Product Company *
                           </FormLabel>
-                          <Select
-                            disabled={isSubmitting}
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            value={field.value?.toString() || ""}
+                          <Popover
+                            open={productCompanyIdOpen}
+                            onOpenChange={setProductCompanyIdOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a product company" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {productCompanies.map((company) => (
-                                <SelectItem
-                                  key={company.id}
-                                  value={company.id.toString()}
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={productCompanyIdOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
                                 >
-                                  {company.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  {field.value
+                                    ? findCompanyName(field.value)
+                                    : "Select company"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search companies..." />
+                                <CommandList>
+                                  <CommandEmpty>No company found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {productCompanies.map((company) => (
+                                      <CommandItem
+                                        key={company.id}
+                                        value={`${company.id} ${company.name}`}
+                                        onSelect={() => {
+                                          field.onChange(company.id);
+                                          setProductCompanyIdOpen(false);
+                                        }}
+                                      >
+                                        {company.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            company.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
                     <div className="grid grid-cols-2 gap-3">
+                      {/* Purchase Unit Dropdown using Command */}
                       <FormField
                         control={form.control}
                         name="purchaseUnit"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel className="text-sm">
                               Purchase Unit *
                             </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={isSubmitting}
+                            <Popover
+                              open={purchaseUnitOpen}
+                              onOpenChange={setPurchaseUnitOpen}
                             >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {units.map((unit) => (
-                                  <SelectItem
-                                    key={unit.id}
-                                    value={unit.id.toString()}
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={purchaseUnitOpen}
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !field.value && "text-muted-foreground",
+                                    )}
+                                    disabled={isSubmitting}
                                   >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-lg font-bold">
-                                        {unit.symbol}
-                                      </span>
-
-                                      <div className="flex flex-col">
-                                        <span className="text-[12px] text-muted-foreground">
-                                          {unit.name}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                    {field.value
+                                      ? findUnitName(parseInt(field.value))
+                                      : "Select unit"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search units..." />
+                                  <CommandList>
+                                    <CommandEmpty>No unit found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {units.map((unit) => (
+                                        <CommandItem
+                                          key={unit.id}
+                                          value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                          onSelect={() => {
+                                            field.onChange(unit.id.toString());
+                                            setPurchaseUnitOpen(false);
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-lg font-bold">
+                                              {unit.symbol}
+                                            </span>
+                                            <div className="flex flex-col">
+                                              <span className="text-[12px] text-muted-foreground">
+                                                {unit.name}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <Check
+                                            className={cn(
+                                              "ml-auto h-4 w-4",
+                                              unit.id.toString() === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1098,33 +1249,67 @@ export default function ProductFormModal({
                       )}
                     />
 
+                    {/* Sale Unit Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="saleUnit"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">Sale Unit *</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={saleUnitOpen}
+                            onOpenChange={setSaleUnitOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select unit" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {units.map((unit) => (
-                                <SelectItem
-                                  key={unit.id}
-                                  value={unit.id.toString()}
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={saleUnitOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
                                 >
-                                  {unit.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  {field.value
+                                    ? findUnitName(parseInt(field.value))
+                                    : "Select unit"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search units..." />
+                                <CommandList>
+                                  <CommandEmpty>No unit found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {units.map((unit) => (
+                                      <CommandItem
+                                        key={unit.id}
+                                        value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                        onSelect={() => {
+                                          field.onChange(unit.id.toString());
+                                          setSaleUnitOpen(false);
+                                        }}
+                                      >
+                                        {unit.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            unit.id.toString() === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1174,7 +1359,7 @@ export default function ProductFormModal({
                   </div>
                 </div>
 
-                {/* Images Section - UPDATED TO DISPLAY ACTUAL IMAGES */}
+                {/* Images Section */}
                 <div className="rounded-lg border p-4">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <ImageIcon className="h-4 w-4" />
@@ -1234,7 +1419,7 @@ export default function ProductFormModal({
                       )}
                     </div>
 
-                    {/* Related Images - UPDATED TO DISPLAY ACTUAL IMAGES */}
+                    {/* Related Images */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">
@@ -1343,32 +1528,69 @@ export default function ProductFormModal({
                     GST Details
                   </h3>
                   <div className="space-y-4">
+                    {/* GST Applicability Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="gstApplicability"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             GST Applicability *
                           </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={gstApplicabilityOpen}
+                            onOpenChange={setGstApplicabilityOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select applicability" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {gstApplicabilityOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={gstApplicabilityOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
+                                >
+                                  {field.value
+                                    ? findGstApplicabilityLabel(field.value)
+                                    : "Select applicability"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search GST applicability..." />
+                                <CommandList>
+                                  <CommandEmpty>No option found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {gstApplicabilityOptions.map((option) => (
+                                      <CommandItem
+                                        key={option.value}
+                                        value={option.value}
+                                        onSelect={() => {
+                                          field.onChange(option.value);
+                                          setGstApplicabilityOpen(false);
+                                        }}
+                                      >
+                                        {option.label}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            option.value === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1592,7 +1814,7 @@ export default function ProductFormModal({
                           </div>
                         </div>
 
-                        {/* Dates - UPDATED TO USE CUSTOM DATE INPUT */}
+                        {/* Dates */}
                         <div className="space-y-3">
                           <CustomDateInput
                             value={batch.mfgDate}
