@@ -337,6 +337,7 @@ export default function UnitComponent() {
   const handleDelete = async () => {
     if (unitToDelete) {
       try {
+        // console.log("Deleting unit with ID:", unitToDelete);
         await unitService.deleteUnit(unitToDelete.id);
         toast.success("Unit deleted successfully!");
         fetchUnits(); // Refresh the list

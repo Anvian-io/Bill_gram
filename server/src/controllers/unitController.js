@@ -14,9 +14,10 @@ export const createUnit = asyncHandler(async (req, res) => {
   if (!name || !symbol) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Name and symbol are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -37,9 +38,10 @@ export const createUnit = asyncHandler(async (req, res) => {
     const field = existingUnit.name === name ? "name" : "symbol";
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Unit with this ${field} already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -62,12 +64,13 @@ export const createUnit = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Unit created successfully",
       unit,
     },
     "Unit created",
+    statusType.CREATED,
   );
 });
 
@@ -102,7 +105,7 @@ export const getUnits = asyncHandler(async (req, res) => {
 
   // Deleted filter - conditionally filter based on showDeleted
   if (showDeleted !== "true") {
-    console.log('fwoeho')
+    // console.log("fwoeho");
     andConditions.push({ deleted: false });
   }
 
@@ -190,7 +193,7 @@ export const getUnits = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       units,
       pagination: {
@@ -203,6 +206,7 @@ export const getUnits = asyncHandler(async (req, res) => {
       },
     },
     "Units retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -229,14 +233,21 @@ export const getUnitById = asyncHandler(async (req, res) => {
   });
 
   if (!unit) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Unit not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Unit not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { unit },
     "Unit retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -257,7 +268,13 @@ export const updateUnit = asyncHandler(async (req, res) => {
   });
 
   if (!existingUnit) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Unit not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Unit not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new name or symbol conflicts with other units
@@ -286,9 +303,10 @@ export const updateUnit = asyncHandler(async (req, res) => {
         const field = nameOrSymbolConflict.name === name ? "name" : "symbol";
         return sendResponse(
           res,
-          statusType.CONFLICT,
+          false,
           null,
           `Unit with this ${field} already exists`,
+          statusType.CONFLICT,
         );
       }
     }
@@ -316,12 +334,13 @@ export const updateUnit = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Unit updated successfully",
       unit: updatedUnit,
     },
     "Unit updated",
+    statusType.OK,
   );
 });
 
@@ -341,27 +360,30 @@ export const deleteUnit = asyncHandler(async (req, res) => {
   });
 
   if (!existingUnit) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Unit not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Unit not found",
+      statusType.NOT_FOUND,
+    );
   }
 
-  // Check if unit is being used in products
+  // Check if unit is being used in active products (not deleted)
   const productUsingUnit = await prisma.product.findFirst({
     where: {
-      OR: [
-        { unit: existingUnit.name },
-        { purchaseUnit: existingUnit.name },
-        { saleUnit: existingUnit.name },
-      ],
-      userId: req.user?.id, // Assuming user context is available
+      OR: [{ unitId: existingUnit.id }, { purchaseUnit: id }, { saleUnit: id }],
+      deleted: false, // Only check active products
     },
   });
 
   if (productUsingUnit) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Cannot delete unit. It is being used in products.",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -378,9 +400,10 @@ export const deleteUnit = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Unit deleted successfully" },
     "Unit deleted",
+    statusType.OK,
   );
 });
 
@@ -391,9 +414,10 @@ export const bulkDeleteUnits = asyncHandler(async (req, res) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Please provide an array of unit IDs",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -414,9 +438,10 @@ export const bulkDeleteUnits = asyncHandler(async (req, res) => {
   if (existingUnits.length !== unitIds.length) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "One or more units not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -436,9 +461,10 @@ export const bulkDeleteUnits = asyncHandler(async (req, res) => {
   if (productUsingUnits) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Cannot delete units. Some units are being used in products.",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -455,12 +481,13 @@ export const bulkDeleteUnits = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: `${unitIds.length} unit(s) deleted successfully`,
       deletedCount: unitIds.length,
     },
     "Bulk delete successful",
+    statusType.OK,
   );
 });
 
@@ -472,9 +499,10 @@ export const updateUnitStatus = asyncHandler(async (req, res) => {
   if (typeof status !== "boolean") {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Status must be a boolean value",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -490,7 +518,13 @@ export const updateUnitStatus = asyncHandler(async (req, res) => {
   });
 
   if (!existingUnit) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Unit not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Unit not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Update status
@@ -513,12 +547,13 @@ export const updateUnitStatus = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: `Unit ${status ? "activated" : "deactivated"} successfully`,
       unit: updatedUnit,
     },
     `Unit ${status ? "activated" : "deactivated"}`,
+    statusType.OK,
   );
 });
 
@@ -544,9 +579,10 @@ export const getActiveUnits = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { units },
     "Active units retrieved successfully",
+    statusType.OK,
   );
 });
 
