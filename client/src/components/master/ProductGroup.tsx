@@ -373,7 +373,7 @@ export default function ProductGroup() {
           className="flex flex-col gap-6 mb-6 w-full"
           variants={headerVariants}
         >
-          <div className="flex justify-between gap-4">
+          <div className="flex justify-between">
             {/* Title */}
             <div>
               <h1 className="text-3xl font-bold text-heading">
