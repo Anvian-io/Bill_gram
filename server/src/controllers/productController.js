@@ -1199,25 +1199,25 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     );
   }
 
-  // Check if product has active stock
-  const activeBatches = await prisma.batch.findFirst({
+  // Find all batches for this product with zero opening stock
+  const zeroStockBatches = await prisma.batch.findMany({
     where: {
       productId: parseInt(id),
-      openingStock: { gt: 0 },
+      openingStock: 0,
     },
   });
 
-  if (activeBatches) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      "Cannot delete product with active stock",
-      statusType.BAD_REQUEST,
-    );
+  // Hard delete batches with zero opening stock
+  if (zeroStockBatches.length > 0) {
+    await prisma.batch.deleteMany({
+      where: {
+        productId: parseInt(id),
+        openingStock: 0,
+      },
+    });
   }
 
-  // Soft delete
+  // Soft delete the product
   await prisma.product.update({
     where: {
       id: parseInt(id),
@@ -1231,7 +1231,10 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   return sendResponse(
     res,
     true,
-    { message: "Product deleted successfully" },
+    {
+      message: "Product deleted successfully",
+      deletedZeroStockBatches: zeroStockBatches.length,
+    },
     "Product deleted",
     statusType.OK,
   );
