@@ -12,7 +12,13 @@ export const createProductGroup = asyncHandler(async (req, res) => {
 
   // Validate required fields
   if (!name) {
-    return sendResponse(res, statusType.BAD_REQUEST, null, "Name is required");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Name is required",
+      statusType.BAD_REQUEST,
+    );
   }
 
   const prisma = getPrismaOrFail(res);
@@ -29,9 +35,10 @@ export const createProductGroup = asyncHandler(async (req, res) => {
   if (existingGroup) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       "Product group with this name already exists",
+      statusType.CONFLICT,
     );
   }
 
@@ -54,12 +61,13 @@ export const createProductGroup = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Product group created successfully",
       productGroup,
     },
     "Product group created",
+    statusType.CREATED,
   );
 });
 
@@ -172,7 +180,7 @@ export const getProductGroups = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       productGroups,
       pagination: {
@@ -185,6 +193,7 @@ export const getProductGroups = asyncHandler(async (req, res) => {
       },
     },
     "Product groups retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -213,17 +222,19 @@ export const getProductGroupById = asyncHandler(async (req, res) => {
   if (!productGroup) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product group not found",
+      statusType.NOT_FOUND,
     );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { productGroup },
     "Product group retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -246,9 +257,10 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
   if (!existingGroup) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product group not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -267,9 +279,10 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
     if (nameConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         "Product group with this name already exists",
+        statusType.CONFLICT,
       );
     }
   }
@@ -297,12 +310,13 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Product group updated successfully",
       productGroup: updatedProductGroup,
     },
     "Product group updated",
+    statusType.OK,
   );
 });
 
@@ -324,9 +338,10 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
   if (!existingGroup) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product group not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -343,9 +358,10 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Product group deleted successfully" },
     "Product group deleted",
+    statusType.OK,
   );
 });
 
@@ -356,9 +372,10 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Please provide an array of product group IDs",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -381,9 +398,10 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
   if (existingGroups.length !== productGroupIds.length) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "One or more product groups not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -400,12 +418,13 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: `${productGroupIds.length} product group(s) deleted successfully`,
       deletedCount: productGroupIds.length,
     },
     "Bulk delete successful",
+    statusType.OK,
   );
 });
 
@@ -417,9 +436,10 @@ export const updateProductGroupStatus = asyncHandler(async (req, res) => {
   if (typeof status !== "boolean") {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Status must be a boolean value",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -437,9 +457,10 @@ export const updateProductGroupStatus = asyncHandler(async (req, res) => {
   if (!existingGroup) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product group not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -463,19 +484,20 @@ export const updateProductGroupStatus = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: `Product group ${status ? "activated" : "deactivated"} successfully`,
       productGroup: updatedProductGroup,
     },
     `Product group ${status ? "activated" : "deactivated"}`,
+    statusType.OK,
   );
 });
 
 export const getActiveProductGroups = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
-  console.log('oifewofiewh')
+  console.log("oifewofiewh");
   const productGroups = await prisma.productGroup.findMany({
     where: {
       status: true,
@@ -493,9 +515,10 @@ export const getActiveProductGroups = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { productGroups },
     "Active product groups retrieved successfully",
+    statusType.OK,
   );
 });
 

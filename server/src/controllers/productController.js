@@ -108,9 +108,10 @@ export const createProduct = asyncHandler(async (req, res) => {
   ) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Required fields are missing",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -128,9 +129,10 @@ export const createProduct = asyncHandler(async (req, res) => {
   if (existingProduct) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       "Product with this code already exists",
+      statusType.CONFLICT,
     );
   }
 
@@ -140,7 +142,13 @@ export const createProduct = asyncHandler(async (req, res) => {
       where: { id: parseInt(unitId), deleted: false, status: true },
     });
     if (!unit) {
-      return sendResponse(res, statusType.NOT_FOUND, null, "Unit not found");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Unit not found",
+        statusType.NOT_FOUND,
+      );
     }
   }
 
@@ -152,9 +160,10 @@ export const createProduct = asyncHandler(async (req, res) => {
     if (!productGroup) {
       return sendResponse(
         res,
-        statusType.NOT_FOUND,
+        false,
         null,
         "Product group not found",
+        statusType.NOT_FOUND,
       );
     }
   }
@@ -167,9 +176,10 @@ export const createProduct = asyncHandler(async (req, res) => {
     if (!productCompany) {
       return sendResponse(
         res,
-        statusType.NOT_FOUND,
+        false,
         null,
         "Product company not found",
+        statusType.NOT_FOUND,
       );
     }
   }
@@ -311,20 +321,22 @@ export const createProduct = asyncHandler(async (req, res) => {
 
     return sendResponse(
       res,
-      statusType.CREATED,
+      true,
       {
         message: "Product created successfully",
         product: productWithUrls,
       },
       "Product created",
+      statusType.CREATED,
     );
   } catch (error) {
     console.error("Error creating product:", error);
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Error creating product",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -409,10 +421,17 @@ export const getProducts = asyncHandler(async (req, res) => {
   }
 
   // Stock Range Filter (Min/Max Total Opening Stock)
-  if (minStock !== undefined && minStock !== "" || maxStock !== undefined && maxStock !== "") {
-    const min = minStock !== undefined && minStock !== "" ? parseInt(minStock) : 0;
-    const max = maxStock !== undefined && maxStock !== "" ? parseInt(maxStock) : 999999999;
-    
+  if (
+    (minStock !== undefined && minStock !== "") ||
+    (maxStock !== undefined && maxStock !== "")
+  ) {
+    const min =
+      minStock !== undefined && minStock !== "" ? parseInt(minStock) : 0;
+    const max =
+      maxStock !== undefined && maxStock !== ""
+        ? parseInt(maxStock)
+        : 999999999;
+
     // Use raw query to get product IDs with stock in range
     const productsWithStock = await prisma.$queryRaw`
       SELECT productId 
@@ -421,17 +440,17 @@ export const getProducts = asyncHandler(async (req, res) => {
       HAVING SUM(opening_stock) >= ${min} 
       AND SUM(opening_stock) <= ${max}
     `;
-    
-    const productIds = productsWithStock.map(p => p.productId);
-    
+
+    const productIds = productsWithStock.map((p) => p.productId);
+
     if (productIds.length > 0) {
       andConditions.push({
-        id: { in: productIds }
+        id: { in: productIds },
       });
     } else {
       // If no products match stock criteria, return empty results
       andConditions.push({
-        id: { in: [] }
+        id: { in: [] },
       });
     }
   }
@@ -443,9 +462,9 @@ export const getProducts = asyncHandler(async (req, res) => {
     andConditions.push({
       batches: {
         some: {
-          mfgDate: mfgDate  // Direct string comparison
-        }
-      }
+          mfgDate: mfgDate, // Direct string comparison
+        },
+      },
     });
   }
 
@@ -456,9 +475,9 @@ export const getProducts = asyncHandler(async (req, res) => {
     andConditions.push({
       batches: {
         some: {
-          expDate: expDate  // Direct string comparison
-        }
-      }
+          expDate: expDate, // Direct string comparison
+        },
+      },
     });
   }
 
@@ -517,10 +536,10 @@ export const getProducts = asyncHandler(async (req, res) => {
   // Build batch where condition for the include to filter returned batches
   const batchWhere = {};
   if (mfgDate) {
-    batchWhere.mfgDate = mfgDate;  // String comparison
+    batchWhere.mfgDate = mfgDate; // String comparison
   }
   if (expDate) {
-    batchWhere.expDate = expDate;  // String comparison
+    batchWhere.expDate = expDate; // String comparison
   }
 
   // Query with relations - INCLUDING RELATED IMAGES
@@ -597,7 +616,7 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       products: productsWithUrls,
       pagination: {
@@ -610,6 +629,7 @@ export const getProducts = asyncHandler(async (req, res) => {
       },
     },
     "Products retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -742,8 +762,8 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
-    { 
+    true,
+    {
       products: productsWithStock,
       count: productsWithStock.length,
       // summary: {
@@ -753,6 +773,7 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
       // }
     },
     "Active products retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -805,7 +826,13 @@ export const getProductById = asyncHandler(async (req, res) => {
   });
 
   if (!product) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Product not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Calculate total opening stock from all batches
@@ -827,9 +854,10 @@ export const getProductById = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { product: productWithUrls },
     "Product retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -895,7 +923,13 @@ export const updateProduct = asyncHandler(async (req, res) => {
   });
 
   if (!existingProduct) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Product not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new product code conflicts with other products
@@ -913,9 +947,10 @@ export const updateProduct = asyncHandler(async (req, res) => {
     if (codeConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         "Product with this code already exists",
+        statusType.CONFLICT,
       );
     }
   }
@@ -1117,20 +1152,22 @@ export const updateProduct = asyncHandler(async (req, res) => {
 
     return sendResponse(
       res,
-      statusType.OK,
+      true,
       {
         message: "Product updated successfully",
         product: productWithUrls,
       },
       "Product updated",
+      statusType.OK,
     );
   } catch (error) {
     console.error("Error updating product:", error);
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Error updating product",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -1153,7 +1190,13 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   });
 
   if (!existingProduct) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Product not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if product has active stock
@@ -1167,9 +1210,10 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   if (activeBatches) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Cannot delete product with active stock",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -1186,9 +1230,10 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Product deleted successfully" },
     "Product deleted",
+    statusType.OK,
   );
 });
 

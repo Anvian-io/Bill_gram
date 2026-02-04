@@ -37,9 +37,10 @@ export const uploadImage = asyncHandler(async (req, res) => {
     if (!req.file) {
       return sendResponse(
         res,
-        statusType.BAD_REQUEST,
+        false,
         null,
         "No image file provided",
+        statusType.BAD_REQUEST,
       );
     }
 
@@ -53,21 +54,23 @@ export const uploadImage = asyncHandler(async (req, res) => {
 
     return sendResponse(
       res,
-      statusType.CREATED,
+      true,
       {
         message: "Image uploaded successfully",
         filename,
         path: filePath,
       },
       "Image uploaded",
+      statusType.CREATED,
     );
   } catch (error) {
     console.error("Error uploading image:", error);
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Error uploading image",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -81,9 +84,10 @@ export const serveImage = asyncHandler(async (req, res) => {
   if (!imageName) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Image name is required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -96,12 +100,24 @@ export const serveImage = asyncHandler(async (req, res) => {
     const resolvedImagesDir = path.resolve(imagesDir);
 
     if (!resolvedPath.startsWith(resolvedImagesDir)) {
-      return sendResponse(res, statusType.FORBIDDEN, null, "Access denied");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Access denied",
+        statusType.FORBIDDEN,
+      );
     }
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return sendResponse(res, statusType.NOT_FOUND, null, "Image not found");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Image not found",
+        statusType.NOT_FOUND,
+      );
     }
 
     // Determine content type based on extension
@@ -130,9 +146,10 @@ export const serveImage = asyncHandler(async (req, res) => {
       if (!res.headersSent) {
         return sendResponse(
           res,
-          statusType.INTERNAL_SERVER_ERROR,
+          false,
           null,
           "Error serving image",
+          statusType.INTERNAL_SERVER_ERROR,
         );
       }
     });
@@ -142,9 +159,10 @@ export const serveImage = asyncHandler(async (req, res) => {
     console.error("Error serving image:", error);
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Error serving image",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -158,9 +176,10 @@ export const deleteImage = asyncHandler(async (req, res) => {
   if (!imageName) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Image name is required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -170,7 +189,13 @@ export const deleteImage = asyncHandler(async (req, res) => {
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return sendResponse(res, statusType.NOT_FOUND, null, "Image not found");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Image not found",
+        statusType.NOT_FOUND,
+      );
     }
 
     // Check if image is being used by any product
@@ -183,17 +208,19 @@ export const deleteImage = asyncHandler(async (req, res) => {
 
     return sendResponse(
       res,
-      statusType.OK,
+      true,
       { message: "Image deleted successfully" },
       "Image deleted",
+      statusType.OK,
     );
   } catch (error) {
     console.error("Error deleting image:", error);
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Error deleting image",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });

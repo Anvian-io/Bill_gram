@@ -22,9 +22,10 @@ export const createProductCompany = asyncHandler(async (req, res) => {
   if (!name || !contactPerson || !email || !phone || !address) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Name, contact person, email, phone, and address are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -42,9 +43,10 @@ export const createProductCompany = asyncHandler(async (req, res) => {
   if (existingCompany) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Product company with this name already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -75,12 +77,13 @@ export const createProductCompany = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Product company created successfully",
       company,
     },
     "Product company created",
+    statusType.CREATED,
   );
 });
 
@@ -227,7 +230,7 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       companies,
       pagination: {
@@ -240,6 +243,7 @@ export const getProductCompanies = asyncHandler(async (req, res) => {
       },
     },
     "Product companies retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -272,17 +276,19 @@ export const getProductCompanyById = asyncHandler(async (req, res) => {
   if (!company) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product company not found",
+      statusType.NOT_FOUND,
     );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { company },
     "Product company retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -306,9 +312,10 @@ export const updateProductCompany = asyncHandler(async (req, res) => {
   if (!existingCompany) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product company not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -327,9 +334,10 @@ export const updateProductCompany = asyncHandler(async (req, res) => {
     if (nameConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Product company with this name already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -364,12 +372,13 @@ export const updateProductCompany = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Product company updated successfully",
       company: updatedCompany,
     },
     "Product company updated",
+    statusType.OK,
   );
 });
 
@@ -391,9 +400,10 @@ export const deleteProductCompany = asyncHandler(async (req, res) => {
   if (!existingCompany) {
     return sendResponse(
       res,
-      statusType.NOT_FOUND,
+      false,
       null,
       "Product company not found",
+      statusType.NOT_FOUND,
     );
   }
 
@@ -426,9 +436,10 @@ export const deleteProductCompany = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Product company deleted successfully" },
     "Product company deleted",
+    statusType.OK,
   );
 });
 
@@ -454,9 +465,10 @@ export const getActiveProductCompanies = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { companies },
     "Active product companies retrieved successfully",
+    statusType.OK,
   );
 });
 

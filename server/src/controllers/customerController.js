@@ -24,9 +24,10 @@ export const createCustomer = asyncHandler(async (req, res) => {
   if (!companyName || !personName || !phoneNo || !address) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Company name, person name, phone number, and address are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -44,9 +45,10 @@ export const createCustomer = asyncHandler(async (req, res) => {
   if (existingCustomer) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Customer with this phone number already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -81,12 +83,13 @@ export const createCustomer = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Customer created successfully",
       customer,
     },
     "Customer created",
+    statusType.CREATED,
   );
 });
 
@@ -266,7 +269,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       customers,
       pagination: {
@@ -279,6 +282,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
       },
     },
     "Customers retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -311,14 +315,21 @@ export const getCustomerById = asyncHandler(async (req, res) => {
   });
 
   if (!customer) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Customer not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Customer not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { customer },
     "Customer retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -349,7 +360,13 @@ export const updateCustomer = asyncHandler(async (req, res) => {
   });
 
   if (!existingCustomer) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Customer not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Customer not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new phone number conflicts with other customers
@@ -367,9 +384,10 @@ export const updateCustomer = asyncHandler(async (req, res) => {
     if (phoneConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Customer with this phone number already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -411,12 +429,13 @@ export const updateCustomer = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Customer updated successfully",
       customer: updatedCustomer,
     },
     "Customer updated",
+    statusType.OK,
   );
 });
 
@@ -436,7 +455,13 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
   });
 
   if (!existingCustomer) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Customer not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Customer not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if customer is being used in orders (if you have this relation)
@@ -449,9 +474,10 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
   // if (orderUsingCustomer) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete customer. It is being used in orders."
+  //     "Cannot delete customer. It is being used in orders.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -468,9 +494,10 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Customer deleted successfully" },
     "Customer deleted",
+    statusType.OK,
   );
 });
 
@@ -497,9 +524,10 @@ export const getActiveCustomers = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { customers },
     "Active customers retrieved successfully",
+    statusType.OK,
   );
 });
 

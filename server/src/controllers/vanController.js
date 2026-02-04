@@ -12,7 +12,13 @@ export const createVan = asyncHandler(async (req, res) => {
 
   // Validate required fields
   if (!name) {
-    return sendResponse(res, statusType.BAD_REQUEST, null, "Name is required");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Name is required",
+      statusType.BAD_REQUEST,
+    );
   }
 
   const prisma = getPrismaOrFail(res);
@@ -30,9 +36,10 @@ export const createVan = asyncHandler(async (req, res) => {
     if (existingVan) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Van with this vehicle number already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -62,12 +69,13 @@ export const createVan = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Van created successfully",
       van,
     },
     "Van created",
+    statusType.CREATED,
   );
 });
 
@@ -245,7 +253,7 @@ export const getVans = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       vans,
       pagination: {
@@ -258,6 +266,7 @@ export const getVans = asyncHandler(async (req, res) => {
       },
     },
     "Vans retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -287,14 +296,21 @@ export const getVanById = asyncHandler(async (req, res) => {
   });
 
   if (!van) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Van not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Van not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { van },
     "Van retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -315,7 +331,13 @@ export const updateVan = asyncHandler(async (req, res) => {
   });
 
   if (!existingVan) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Van not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Van not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new vehicle number conflicts with other vans
@@ -333,9 +355,10 @@ export const updateVan = asyncHandler(async (req, res) => {
     if (vehicleNoConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Van with this vehicle number already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -368,12 +391,13 @@ export const updateVan = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Van updated successfully",
       van: updatedVan,
     },
     "Van updated",
+    statusType.OK,
   );
 });
 
@@ -393,7 +417,13 @@ export const deleteVan = asyncHandler(async (req, res) => {
   });
 
   if (!existingVan) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Van not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Van not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if van is being used in deliveries/orders (if you have this relation)
@@ -406,9 +436,10 @@ export const deleteVan = asyncHandler(async (req, res) => {
   // if (deliveryUsingVan) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete van. It is being used in deliveries."
+  //     "Cannot delete van. It is being used in deliveries.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -425,9 +456,10 @@ export const deleteVan = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Van deleted successfully" },
     "Van deleted",
+    statusType.OK,
   );
 });
 
@@ -454,9 +486,10 @@ export const getActiveVans = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { vans },
     "Active vans retrieved successfully",
+    statusType.OK,
   );
 });
 

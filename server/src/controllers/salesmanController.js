@@ -14,9 +14,10 @@ export const createSalesman = asyncHandler(async (req, res) => {
   if (!name || !phoneNo || !area) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Name, phone number, and area are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -34,9 +35,10 @@ export const createSalesman = asyncHandler(async (req, res) => {
   if (existingSalesman) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Salesman with this phone number already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -62,12 +64,13 @@ export const createSalesman = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Salesman created successfully",
       salesman,
     },
     "Salesman created",
+    statusType.CREATED,
   );
 });
 
@@ -200,7 +203,7 @@ export const getSalesmen = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       salesmen,
       pagination: {
@@ -213,6 +216,7 @@ export const getSalesmen = asyncHandler(async (req, res) => {
       },
     },
     "Salesmen retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -240,14 +244,21 @@ export const getSalesmanById = asyncHandler(async (req, res) => {
   });
 
   if (!salesman) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Salesman not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Salesman not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { salesman },
     "Salesman retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -268,7 +279,13 @@ export const updateSalesman = asyncHandler(async (req, res) => {
   });
 
   if (!existingSalesman) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Salesman not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Salesman not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new phone number conflicts with other salesmen
@@ -286,9 +303,10 @@ export const updateSalesman = asyncHandler(async (req, res) => {
     if (phoneConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Salesman with this phone number already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -318,12 +336,13 @@ export const updateSalesman = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Salesman updated successfully",
       salesman: updatedSalesman,
     },
     "Salesman updated",
+    statusType.OK,
   );
 });
 
@@ -343,7 +362,13 @@ export const deleteSalesman = asyncHandler(async (req, res) => {
   });
 
   if (!existingSalesman) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Salesman not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Salesman not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if salesman is being used in orders/sales (if you have this relation)
@@ -356,9 +381,10 @@ export const deleteSalesman = asyncHandler(async (req, res) => {
   // if (orderUsingSalesman) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete salesman. It is being used in orders."
+  //     "Cannot delete salesman. It is being used in orders.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -376,9 +402,10 @@ export const deleteSalesman = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Salesman deleted successfully" },
     "Salesman deleted",
+    statusType.OK,
   );
 });
 
@@ -405,9 +432,10 @@ export const getActiveSalesmen = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { salesmen },
     "Active salesmen retrieved successfully",
+    statusType.OK,
   );
 });
 

@@ -22,9 +22,10 @@ export const createArea = asyncHandler(async (req, res) => {
   if (!name) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Area name is required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -42,9 +43,10 @@ export const createArea = asyncHandler(async (req, res) => {
   if (existingArea) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Area with this name already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -75,12 +77,13 @@ export const createArea = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Area created successfully",
       area,
     },
     "Area created",
+    statusType.CREATED,
   );
 });
 
@@ -248,7 +251,7 @@ export const getAreas = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       areas,
       pagination: {
@@ -261,6 +264,7 @@ export const getAreas = asyncHandler(async (req, res) => {
       },
     },
     "Areas retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -291,14 +295,21 @@ export const getAreaById = asyncHandler(async (req, res) => {
   });
 
   if (!area) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Area not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Area not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { area },
     "Area retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -319,7 +330,13 @@ export const updateArea = asyncHandler(async (req, res) => {
   });
 
   if (!existingArea) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Area not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Area not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new name conflicts with other areas
@@ -337,9 +354,10 @@ export const updateArea = asyncHandler(async (req, res) => {
     if (nameConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Area with this name already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -375,12 +393,13 @@ export const updateArea = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Area updated successfully",
       area: updatedArea,
     },
     "Area updated",
+    statusType.OK,
   );
 });
 
@@ -400,7 +419,13 @@ export const deleteArea = asyncHandler(async (req, res) => {
   });
 
   if (!existingArea) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Area not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Area not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if area is being used in customers (if you have this relation)
@@ -413,9 +438,10 @@ export const deleteArea = asyncHandler(async (req, res) => {
   // if (customerUsingArea) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete area. It is being used by customers."
+  //     "Cannot delete area. It is being used by customers.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -432,9 +458,10 @@ export const deleteArea = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Area deleted successfully" },
     "Area deleted",
+    statusType.OK,
   );
 });
 
@@ -461,9 +488,10 @@ export const getActiveAreas = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { areas },
     "Active areas retrieved successfully",
+    statusType.OK,
   );
 });
 

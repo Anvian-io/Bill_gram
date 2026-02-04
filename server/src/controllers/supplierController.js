@@ -14,9 +14,10 @@ export const createSupplier = asyncHandler(async (req, res) => {
   if (!name || !phoneNo) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Supplier name and phone number are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -34,9 +35,10 @@ export const createSupplier = asyncHandler(async (req, res) => {
   if (existingSupplier) {
     return sendResponse(
       res,
-      statusType.CONFLICT,
+      false,
       null,
       `Supplier with this phone number already exists`,
+      statusType.CONFLICT,
     );
   }
 
@@ -63,12 +65,13 @@ export const createSupplier = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "Supplier created successfully",
       supplier,
     },
     "Supplier created",
+    statusType.CREATED,
   );
 });
 
@@ -228,7 +231,7 @@ export const getSuppliers = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       suppliers,
       pagination: {
@@ -241,6 +244,7 @@ export const getSuppliers = asyncHandler(async (req, res) => {
       },
     },
     "Suppliers retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -269,14 +273,21 @@ export const getSupplierById = asyncHandler(async (req, res) => {
   });
 
   if (!supplier) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Supplier not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Supplier not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { supplier },
     "Supplier retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -297,7 +308,13 @@ export const updateSupplier = asyncHandler(async (req, res) => {
   });
 
   if (!existingSupplier) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Supplier not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Supplier not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if new phone number conflicts with other suppliers
@@ -315,9 +332,10 @@ export const updateSupplier = asyncHandler(async (req, res) => {
     if (phoneConflict) {
       return sendResponse(
         res,
-        statusType.CONFLICT,
+        false,
         null,
         `Supplier with this phone number already exists`,
+        statusType.CONFLICT,
       );
     }
   }
@@ -348,12 +366,13 @@ export const updateSupplier = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       message: "Supplier updated successfully",
       supplier: updatedSupplier,
     },
     "Supplier updated",
+    statusType.OK,
   );
 });
 
@@ -373,7 +392,13 @@ export const deleteSupplier = asyncHandler(async (req, res) => {
   });
 
   if (!existingSupplier) {
-    return sendResponse(res, statusType.NOT_FOUND, null, "Supplier not found");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Supplier not found",
+      statusType.NOT_FOUND,
+    );
   }
 
   // Check if supplier is being used in purchases (if you have this relation)
@@ -387,9 +412,10 @@ export const deleteSupplier = asyncHandler(async (req, res) => {
   // if (purchaseUsingSupplier) {
   //   return sendResponse(
   //     res,
-  //     statusType.BAD_REQUEST,
+  //     false,
   //     null,
-  //     "Cannot delete supplier. It is being used in purchase records."
+  //     "Cannot delete supplier. It is being used in purchase records.",
+  //     statusType.BAD_REQUEST,
   //   );
   // }
 
@@ -406,9 +432,10 @@ export const deleteSupplier = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { message: "Supplier deleted successfully" },
     "Supplier deleted",
+    statusType.OK,
   );
 });
 
@@ -434,9 +461,10 @@ export const getActiveSuppliers = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     { suppliers },
     "Active suppliers retrieved successfully",
+    statusType.OK,
   );
 });
 
@@ -449,3 +477,4 @@ export const supplierController = {
   deleteSupplier,
   getActiveSuppliers,
 };
+
