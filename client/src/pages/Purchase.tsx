@@ -29,6 +29,8 @@ import {
   ShoppingCart,
   TrendingUp,
   RefreshCw,
+  Hash,
+  IndianRupee,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,861 +61,179 @@ import {
 } from "../components/FramerVariants";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
-import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
 import { useDebounce } from "@/utils/debounce";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import PurchaseForm from "../components/forms/PurchaseForm";
+import type {
+  Purchase,
+  Supplier,
+  Product,
+  PurchaseFormData,
+} from "@/types/purchase";
 
-// Date utility functions
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch (error) {
-      // Continue to next format
-    }
-  }
-
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};
-
-const formatDateForAPI = (date: Date | undefined): string | undefined => {
-  if (!date) return undefined;
-  return format(date, "yyyy-MM-dd");
-};
-
-// Define Purchase type
-interface Purchase {
-  id: number;
-  invoiceId: string;
-  supplier: {
-    id: number;
-    name: string;
-    contactPerson?: string;
-    phone?: string;
-  };
-  amount: number;
-  gstAmount: number;
-  finalAmount: number;
-  discountPercent: number;
-  remarks: string;
-  invoiceDate: string;
-  createdAt: string;
-  updatedAt: string;
-  status: "Pending" | "Paid" | "Partially Paid" | "Cancelled";
-  items: PurchaseItem[];
-}
-
-interface PurchaseItem {
-  id: number;
-  product: {
-    id: number;
-    productCode: string;
-    productBrand: string;
-  };
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  batchNumber?: string;
-}
-
-interface Supplier {
-  id: number;
-  name: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  gstin: string;
-}
-
-// Define the schema for form validation
-const purchaseSchema = z.object({
-  invoiceId: z.string().min(1, "Invoice ID is required"),
-  supplierId: z.coerce.number().min(1, "Supplier is required"),
-  invoiceDate: z.string().min(1, "Invoice date is required"),
-  items: z
-    .array(
-      z.object({
-        productId: z.coerce.number().min(1, "Product is required"),
-        quantity: z.coerce.number().positive("Quantity must be positive"),
-        unitPrice: z.coerce.number().positive("Unit price must be positive"),
-        batchNumber: z.string().optional(),
-      })
-    )
-    .min(1, "At least one item is required"),
-  discountPercent: z.coerce.number().min(0).max(100, "Discount cannot exceed 100%"),
-  gstAmount: z.coerce.number().min(0, "GST amount must be positive"),
-  remarks: z.string().optional(),
-});
-
-type PurchaseFormData = z.infer<typeof purchaseSchema>;
-
-// Initial form values
-const defaultValues: PurchaseFormData = {
-  invoiceId: "",
-  supplierId: 0,
-  invoiceDate: new Date().toISOString().split("T")[0],
-  items: [
-    {
-      productId: 0,
-      quantity: 1,
-      unitPrice: 0,
-      batchNumber: "",
-    },
-  ],
-  discountPercent: 0,
-  gstAmount: 0,
-  remarks: "",
-};
-
-// Sample data for testing
-const samplePurchaseData: PurchaseFormData = {
-  invoiceId: "INV-2024-00123",
-  supplierId: 1,
-  invoiceDate: new Date().toISOString().split("T")[0],
-  items: [
-    {
-      productId: 1,
-      quantity: 10,
-      unitPrice: 150.5,
-      batchNumber: "BATCH001",
-    },
-    {
-      productId: 2,
-      quantity: 5,
-      unitPrice: 299.99,
-      batchNumber: "BATCH002",
-    },
-  ],
-  discountPercent: 5,
-  gstAmount: 225.75,
-  remarks: "Sample purchase order",
-};
-
-// Mock data for demonstration
-const mockPurchases: Purchase[] = [
-  {
-    id: 1,
-    invoiceId: "INV-2024-00123",
-    supplier: {
-      id: 1,
-      name: "ABC Suppliers Pvt. Ltd.",
-      contactPerson: "John Doe",
-      phone: "+91 9876543210",
-    },
-    amount: 2754.95,
-    gstAmount: 225.75,
-    finalAmount: 2980.7,
-    discountPercent: 5,
-    remarks: "Monthly stock purchase",
-    invoiceDate: "2024-01-15",
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
-    status: "Paid",
-    items: [
-      {
-        id: 1,
-        product: {
-          id: 1,
-          productCode: "PROD001",
-          productBrand: "Sample Product 1",
-        },
-        quantity: 10,
-        unitPrice: 150.5,
-        totalPrice: 1505,
-        batchNumber: "BATCH001",
-      },
-      {
-        id: 2,
-        product: {
-          id: 2,
-          productCode: "PROD002",
-          productBrand: "Sample Product 2",
-        },
-        quantity: 5,
-        unitPrice: 299.99,
-        totalPrice: 1499.95,
-        batchNumber: "BATCH002",
-      },
-    ],
-  },
-  {
-    id: 2,
-    invoiceId: "INV-2024-00124",
-    supplier: {
-      id: 2,
-      name: "XYZ Traders",
-      contactPerson: "Jane Smith",
-      phone: "+91 9876543211",
-    },
-    amount: 5000,
-    gstAmount: 900,
-    finalAmount: 5900,
-    discountPercent: 0,
-    remarks: "Urgent order",
-    invoiceDate: "2024-01-16",
-    createdAt: "2024-01-16T14:45:00Z",
-    updatedAt: "2024-01-16T14:45:00Z",
-    status: "Pending",
-    items: [
-      {
-        id: 3,
-        product: {
-          id: 3,
-          productCode: "PROD003",
-          productBrand: "Sample Product 3",
-        },
-        quantity: 20,
-        unitPrice: 250,
-        totalPrice: 5000,
-        batchNumber: "BATCH003",
-      },
-    ],
-  },
+// Mock data
+const mockSuppliers: Supplier[] = [
+  { id: 1, name: "MARINO FOOD PRODUCTS", gstin: "27ABCDE1234F1Z5" },
+  { id: 2, name: "ABC Suppliers Pvt. Ltd.", gstin: "27XYZAB1234F1Z6" },
+  { id: 3, name: "Global Distributors", gstin: "27GLBAL1234F1Z7" },
 ];
 
-const mockSuppliers: Supplier[] = [
+const mockProducts: Product[] = [
   {
     id: 1,
-    name: "ABC Suppliers Pvt. Ltd.",
-    contactPerson: "John Doe",
-    phone: "+91 9876543210",
-    email: "john@abcsuppliers.com",
-    gstin: "27ABCDE1234F1Z5",
+    productCode: "G6",
+    description: "ECLARIS JAR",
+    price: 118.0,
+    gstRate: 5,
   },
   {
     id: 2,
-    name: "XYZ Traders",
-    contactPerson: "Jane Smith",
-    phone: "+91 9876543211",
-    email: "jane@xyztraders.com",
-    gstin: "27XYZAB1234F1Z6",
+    productCode: "10087",
+    description: "CRUNCHY MUNCHY S",
+    price: 3.54,
+    gstRate: 5,
   },
   {
     id: 3,
-    name: "Global Distributors",
-    contactPerson: "Robert Johnson",
-    phone: "+91 9876543212",
-    email: "robert@globaldist.com",
-    gstin: "27GLBAL1234F1Z7",
+    productCode: "K1",
+    description: "KRACK IT S RS",
+    price: 3.54,
+    gstRate: 5,
+  },
+  {
+    id: 4,
+    productCode: "M50",
+    description: "GLUCO-G S RS",
+    price: 3.7,
+    gstRate: 5,
+  },
+  {
+    id: 5,
+    productCode: "G13",
+    description: "LOLLYPOP BIG JAR S",
+    price: 155.0,
+    gstRate: 5,
   },
 ];
 
-const mockProducts = [
-  { id: 1, productCode: "PROD001", productBrand: "Sample Product 1", price: 150.5 },
-  { id: 2, productCode: "PROD002", productBrand: "Sample Product 2", price: 299.99 },
-  { id: 3, productCode: "PROD003", productBrand: "Sample Product 3", price: 250 },
+// Mock purchases
+const mockPurchases: Purchase[] = [
+  {
+    id: 1,
+    invoiceNo: "501622",
+    invoiceDate: "2024-01-15",
+    supplier: {
+      id: 1,
+      name: "MARINO FOOD PRODUCTS",
+      gstin: "27ABCDE1234F1Z5",
+    },
+    gstDetails: "Against GST",
+    items: [
+      {
+        id: 1,
+        productId: 1,
+        productCode: "G6",
+        description: "ECLARIS JAR",
+        rate: 118.0,
+        expiryDate: "2025-12-31",
+        manufacturingDate: "2024-01-01",
+        totalAmount: 1416.0,
+        taxRate: 5,
+        taxAmount: 70.8,
+        sch1Percent: 0,
+        sch1Amount: 0,
+        sch2Percent: 0,
+        sch2Amount: 0,
+      },
+      {
+        id: 2,
+        productId: 2,
+        productCode: "10087",
+        description: "CRUNCHY MUNCHY S",
+        rate: 3.54,
+        expiryDate: "2025-06-30",
+        manufacturingDate: "2024-01-01",
+        totalAmount: 5097.6,
+        taxRate: 5,
+        taxAmount: 254.88,
+        sch1Percent: 0,
+        sch1Amount: 0,
+        sch2Percent: 0,
+        sch2Amount: 0,
+      },
+    ],
+    remarks: "",
+    grossAmount: 6513.6,
+    boxUnit: 22.48,
+    cessInsurance: 0,
+    scheme1: 0,
+    discountPercent: 0,
+    tax: 325.68,
+    amountAdd: 0,
+    creditAmount: 0,
+    finalAmount: 6839.28,
+    status: "Paid",
+    createdAt: "2024-01-15T10:30:00Z",
+    updatedAt: "2024-01-15T10:30:00Z",
+  },
+  {
+    id: 2,
+    invoiceNo: "501623",
+    invoiceDate: "2024-01-16",
+    supplier: {
+      id: 2,
+      name: "ABC Suppliers Pvt. Ltd.",
+      gstin: "27XYZAB1234F1Z6",
+    },
+    gstDetails: "Against GST",
+    items: [
+      {
+        id: 3,
+        productId: 4,
+        productCode: "M50",
+        description: "GLUCO-G S RS",
+        rate: 3.7,
+        expiryDate: "2025-07-31",
+        manufacturingDate: "2024-02-01",
+        totalAmount: 2664.0,
+        taxRate: 5,
+        taxAmount: 133.2,
+        sch1Percent: 0,
+        sch1Amount: 0,
+        sch2Percent: 0,
+        sch2Amount: 0,
+      },
+      {
+        id: 4,
+        productId: 5,
+        productCode: "G13",
+        description: "LOLLYPOP BIG JAR S",
+        rate: 155.0,
+        expiryDate: "2025-12-31",
+        manufacturingDate: "2024-01-15",
+        totalAmount: 9300.0,
+        taxRate: 5,
+        taxAmount: 465.0,
+        sch1Percent: 0,
+        sch1Amount: 0,
+        sch2Percent: 0,
+        sch2Amount: 0,
+      },
+    ],
+    remarks: "Monthly order",
+    grossAmount: 11964.0,
+    boxUnit: 18.75,
+    cessInsurance: 0,
+    scheme1: 0,
+    discountPercent: 5,
+    tax: 598.2,
+    amountAdd: 0,
+    creditAmount: 0,
+    finalAmount: 12562.2,
+    status: "Pending",
+    createdAt: "2024-01-16T14:45:00Z",
+    updatedAt: "2024-01-16T14:45:00Z",
+  },
 ];
-
-// Purchase Form Modal Component
-interface PurchaseFormModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  editingPurchase?: Purchase | null;
-  onSave: (data: PurchaseFormData, id?: number) => Promise<void>;
-  isSubmitting?: boolean;
-}
-
-function PurchaseFormModal({
-  open,
-  onOpenChange,
-  editingPurchase,
-  onSave,
-  isSubmitting = false,
-}: PurchaseFormModalProps) {
-  const form = useForm<PurchaseFormData>({
-    resolver: zodResolver(purchaseSchema) as any,
-    defaultValues,
-  });
-
-  const items = form.watch("items");
-  const discountPercent = form.watch("discountPercent");
-  const gstAmount = form.watch("gstAmount");
-
-  // Calculate totals
-  const calculateTotals = () => {
-    const subtotal = items.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
-      0
-    );
-    const discountAmount = subtotal * (discountPercent / 100);
-    const amountAfterDiscount = subtotal - discountAmount;
-    const finalAmount = amountAfterDiscount + gstAmount;
-
-    return {
-      subtotal,
-      discountAmount,
-      amountAfterDiscount,
-      finalAmount,
-    };
-  };
-
-  const totals = calculateTotals();
-
-  // Load sample data
-  const loadSampleData = () => {
-    form.reset(samplePurchaseData);
-    toast.success("Sample data loaded", {
-      description: "Fill in real data before submitting.",
-    });
-  };
-
-  // Reset form when editingPurchase changes
-  useEffect(() => {
-    if (editingPurchase) {
-      form.reset({
-        invoiceId: editingPurchase.invoiceId,
-        supplierId: editingPurchase.supplier.id,
-        invoiceDate: editingPurchase.invoiceDate,
-        items: editingPurchase.items.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          batchNumber: item.batchNumber || "",
-        })),
-        discountPercent: editingPurchase.discountPercent,
-        gstAmount: editingPurchase.gstAmount,
-        remarks: editingPurchase.remarks,
-      });
-    } else {
-      form.reset(defaultValues);
-    }
-  }, [editingPurchase, form]);
-
-  // Handle item changes
-  const handleItemChange = (
-    index: number,
-    field: keyof PurchaseFormData["items"][0],
-    value: any
-  ) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    form.setValue("items", updatedItems);
-  };
-
-  // Add new item row
-  const addItemRow = () => {
-    const newItem: PurchaseFormData["items"][0] = {
-      productId: 0,
-      quantity: 1,
-      unitPrice: 0,
-      batchNumber: "",
-    };
-    form.setValue("items", [...items, newItem]);
-  };
-
-  // Remove item row
-  const removeItemRow = (index: number) => {
-    if (items.length > 1) {
-      const updatedItems = items.filter((_, i) => i !== index);
-      form.setValue("items", updatedItems);
-    }
-  };
-
-  const onSubmit = async (data: PurchaseFormData) => {
-    try {
-      await onSave(data, editingPurchase?.id);
-    } catch (error) {
-      console.error("Error in form submission:", error);
-      toast.error("Failed to save purchase. Please try again.");
-    }
-  };
-
-  const onError = (errors: any) => {
-    console.error("Form validation errors:", errors);
-    toast.error("Please fix all validation errors before submitting.");
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-[90vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <ShoppingCart className="h-6 w-6" />
-              {editingPurchase ? "Edit Purchase" : "Add New Purchase"}
-            </DialogTitle>
-
-            {!editingPurchase && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={loadSampleData}
-                disabled={isSubmitting}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Load Sample Data
-              </Button>
-            )}
-          </div>
-
-          <DialogDescription>
-            {editingPurchase
-              ? "Update purchase details and items"
-              : "Add a new purchase to your records"}
-          </DialogDescription>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit, onError)}
-            className="space-y-6"
-          >
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Column 1: Basic Info */}
-              <div className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Basic Information
-                  </h3>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="invoiceId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Invoice ID *
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., INV-2024-00123"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="supplierId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Supplier *
-                          </FormLabel>
-                          <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            value={field.value?.toString() || ""}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select supplier" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockSuppliers.map((supplier) => (
-                                <SelectItem
-                                  key={supplier.id}
-                                  value={supplier.id.toString()}
-                                >
-                                  <div className="flex flex-col">
-                                    <span>{supplier.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {supplier.contactPerson} • {supplier.phone}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="invoiceDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Invoice Date *
-                          </FormLabel>
-                          <FormControl>
-                            <CustomDateInput
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder="dd/mm/yyyy or select"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Column 2: Financial Details */}
-              <div className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Financial Details
-                  </h3>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="discountPercent"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Discount (%)
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                <Percent className="h-3 w-3" />
-                              </span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                className="pl-9"
-                                disabled={isSubmitting}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="gstAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            GST Amount *
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                ₹
-                              </span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                className="pl-8"
-                                disabled={isSubmitting}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Financial Summary */}
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border">
-                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-3">
-                        Financial Summary
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Subtotal:</span>
-                          <span className="font-semibold">₹{totals.subtotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Discount ({discountPercent}%):</span>
-                          <span className="font-semibold text-red-600">
-                            -₹{totals.discountAmount.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-t pt-2">
-                          <span>Amount after Discount:</span>
-                          <span className="font-semibold">
-                            ₹{totals.amountAfterDiscount.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>GST Amount:</span>
-                          <span className="font-semibold text-green-600">
-                            +₹{gstAmount.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-t pt-2 font-bold text-lg">
-                          <span>Final Amount:</span>
-                          <span className="text-primary">
-                            ₹{totals.finalAmount.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Column 3: Remarks */}
-              <div className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Additional Information
-                  </h3>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="remarks"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">Remarks</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Enter any additional remarks or notes"
-                              className="min-h-[120px]"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Purchase Items Section */}
-            <div className="border-t pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Purchase Items</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Add products to this purchase order
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addItemRow}
-                  disabled={isSubmitting}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </div>
-
-              <AnimatePresence>
-                {items.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mb-4 border rounded-lg overflow-hidden"
-                  >
-                    <div className="bg-muted/50 px-4 py-3 border-b">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          <div className="text-sm font-medium">
-                            Item #{index + 1}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItemRow(index)}
-                            disabled={items.length === 1 || isSubmitting}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Product Selection */}
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">
-                            Product *
-                          </label>
-                          <Select
-                            value={item.productId.toString()}
-                            onValueChange={(value) =>
-                              handleItemChange(index, "productId", parseInt(value))
-                            }
-                            disabled={isSubmitting}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select product" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {mockProducts.map((product) => (
-                                <SelectItem
-                                  key={product.id}
-                                  value={product.id.toString()}
-                                >
-                                  <div className="flex flex-col">
-                                    <span>{product.productBrand}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {product.productCode} • ₹{product.price}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Quantity */}
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">
-                            Quantity *
-                          </label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "quantity",
-                                parseInt(e.target.value) || 1
-                              )
-                            }
-                            disabled={isSubmitting}
-                          />
-                        </div>
-
-                        {/* Unit Price */}
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">
-                            Unit Price *
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                              ₹
-                            </span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.unitPrice}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  index,
-                                  "unitPrice",
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              className="pl-8"
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Batch Number */}
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">
-                            Batch Number
-                          </label>
-                          <Input
-                            value={item.batchNumber}
-                            onChange={(e) =>
-                              handleItemChange(index, "batchNumber", e.target.value)
-                            }
-                            placeholder="Optional"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Item Summary */}
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm text-muted-foreground">
-                            Total for this item:
-                          </div>
-                          <div className="text-lg font-bold">
-                            ₹{(item.quantity * item.unitPrice).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? "Saving..."
-                  : editingPurchase
-                    ? "Update Purchase"
-                    : "Create Purchase"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // Main Purchase Page Component
 export default function Purchase() {
@@ -928,17 +248,24 @@ export default function Purchase() {
 
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
+    null,
+  );
 
   // Filter state
   const [filters, setFilters] = useState({
     search: "",
-    invoiceId: "",
+    invoiceNo: "",
     supplier: "all" as string | "all",
     minAmount: "",
     maxAmount: "",
     invoiceDate: undefined as Date | undefined,
-    status: "all" as "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled",
+    status: "all" as
+      | "all"
+      | "Pending"
+      | "Paid"
+      | "Partially Paid"
+      | "Cancelled",
   });
 
   // Pagination state
@@ -950,7 +277,7 @@ export default function Purchase() {
 
   // Local state for immediate input values
   const [searchInput, setSearchInput] = useState<string>("");
-  const [invoiceIdInput, setInvoiceIdInput] = useState<string>("");
+  const [invoiceNoInput, setInvoiceNoInput] = useState<string>("");
   const [minAmountInput, setMinAmountInput] = useState<string>("");
   const [maxAmountInput, setMaxAmountInput] = useState<string>("");
   const [invoiceDateInput, setInvoiceDateInput] = useState<string>("");
@@ -960,8 +287,8 @@ export default function Purchase() {
     setFilters((prev) => ({ ...prev, search: value }));
   }, 300);
 
-  const debouncedSetInvoiceId = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, invoiceId: value }));
+  const debouncedSetInvoiceNo = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, invoiceNo: value }));
   }, 300);
 
   const debouncedSetMinAmount = useDebounce((value: string) => {
@@ -978,9 +305,9 @@ export default function Purchase() {
     debouncedSetSearch(value);
   };
 
-  const handleInvoiceIdChange = (value: string) => {
-    setInvoiceIdInput(value);
-    debouncedSetInvoiceId(value);
+  const handleInvoiceNoChange = (value: string) => {
+    setInvoiceNoInput(value);
+    debouncedSetInvoiceNo(value);
   };
 
   const handleMinAmountChange = (value: string) => {
@@ -1024,7 +351,7 @@ export default function Purchase() {
   const clearFilters = () => {
     setFilters({
       search: "",
-      invoiceId: "",
+      invoiceNo: "",
       supplier: "all",
       minAmount: "",
       maxAmount: "",
@@ -1032,7 +359,7 @@ export default function Purchase() {
       status: "all",
     });
     setSearchInput("");
-    setInvoiceIdInput("");
+    setInvoiceNoInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
     setInvoiceDateInput("");
@@ -1054,8 +381,8 @@ export default function Purchase() {
       case "search":
         setSearchInput("");
         break;
-      case "invoiceId":
-        setInvoiceIdInput("");
+      case "invoiceNo":
+        setInvoiceNoInput("");
         break;
       case "minAmount":
         setMinAmountInput("");
@@ -1076,27 +403,44 @@ export default function Purchase() {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const matches =
-          purchase.invoiceId.toLowerCase().includes(searchLower) ||
+          purchase.invoiceNo.toLowerCase().includes(searchLower) ||
           purchase.supplier.name.toLowerCase().includes(searchLower) ||
-          purchase.remarks.toLowerCase().includes(searchLower);
+          purchase.remarks.toLowerCase().includes(searchLower) ||
+          purchase.items.some(
+            (item) =>
+              item.productCode.toLowerCase().includes(searchLower) ||
+              item.description.toLowerCase().includes(searchLower),
+          );
         if (!matches) return false;
       }
 
-      // Invoice ID filter
-      if (filters.invoiceId && !purchase.invoiceId.includes(filters.invoiceId)) {
+      // Invoice No filter
+      if (
+        filters.invoiceNo &&
+        !purchase.invoiceNo.includes(filters.invoiceNo)
+      ) {
         return false;
       }
 
       // Supplier filter
-      if (filters.supplier !== "all" && purchase.supplier.id.toString() !== filters.supplier) {
+      if (
+        filters.supplier !== "all" &&
+        purchase.supplier.id.toString() !== filters.supplier
+      ) {
         return false;
       }
 
       // Amount range filter
-      if (filters.minAmount && purchase.finalAmount < parseFloat(filters.minAmount)) {
+      if (
+        filters.minAmount &&
+        purchase.finalAmount < parseFloat(filters.minAmount)
+      ) {
         return false;
       }
-      if (filters.maxAmount && purchase.finalAmount > parseFloat(filters.maxAmount)) {
+      if (
+        filters.maxAmount &&
+        purchase.finalAmount > parseFloat(filters.maxAmount)
+      ) {
         return false;
       }
 
@@ -1157,6 +501,11 @@ export default function Purchase() {
     }
   };
 
+  // Calculate total items amount
+  const calculateTotalAmount = (items: any[]) => {
+    return items.reduce((sum, item) => sum + item.totalAmount, 0);
+  };
+
   // Handle Add Purchase
   const handleAddPurchase = () => {
     setEditingPurchase(null);
@@ -1178,8 +527,7 @@ export default function Purchase() {
   const handleDeletePurchase = async () => {
     if (purchaseToDelete) {
       try {
-        // In real implementation, call API to delete
-        setPurchases(purchases.filter(p => p.id !== purchaseToDelete.id));
+        setPurchases(purchases.filter((p) => p.id !== purchaseToDelete.id));
         toast.success("Purchase deleted successfully!");
       } catch (error: any) {
         toast.error("Failed to delete purchase", {
@@ -1197,50 +545,98 @@ export default function Purchase() {
     setIsSubmitting(true);
 
     try {
+      const supplier = mockSuppliers.find((s) => s.id === data.supplierId);
+
+      if (!supplier) {
+        throw new Error("Supplier not found");
+      }
+
       if (id) {
         // Update existing purchase
-        // In real implementation, call API to update
         const updatedPurchase: Purchase = {
-          ...mockPurchases[0], // Simplified for demo
           id,
-          invoiceId: data.invoiceId,
-          supplier: mockSuppliers.find(s => s.id === data.supplierId) || mockSuppliers[0],
-          amount: data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
-          gstAmount: data.gstAmount,
-          finalAmount: data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) +
-            data.gstAmount - (data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * data.discountPercent / 100),
-          discountPercent: data.discountPercent,
-          remarks: data.remarks || "",
+          invoiceNo: data.invoiceNo,
           invoiceDate: data.invoiceDate,
+          supplier: {
+            id: supplier.id,
+            name: supplier.name,
+            gstin: supplier.gstin,
+          },
+          gstDetails: data.gstDetails || "Against GST",
+          items: data.items.map((item, index) => ({
+            id: index + 1,
+            productId: item.productId,
+            productCode: item.productCode,
+            description: item.description,
+            rate: item.rate,
+            expiryDate: item.expiryDate,
+            manufacturingDate: item.manufacturingDate,
+            totalAmount: item.totalAmount,
+            taxRate: item.taxRate,
+            taxAmount: item.taxAmount,
+            sch1Percent: item.sch1Percent,
+            sch1Amount: item.sch1Amount,
+            sch2Percent: item.sch2Percent,
+            sch2Amount: item.sch2Amount,
+          })),
+          remarks: data.remarks || "",
+          grossAmount: data.grossAmount,
+          boxUnit: data.boxUnit,
+          cessInsurance: data.cessInsurance,
+          scheme1: data.scheme1,
+          discountPercent: data.discountPercent,
+          tax: data.tax,
+          amountAdd: data.amountAdd,
+          creditAmount: data.creditAmount,
+          finalAmount: data.finalAmount,
+          status: "Pending",
+          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        setPurchases(purchases.map(p => p.id === id ? updatedPurchase : p));
+        setPurchases(purchases.map((p) => (p.id === id ? updatedPurchase : p)));
         toast.success("Purchase updated successfully!");
       } else {
         // Add new purchase
         const newPurchase: Purchase = {
           id: purchases.length + 1,
-          invoiceId: data.invoiceId,
-          supplier: mockSuppliers.find(s => s.id === data.supplierId) || mockSuppliers[0],
-          amount: data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
-          gstAmount: data.gstAmount,
-          finalAmount: data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) +
-            data.gstAmount - (data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * data.discountPercent / 100),
-          discountPercent: data.discountPercent,
-          remarks: data.remarks || "",
+          invoiceNo: data.invoiceNo,
           invoiceDate: data.invoiceDate,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: "Pending",
+          supplier: {
+            id: supplier.id,
+            name: supplier.name,
+            gstin: supplier.gstin,
+          },
+          gstDetails: data.gstDetails || "Against GST",
           items: data.items.map((item, index) => ({
             id: index + 1,
-            product: mockProducts.find(p => p.id === item.productId) || mockProducts[0],
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.quantity * item.unitPrice,
-            batchNumber: item.batchNumber,
+            productId: item.productId,
+            productCode: item.productCode,
+            description: item.description,
+            rate: item.rate,
+            expiryDate: item.expiryDate,
+            manufacturingDate: item.manufacturingDate,
+            totalAmount: item.totalAmount,
+            taxRate: item.taxRate,
+            taxAmount: item.taxAmount,
+            sch1Percent: item.sch1Percent,
+            sch1Amount: item.sch1Amount,
+            sch2Percent: item.sch2Percent,
+            sch2Amount: item.sch2Amount,
           })),
+          remarks: data.remarks || "",
+          grossAmount: data.grossAmount,
+          boxUnit: data.boxUnit,
+          cessInsurance: data.cessInsurance,
+          scheme1: data.scheme1,
+          discountPercent: data.discountPercent,
+          tax: data.tax,
+          amountAdd: data.amountAdd,
+          creditAmount: data.creditAmount,
+          finalAmount: data.finalAmount,
+          status: "Pending",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
 
         setPurchases([newPurchase, ...purchases]);
@@ -1250,7 +646,7 @@ export default function Purchase() {
       setIsModalOpen(false);
     } catch (error: any) {
       toast.error("Failed to save purchase", {
-        description: "Please try again",
+        description: error.message || "Please try again",
       });
       throw error;
     } finally {
@@ -1274,7 +670,7 @@ export default function Purchase() {
         key !== "search" &&
         value &&
         value !== "all" &&
-        !(value instanceof Date)
+        !(value instanceof Date),
     ).length + (filters.invoiceDate ? 1 : 0);
 
   // Calculate start and end index for display
@@ -1307,7 +703,7 @@ export default function Purchase() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  Manage and track your purchase orders
+                  Manage and track your purchase invoices
                 </motion.p>
               </div>
 
@@ -1321,7 +717,7 @@ export default function Purchase() {
                 <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search by invoice ID, supplier, or remarks..."
+                  placeholder="Search by invoice no, supplier, product, or remarks..."
                   className="pl-10 py-6 text-base"
                   value={searchInput}
                   onChange={(e) => handleSearchChange(e.target.value)}
@@ -1434,32 +830,32 @@ export default function Purchase() {
                         className="overflow-hidden"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                          {/* Invoice ID Filter */}
+                          {/* Invoice No Filter */}
                           <div className="space-y-2">
                             <Label
-                              htmlFor="invoiceId"
+                              htmlFor="invoiceNo"
                               className="text-sm font-medium"
                             >
-                              Invoice ID
+                              Invoice No
                             </Label>
                             <div className="flex gap-2">
                               <Input
-                                id="invoiceId"
-                                placeholder="Enter invoice ID"
-                                value={invoiceIdInput}
+                                id="invoiceNo"
+                                placeholder="Enter invoice no"
+                                value={invoiceNoInput}
                                 onChange={(e) =>
-                                  handleInvoiceIdChange(e.target.value)
+                                  handleInvoiceNoChange(e.target.value)
                                 }
                                 className="flex-1"
                               />
-                              {invoiceIdInput && (
+                              {invoiceNoInput && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
                                   onClick={() => {
-                                    setInvoiceIdInput("");
-                                    clearFilter("invoiceId");
+                                    setInvoiceNoInput("");
+                                    clearFilter("invoiceNo");
                                   }}
                                   disabled={isLoading}
                                 >
@@ -1488,7 +884,9 @@ export default function Purchase() {
                                 <SelectValue placeholder="Select supplier" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all">All Suppliers</SelectItem>
+                                <SelectItem value="all">
+                                  All Suppliers
+                                </SelectItem>
                                 {mockSuppliers.map((supplier) => (
                                   <SelectItem
                                     key={supplier.id}
@@ -1539,7 +937,12 @@ export default function Purchase() {
                             <Select
                               value={filters.status}
                               onValueChange={(
-                                value: "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled",
+                                value:
+                                  | "all"
+                                  | "Pending"
+                                  | "Paid"
+                                  | "Partially Paid"
+                                  | "Cancelled",
                               ) => handleFilterChange("status", value)}
                               disabled={isLoading}
                             >
@@ -1550,8 +953,12 @@ export default function Purchase() {
                                 <SelectItem value="all">All Status</SelectItem>
                                 <SelectItem value="Pending">Pending</SelectItem>
                                 <SelectItem value="Paid">Paid</SelectItem>
-                                <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                <SelectItem value="Partially Paid">
+                                  Partially Paid
+                                </SelectItem>
+                                <SelectItem value="Cancelled">
+                                  Cancelled
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1659,16 +1066,33 @@ export default function Purchase() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold">Invoice ID</TableHead>
-                        <TableHead className="font-semibold">Supplier</TableHead>
-                        <TableHead className="font-semibold">Amount</TableHead>
-                        <TableHead className="font-semibold">GST Amount</TableHead>
-                        <TableHead className="font-semibold">Final Amount</TableHead>
-                        <TableHead className="font-semibold">Discount %</TableHead>
-                        <TableHead className="font-semibold">Remarks</TableHead>
-                        <TableHead className="font-semibold">Invoice Date</TableHead>
+                        <TableHead className="font-semibold">
+                          Invoice No
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Supplier
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Invoice Date
+                        </TableHead>
+                        <TableHead className="font-semibold">Items</TableHead>
+                        <TableHead className="font-semibold">
+                          Gross Amount
+                        </TableHead>
+                        <TableHead className="font-semibold">Tax</TableHead>
+                        <TableHead className="font-semibold">
+                          Final Amount
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Discount %
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          GST Details
+                        </TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Created & Updated</TableHead>
+                        <TableHead className="font-semibold">
+                          Created & Updated
+                        </TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1683,7 +1107,7 @@ export default function Purchase() {
                             transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={11}
+                              colSpan={12}
                               className="text-center py-12"
                             >
                               <div className="flex flex-col items-center justify-center">
@@ -1703,7 +1127,7 @@ export default function Purchase() {
                             transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={11}
+                              colSpan={12}
                               className="text-center py-8 text-muted-foreground"
                             >
                               <motion.div
@@ -1746,28 +1170,47 @@ export default function Purchase() {
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div className="font-mono font-medium text-primary">
-                                  {purchase.invoiceId}
+                                  {purchase.invoiceNo}
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div>
-                                  <p className="font-medium">{purchase.supplier.name}</p>
+                                  <p className="font-medium">
+                                    {purchase.supplier.name}
+                                  </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {purchase.supplier.contactPerson}
+                                    GSTIN: {purchase.supplier.gstin}
                                   </p>
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                {formatDateTime(purchase.invoiceDate)}
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
+                                  <Badge
+                                    variant="outline"
+                                    className="font-mono"
+                                  >
+                                    {purchase.items.length}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div className="flex items-center gap-1">
-                                  <DollarSign className="h-3 w-3 text-muted-foreground" />
+                                  <IndianRupee className="h-3 w-3 text-muted-foreground" />
                                   <span className="font-medium">
-                                    ₹{purchase.amount.toFixed(2)}
+                                    ₹{purchase.grossAmount.toFixed(2)}
                                   </span>
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                  ₹{purchase.gstAmount.toFixed(2)}
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-700"
+                                >
+                                  ₹{purchase.tax.toFixed(2)}
                                 </Badge>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
@@ -1777,20 +1220,22 @@ export default function Purchase() {
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 {purchase.discountPercent > 0 ? (
-                                  <Badge variant="outline" className="bg-red-50 text-red-700">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-red-50 text-red-700"
+                                  >
                                     {purchase.discountPercent}%
                                   </Badge>
                                 ) : (
-                                  <span className="text-muted-foreground text-sm">-</span>
+                                  <span className="text-muted-foreground text-sm">
+                                    -
+                                  </span>
                                 )}
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-xs">
-                                <div className="line-clamp-2 text-sm">
-                                  {purchase.remarks || "No remarks"}
-                                </div>
-                              </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                {formatDateTime(purchase.invoiceDate)}
+                                <div className="text-xs text-muted-foreground">
+                                  {purchase.gstDetails}
+                                </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <motion.div
@@ -1855,7 +1300,9 @@ export default function Purchase() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => confirmDeletePurchase(purchase)}
+                                    onClick={() =>
+                                      confirmDeletePurchase(purchase)
+                                    }
                                     className="h-8 w-8 hover:bg-red-100"
                                     disabled={isLoading}
                                   >
@@ -1892,7 +1339,7 @@ export default function Purchase() {
       </motion.div>
 
       {/* Purchase Form Modal */}
-      <PurchaseFormModal
+      <PurchaseForm
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         editingPurchase={editingPurchase}
@@ -1907,7 +1354,7 @@ export default function Purchase() {
         mainText="Delete Purchase"
         subText={
           purchaseToDelete
-            ? `Are you sure you want to delete purchase "${purchaseToDelete.invoiceId}"? This action cannot be undone.`
+            ? `Are you sure you want to delete purchase "${purchaseToDelete.invoiceNo}"? This action cannot be undone.`
             : "This action cannot be undone."
         }
         nextButtonText="Delete"
@@ -1920,3 +1367,34 @@ export default function Purchase() {
     </>
   );
 }
+
+// Date utility functions
+const parseDateFromString = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined;
+
+  const formats = [
+    "dd/MM/yyyy",
+    "dd-MM-yyyy",
+    "dd.MM.yyyy",
+    "dd/MM/yy",
+    "yyyy-MM-dd",
+  ];
+
+  for (const fmt of formats) {
+    try {
+      const parsed = parse(dateString, fmt, new Date());
+      if (isValid(parsed)) {
+        return parsed;
+      }
+    } catch (error) {
+      // Continue to next format
+    }
+  }
+
+  return undefined;
+};
+
+const formatDateToDisplay = (date: Date | undefined): string => {
+  if (!date) return "";
+  return format(date, "dd/MM/yyyy");
+};
