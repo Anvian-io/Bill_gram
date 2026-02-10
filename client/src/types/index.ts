@@ -7,6 +7,8 @@ import { type Salesman } from "./salesman";
 import { type Unit } from "./unit";
 import { type Van } from "./van";
 import { type Product } from "./product";
+import { type Purchase } from "./purchase";
+import { type Sales } from "./sales";
 
 export {
   type Account,
@@ -18,4 +20,6 @@ export {
   type Unit,
   type Van,
   type Product,
+  type Purchase,
+  type Sales,
 }
