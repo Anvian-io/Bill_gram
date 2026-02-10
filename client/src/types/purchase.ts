@@ -24,7 +24,7 @@ export interface Purchase {
   supplier: {
     id: number;
     name: string;
-    gstin: string;
+    // gstin: string;
   };
   gstDetails: string;
   items: PurchaseItem[];

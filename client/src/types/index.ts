@@ -9,17 +9,19 @@ import { type Van } from "./van";
 import { type Product } from "./product";
 import { type Purchase } from "./purchase";
 import { type Sales } from "./sales";
+import { type Supplier } from "./supplier";
 
-export {
-  type Account,
-  type Area,
-  type Customer,
-  type ProductCompany,
-  type ProductGroup,
-  type Salesman,
-  type Unit,
-  type Van,
-  type Product,
-  type Purchase,
-  type Sales,
-}
+export type {
+  Account,
+  Area,
+  Customer,
+  ProductCompany,
+  ProductGroup,
+  Salesman,
+  Unit,
+  Van,
+  Product,
+  Supplier,
+  Purchase,
+  Sales,
+};

@@ -28,7 +28,7 @@ export const createSalesman = asyncHandler(async (req, res) => {
   const existingSalesman = await prisma.salesman.findFirst({
     where: {
       phoneNo,
-      deleted: false,
+      // deleted: false,
     },
   });
 

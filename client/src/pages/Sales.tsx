@@ -34,6 +34,8 @@ import {
   RefreshCw,
   Hash,
   IndianRupee,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,334 +68,52 @@ import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
 import SalesForm from "../components/forms/SalesForm";
-import type {
-  Sales,
-  Area,
-  Customer,
-  Van,
-  Salesman,
-  SalesFormData,
-} from "@/types/sales";
+import type { Sales, SalesFormData } from "@/types/sales";
+import { useActiveLists } from "@/hooks/useActiveLists";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
-// Mock data
-const mockAreas: Area[] = [
-  { id: 1, name: "Mumbai Central", code: "MUM-C" },
-  { id: 2, name: "Andheri East", code: "AND-E" },
-  { id: 3, name: "Bandra West", code: "BAN-W" },
-  { id: 4, name: "Thane", code: "THN" },
-  { id: 5, name: "Pune", code: "PUN" },
-];
+// Date utility functions
+const parseDateFromString = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined;
 
-const mockCustomers: Customer[] = [
-  {
-    id: 1,
-    name: "Reliance Fresh",
-    code: "C001",
-    address: "Mumbai Central",
-    areaId: 1,
-  },
-  { id: 2, name: "D-Mart", code: "C002", address: "Andheri East", areaId: 2 },
-  {
-    id: 3,
-    name: "More Supermarket",
-    code: "C003",
-    address: "Bandra West",
-    areaId: 3,
-  },
-  { id: 4, name: "Big Bazaar", code: "C004", address: "Thane", areaId: 4 },
-  { id: 5, name: "Star Bazaar", code: "C005", address: "Pune", areaId: 5 },
-];
+  const formats = [
+    "dd/MM/yyyy",
+    "dd-MM-yyyy",
+    "dd.MM.yyyy",
+    "dd/MM/yy",
+    "yyyy-MM-dd",
+  ];
 
-const mockVans: Van[] = [
-  {
-    id: 1,
-    name: "Delivery Van 1",
-    number: "MH01AB1234",
-    driverName: "Rajesh Kumar",
-  },
-  {
-    id: 2,
-    name: "Delivery Van 2",
-    number: "MH01CD5678",
-    driverName: "Suresh Patel",
-  },
-  {
-    id: 3,
-    name: "Delivery Van 3",
-    number: "MH01EF9012",
-    driverName: "Mahesh Sharma",
-  },
-  {
-    id: 4,
-    name: "Sales Van 1",
-    number: "MH02GH3456",
-    driverName: "Ramesh Singh",
-  },
-  {
-    id: 5,
-    name: "Sales Van 2",
-    number: "MH02IJ7890",
-    driverName: "Vikram Yadav",
-  },
-];
+  for (const fmt of formats) {
+    try {
+      const parsed = parse(dateString, fmt, new Date());
+      if (isValid(parsed)) {
+        return parsed;
+      }
+    } catch (error) {
+      // Continue to next format
+    }
+  }
 
-const mockSalesmen: Salesman[] = [
-  { id: 1, name: "Amit Sharma", code: "S001", areaId: 1 },
-  { id: 2, name: "Rahul Verma", code: "S002", areaId: 2 },
-  { id: 3, name: "Sandeep Patel", code: "S003", areaId: 3 },
-  { id: 4, name: "Vikas Singh", code: "S004", areaId: 4 },
-  { id: 5, name: "Raj Kumar", code: "S005", areaId: 5 },
-];
+  return undefined;
+};
 
-const mockProducts = [
-  {
-    id: 1,
-    productCode: "G6",
-    description: "ECLARIS JAR",
-    price: 130.0,
-    gstRate: 5,
-  },
-  {
-    id: 2,
-    productCode: "10087",
-    description: "CRUNCHY MUNCHY S",
-    price: 4.0,
-    gstRate: 5,
-  },
-  {
-    id: 3,
-    productCode: "K1",
-    description: "KRACK IT S RS",
-    price: 4.2,
-    gstRate: 5,
-  },
-  {
-    id: 4,
-    productCode: "M50",
-    description: "GLUCO-G S RS",
-    price: 4.5,
-    gstRate: 5,
-  },
-  {
-    id: 5,
-    productCode: "G13",
-    description: "LOLLYPOP BIG JAR S",
-    price: 170.0,
-    gstRate: 5,
-  },
-];
-
-// Mock sales (updated with area, customer, van, salesman)
-const mockSales: Sales[] = [
-  {
-    id: 1,
-    invoiceNo: "S501622",
-    invoiceDate: "2024-01-15",
-    area: {
-      id: 1,
-      name: "Mumbai Central",
-    },
-    customer: {
-      id: 1,
-      name: "Reliance Fresh",
-      code: "C001",
-    },
-    van: {
-      id: 1,
-      name: "Delivery Van 1",
-      number: "MH01AB1234",
-    },
-    salesman: {
-      id: 1,
-      name: "Amit Sharma",
-      code: "S001",
-    },
-    address: "Mumbai Central",
-    gstDetails: "Against GST",
-    items: [
-      {
-        id: 1,
-        productId: 1,
-        productCode: "G6",
-        description: "ECLARIS JAR",
-        rate: 130.0,
-        aQty: 10,
-        mQty: 10,
-        totalAmount: 1300.0,
-        taxRate: 5,
-        taxAmount: 65.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-      {
-        id: 2,
-        productId: 2,
-        productCode: "10087",
-        description: "CRUNCHY MUNCHY S",
-        rate: 4.0,
-        aQty: 1200,
-        mQty: 1200,
-        totalAmount: 4800.0,
-        taxRate: 5,
-        taxAmount: 240.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-    ],
-    remarks: "",
-    grossAmount: 6100.0,
-    boxUnit: 20.0,
-    cessInsurance: 0,
-    scheme1: 0,
-    discountPercent: 5,
-    tax: 305.0,
-    amountAdd: 0,
-    creditAmount: 0,
-    finalAmount: 6405.0,
-    status: "Paid",
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: 2,
-    invoiceNo: "S501623",
-    invoiceDate: "2024-01-16",
-    area: {
-      id: 2,
-      name: "Andheri East",
-    },
-    customer: {
-      id: 2,
-      name: "D-Mart",
-      code: "C002",
-    },
-    van: {
-      id: 2,
-      name: "Delivery Van 2",
-      number: "MH01CD5678",
-    },
-    salesman: {
-      id: 2,
-      name: "Rahul Verma",
-      code: "S002",
-    },
-    address: "Andheri East",
-    gstDetails: "Against GST",
-    items: [
-      {
-        id: 3,
-        productId: 4,
-        productCode: "M50",
-        description: "GLUCO-G S RS",
-        rate: 4.5,
-        aQty: 800,
-        mQty: 800,
-        totalAmount: 3600.0,
-        taxRate: 5,
-        taxAmount: 180.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-      {
-        id: 4,
-        productId: 5,
-        productCode: "G13",
-        description: "LOLLYPOP BIG JAR S",
-        rate: 170.0,
-        aQty: 50,
-        mQty: 50,
-        totalAmount: 8500.0,
-        taxRate: 5,
-        taxAmount: 425.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-    ],
-    remarks: "Monthly order",
-    grossAmount: 12100.0,
-    boxUnit: 15.75,
-    cessInsurance: 0,
-    scheme1: 0,
-    discountPercent: 8,
-    tax: 605.0,
-    amountAdd: 0,
-    creditAmount: 0,
-    finalAmount: 12705.0,
-    status: "Delivered",
-    createdAt: "2024-01-16T14:45:00Z",
-    updatedAt: "2024-01-16T14:45:00Z",
-  },
-  {
-    id: 3,
-    invoiceNo: "S501624",
-    invoiceDate: "2024-01-17",
-    area: {
-      id: 3,
-      name: "Bandra West",
-    },
-    customer: {
-      id: 3,
-      name: "More Supermarket",
-      code: "C003",
-    },
-    van: {
-      id: 3,
-      name: "Delivery Van 3",
-      number: "MH01EF9012",
-    },
-    salesman: {
-      id: 3,
-      name: "Sandeep Patel",
-      code: "S003",
-    },
-    address: "Bandra West",
-    gstDetails: "Against GST",
-    items: [
-      {
-        id: 5,
-        productId: 3,
-        productCode: "K1",
-        description: "KRACK IT S RS",
-        rate: 4.2,
-        aQty: 1000,
-        mQty: 1000,
-        totalAmount: 4200.0,
-        taxRate: 5,
-        taxAmount: 210.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-    ],
-    remarks: "",
-    grossAmount: 4200.0,
-    boxUnit: 10.5,
-    cessInsurance: 0,
-    scheme1: 0,
-    discountPercent: 3,
-    tax: 210.0,
-    amountAdd: 0,
-    creditAmount: 0,
-    finalAmount: 4410.0,
-    status: "Pending",
-    createdAt: "2024-01-17T09:15:00Z",
-    updatedAt: "2024-01-17T09:15:00Z",
-  },
-];
+const formatDateToDisplay = (date: Date | undefined): string => {
+  if (!date) return "";
+  return format(date, "dd/MM/yyyy");
+};
 
 // Main Sales Page Component
 export default function Sales() {
   // State for sales
-  const [sales, setSales] = useState<Sales[]>(mockSales);
+  const [sales, setSales] = useState<Sales[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -404,6 +124,9 @@ export default function Sales() {
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [salesToDelete, setSalesToDelete] = useState<Sales | null>(null);
+
+  // Get data from Redux store using the hook
+  const { areas, customers, salesmen, vans } = useActiveLists();
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -425,10 +148,16 @@ export default function Sales() {
       | "Delivered",
   });
 
+  // State for Command dropdowns
+  const [areaOpen, setAreaOpen] = useState(false);
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [vanOpen, setVanOpen] = useState(false);
+  const [salesmanOpen, setSalesmanOpen] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalItems, setTotalItems] = useState<number>(mockSales.length);
+  const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
@@ -560,6 +289,92 @@ export default function Sales() {
     }
   };
 
+  // Fetch sales data (mock for now - replace with actual API call)
+  const fetchSales = async () => {
+    setIsLoading(true);
+    try {
+      // Mock data - replace with actual API call
+      const mockSales: Sales[] = [
+        {
+          id: 1,
+          invoiceNo: "S501622",
+          invoiceDate: "2024-01-15",
+          area: {
+            id: 1,
+            name: "Mumbai Central",
+          },
+          customer: {
+            id: 1,
+            name: "Reliance Fresh",
+            code: "C001",
+          },
+          van: {
+            id: 1,
+            name: "Delivery Van 1",
+            number: "MH01AB1234",
+          },
+          salesman: {
+            id: 1,
+            name: "Amit Sharma",
+            code: "S001",
+          },
+          address: "Mumbai Central",
+          gstDetails: "Against GST",
+          items: [
+            {
+              id: 1,
+              productId: 1,
+              productCode: "G6",
+              description: "ECLARIS JAR",
+              rate: 130.0,
+              aQty: 10,
+              mQty: 10,
+              totalAmount: 1300.0,
+              taxRate: 5,
+              taxAmount: 65.0,
+              sch1Percent: 0,
+              sch1Amount: 0,
+              sch2Percent: 0,
+              sch2Amount: 0,
+            },
+          ],
+          remarks: "",
+          grossAmount: 6100.0,
+          boxUnit: 20.0,
+          cessInsurance: 0,
+          scheme1: 0,
+          discountPercent: 5,
+          tax: 305.0,
+          amountAdd: 0,
+          creditAmount: 0,
+          finalAmount: 6405.0,
+          status: "Paid",
+          createdAt: "2024-01-15T10:30:00Z",
+          updatedAt: "2024-01-15T10:30:00Z",
+        },
+      ];
+
+      setSales(mockSales);
+      setTotalItems(mockSales.length);
+      setTotalPages(Math.ceil(mockSales.length / itemsPerPage));
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+      toast.error("Failed to fetch sales", {
+        description: "Please try again later",
+      });
+      setSales([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchSales();
+  }, [currentPage, itemsPerPage]);
+
   // Filter sales based on current filters
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
@@ -572,7 +387,7 @@ export default function Sales() {
           sale.area.name.toLowerCase().includes(searchLower) ||
           sale.van.name.toLowerCase().includes(searchLower) ||
           sale.salesman.name.toLowerCase().includes(searchLower) ||
-          sale.remarks.toLowerCase().includes(searchLower) ||
+          (sale.remarks && sale.remarks.toLowerCase().includes(searchLower)) ||
           sale.items.some(
             (item) =>
               item.productCode.toLowerCase().includes(searchLower) ||
@@ -683,11 +498,6 @@ export default function Sales() {
     }
   };
 
-  // Calculate total items amount
-  const calculateTotalAmount = (items: any[]) => {
-    return items.reduce((sum, item) => sum + item.totalAmount, 0);
-  };
-
   // Handle Add Sales
   const handleAddSales = () => {
     setEditingSales(null);
@@ -727,10 +537,10 @@ export default function Sales() {
     setIsSubmitting(true);
 
     try {
-      const area = mockAreas.find((a) => a.id === data.areaId);
-      const customer = mockCustomers.find((c) => c.id === data.customerId);
-      const van = mockVans.find((v) => v.id === data.vanId);
-      const salesman = mockSalesmen.find((s) => s.id === data.salesmanId);
+      const area = areas.find((a) => a.id === data.areaId);
+      const customer = customers.find((c) => c.id === data.customerId);
+      const van = vans.find((v) => v.id === data.vanId);
+      const salesman = salesmen.find((s) => s.id === data.salesmanId);
 
       if (!area || !customer || !van || !salesman) {
         throw new Error("Required fields not found");
@@ -748,18 +558,18 @@ export default function Sales() {
           },
           customer: {
             id: customer.id,
-            name: customer.name,
-            code: customer.code,
+            name: customer.companyName || customer.personName || customer.name,
+            code: `C${customer.id.toString().padStart(3, "0")}`,
           },
           van: {
             id: van.id,
             name: van.name,
-            number: van.number,
+            number: van.vehicleNo || "",
           },
           salesman: {
             id: salesman.id,
             name: salesman.name,
-            code: salesman.code,
+            code: `S${salesman.id.toString().padStart(3, "0")}`,
           },
           address: data.address,
           gstDetails: data.gstDetails || "Against GST",
@@ -808,18 +618,18 @@ export default function Sales() {
           },
           customer: {
             id: customer.id,
-            name: customer.name,
-            code: customer.code,
+            name: customer.companyName || customer.personName || customer.name,
+            code: `C${customer.id.toString().padStart(3, "0")}`,
           },
           van: {
             id: van.id,
             name: van.name,
-            number: van.number,
+            number: van.vehicleNo || "",
           },
           salesman: {
             id: salesman.id,
             name: salesman.name,
-            code: salesman.code,
+            code: `S${salesman.id.toString().padStart(3, "0")}`,
           },
           address: data.address,
           gstDetails: data.gstDetails || "Against GST",
@@ -859,6 +669,7 @@ export default function Sales() {
       }
 
       setIsModalOpen(false);
+      fetchSales(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save sales", {
         description: error.message || "Please try again",
@@ -871,11 +682,8 @@ export default function Sales() {
 
   // Refresh data
   const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.info("Refreshing sales data...");
-    }, 1000);
+    fetchSales();
+    toast.info("Refreshing sales data...");
   };
 
   // Active filters count
@@ -891,6 +699,33 @@ export default function Sales() {
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+
+  // Get display names for Command dropdowns
+  const getAreaName = (id: string) => {
+    if (id === "all") return "All Areas";
+    const area = areas.find((a) => a.id.toString() === id);
+    return area ? area.name : "Select Area";
+  };
+
+  const getCustomerName = (id: string) => {
+    if (id === "all") return "All Customers";
+    const customer = customers.find((c) => c.id.toString() === id);
+    return customer
+      ? customer.companyName || customer.personName
+      : "Select Customer";
+  };
+
+  const getVanName = (id: string) => {
+    if (id === "all") return "All Vans";
+    const van = vans.find((v) => v.id.toString() === id);
+    return van ? van.name : "Select Van";
+  };
+
+  const getSalesmanName = (id: string) => {
+    if (id === "all") return "All Salesmen";
+    const salesman = salesmen.find((s) => s.id.toString() === id);
+    return salesman ? salesman.name : "Select Salesman";
+  };
 
   return (
     <>
@@ -1080,136 +915,313 @@ export default function Sales() {
                             </div>
                           </div>
 
-                          {/* Area Filter */}
+                          {/* Area Filter - Command Dropdown */}
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="area"
-                              className="text-sm font-medium"
-                            >
-                              Area
-                            </Label>
-                            <Select
-                              value={filters.area}
-                              onValueChange={(value) =>
-                                handleFilterChange("area", value)
-                              }
-                              disabled={isLoading}
-                            >
-                              <SelectTrigger id="area">
-                                <SelectValue placeholder="Select area" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Areas</SelectItem>
-                                {mockAreas.map((area) => (
-                                  <SelectItem
-                                    key={area.id}
-                                    value={area.id.toString()}
-                                  >
-                                    {area.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Label className="text-sm font-medium">Area</Label>
+                            <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={areaOpen}
+                                  className="w-full justify-between"
+                                  disabled={isLoading}
+                                >
+                                  {getAreaName(filters.area)}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search area..." />
+                                  <CommandList>
+                                    <CommandEmpty>No area found.</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                          handleFilterChange("area", "all");
+                                          setAreaOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.area === "all"
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        All Areas
+                                      </CommandItem>
+                                      {areas.map((area) => (
+                                        <CommandItem
+                                          key={area.id}
+                                          value={area.id.toString()}
+                                          onSelect={() => {
+                                            handleFilterChange(
+                                              "area",
+                                              area.id.toString(),
+                                            );
+                                            setAreaOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filters.area ===
+                                                area.id.toString()
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {area.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
-                          {/* Customer Filter */}
+                          {/* Customer Filter - Command Dropdown */}
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="customer"
-                              className="text-sm font-medium"
-                            >
+                            <Label className="text-sm font-medium">
                               Customer
                             </Label>
-                            <Select
-                              value={filters.customer}
-                              onValueChange={(value) =>
-                                handleFilterChange("customer", value)
-                              }
-                              disabled={isLoading}
+                            <Popover
+                              open={customerOpen}
+                              onOpenChange={setCustomerOpen}
                             >
-                              <SelectTrigger id="customer">
-                                <SelectValue placeholder="Select customer" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  All Customers
-                                </SelectItem>
-                                {mockCustomers.map((customer) => (
-                                  <SelectItem
-                                    key={customer.id}
-                                    value={customer.id.toString()}
-                                  >
-                                    {customer.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={customerOpen}
+                                  className="w-full justify-between"
+                                  disabled={isLoading}
+                                >
+                                  {getCustomerName(filters.customer)}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search customer..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      No customer found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                          handleFilterChange("customer", "all");
+                                          setCustomerOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.customer === "all"
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        All Customers
+                                      </CommandItem>
+                                      {customers.map((customer) => (
+                                        <CommandItem
+                                          key={customer.id}
+                                          value={customer.id.toString()}
+                                          onSelect={() => {
+                                            handleFilterChange(
+                                              "customer",
+                                              customer.id.toString(),
+                                            );
+                                            setCustomerOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filters.customer ===
+                                                customer.id.toString()
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {customer.companyName ||
+                                            customer.personName}
+                                          {customer.phoneNo && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              ({customer.phoneNo})
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
-                          {/* Van Filter */}
+                          {/* Van Filter - Command Dropdown */}
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="van"
-                              className="text-sm font-medium"
-                            >
-                              Van
-                            </Label>
-                            <Select
-                              value={filters.van}
-                              onValueChange={(value) =>
-                                handleFilterChange("van", value)
-                              }
-                              disabled={isLoading}
-                            >
-                              <SelectTrigger id="van">
-                                <SelectValue placeholder="Select van" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Vans</SelectItem>
-                                {mockVans.map((van) => (
-                                  <SelectItem
-                                    key={van.id}
-                                    value={van.id.toString()}
-                                  >
-                                    {van.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Label className="text-sm font-medium">Van</Label>
+                            <Popover open={vanOpen} onOpenChange={setVanOpen}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={vanOpen}
+                                  className="w-full justify-between"
+                                  disabled={isLoading}
+                                >
+                                  {getVanName(filters.van)}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search van..." />
+                                  <CommandList>
+                                    <CommandEmpty>No van found.</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                          handleFilterChange("van", "all");
+                                          setVanOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.van === "all"
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        All Vans
+                                      </CommandItem>
+                                      {vans.map((van) => (
+                                        <CommandItem
+                                          key={van.id}
+                                          value={van.id.toString()}
+                                          onSelect={() => {
+                                            handleFilterChange(
+                                              "van",
+                                              van.id.toString(),
+                                            );
+                                            setVanOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filters.van === van.id.toString()
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {van.name}
+                                          {van.vehicleNo && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              ({van.vehicleNo})
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
-                          {/* Salesman Filter */}
+                          {/* Salesman Filter - Command Dropdown */}
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="salesman"
-                              className="text-sm font-medium"
-                            >
+                            <Label className="text-sm font-medium">
                               Salesman
                             </Label>
-                            <Select
-                              value={filters.salesman}
-                              onValueChange={(value) =>
-                                handleFilterChange("salesman", value)
-                              }
-                              disabled={isLoading}
+                            <Popover
+                              open={salesmanOpen}
+                              onOpenChange={setSalesmanOpen}
                             >
-                              <SelectTrigger id="salesman">
-                                <SelectValue placeholder="Select salesman" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  All Salesmen
-                                </SelectItem>
-                                {mockSalesmen.map((salesman) => (
-                                  <SelectItem
-                                    key={salesman.id}
-                                    value={salesman.id.toString()}
-                                  >
-                                    {salesman.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={salesmanOpen}
+                                  className="w-full justify-between"
+                                  disabled={isLoading}
+                                >
+                                  {getSalesmanName(filters.salesman)}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search salesman..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      No salesman found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                          handleFilterChange("salesman", "all");
+                                          setSalesmanOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.salesman === "all"
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        All Salesmen
+                                      </CommandItem>
+                                      {salesmen.map((salesman) => (
+                                        <CommandItem
+                                          key={salesman.id}
+                                          value={salesman.id.toString()}
+                                          onSelect={() => {
+                                            handleFilterChange(
+                                              "salesman",
+                                              salesman.id.toString(),
+                                            );
+                                            setSalesmanOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filters.salesman ===
+                                                salesman.id.toString()
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {salesman.name}
+                                          {salesman.phoneNo && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              ({salesman.phoneNo})
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
                           {/* Amount Range Filter */}
@@ -1291,6 +1303,41 @@ export default function Sales() {
                                 </Button>
                               )}
                             </div>
+                          </div>
+
+                          {/* Status Filter */}
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="status"
+                              className="text-sm font-medium"
+                            >
+                              Status
+                            </Label>
+                            <Select
+                              value={filters.status}
+                              onValueChange={(value) =>
+                                handleFilterChange("status", value)
+                              }
+                              disabled={isLoading}
+                            >
+                              <SelectTrigger id="status">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Paid">Paid</SelectItem>
+                                <SelectItem value="Partially Paid">
+                                  Partially Paid
+                                </SelectItem>
+                                <SelectItem value="Cancelled">
+                                  Cancelled
+                                </SelectItem>
+                                <SelectItem value="Delivered">
+                                  Delivered
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </motion.div>
@@ -1464,7 +1511,7 @@ export default function Sales() {
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <Badge variant="outline" className="bg-blue-50">
+                                <Badge variant="outline" className="bg-blue-500">
                                   {sale.area.name}
                                 </Badge>
                               </TableCell>
@@ -1650,34 +1697,3 @@ export default function Sales() {
     </>
   );
 }
-
-// Date utility functions
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch (error) {
-      // Continue to next format
-    }
-  }
-
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};

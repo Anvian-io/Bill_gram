@@ -1,4 +1,3 @@
-// pages/Purchase.tsx (updated imports and mock data)
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -32,6 +31,8 @@ import {
   RefreshCw,
   Hash,
   IndianRupee,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,21 +65,19 @@ import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
 import PurchaseForm from "../components/forms/PurchaseForm";
-import type {
-  Purchase,
-  Supplier,
-  Product,
-  PurchaseFormData,
-} from "@/types/purchase";
+import type { Purchase, PurchaseFormData } from "@/types/purchase";
+import { useActiveLists } from "@/hooks/useActiveLists";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
-// Mock data
-const mockSuppliers: Supplier[] = [
-  { id: 1, name: "MARINO FOOD PRODUCTS", gstin: "27ABCDE1234F1Z5" },
-  { id: 2, name: "ABC Suppliers Pvt. Ltd.", gstin: "27XYZAB1234F1Z6" },
-  { id: 3, name: "Global Distributors", gstin: "27GLBAL1234F1Z7" },
-];
-
-const mockProducts: Product[] = [
+// Mock product data (you might want to fetch this from Redux/API)
+const mockProducts = [
   {
     id: 1,
     productCode: "G6",
@@ -116,130 +115,41 @@ const mockProducts: Product[] = [
   },
 ];
 
-// Mock purchases (updated to remove expiry/manufacturing dates and add quantities)
-const mockPurchases: Purchase[] = [
-  {
-    id: 1,
-    invoiceNo: "501622",
-    invoiceDate: "2024-01-15",
-    supplier: {
-      id: 1,
-      name: "MARINO FOOD PRODUCTS",
-      gstin: "27ABCDE1234F1Z5",
-    },
-    gstDetails: "Against GST",
-    items: [
-      {
-        id: 1,
-        productId: 1,
-        productCode: "G6",
-        description: "ECLARIS JAR",
-        rate: 118.0,
-        aQty: 12,
-        mQty: 12,
-        totalAmount: 1416.0,
-        taxRate: 5,
-        taxAmount: 70.8,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-      {
-        id: 2,
-        productId: 2,
-        productCode: "10087",
-        description: "CRUNCHY MUNCHY S",
-        rate: 3.54,
-        aQty: 1440,
-        mQty: 1440,
-        totalAmount: 5097.6,
-        taxRate: 5,
-        taxAmount: 254.88,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-    ],
-    remarks: "",
-    grossAmount: 6513.6,
-    boxUnit: 22.48,
-    cessInsurance: 0,
-    scheme1: 0,
-    discountPercent: 0,
-    tax: 325.68,
-    amountAdd: 0,
-    creditAmount: 0,
-    finalAmount: 6839.28,
-    status: "Paid",
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: 2,
-    invoiceNo: "501623",
-    invoiceDate: "2024-01-16",
-    supplier: {
-      id: 2,
-      name: "ABC Suppliers Pvt. Ltd.",
-      gstin: "27XYZAB1234F1Z6",
-    },
-    gstDetails: "Against GST",
-    items: [
-      {
-        id: 3,
-        productId: 4,
-        productCode: "M50",
-        description: "GLUCO-G S RS",
-        rate: 3.7,
-        aQty: 720,
-        mQty: 720,
-        totalAmount: 2664.0,
-        taxRate: 5,
-        taxAmount: 133.2,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-      {
-        id: 4,
-        productId: 5,
-        productCode: "G13",
-        description: "LOLLYPOP BIG JAR S",
-        rate: 155.0,
-        aQty: 60,
-        mQty: 60,
-        totalAmount: 9300.0,
-        taxRate: 5,
-        taxAmount: 465.0,
-        sch1Percent: 0,
-        sch1Amount: 0,
-        sch2Percent: 0,
-        sch2Amount: 0,
-      },
-    ],
-    remarks: "Monthly order",
-    grossAmount: 11964.0,
-    boxUnit: 18.75,
-    cessInsurance: 0,
-    scheme1: 0,
-    discountPercent: 5,
-    tax: 598.2,
-    amountAdd: 0,
-    creditAmount: 0,
-    finalAmount: 12562.2,
-    status: "Pending",
-    createdAt: "2024-01-16T14:45:00Z",
-    updatedAt: "2024-01-16T14:45:00Z",
-  },
-];
+// Date utility functions
+const parseDateFromString = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined;
+
+  const formats = [
+    "dd/MM/yyyy",
+    "dd-MM-yyyy",
+    "dd.MM.yyyy",
+    "dd/MM/yy",
+    "yyyy-MM-dd",
+  ];
+
+  for (const fmt of formats) {
+    try {
+      const parsed = parse(dateString, fmt, new Date());
+      if (isValid(parsed)) {
+        return parsed;
+      }
+    } catch (error) {
+      // Continue to next format
+    }
+  }
+
+  return undefined;
+};
+
+const formatDateToDisplay = (date: Date | undefined): string => {
+  if (!date) return "";
+  return format(date, "dd/MM/yyyy");
+};
 
 // Main Purchase Page Component
 export default function Purchase() {
   // State for purchases
-  const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -252,6 +162,12 @@ export default function Purchase() {
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
     null,
   );
+
+  // Get data from Redux store
+  const { suppliers } = useActiveLists();
+
+  // State for Command dropdowns
+  const [supplierOpen, setSupplierOpen] = useState(false);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -272,7 +188,7 @@ export default function Purchase() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalItems, setTotalItems] = useState<number>(mockPurchases.length);
+  const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
@@ -397,6 +313,77 @@ export default function Purchase() {
     }
   };
 
+  // Fetch purchases data (mock for now - replace with actual API call)
+  const fetchPurchases = async () => {
+    setIsLoading(true);
+    try {
+      // Mock data - replace with actual API call
+      const mockPurchases: Purchase[] = [
+        {
+          id: 1,
+          invoiceNo: "501622",
+          invoiceDate: "2024-01-15",
+          supplier: {
+            id: 1,
+            name: "MARINO FOOD PRODUCTS",
+            // gstin: "27ABCDE1234F1Z5",
+          },
+          gstDetails: "Against GST",
+          items: [
+            {
+              id: 1,
+              productId: 1,
+              productCode: "G6",
+              description: "ECLARIS JAR",
+              rate: 118.0,
+              aQty: 12,
+              mQty: 12,
+              totalAmount: 1416.0,
+              taxRate: 5,
+              taxAmount: 70.8,
+              sch1Percent: 0,
+              sch1Amount: 0,
+              sch2Percent: 0,
+              sch2Amount: 0,
+            },
+          ],
+          remarks: "",
+          grossAmount: 6513.6,
+          boxUnit: 22.48,
+          cessInsurance: 0,
+          scheme1: 0,
+          discountPercent: 0,
+          tax: 325.68,
+          amountAdd: 0,
+          creditAmount: 0,
+          finalAmount: 6839.28,
+          status: "Paid",
+          createdAt: "2024-01-15T10:30:00Z",
+          updatedAt: "2024-01-15T10:30:00Z",
+        },
+      ];
+
+      setPurchases(mockPurchases);
+      setTotalItems(mockPurchases.length);
+      setTotalPages(Math.ceil(mockPurchases.length / itemsPerPage));
+    } catch (error) {
+      console.error("Error fetching purchases:", error);
+      toast.error("Failed to fetch purchases", {
+        description: "Please try again later",
+      });
+      setPurchases([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchPurchases();
+  }, [currentPage, itemsPerPage]);
+
   // Filter purchases based on current filters
   const filteredPurchases = useMemo(() => {
     return purchases.filter((purchase) => {
@@ -406,7 +393,8 @@ export default function Purchase() {
         const matches =
           purchase.invoiceNo.toLowerCase().includes(searchLower) ||
           purchase.supplier.name.toLowerCase().includes(searchLower) ||
-          purchase.remarks.toLowerCase().includes(searchLower) ||
+          (purchase.remarks &&
+            purchase.remarks.toLowerCase().includes(searchLower)) ||
           purchase.items.some(
             (item) =>
               item.productCode.toLowerCase().includes(searchLower) ||
@@ -502,11 +490,6 @@ export default function Purchase() {
     }
   };
 
-  // Calculate total items amount
-  const calculateTotalAmount = (items: any[]) => {
-    return items.reduce((sum, item) => sum + item.totalAmount, 0);
-  };
-
   // Handle Add Purchase
   const handleAddPurchase = () => {
     setEditingPurchase(null);
@@ -546,7 +529,7 @@ export default function Purchase() {
     setIsSubmitting(true);
 
     try {
-      const supplier = mockSuppliers.find((s) => s.id === data.supplierId);
+      const supplier = suppliers.find((s) => s.id === data.supplierId);
 
       if (!supplier) {
         throw new Error("Supplier not found");
@@ -561,7 +544,7 @@ export default function Purchase() {
           supplier: {
             id: supplier.id,
             name: supplier.name,
-            gstin: supplier.gstin,
+            // gstin: supplier.gstin || "",
           },
           gstDetails: data.gstDetails || "Against GST",
           items: data.items.map((item, index) => ({
@@ -606,7 +589,7 @@ export default function Purchase() {
           supplier: {
             id: supplier.id,
             name: supplier.name,
-            gstin: supplier.gstin,
+            // gstin: supplier.gstin || "",
           },
           gstDetails: data.gstDetails || "Against GST",
           items: data.items.map((item, index) => ({
@@ -645,6 +628,7 @@ export default function Purchase() {
       }
 
       setIsModalOpen(false);
+      fetchPurchases(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save purchase", {
         description: error.message || "Please try again",
@@ -657,11 +641,8 @@ export default function Purchase() {
 
   // Refresh data
   const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.info("Refreshing purchase data...");
-    }, 1000);
+    fetchPurchases();
+    toast.info("Refreshing purchase data...");
   };
 
   // Active filters count
@@ -677,6 +658,13 @@ export default function Purchase() {
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+
+  // Get display name for Command dropdowns
+  const getSupplierName = (id: string) => {
+    if (id === "all") return "All Suppliers";
+    const supplier = suppliers.find((s) => s.id.toString() === id);
+    return supplier ? supplier.name : "Select Supplier";
+  };
 
   return (
     <>
@@ -866,38 +854,86 @@ export default function Purchase() {
                             </div>
                           </div>
 
-                          {/* Supplier Filter */}
+                          {/* Supplier Filter - Command Dropdown */}
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="supplier"
-                              className="text-sm font-medium"
-                            >
+                            <Label className="text-sm font-medium">
                               Supplier
                             </Label>
-                            <Select
-                              value={filters.supplier}
-                              onValueChange={(value) =>
-                                handleFilterChange("supplier", value)
-                              }
-                              disabled={isLoading}
+                            <Popover
+                              open={supplierOpen}
+                              onOpenChange={setSupplierOpen}
                             >
-                              <SelectTrigger id="supplier">
-                                <SelectValue placeholder="Select supplier" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  All Suppliers
-                                </SelectItem>
-                                {mockSuppliers.map((supplier) => (
-                                  <SelectItem
-                                    key={supplier.id}
-                                    value={supplier.id.toString()}
-                                  >
-                                    {supplier.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={supplierOpen}
+                                  className="w-full justify-between"
+                                  disabled={isLoading}
+                                >
+                                  {getSupplierName(filters.supplier)}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search suppliers..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      No supplier found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                          handleFilterChange("supplier", "all");
+                                          setSupplierOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.supplier === "all"
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        All Suppliers
+                                      </CommandItem>
+                                      {suppliers.map((supplier) => (
+                                        <CommandItem
+                                          key={supplier.id}
+                                          value={supplier.id.toString()}
+                                          onSelect={() => {
+                                            handleFilterChange(
+                                              "supplier",
+                                              supplier.id.toString(),
+                                            );
+                                            setSupplierOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filters.supplier ===
+                                                supplier.id.toString()
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {supplier.name}
+                                          {supplier.phoneNo && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              ({supplier.phoneNo})
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
                           {/* Amount Range Filter */}
@@ -1180,7 +1216,7 @@ export default function Purchase() {
                                     {purchase.supplier.name}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    GSTIN: {purchase.supplier.gstin}
+                                    {/* GSTIN: {purchase.supplier.gstin} */}
                                   </p>
                                 </div>
                               </TableCell>
@@ -1377,34 +1413,3 @@ export default function Purchase() {
     </>
   );
 }
-
-// Date utility functions
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch (error) {
-      // Continue to next format
-    }
-  }
-
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};

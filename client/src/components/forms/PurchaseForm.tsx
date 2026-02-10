@@ -1,4 +1,3 @@
-// components/forms/PurchaseForm.tsx
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,10 +50,10 @@ import {
   Check,
   IndianRupee,
   Layers,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CustomDateInput } from "../custom_ui/CustomDateInput";
 import {
   Table,
   TableBody,
@@ -65,14 +64,9 @@ import {
 } from "@/components/ui/table";
 import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "./BatchSelection";
+import { useActiveLists } from "@/hooks/useActiveLists";
 
-// Mock data
-const mockSuppliers = [
-  { id: 1, name: "MARINO FOOD PRODUCTS", gstin: "27ABCDE1234F1Z5" },
-  { id: 2, name: "ABC Suppliers Pvt. Ltd.", gstin: "27XYZAB1234F1Z6" },
-  { id: 3, name: "Global Distributors", gstin: "27GLBAL1234F1Z7" },
-];
-
+// Mock product data (you might want to fetch this from Redux/API)
 const mockProducts = [
   {
     id: 1,
@@ -185,9 +179,9 @@ const defaultValues: PurchaseFormData = {
 
 // Sample data for testing
 const sampleData: PurchaseFormData = {
-  invoiceDate: "2024-01-15",
+  invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 1,
-  invoiceNo: "501622",
+  invoiceNo: `P${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}001`,
   gstDetails: "Against GST",
   items: [
     {
@@ -256,6 +250,9 @@ export default function PurchaseForm({
     description: string;
   } | null>(null);
 
+  // Get data from Redux store
+  const { suppliers } = useActiveLists();
+
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema) as any,
     defaultValues,
@@ -322,9 +319,9 @@ export default function PurchaseForm({
     }
   }, [editingPurchase, form]);
 
-  // Helper functions
+  // Helper functions using Redux data
   const findSupplierName = (supplierId: number) => {
-    const supplier = mockSuppliers.find((s) => s.id === supplierId);
+    const supplier = suppliers.find((s) => s.id === supplierId);
     return supplier ? supplier.name : "Select supplier";
   };
 
@@ -584,19 +581,23 @@ export default function PurchaseForm({
                           Invoice Date *
                         </FormLabel>
                         <FormControl>
-                          <CustomDateInput
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="dd/mm/yyyy or select"
-                            disabled={isSubmitting}
-                          />
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="date"
+                              value={field.value}
+                              onChange={field.onChange}
+                              className="pl-10"
+                              disabled={isSubmitting}
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Supplier Dropdown */}
+                  {/* Supplier Dropdown - Command Component */}
                   <FormField
                     control={form.control}
                     name="supplierId"
@@ -634,19 +635,25 @@ export default function PurchaseForm({
                               <CommandList>
                                 <CommandEmpty>No supplier found.</CommandEmpty>
                                 <CommandGroup>
-                                  {mockSuppliers.map((supplier) => (
+                                  {suppliers.map((supplier) => (
                                     <CommandItem
                                       key={supplier.id}
-                                      value={`${supplier.id} ${supplier.name}`}
+                                      value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
                                       onSelect={() => {
                                         field.onChange(supplier.id);
                                         setSupplierOpen(false);
                                       }}
                                     >
                                       <div className="flex flex-col">
-                                        <span>{supplier.name}</span>
+                                        <span className="font-medium">
+                                          {supplier.name}
+                                        </span>
                                         <span className="text-xs text-muted-foreground">
-                                          GSTIN: {supplier.gstin}
+                                          {supplier.phoneNo &&
+                                            `${supplier.phoneNo} • `}
+                                          {supplier.email &&
+                                            `${supplier.email} • `}
+                                          {supplier.address}
                                         </span>
                                       </div>
                                       <Check

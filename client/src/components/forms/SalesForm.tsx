@@ -54,6 +54,7 @@ import {
   IndianRupee,
   Layers,
   Building,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -68,77 +69,10 @@ import {
 } from "@/components/ui/table";
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "./BatchSelection";
+import { useActiveLists } from "@/hooks/useActiveLists";
+import { format } from "date-fns";
 
-// Mock data
-const mockAreas = [
-  { id: 1, name: "Mumbai Central", code: "MUM-C" },
-  { id: 2, name: "Andheri East", code: "AND-E" },
-  { id: 3, name: "Bandra West", code: "BAN-W" },
-  { id: 4, name: "Thane", code: "THN" },
-  { id: 5, name: "Pune", code: "PUN" },
-];
-
-const mockCustomers = [
-  {
-    id: 1,
-    name: "Reliance Fresh",
-    code: "C001",
-    address: "Mumbai Central",
-    areaId: 1,
-  },
-  { id: 2, name: "D-Mart", code: "C002", address: "Andheri East", areaId: 2 },
-  {
-    id: 3,
-    name: "More Supermarket",
-    code: "C003",
-    address: "Bandra West",
-    areaId: 3,
-  },
-  { id: 4, name: "Big Bazaar", code: "C004", address: "Thane", areaId: 4 },
-  { id: 5, name: "Star Bazaar", code: "C005", address: "Pune", areaId: 5 },
-];
-
-const mockVans = [
-  {
-    id: 1,
-    name: "Delivery Van 1",
-    number: "MH01AB1234",
-    driverName: "Rajesh Kumar",
-  },
-  {
-    id: 2,
-    name: "Delivery Van 2",
-    number: "MH01CD5678",
-    driverName: "Suresh Patel",
-  },
-  {
-    id: 3,
-    name: "Delivery Van 3",
-    number: "MH01EF9012",
-    driverName: "Mahesh Sharma",
-  },
-  {
-    id: 4,
-    name: "Sales Van 1",
-    number: "MH02GH3456",
-    driverName: "Ramesh Singh",
-  },
-  {
-    id: 5,
-    name: "Sales Van 2",
-    number: "MH02IJ7890",
-    driverName: "Vikram Yadav",
-  },
-];
-
-const mockSalesmen = [
-  { id: 1, name: "Amit Sharma", code: "S001", areaId: 1 },
-  { id: 2, name: "Rahul Verma", code: "S002", areaId: 2 },
-  { id: 3, name: "Sandeep Patel", code: "S003", areaId: 3 },
-  { id: 4, name: "Vikas Singh", code: "S004", areaId: 4 },
-  { id: 5, name: "Raj Kumar", code: "S005", areaId: 5 },
-];
-
+// Mock product data (you might want to fetch this from Redux as well)
 const mockProducts = [
   {
     id: 1,
@@ -259,13 +193,13 @@ const defaultValues: SalesFormData = {
 
 // Sample data for testing
 const sampleData: SalesFormData = {
-  invoiceDate: "2024-01-15",
+  invoiceDate: new Date().toISOString().split("T")[0],
   areaId: 1,
   customerId: 1,
   vanId: 1,
   salesmanId: 1,
-  address: "Mumbai Central",
-  invoiceNo: "S501622",
+  address: "Sample Address",
+  invoiceNo: `S${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}001`,
   gstDetails: "Against GST",
   items: [
     {
@@ -337,6 +271,9 @@ export default function SalesForm({
     description: string;
   } | null>(null);
 
+  // Get data from Redux store
+  const { areas, customers, salesmen, vans } = useActiveLists();
+
   const form = useForm<SalesFormData>({
     resolver: zodResolver(salesSchema) as any,
     defaultValues,
@@ -405,25 +342,29 @@ export default function SalesForm({
     }
   }, [editingSales, form]);
 
-  // Helper functions
+  // Helper functions using Redux data
   const findAreaName = (areaId: number) => {
-    const area = mockAreas.find((a) => a.id === areaId);
-    return area ? `${area.name} (${area.code})` : "Select area";
+    const area = areas.find((a) => a.id === areaId);
+    return area
+      ? `${area.name} (${area.city || area.state || "N/A"})`
+      : "Select area";
   };
 
   const findCustomerName = (customerId: number) => {
-    const customer = mockCustomers.find((c) => c.id === customerId);
-    return customer ? `${customer.name} (${customer.code})` : "Select customer";
+    const customer = customers.find((c) => c.id === customerId);
+    return customer
+      ? `${customer.companyName || customer.personName}`
+      : "Select customer";
   };
 
   const findVanName = (vanId: number) => {
-    const van = mockVans.find((v) => v.id === vanId);
-    return van ? `${van.name} (${van.number})` : "Select van";
+    const van = vans.find((v) => v.id === vanId);
+    return van ? `${van.name} (${van.vehicleNo || "No Plate"})` : "Select van";
   };
 
   const findSalesmanName = (salesmanId: number) => {
-    const salesman = mockSalesmen.find((s) => s.id === salesmanId);
-    return salesman ? `${salesman.name} (${salesman.code})` : "Select salesman";
+    const salesman = salesmen.find((s) => s.id === salesmanId);
+    return salesman ? `${salesman.name}` : "Select salesman";
   };
 
   const findProductName = (productId: number) => {
@@ -433,34 +374,22 @@ export default function SalesForm({
       : "Select product";
   };
 
-  // Handle area change to filter customers and salesmen
+  // Handle area change (removed filtering logic for customers and salesmen)
   useEffect(() => {
-    if (areaId) {
-      // Reset customer and salesman if they don't belong to selected area
-      const currentCustomer = mockCustomers.find((c) => c.id === customerId);
-      if (currentCustomer && currentCustomer.areaId !== areaId) {
-        form.setValue("customerId", 0);
-        form.setValue("address", "");
-      }
-
-      const currentSalesman = mockSalesmen.find(
-        (s) => s.id === form.getValues("salesmanId"),
-      );
-      if (currentSalesman && currentSalesman.areaId !== areaId) {
-        form.setValue("salesmanId", 0);
-      }
-    }
-  }, [areaId, customerId, form]);
+    // We're removing the resetting of customer and salesman based on area
+    // Customers and salesmen will now remain independent of area selection
+    // This useEffect is kept for any other area-related logic if needed
+  }, [areaId, form, areas]);
 
   // Handle customer change to update address
   useEffect(() => {
     if (customerId) {
-      const customer = mockCustomers.find((c) => c.id === customerId);
+      const customer = customers.find((c) => c.id === customerId);
       if (customer) {
-        form.setValue("address", customer.address);
+        form.setValue("address", customer.address || "");
       }
     }
-  }, [customerId, form]);
+  }, [customerId, form, customers]);
 
   // Handle item changes
   const handleItemChange = (
@@ -523,7 +452,7 @@ export default function SalesForm({
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.sRate.toFixed(2)} | Qty: A=${aQty}, M=${mQty}`,
+        description: `Rate: ₹${batch.sRate} | Qty: A=${aQty}, M=${mQty}`,
       });
 
       // Clear pending selection
@@ -709,19 +638,23 @@ export default function SalesForm({
                           Invoice Date *
                         </FormLabel>
                         <FormControl>
-                          <CustomDateInput
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="dd/mm/yyyy or select"
-                            disabled={isSubmitting}
-                          />
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="date"
+                              value={field.value}
+                              onChange={field.onChange}
+                              className="pl-10"
+                              disabled={isSubmitting}
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Area Dropdown */}
+                  {/* Area Dropdown - Command Component */}
                   <FormField
                     control={form.control}
                     name="areaId"
@@ -754,19 +687,24 @@ export default function SalesForm({
                               <CommandList>
                                 <CommandEmpty>No area found.</CommandEmpty>
                                 <CommandGroup>
-                                  {mockAreas.map((area) => (
+                                  {areas.map((area) => (
                                     <CommandItem
                                       key={area.id}
-                                      value={`${area.id} ${area.name} ${area.code}`}
+                                      value={`${area.id} ${area.name} ${area.city || ""}`}
                                       onSelect={() => {
                                         field.onChange(area.id);
                                         setAreaOpen(false);
                                       }}
                                     >
                                       <div className="flex flex-col">
-                                        <span>{area.name}</span>
+                                        <span className="font-medium">
+                                          {area.name}
+                                        </span>
                                         <span className="text-xs text-muted-foreground">
-                                          Code: {area.code}
+                                          {area.city && `${area.city}, `}
+                                          {area.state ||
+                                            area.region ||
+                                            area.description}
                                         </span>
                                       </div>
                                       <Check
@@ -789,7 +727,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Customer Dropdown */}
+                  {/* Customer Dropdown - Command Component */}
                   <FormField
                     control={form.control}
                     name="customerId"
@@ -810,13 +748,11 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || !areaId}
+                                disabled={isSubmitting}
                               >
                                 {field.value
                                   ? findCustomerName(field.value)
-                                  : areaId
-                                    ? "Select customer"
-                                    : "Select area first"}
+                                  : "Select customer"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </FormControl>
@@ -827,41 +763,36 @@ export default function SalesForm({
                               <CommandList>
                                 <CommandEmpty>No customer found.</CommandEmpty>
                                 <CommandGroup>
-                                  {mockCustomers
-                                    .filter(
-                                      (customer) =>
-                                        !areaId || customer.areaId === areaId,
-                                    )
-                                    .map((customer) => (
-                                      <CommandItem
-                                        key={customer.id}
-                                        value={`${customer.id} ${customer.name} ${customer.code}`}
-                                        onSelect={() => {
-                                          field.onChange(customer.id);
-                                          setCustomerOpen(false);
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{customer.name}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            Code: {customer.code} | Area:{" "}
-                                            {
-                                              mockAreas.find(
-                                                (a) => a.id === customer.areaId,
-                                              )?.name
-                                            }
-                                          </span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            customer.id === field.value
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ))}
+                                  {customers.map((customer) => (
+                                    <CommandItem
+                                      key={customer.id}
+                                      value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
+                                      onSelect={() => {
+                                        field.onChange(customer.id);
+                                        setCustomerOpen(false);
+                                      }}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {customer.companyName ||
+                                            customer.personName}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {customer.phoneNo &&
+                                            `${customer.phoneNo} • `}
+                                          {customer.city || customer.address}
+                                        </span>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          customer.id === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
                                 </CommandGroup>
                               </CommandList>
                             </Command>
@@ -895,7 +826,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Van Dropdown */}
+                  {/* Van Dropdown - Command Component */}
                   <FormField
                     control={form.control}
                     name="vanId"
@@ -928,20 +859,23 @@ export default function SalesForm({
                               <CommandList>
                                 <CommandEmpty>No van found.</CommandEmpty>
                                 <CommandGroup>
-                                  {mockVans.map((van) => (
+                                  {vans.map((van) => (
                                     <CommandItem
                                       key={van.id}
-                                      value={`${van.id} ${van.name} ${van.number}`}
+                                      value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
                                       onSelect={() => {
                                         field.onChange(van.id);
                                         setVanOpen(false);
                                       }}
                                     >
                                       <div className="flex flex-col">
-                                        <span>{van.name}</span>
+                                        <span className="font-medium">
+                                          {van.name}
+                                        </span>
                                         <span className="text-xs text-muted-foreground">
-                                          Number: {van.number} | Driver:{" "}
-                                          {van.driverName}
+                                          {van.vehicleNo &&
+                                            `Vehicle: ${van.vehicleNo} • `}
+                                          {van.model && `Model: ${van.model}`}
                                         </span>
                                       </div>
                                       <Check
@@ -964,7 +898,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Salesman Dropdown */}
+                  {/* Salesman Dropdown - Command Component */}
                   <FormField
                     control={form.control}
                     name="salesmanId"
@@ -985,13 +919,11 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || !areaId}
+                                disabled={isSubmitting}
                               >
                                 {field.value
                                   ? findSalesmanName(field.value)
-                                  : areaId
-                                    ? "Select salesman"
-                                    : "Select area first"}
+                                  : "Select salesman"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </FormControl>
@@ -1002,41 +934,37 @@ export default function SalesForm({
                               <CommandList>
                                 <CommandEmpty>No salesman found.</CommandEmpty>
                                 <CommandGroup>
-                                  {mockSalesmen
-                                    .filter(
-                                      (salesman) =>
-                                        !areaId || salesman.areaId === areaId,
-                                    )
-                                    .map((salesman) => (
-                                      <CommandItem
-                                        key={salesman.id}
-                                        value={`${salesman.id} ${salesman.name} ${salesman.code}`}
-                                        onSelect={() => {
-                                          field.onChange(salesman.id);
-                                          setSalesmanOpen(false);
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{salesman.name}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            Code: {salesman.code} | Area:{" "}
-                                            {
-                                              mockAreas.find(
-                                                (a) => a.id === salesman.areaId,
-                                              )?.name
-                                            }
-                                          </span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            salesman.id === field.value
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ))}
+                                  {salesmen.map((salesman) => (
+                                    <CommandItem
+                                      key={salesman.id}
+                                      value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
+                                      onSelect={() => {
+                                        field.onChange(salesman.id);
+                                        setSalesmanOpen(false);
+                                      }}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {salesman.name}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {salesman.phoneNo &&
+                                            `${salesman.phoneNo} • `}
+                                          {salesman.email &&
+                                            `${salesman.email} • `}
+                                          {salesman.area}
+                                        </span>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          salesman.id === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
                                 </CommandGroup>
                               </CommandList>
                             </Command>

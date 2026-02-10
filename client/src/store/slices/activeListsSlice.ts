@@ -11,18 +11,20 @@ import {
   productCompanyService,
   salesmanService,
   vanService,
-  accountService
+  accountService,
 } from "@/services";
-import {
-  type Account,
-  type Area,
-  type Customer,
-  type ProductCompany,
-  type Salesman,
-  type Unit,
-  type Van,
-  type ProductGroup,
-  type Product,
+
+import type {
+  Account,
+  Area,
+  Customer,
+  ProductCompany,
+  Salesman,
+  Unit,
+  Van,
+  ProductGroup,
+  Product,
+  Supplier,
 } from "@/types";
 
 interface ActiveListsState {
@@ -71,6 +73,11 @@ interface ActiveListsState {
     loading: boolean;
     error: string | null;
   };
+  supplier: {
+    data: Supplier[];
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 const initialState: ActiveListsState = {
@@ -82,7 +89,8 @@ const initialState: ActiveListsState = {
   units: { data: [], loading: false, error: null },
   vans: { data: [], loading: false, error: null },
   groups: { data: [], loading: false, error: null },
-  products:{data:[],loading:false,error:null}
+  products: { data: [], loading: false, error: null },
+  supplier: { data: [], loading: false, error: null },
 };
 
 // Async thunks for each resource
@@ -201,6 +209,18 @@ export const fetchActiveProducts = createAsyncThunk(
     }
   },
 );
+export const fetchActiveSuppliers = createAsyncThunk(
+  "activeLists/fetchActiveSuppliers",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await supplierService.getActiveSuppliers();
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch suppliers",
+      );
+    }
+  },
+);
 
 // Master thunk to fetch all active lists
 export const fetchAllActiveLists = createAsyncThunk(
@@ -215,7 +235,8 @@ export const fetchAllActiveLists = createAsyncThunk(
       dispatch(fetchActiveUnits()),
       dispatch(fetchActiveVans()),
       dispatch(fetchActiveProductGroups()),
-      dispatch(fetchActiveProducts())
+      dispatch(fetchActiveProducts()),
+      dispatch(fetchActiveSuppliers()),
     ]);
   },
 );
@@ -252,9 +273,12 @@ const activeListsSlice = createSlice({
     resetGroups: (state) => {
       state.groups = initialState.groups;
     },
-    resetProducts:(state)=>{
+    resetProducts: (state) => {
       state.products = initialState.products;
-    }
+    },
+    resetSuppliers: (state) => {
+      state.supplier = initialState.supplier;
+    },
   },
   extraReducers: (builder) => {
     // Accounts
@@ -391,7 +415,21 @@ const activeListsSlice = createSlice({
         state.products.loading = false;
         state.products.error = action.payload as string;
       });
-    },
+    //Suppliers
+    builder
+      .addCase(fetchActiveSuppliers.pending, (state) => {
+        state.supplier.loading = true;
+        state.supplier.error = null;
+      })
+      .addCase(fetchActiveSuppliers.fulfilled, (state, action) => {
+        state.supplier.loading = false;
+        state.supplier.data = action.payload;
+      })
+      .addCase(fetchActiveSuppliers.rejected, (state, action) => {
+        state.supplier.loading = false;
+        state.supplier.error = action.payload as string;
+      });
+  },
 });
 
 export const {
@@ -404,6 +442,7 @@ export const {
   resetUnits,
   resetVans,
   resetGroups,
+  resetSuppliers,
 } = activeListsSlice.actions;
 
 export default activeListsSlice.reducer;

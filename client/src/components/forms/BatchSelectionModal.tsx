@@ -184,7 +184,7 @@ export default function BatchSelectionModal({
     setSelectedBatch(batch);
     setShowBatchError(false);
     toast.success(`Batch ${batch.batchNo} selected`, {
-      description: `Rate: ₹${batch.sRate.toFixed(2)} | MRP: ₹${batch.mrp.toFixed(2)}`,
+      description: `Rate: ₹${batch.sRate} | MRP: ₹${batch.mrp}`,
     });
   };
 
@@ -324,9 +324,9 @@ export default function BatchSelectionModal({
               </Badge>
               <span className="text-sm font-medium flex items-center">
                 <IndianRupee className="h-3 w-3 mr-1" />
-                {selectedBatch.sRate.toFixed(2)} × {aQty} =
+                {selectedBatch.sRate} × {aQty} =
                 <span className="ml-1 font-bold">
-                  ₹{(selectedBatch.sRate * aQty).toFixed(2)}
+                  ₹{(selectedBatch.sRate * aQty)}
                 </span>
               </span>
             </div>
@@ -488,7 +488,7 @@ export default function BatchSelectionModal({
                           <div className="flex items-center">
                             <IndianRupee className="h-3 w-3 mr-1 text-green-600" />
                             <span className="font-bold text-green-700">
-                              {batch.sRate.toFixed(2)}
+                              {batch.sRate}
                             </span>
                           </div>
                         </TableCell>
@@ -496,7 +496,7 @@ export default function BatchSelectionModal({
                           <div className="flex items-center">
                             <IndianRupee className="h-3 w-3 mr-1 text-muted-foreground" />
                             <span className="font-medium">
-                              {batch.lastSRate.toFixed(2)}
+                              {batch.lastSRate}
                             </span>
                           </div>
                         </TableCell>
@@ -629,7 +629,7 @@ export default function BatchSelectionModal({
                   <span className="flex items-center">
                     <IndianRupee className="h-3 w-3 mr-1" />
                     <span className="font-medium">
-                      {selectedBatch.sRate.toFixed(2)} × {aQty} = ₹
+                      {selectedBatch.sRate} × {aQty} = ₹
                       {(selectedBatch.sRate * aQty).toFixed(2)}
                     </span>
                   </span>

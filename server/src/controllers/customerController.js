@@ -38,7 +38,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
   const existingCustomer = await prisma.customer.findFirst({
     where: {
       phoneNo,
-      deleted: false,
+      // deleted: false,
     },
   });
 

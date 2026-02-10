@@ -28,7 +28,7 @@ export const createSupplier = asyncHandler(async (req, res) => {
   const existingSupplier = await prisma.supplier.findFirst({
     where: {
       phoneNo,
-      deleted: false,
+      // deleted: false,
     },
   });
 
