@@ -52,6 +52,62 @@
   --sidebar-border: #e5e7eb;
   --sidebar-ring: #3b82f6;
   
+  /* Summary Section Colors - Light Theme */
+  --summary-bg-1: #ecfdf5; /* Green - Gross Amount */
+  --summary-border-1: #d1fae5;
+  --summary-text-1: #065f46;
+  --summary-icon-1: #10b981;
+  
+  --summary-bg-2: #fef3c7; /* Amber - Box/Unit */
+  --summary-border-2: #fde68a;
+  --summary-text-2: #92400e;
+  --summary-icon-2: #f59e0b;
+  
+  --summary-bg-3: #dbeafe; /* Blue - CESS/INS */
+  --summary-border-3: #bfdbfe;
+  --summary-text-3: #1e40af;
+  --summary-icon-3: #3b82f6;
+  
+  --summary-bg-4: #f3e8ff; /* Purple - Scheme 1 */
+  --summary-border-4: #e9d5ff;
+  --summary-text-4: #6b21a8;
+  --summary-icon-4: #a855f7;
+  
+  --summary-bg-5: #fee2e2; /* Rose - Discount % */
+  --summary-border-5: #fecaca;
+  --summary-text-5: #991b1b;
+  --summary-icon-5: #ef4444;
+  
+  --summary-bg-6: #e0f2fe; /* Sky - Tax Amount */
+  --summary-border-6: #bae6fd;
+  --summary-text-6: #0369a1;
+  --summary-icon-6: #0ea5e9;
+  
+  --summary-bg-7: #dcfce7; /* Lime - Add Amount */
+  --summary-border-7: #bbf7d0;
+  --summary-text-7: #166534;
+  --summary-icon-7: #22c55e;
+  
+  --summary-bg-8: #ffedd5; /* Orange - Credit Amount */
+  --summary-border-8: #fed7aa;
+  --summary-text-8: #9a3412;
+  --summary-icon-8: #f97316;
+  
+  --summary-bg-final: #1e40af; /* Indigo - Final Amount */
+  --summary-border-final: #1e3a8a;
+  --summary-text-final: #ffffff;
+  --summary-icon-final: #ffffff;
+  
+  /* Summary Container Colors */
+  --summary-container-bg: #f8fafc;
+  --summary-container-border: #e2e8f0;
+  --summary-container-text: #1e293b;
+  
+  /* Remarks Container Colors */
+  --remarks-bg: #eff6ff;
+  --remarks-border: #dbeafe;
+  --remarks-text: #1e40af;
+  
   /* Additional colors for consistency */
   --text: #000000;
   --heading: #111827;
@@ -140,6 +196,62 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #374151;
   --sidebar-ring: #60a5fa;
+  
+  /* Summary Section Colors - Dark Theme */
+  --summary-bg-1: #022c22; /* Green - Gross Amount */
+  --summary-border-1: #065f46;
+  --summary-text-1: #a7f3d0;
+  --summary-icon-1: #10b981;
+  
+  --summary-bg-2: #431407; /* Amber - Box/Unit */
+  --summary-border-2: #92400e;
+  --summary-text-2: #fed7aa;
+  --summary-icon-2: #f59e0b;
+  
+  --summary-bg-3: #172554; /* Blue - CESS/INS */
+  --summary-border-3: #1e40af;
+  --summary-text-3: #bfdbfe;
+  --summary-icon-3: #60a5fa;
+  
+  --summary-bg-4: #3b0764; /* Purple - Scheme 1 */
+  --summary-border-4: #6b21a8;
+  --summary-text-4: #e9d5ff;
+  --summary-icon-4: #a855f7;
+  
+  --summary-bg-5: #450a0a; /* Rose - Discount % */
+  --summary-border-5: #991b1b;
+  --summary-text-5: #fecaca;
+  --summary-icon-5: #ef4444;
+  
+  --summary-bg-6: #0c4a6e; /* Sky - Tax Amount */
+  --summary-border-6: #0369a1;
+  --summary-text-6: #bae6fd;
+  --summary-icon-6: #0ea5e9;
+  
+  --summary-bg-7: #052e16; /* Lime - Add Amount */
+  --summary-border-7: #166534;
+  --summary-text-7: #bbf7d0;
+  --summary-icon-7: #22c55e;
+  
+  --summary-bg-8: #431407; /* Orange - Credit Amount */
+  --summary-border-8: #9a3412;
+  --summary-text-8: #fed7aa;
+  --summary-icon-8: #f97316;
+  
+  --summary-bg-final: #1e3a8a; /* Indigo - Final Amount */
+  --summary-border-final: #1e40af;
+  --summary-text-final: #ffffff;
+  --summary-icon-final: #ffffff;
+  
+  /* Summary Container Colors - Dark Theme */
+  --summary-container-bg: #0f172a;
+  --summary-container-border: #1e293b;
+  --summary-container-text: #f1f5f9;
+  
+  /* Remarks Container Colors - Dark Theme */
+  --remarks-bg: #1e3a8a;
+  --remarks-border: #1e40af;
+  --remarks-text: #dbeafe;
   
   /* Additional colors for dark theme */
   --text: #ffffff;
@@ -237,6 +349,62 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Summary Section Colors */
+  --color-summary-bg-1: var(--summary-bg-1);
+  --color-summary-border-1: var(--summary-border-1);
+  --color-summary-text-1: var(--summary-text-1);
+  --color-summary-icon-1: var(--summary-icon-1);
+  
+  --color-summary-bg-2: var(--summary-bg-2);
+  --color-summary-border-2: var(--summary-border-2);
+  --color-summary-text-2: var(--summary-text-2);
+  --color-summary-icon-2: var(--summary-icon-2);
+  
+  --color-summary-bg-3: var(--summary-bg-3);
+  --color-summary-border-3: var(--summary-border-3);
+  --color-summary-text-3: var(--summary-text-3);
+  --color-summary-icon-3: var(--summary-icon-3);
+  
+  --color-summary-bg-4: var(--summary-bg-4);
+  --color-summary-border-4: var(--summary-border-4);
+  --color-summary-text-4: var(--summary-text-4);
+  --color-summary-icon-4: var(--summary-icon-4);
+  
+  --color-summary-bg-5: var(--summary-bg-5);
+  --color-summary-border-5: var(--summary-border-5);
+  --color-summary-text-5: var(--summary-text-5);
+  --color-summary-icon-5: var(--summary-icon-5);
+  
+  --color-summary-bg-6: var(--summary-bg-6);
+  --color-summary-border-6: var(--summary-border-6);
+  --color-summary-text-6: var(--summary-text-6);
+  --color-summary-icon-6: var(--summary-icon-6);
+  
+  --color-summary-bg-7: var(--summary-bg-7);
+  --color-summary-border-7: var(--summary-border-7);
+  --color-summary-text-7: var(--summary-text-7);
+  --color-summary-icon-7: var(--summary-icon-7);
+  
+  --color-summary-bg-8: var(--summary-bg-8);
+  --color-summary-border-8: var(--summary-border-8);
+  --color-summary-text-8: var(--summary-text-8);
+  --color-summary-icon-8: var(--summary-icon-8);
+  
+  --color-summary-bg-final: var(--summary-bg-final);
+  --color-summary-border-final: var(--summary-border-final);
+  --color-summary-text-final: var(--summary-text-final);
+  --color-summary-icon-final: var(--summary-icon-final);
+  
+  /* Summary Container Colors */
+  --color-summary-container-bg: var(--summary-container-bg);
+  --color-summary-container-border: var(--summary-container-border);
+  --color-summary-container-text: var(--summary-container-text);
+  
+  /* Remarks Container Colors */
+  --color-remarks-bg: var(--remarks-bg);
+  --color-remarks-border: var(--remarks-border);
+  --color-remarks-text: var(--remarks-text);
   
   /* Toast colors */
   --color-toast-success-bg: var(--toast-success-bg);
