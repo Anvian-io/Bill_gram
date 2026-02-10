@@ -1,3 +1,4 @@
+// components/forms/PurchaseForm.tsx
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -43,7 +43,6 @@ import {
   Trash2,
   Percent,
   Search,
-  Calendar,
   Package,
   Hash,
   FileText,
@@ -51,6 +50,7 @@ import {
   ChevronsUpDown,
   Check,
   IndianRupee,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { PurchaseFormData } from "@/types/purchase";
+import BatchSelectionModal from "./BatchSelection";
 
 // Mock data
 const mockSuppliers = [
@@ -126,8 +127,8 @@ const purchaseSchema = z.object({
         productCode: z.string().optional(),
         description: z.string().optional(),
         rate: z.coerce.number().min(0, "Rate must be positive"),
-        expiryDate: z.string().optional().nullable(),
-        manufacturingDate: z.string().optional().nullable(),
+        aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
+        mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
         taxRate: z.coerce
           .number()
@@ -194,8 +195,8 @@ const sampleData: PurchaseFormData = {
       productCode: "G6",
       description: "ECLARIS JAR",
       rate: 118.0,
-      expiryDate: "2025-12-31",
-      manufacturingDate: "2024-01-01",
+      aQty: 12,
+      mQty: 12,
       totalAmount: 1416.0,
       taxRate: 5,
       taxAmount: 70.8,
@@ -209,8 +210,8 @@ const sampleData: PurchaseFormData = {
       productCode: "10087",
       description: "CRUNCHY MUNCHY S",
       rate: 3.54,
-      expiryDate: "2025-06-30",
-      manufacturingDate: "2024-01-01",
+      aQty: 1440,
+      mQty: 1440,
       totalAmount: 5097.6,
       taxRate: 5,
       taxAmount: 254.88,
@@ -245,6 +246,15 @@ export default function PurchaseForm({
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
+
+  // State for batch selection modal
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [pendingBatchSelection, setPendingBatchSelection] = useState<{
+    index: number;
+    productId: number;
+    productCode: string;
+    description: string;
+  } | null>(null);
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema) as any,
@@ -337,18 +347,87 @@ export default function PurchaseForm({
     // Update the field
     updatedItems[index] = { ...item, [field]: value };
 
-    // If rate or total amount changes, recalculate tax
-    if (field === "rate" || field === "totalAmount" || field === "taxRate") {
+    // If rate or aQty changes, recalculate total amount and tax
+    if (field === "rate" || field === "aQty") {
       const rate = field === "rate" ? value : item.rate;
-      const totalAmount = field === "totalAmount" ? value : item.totalAmount;
-      const taxRate = field === "taxRate" ? value : item.taxRate;
+      const aQty = field === "aQty" ? value : item.aQty;
+      const taxRate = item.taxRate;
 
-      // Update tax amount based on total amount and tax rate
+      // Calculate total amount and tax
+      const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
+
+      updatedItems[index].totalAmount = parseFloat(totalAmount.toFixed(2));
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+    }
+
+    // If tax rate changes, recalculate tax
+    if (field === "taxRate") {
+      const taxAmount = item.totalAmount * (value / 100);
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+    }
+
+    // If total amount changes, recalculate tax
+    if (field === "totalAmount") {
+      const taxAmount = value * (item.taxRate / 100);
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
     form.setValue("items", updatedItems);
+  };
+
+  // Handle batch selection from modal
+  const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
+    if (pendingBatchSelection) {
+      const { index } = pendingBatchSelection;
+      const updatedItems = [...items];
+      const item = updatedItems[index];
+
+      // Update item with batch information
+      updatedItems[index] = {
+        ...item,
+        rate: batch.pRate,
+        aQty: aQty,
+        mQty: mQty,
+        totalAmount: batch.pRate * aQty,
+        taxAmount: batch.pRate * aQty * (item.taxRate / 100),
+      };
+
+      form.setValue("items", updatedItems);
+
+      toast.success(`Batch applied to ${item.productCode}`, {
+        description: `Rate: ₹${batch.pRate.toFixed(2)} | Qty: A=${aQty}, M=${mQty}`,
+      });
+
+      // Clear pending selection
+      setPendingBatchSelection(null);
+    }
+  };
+
+  // Handle batch modal close
+  const handleBatchModalClose = () => {
+    setBatchModalOpen(false);
+    // Don't clear pendingBatchSelection immediately to allow animation
+    setTimeout(() => {
+      setPendingBatchSelection(null);
+    }, 300);
+  };
+
+  // Open batch selection modal
+  const openBatchModal = (index: number) => {
+    if (!items[index].productId) {
+      toast.error("Please select a product first");
+      return;
+    }
+
+    const item = items[index];
+    setPendingBatchSelection({
+      index,
+      productId: item.productId,
+      productCode: item.productCode || "",
+      description: item.description || "",
+    });
+    setBatchModalOpen(true);
   };
 
   // Add new product row
@@ -358,8 +437,8 @@ export default function PurchaseForm({
       productCode: "",
       description: "",
       rate: 0,
-      expiryDate: null,
-      manufacturingDate: null,
+      aQty: 0,
+      mQty: 0,
       totalAmount: 0,
       taxRate: 5,
       taxAmount: 0,
@@ -379,7 +458,7 @@ export default function PurchaseForm({
     }
   };
 
-  // Handle product selection
+  // Handle product selection - UPDATED TO OPEN BATCH MODAL IMMEDIATELY
   const handleProductSelect = (index: number, productId: number) => {
     const product = mockProducts.find((p) => p.id === productId);
     if (product) {
@@ -391,10 +470,25 @@ export default function PurchaseForm({
         description: product.description,
         rate: product.price,
         taxRate: product.gstRate,
+        aQty: 1,
+        mQty: 1,
         totalAmount: product.price,
         taxAmount: product.price * (product.gstRate / 100),
       };
       form.setValue("items", updatedItems);
+
+      // Close the product dropdown
+      setProductOpen(false);
+      setActiveProductIndex(null);
+
+      // Set pending batch selection and open batch modal
+      setPendingBatchSelection({
+        index,
+        productId: product.id,
+        productCode: product.productCode,
+        description: product.description,
+      });
+      setBatchModalOpen(true);
     }
   };
 
@@ -434,520 +528,180 @@ export default function PurchaseForm({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-[99vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <FileText className="h-6 w-6" />
-              {editingPurchase
-                ? "Edit Purchase Invoice"
-                : "Add New Purchase Invoice"}
-            </DialogTitle>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="min-w-[99vw] max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                {editingPurchase
+                  ? "Edit Purchase Invoice"
+                  : "Add New Purchase Invoice"}
+              </DialogTitle>
 
-            {!editingPurchase && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={loadSampleData}
-                disabled={isSubmitting}
-                className="flex items-center gap-2"
-              >
-                <Package className="h-4 w-4" />
-                Load Sample Data
-              </Button>
-            )}
-          </div>
-
-          <DialogDescription>
-            {editingPurchase
-              ? "Update purchase invoice details"
-              : "Create a new purchase invoice"}
-          </DialogDescription>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit, onError)}
-            className="space-y-6"
-          >
-            {/* Header Section - Full Row */}
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Invoice Details
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                {/* Invoice Date */}
-                <FormField
-                  control={form.control}
-                  name="invoiceDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Invoice Date *</FormLabel>
-                      <FormControl>
-                        <CustomDateInput
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="dd/mm/yyyy or select"
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Supplier Dropdown */}
-                <FormField
-                  control={form.control}
-                  name="supplierId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="text-sm">Supplier Name *</FormLabel>
-                      <Popover
-                        open={supplierOpen}
-                        onOpenChange={setSupplierOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={supplierOpen}
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground",
-                              )}
-                              disabled={isSubmitting}
-                            >
-                              {field.value
-                                ? findSupplierName(field.value)
-                                : "Select supplier"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Search suppliers..." />
-                            <CommandList>
-                              <CommandEmpty>No supplier found.</CommandEmpty>
-                              <CommandGroup>
-                                {mockSuppliers.map((supplier) => (
-                                  <CommandItem
-                                    key={supplier.id}
-                                    value={`${supplier.id} ${supplier.name}`}
-                                    onSelect={() => {
-                                      field.onChange(supplier.id);
-                                      setSupplierOpen(false);
-                                    }}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span>{supplier.name}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        GSTIN: {supplier.gstin}
-                                      </span>
-                                    </div>
-                                    <Check
-                                      className={cn(
-                                        "ml-auto h-4 w-4",
-                                        supplier.id === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Invoice No */}
-                <FormField
-                  control={form.control}
-                  name="invoiceNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Invoice No. *</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="e.g., 501622"
-                            className="pl-10"
-                            {...field}
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* GST Details */}
-                <FormField
-                  control={form.control}
-                  name="gstDetails"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">GST Details</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Against GST"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Products Table Section */}
-            <div className="border-t pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Products</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Add products to the purchase invoice
-                  </p>
-                </div>
+              {!editingPurchase && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={addProductRow}
+                  onClick={loadSampleData}
                   disabled={isSubmitting}
+                  className="flex items-center gap-2"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
+                  <Package className="h-4 w-4" />
+                  Load Sample Data
                 </Button>
-              </div>
-
-              <div className="overflow-x-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-secondary/50">
-                      <TableHead className="font-semibold w-12">Sr</TableHead>
-                      <TableHead className="font-semibold">
-                        Prod Code & Description
-                      </TableHead>
-                      <TableHead className="font-semibold">Rate</TableHead>
-                      <TableHead className="font-semibold">Amount</TableHead>
-                      <TableHead className="font-semibold">Sch1%</TableHead>
-                      <TableHead className="font-semibold">Sch1 amt</TableHead>
-                      <TableHead className="font-semibold">Sch2%</TableHead>
-                      <TableHead className="font-semibold">Sch2 amt</TableHead>
-                      <TableHead className="font-semibold">Tax (%)</TableHead>
-                      <TableHead className="font-semibold">Tax Amt</TableHead>
-                      <TableHead className="font-semibold">
-                        Expiry Date
-                      </TableHead>
-                      <TableHead className="font-semibold">MFG Date</TableHead>
-                      <TableHead className="font-semibold w-16">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence>
-                      {items.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={13}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            No products added. Click "Add Product" to get
-                            started.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        items.map((item, index) => (
-                          <motion.tr
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="hover:bg-secondary/30"
-                          >
-                            <TableCell>{index + 1}</TableCell>
-
-                            {/* Product Selection */}
-                            <TableCell>
-                              <Popover
-                                open={
-                                  productOpen && activeProductIndex === index
-                                }
-                                onOpenChange={(open) => {
-                                  if (open) {
-                                    setActiveProductIndex(index);
-                                  } else {
-                                    setActiveProductIndex(null);
-                                  }
-                                  setProductOpen(open);
-                                }}
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className="w-full justify-between"
-                                    disabled={isSubmitting}
-                                  >
-                                    {item.productId
-                                      ? findProductName(item.productId)
-                                      : "Select product"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-full p-0">
-                                  <Command>
-                                    <CommandInput placeholder="Search products..." />
-                                    <CommandList>
-                                      <CommandEmpty>
-                                        No product found.
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {mockProducts.map((product) => (
-                                          <CommandItem
-                                            key={product.id}
-                                            value={`${product.id} ${product.productCode} ${product.description}`}
-                                            onSelect={() => {
-                                              handleProductSelect(
-                                                index,
-                                                product.id,
-                                              );
-                                              setProductOpen(false);
-                                              setActiveProductIndex(null);
-                                            }}
-                                          >
-                                            <div className="flex flex-col">
-                                              <span className="font-medium">
-                                                {product.productCode}
-                                              </span>
-                                              <span className="text-xs text-muted-foreground">
-                                                {product.description}
-                                              </span>
-                                            </div>
-                                            <Check
-                                              className={cn(
-                                                "ml-auto h-4 w-4",
-                                                product.id === item.productId
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
-                            </TableCell>
-
-                            {/* Rate */}
-                            <TableCell>
-                              <div className="relative">
-                                <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.rate}
-                                  onChange={(e) =>
-                                    handleItemChange(
-                                      index,
-                                      "rate",
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
-                                  className="w-24 pl-7"
-                                  disabled={isSubmitting}
-                                />
-                              </div>
-                            </TableCell>
-
-                            {/* Amount */}
-                            <TableCell>
-                              <div className="relative">
-                                <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.totalAmount}
-                                  onChange={(e) =>
-                                    handleItemChange(
-                                      index,
-                                      "totalAmount",
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
-                                  className="w-24 pl-7"
-                                  disabled={isSubmitting}
-                                />
-                              </div>
-                            </TableCell>
-
-                            {/* Sch1% */}
-                            <TableCell>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.sch1Percent}
-                                  onChange={(e) =>
-                                    handleSchemeChange(
-                                      index,
-                                      "sch1Percent",
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
-                                  className="w-20 pl-6"
-                                  disabled={isSubmitting}
-                                />
-                                <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                              </div>
-                            </TableCell>
-
-                            {/* Sch1 Amount */}
-                            <TableCell>
-                              <div className="font-medium text-sm">
-                                ₹{item.sch1Amount.toFixed(2)}
-                              </div>
-                            </TableCell>
-
-                            {/* Sch2% */}
-                            <TableCell>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.sch2Percent}
-                                  onChange={(e) =>
-                                    handleSchemeChange(
-                                      index,
-                                      "sch2Percent",
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
-                                  className="w-20 pl-6"
-                                  disabled={isSubmitting}
-                                />
-                                <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                              </div>
-                            </TableCell>
-
-                            {/* Sch2 Amount */}
-                            <TableCell>
-                              <div className="font-medium text-sm">
-                                ₹{item.sch2Amount.toFixed(2)}
-                              </div>
-                            </TableCell>
-
-                            {/* Tax Rate */}
-                            <TableCell>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.taxRate}
-                                  onChange={(e) =>
-                                    handleItemChange(
-                                      index,
-                                      "taxRate",
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
-                                  className="w-20 pl-6"
-                                  disabled={isSubmitting}
-                                />
-                                <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                              </div>
-                            </TableCell>
-
-                            {/* Tax Amount */}
-                            <TableCell>
-                              <div className="font-medium text-sm">
-                                ₹{item.taxAmount.toFixed(2)}
-                              </div>
-                            </TableCell>
-
-                            {/* Expiry Date */}
-                            <TableCell>
-                              <CustomDateInput
-                                value={item.expiryDate}
-                                onChange={(value) =>
-                                  handleItemChange(index, "expiryDate", value)
-                                }
-                                placeholder="dd/mm/yyyy"
-                                disabled={isSubmitting}
-                              />
-                            </TableCell>
-
-                            {/* Manufacturing Date */}
-                            <TableCell>
-                              <CustomDateInput
-                                value={item.manufacturingDate}
-                                onChange={(value) =>
-                                  handleItemChange(
-                                    index,
-                                    "manufacturingDate",
-                                    value,
-                                  )
-                                }
-                                placeholder="dd/mm/yyyy"
-                                disabled={isSubmitting}
-                              />
-                            </TableCell>
-
-                            {/* Actions */}
-                            <TableCell>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeProductRow(index)}
-                                disabled={isSubmitting}
-                                className="h-7 w-7 p-0"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TableCell>
-                          </motion.tr>
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </div>
+              )}
             </div>
 
-            {/* Summary Section - Compact */}
-            <div className="border-t pt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                {/* Remarks - Left Side */}
-                <div className="lg:col-span-1">
+            <DialogDescription>
+              {editingPurchase
+                ? "Update purchase invoice details"
+                : "Create a new purchase invoice"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit, onError)}
+              className="space-y-6"
+            >
+              {/* Header Section - Full Row */}
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Invoice Details
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  {/* Invoice Date */}
                   <FormField
                     control={form.control}
-                    name="remarks"
+                    name="invoiceDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">Remarks</FormLabel>
+                        <FormLabel className="text-sm">
+                          Invoice Date *
+                        </FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Enter any additional remarks..."
-                            className="min-h-[80px]"
+                          <CustomDateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="dd/mm/yyyy or select"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Supplier Dropdown */}
+                  <FormField
+                    control={form.control}
+                    name="supplierId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm">
+                          Supplier Name *
+                        </FormLabel>
+                        <Popover
+                          open={supplierOpen}
+                          onOpenChange={setSupplierOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={supplierOpen}
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                                disabled={isSubmitting}
+                              >
+                                {field.value
+                                  ? findSupplierName(field.value)
+                                  : "Select supplier"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search suppliers..." />
+                              <CommandList>
+                                <CommandEmpty>No supplier found.</CommandEmpty>
+                                <CommandGroup>
+                                  {mockSuppliers.map((supplier) => (
+                                    <CommandItem
+                                      key={supplier.id}
+                                      value={`${supplier.id} ${supplier.name}`}
+                                      onSelect={() => {
+                                        field.onChange(supplier.id);
+                                        setSupplierOpen(false);
+                                      }}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span>{supplier.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          GSTIN: {supplier.gstin}
+                                        </span>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          supplier.id === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Invoice No */}
+                  <FormField
+                    control={form.control}
+                    name="invoiceNo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Invoice No. *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="e.g., 501622"
+                              className="pl-10"
+                              {...field}
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* GST Details */}
+                  <FormField
+                    control={form.control}
+                    name="gstDetails"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">GST Details</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Against GST"
                             {...field}
                             disabled={isSubmitting}
                           />
@@ -957,224 +711,607 @@ export default function PurchaseForm({
                     )}
                   />
                 </div>
+              </div>
 
-                {/* Summary - Right Side - Compact and Disabled */}
-                <div className="lg:col-span-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* Row 1 */}
+              {/* Products Table Section */}
+              <div className="border-t pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Products</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Add products to the purchase invoice
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addProductRow}
+                    disabled={isSubmitting}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+
+                <div className="overflow-x-auto border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-secondary/50">
+                        <TableHead className="font-semibold w-12">Sr</TableHead>
+                        <TableHead className="font-semibold">
+                          Prod Code & Description
+                        </TableHead>
+                        <TableHead className="font-semibold">Rate</TableHead>
+                        <TableHead className="font-semibold">A. Qty</TableHead>
+                        <TableHead className="font-semibold">M. Qty</TableHead>
+                        <TableHead className="font-semibold">Amount</TableHead>
+                        <TableHead className="font-semibold">Sch1%</TableHead>
+                        <TableHead className="font-semibold">
+                          Sch1 amt
+                        </TableHead>
+                        <TableHead className="font-semibold">Sch2%</TableHead>
+                        <TableHead className="font-semibold">
+                          Sch2 amt
+                        </TableHead>
+                        <TableHead className="font-semibold">Tax (%)</TableHead>
+                        <TableHead className="font-semibold">Tax Amt</TableHead>
+                        <TableHead className="font-semibold w-20">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence>
+                        {items.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={13}
+                              className="text-center py-8 text-muted-foreground"
+                            >
+                              No products added. Click "Add Product" to get
+                              started.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          items.map((item, index) => (
+                            <motion.tr
+                              key={index}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="hover:bg-secondary/30"
+                            >
+                              <TableCell>{index + 1}</TableCell>
+
+                              {/* Product Selection */}
+                              <TableCell>
+                                <Popover
+                                  open={
+                                    productOpen && activeProductIndex === index
+                                  }
+                                  onOpenChange={(open) => {
+                                    if (open) {
+                                      setActiveProductIndex(index);
+                                    } else {
+                                      setActiveProductIndex(null);
+                                    }
+                                    setProductOpen(open);
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      className="w-full justify-between"
+                                      disabled={isSubmitting}
+                                    >
+                                      {item.productId
+                                        ? findProductName(item.productId)
+                                        : "Select product"}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-full p-0">
+                                    <Command>
+                                      <CommandInput placeholder="Search products..." />
+                                      <CommandList>
+                                        <CommandEmpty>
+                                          No product found.
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                          {mockProducts.map((product) => (
+                                            <CommandItem
+                                              key={product.id}
+                                              value={`${product.id} ${product.productCode} ${product.description}`}
+                                              onSelect={() => {
+                                                handleProductSelect(
+                                                  index,
+                                                  product.id,
+                                                );
+                                              }}
+                                            >
+                                              <div className="flex flex-col">
+                                                <span className="font-medium">
+                                                  {product.productCode}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                  {product.description}
+                                                </span>
+                                              </div>
+                                              <Check
+                                                className={cn(
+                                                  "ml-auto h-4 w-4",
+                                                  product.id === item.productId
+                                                    ? "opacity-100"
+                                                    : "opacity-0",
+                                                )}
+                                              />
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                              </TableCell>
+
+                              {/* Rate */}
+                              <TableCell>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.rate}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "rate",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-24 pl-7"
+                                    disabled={isSubmitting}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* A. Qty */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.aQty}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "aQty",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20"
+                                    disabled={isSubmitting}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* M. Qty */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.mQty}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "mQty",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20"
+                                    disabled={isSubmitting}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* Amount */}
+                              <TableCell>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.totalAmount}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "totalAmount",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-24 pl-7"
+                                    disabled={isSubmitting}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* Sch1% */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.sch1Percent}
+                                    onChange={(e) =>
+                                      handleSchemeChange(
+                                        index,
+                                        "sch1Percent",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20 pl-6"
+                                    disabled={isSubmitting}
+                                  />
+                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                </div>
+                              </TableCell>
+
+                              {/* Sch1 Amount */}
+                              <TableCell>
+                                <div className="font-medium text-sm">
+                                  ₹{item.sch1Amount.toFixed(2)}
+                                </div>
+                              </TableCell>
+
+                              {/* Sch2% */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.sch2Percent}
+                                    onChange={(e) =>
+                                      handleSchemeChange(
+                                        index,
+                                        "sch2Percent",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20 pl-6"
+                                    disabled={isSubmitting}
+                                  />
+                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                </div>
+                              </TableCell>
+
+                              {/* Sch2 Amount */}
+                              <TableCell>
+                                <div className="font-medium text-sm">
+                                  ₹{item.sch2Amount.toFixed(2)}
+                                </div>
+                              </TableCell>
+
+                              {/* Tax Rate */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.taxRate}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "taxRate",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20 pl-6"
+                                    disabled={isSubmitting}
+                                  />
+                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                </div>
+                              </TableCell>
+
+                              {/* Tax Amount */}
+                              <TableCell>
+                                <div className="font-medium text-sm">
+                                  ₹{item.taxAmount.toFixed(2)}
+                                </div>
+                              </TableCell>
+
+                              {/* Actions */}
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openBatchModal(index)}
+                                    disabled={!item.productId || isSubmitting}
+                                    className="h-7 w-7 p-0"
+                                    title="Select Batch"
+                                  >
+                                    <Layers className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeProductRow(index)}
+                                    disabled={isSubmitting}
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Summary Section - Compact */}
+              <div className="border-t pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  {/* Remarks - Left Side */}
+                  <div className="lg:col-span-1">
                     <FormField
                       control={form.control}
-                      name="grossAmount"
+                      name="remarks"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Gross</FormLabel>
+                          <FormLabel className="text-sm">Remarks</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <Textarea
+                              placeholder="Enter any additional remarks..."
+                              className="min-h-[80px]"
                               {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
+                              disabled={isSubmitting}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
-                      name="boxUnit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Box/Unit</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="cessInsurance"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">CESS/INS</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="scheme1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Scheme 1</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Row 2 */}
-                    <FormField
-                      control={form.control}
-                      name="discountPercent"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Disc %</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="tax"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Tax</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="amountAdd"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Add Amt</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="creditAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Credit</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              readOnly
-                              disabled
-                              className="h-8 text-sm"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Final Amount - Full Width */}
-                    <div className="col-span-2 sm:col-span-4 mt-2">
+                  {/* Summary - Right Side - Compact and Disabled */}
+                  <div className="lg:col-span-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Row 1 */}
                       <FormField
                         control={form.control}
-                        name="finalAmount"
+                        name="grossAmount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-bold">
-                              Final Amount
-                            </FormLabel>
+                            <FormLabel className="text-xs">Gross</FormLabel>
                             <FormControl>
-                              <div className="relative">
-                                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  {...field}
-                                  className="pl-10 h-10 text-lg font-bold"
-                                  readOnly
-                                  disabled
-                                />
-                              </div>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
                             </FormControl>
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={form.control}
+                        name="boxUnit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Box/Unit</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="cessInsurance"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">CESS/INS</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="scheme1"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Scheme 1</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Row 2 */}
+                      <FormField
+                        control={form.control}
+                        name="discountPercent"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Disc %</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tax"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Tax</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="amountAdd"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Add Amt</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="creditAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Credit</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                readOnly
+                                disabled
+                                className="h-8 text-sm"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Final Amount - Full Width */}
+                      <div className="col-span-2 sm:col-span-4 mt-2">
+                        <FormField
+                          control={form.control}
+                          name="finalAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-bold">
+                                Final Amount
+                              </FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    className="pl-10 h-10 text-lg font-bold"
+                                    readOnly
+                                    disabled
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? "Saving..."
-                  : editingPurchase
-                    ? "Update Purchase"
-                    : "Create Purchase"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter className="pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? "Saving..."
+                    : editingPurchase
+                      ? "Update Purchase"
+                      : "Create Purchase"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Selection Modal - Opens automatically when product is selected */}
+      {pendingBatchSelection && (
+        <BatchSelectionModal
+          open={batchModalOpen}
+          onOpenChange={handleBatchModalClose}
+          productId={pendingBatchSelection.productId}
+          productCode={pendingBatchSelection.productCode}
+          description={pendingBatchSelection.description}
+          onBatchSelect={handleBatchSelect}
+        />
+      )}
+    </>
   );
 }

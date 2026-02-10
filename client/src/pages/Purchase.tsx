@@ -1,3 +1,4 @@
+// pages/Purchase.tsx (updated imports and mock data)
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -115,7 +116,7 @@ const mockProducts: Product[] = [
   },
 ];
 
-// Mock purchases
+// Mock purchases (updated to remove expiry/manufacturing dates and add quantities)
 const mockPurchases: Purchase[] = [
   {
     id: 1,
@@ -134,8 +135,8 @@ const mockPurchases: Purchase[] = [
         productCode: "G6",
         description: "ECLARIS JAR",
         rate: 118.0,
-        expiryDate: "2025-12-31",
-        manufacturingDate: "2024-01-01",
+        aQty: 12,
+        mQty: 12,
         totalAmount: 1416.0,
         taxRate: 5,
         taxAmount: 70.8,
@@ -150,8 +151,8 @@ const mockPurchases: Purchase[] = [
         productCode: "10087",
         description: "CRUNCHY MUNCHY S",
         rate: 3.54,
-        expiryDate: "2025-06-30",
-        manufacturingDate: "2024-01-01",
+        aQty: 1440,
+        mQty: 1440,
         totalAmount: 5097.6,
         taxRate: 5,
         taxAmount: 254.88,
@@ -192,8 +193,8 @@ const mockPurchases: Purchase[] = [
         productCode: "M50",
         description: "GLUCO-G S RS",
         rate: 3.7,
-        expiryDate: "2025-07-31",
-        manufacturingDate: "2024-02-01",
+        aQty: 720,
+        mQty: 720,
         totalAmount: 2664.0,
         taxRate: 5,
         taxAmount: 133.2,
@@ -208,8 +209,8 @@ const mockPurchases: Purchase[] = [
         productCode: "G13",
         description: "LOLLYPOP BIG JAR S",
         rate: 155.0,
-        expiryDate: "2025-12-31",
-        manufacturingDate: "2024-01-15",
+        aQty: 60,
+        mQty: 60,
         totalAmount: 9300.0,
         taxRate: 5,
         taxAmount: 465.0,
@@ -569,8 +570,8 @@ export default function Purchase() {
             productCode: item.productCode,
             description: item.description,
             rate: item.rate,
-            expiryDate: item.expiryDate,
-            manufacturingDate: item.manufacturingDate,
+            aQty: item.aQty,
+            mQty: item.mQty,
             totalAmount: item.totalAmount,
             taxRate: item.taxRate,
             taxAmount: item.taxAmount,
@@ -614,8 +615,8 @@ export default function Purchase() {
             productCode: item.productCode,
             description: item.description,
             rate: item.rate,
-            expiryDate: item.expiryDate,
-            manufacturingDate: item.manufacturingDate,
+            aQty: item.aQty,
+            mQty: item.mQty,
             totalAmount: item.totalAmount,
             taxRate: item.taxRate,
             taxAmount: item.taxAmount,
@@ -1187,14 +1188,23 @@ export default function Purchase() {
                                 {formatDateTime(purchase.invoiceDate)}
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4 text-muted-foreground" />
-                                  <Badge
-                                    variant="outline"
-                                    className="font-mono"
-                                  >
-                                    {purchase.items.length}
-                                  </Badge>
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                    <Badge
+                                      variant="outline"
+                                      className="font-mono"
+                                    >
+                                      {purchase.items.length} items
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Total Qty:{" "}
+                                    {purchase.items.reduce(
+                                      (sum, item) => sum + item.aQty,
+                                      0,
+                                    )}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">

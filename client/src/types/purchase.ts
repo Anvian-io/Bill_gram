@@ -6,8 +6,8 @@ export interface PurchaseItem {
   productCode: string;
   description: string;
   rate: number;
-  expiryDate: string | null;
-  manufacturingDate: string | null;
+  aQty: number; // Added: A. Qty
+  mQty: number; // Added: M. Qty
   totalAmount: number;
   taxRate: number;
   taxAmount: number;
@@ -57,6 +57,28 @@ export interface Product {
   gstRate: number;
 }
 
+export interface Batch {
+  batchNo: string;
+  mfgDate: string;
+  expDate: string;
+  barcode: string;
+  currentStock: number;
+  tempStock: number;
+  mrp: number;
+  pRate: number;
+  lastPRate: number;
+  pack: number;
+}
+
+export interface PurchaseHistory {
+  batch: string;
+  invoiceNo: string;
+  date: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
 export type PurchaseFormData = {
   invoiceDate: string;
   supplierId: number;
@@ -67,8 +89,8 @@ export type PurchaseFormData = {
     productCode: string;
     description: string;
     rate: number;
-    expiryDate: string | null;
-    manufacturingDate: string | null;
+    aQty: number; // Added: A. Qty
+    mQty: number; // Added: M. Qty
     totalAmount: number;
     taxRate: number;
     taxAmount: number;
