@@ -178,16 +178,18 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
           </Popover>
         </div>
         {inputValue && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10"
-            onClick={handleClear}
-            disabled={disabled}
-            type="button"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex justify-center items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleClear}
+              disabled={disabled}
+              type="button"
+            >
+              <X className="h-4 w-4 text-red-600" />
+            </Button>
+          </div>
         )}
       </div>
     </div>
