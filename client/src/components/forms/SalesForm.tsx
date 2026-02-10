@@ -55,6 +55,11 @@ import {
   Layers,
   Building,
   Calendar,
+  Tag,
+  Gift,
+  Shield,
+  CreditCard,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -1363,243 +1368,363 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Summary Section - Compact */}
+              {/* Summary Section - Colorful and Formal */}
               <div className="border-t pt-6">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
                   <div className="lg:col-span-1">
-                    <FormField
-                      control={form.control}
-                      name="remarks"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">Remarks</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Enter any additional remarks..."
-                              className="min-h-[80px]"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                      <h4 className="font-semibold mb-3 text-blue-800 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Remarks & Notes
+                      </h4>
+                      <FormField
+                        control={form.control}
+                        name="remarks"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Enter any additional remarks, notes, or special instructions..."
+                                className="min-h-[120px] bg-white border-blue-200 focus:border-blue-400"
+                                {...field}
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <p className="text-xs text-blue-600 mt-2">
+                        Add any special instructions or notes for this invoice.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Summary - Right Side - Compact and Disabled */}
+                  {/* Summary - Right Side - Colorful Grid */}
                   <div className="lg:col-span-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {/* Row 1 */}
-                      <FormField
-                        control={form.control}
-                        name="grossAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Gross</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                    <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl p-5 border border-slate-200 shadow-sm">
+                      <h4 className="font-semibold mb-4 text-slate-800 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Invoice Summary
+                      </h4>
 
-                      <FormField
-                        control={form.control}
-                        name="boxUnit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Box/Unit</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Gross Amount */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-emerald-700">
+                              Gross Amount
+                            </span>
+                            <Tag className="h-3 w-3 text-emerald-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="grossAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-emerald-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-emerald-200 text-emerald-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="cessInsurance"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">CESS/INS</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* Box/Unit */}
+                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-amber-700">
+                              Box/Unit
+                            </span>
+                            <Package className="h-3 w-3 text-amber-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="boxUnit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-amber-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-amber-200 text-amber-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="scheme1"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Scheme 1</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* CESS/INS */}
+                        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg p-3 border border-cyan-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-cyan-700">
+                              CESS/INS
+                            </span>
+                            <Shield className="h-3 w-3 text-cyan-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="cessInsurance"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-cyan-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-cyan-200 text-cyan-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      {/* Row 2 */}
-                      <FormField
-                        control={form.control}
-                        name="discountPercent"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Disc %</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* Scheme 1 */}
+                        <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-3 border border-purple-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-purple-700">
+                              Scheme 1
+                            </span>
+                            <Gift className="h-3 w-3 text-purple-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="scheme1"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-purple-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-purple-200 text-purple-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="tax"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Tax</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* Discount % */}
+                        <div className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-lg p-3 border border-rose-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-rose-700">
+                              Discount %
+                            </span>
+                            <Percent className="h-3 w-3 text-rose-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="discountPercent"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="h-8 bg-white/80 border-rose-200 text-rose-700 font-medium text-center"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="amountAdd"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Add Amt</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* Tax */}
+                        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-lg p-3 border border-sky-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-sky-700">
+                              Tax Amount
+                            </span>
+                            <FileText className="h-3 w-3 text-sky-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="tax"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-sky-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-sky-200 text-sky-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="creditAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Credit</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                readOnly
-                                disabled
-                                className="h-8 text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        {/* Add Amount */}
+                        <div className="bg-gradient-to-br from-lime-50 to-green-50 rounded-lg p-3 border border-lime-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-lime-700">
+                              Add Amount
+                            </span>
+                            <Plus className="h-3 w-3 text-lime-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="amountAdd"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-lime-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-lime-200 text-lime-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      {/* Final Amount - Full Width */}
-                      <div className="col-span-2 sm:col-span-4 mt-2">
-                        <FormField
-                          control={form.control}
-                          name="finalAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sm font-bold">
-                                Final Amount
-                              </FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    {...field}
-                                    className="pl-10 h-10 text-lg font-bold"
-                                    readOnly
-                                    disabled
-                                  />
-                                </div>
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+                        {/* Credit Amount */}
+                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-100">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-orange-700">
+                              Credit Amount
+                            </span>
+                            <CreditCard className="h-3 w-3 text-orange-500" />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="creditAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-orange-600" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      readOnly
+                                      disabled
+                                      className="pl-7 h-8 bg-white/80 border-orange-200 text-orange-700 font-medium"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Final Amount - Full Width */}
+                        <div className="col-span-2 md:col-span-4 mt-4">
+                          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-5 border border-blue-600 shadow-md">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <DollarSign className="h-5 w-5 text-white" />
+                                <span className="text-lg font-bold text-white">
+                                  Final Amount
+                                </span>
+                              </div>
+                              <Badge className="bg-white/20 text-white hover:bg-white/30 border-0">
+                                PAYABLE
+                              </Badge>
+                            </div>
+                            <FormField
+                              control={form.control}
+                              name="finalAmount"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-white" />
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        {...field}
+                                        className="pl-12 h-14 text-2xl font-bold bg-white/10 text-white border-white/30 placeholder:text-white/60"
+                                        readOnly
+                                        disabled
+                                      />
+                                    </div>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <p className="text-xs text-white/80 mt-3 flex items-center gap-1">
+                              <span className="font-medium">Note:</span> This is
+                              the total payable amount including all taxes and
+                              adjustments.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <DialogFooter className="pt-4">
+              <DialogFooter className="pt-6">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
+                  className="border-gray-300"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {isSubmitting
                     ? "Saving..."
                     : editingSales
-                      ? "Update Sales"
-                      : "Create Sales"}
+                      ? "Update Sales Invoice"
+                      : "Create Sales Invoice"}
                 </Button>
               </DialogFooter>
             </form>

@@ -18,7 +18,7 @@
   /* Light theme - White/Grey/Blue palette */
   --background: #ffffff;
   --foreground: #000000;
-  --card: #ffffff;
+  --card: rgb(238, 243, 250);
   --card-foreground: #000000;
   --popover: #ffffff;
   --popover-foreground: #000000;
@@ -43,11 +43,11 @@
   --chart-5: #dbeafe;
   
   /* Sidebar colors for light theme */
-  --sidebar: #f9fafb;
+  --sidebar: rgb(238, 243, 250);
   --sidebar-foreground: #111827;
   --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e5e7eb;
+  --sidebar-accent: #4985ff;
   --sidebar-accent-foreground: #111827;
   --sidebar-border: #e5e7eb;
   --sidebar-ring: #3b82f6;

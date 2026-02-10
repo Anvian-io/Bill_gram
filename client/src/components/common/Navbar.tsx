@@ -132,7 +132,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             {/* Header */}
             <div className="flex-shrink-0 flex items-center justify-start h-16 px-4 border-b border-border">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-card">
                   <Menu className="w-5 h-5 text-sidebar-foreground" />
                 </div>
                 <span
@@ -375,9 +375,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             bg-background`}
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
-          <div className="mt-16 flex-1 overflow-auto">
-            {children}
-          </div>
+          <div className="mt-16 flex-1 overflow-auto">{children}</div>
         </main>
       </div>
     </div>
