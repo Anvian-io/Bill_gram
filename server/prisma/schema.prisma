@@ -271,6 +271,24 @@ model Account {
   @@map("accounts")
 }
 
+model Supplier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  phoneNo     String
+  email       String?
+  address     String?
+
+  status      Boolean  @default(true)
+  deleted     Boolean  @default(false)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([phoneNo])
+  @@index([name])
+  @@map("suppliers")
+}
+
 model SchemaVersion {
   version Int @id @default(1)
 }
