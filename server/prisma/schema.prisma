@@ -14,69 +14,70 @@ datasource db {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  username   String   @unique
-  email      String   @unique
-  password   String
-  shop_name  String?
-  phone      String?
-  products   Product[]
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  id           Int            @id @default(autoincrement())
+  username     String         @unique
+  email        String         @unique
+  password     String
+  shop_name    String?
+  phone        String?
+  products     Product[]
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
+  Notification Notification[]
 
   @@map("users")
 }
 
 model Product {
-  id                  Int               @id @default(autoincrement())
-  productCode         String            @unique @map("product_code")
-  productBrand        String            @map("product_brand")
-  description         String
-  hsnSacCode          String            @map("hsn_sac_code")
-  goodsServices       String            @map("goods_services")
-  weight              Float
-  unitId              Int?              @map("unit_id")
-  unit                Unit?             @relation(fields: [unitId], references: [id])
-  productGroupId      Int?              @map("product_group_id")
-  productGroup        ProductGroup?     @relation(fields: [productGroupId], references: [id])
-  productShortName    String?           @map("product_short_name")
-  purchaseUnit        String?           @map("purchase_unit")
-  conversionFactor    Float?            @default(1) @map("conversion_factor")
-  pricePerPcs         Float?            @map("price_per_pcs")
-  productCompanyId    Int?              @map("product_company_id")
-  productCompany      ProductCompany?   @relation(fields: [productCompanyId], references: [id])
-  saleUnit            String?           @map("sale_unit")
-  cartonPack          Int?              @default(1) @map("carton_pack")
-  innerPack           String?           @map("inner_pack")
-  packagingBasic      Boolean           @default(false) @map("packaging_basic")
-  packagingMRP        Boolean           @default(false) @map("packaging_mrp")
-  insuranceTaxBasic   Boolean           @default(false) @map("insurance_tax_basic")
-  insuranceTaxMRP     Boolean           @default(false) @map("insurance_tax_mrp")
-  
+  id                Int             @id @default(autoincrement())
+  productCode       String          @unique @map("product_code")
+  productBrand      String          @map("product_brand")
+  description       String
+  hsnSacCode        String          @map("hsn_sac_code")
+  goodsServices     String          @map("goods_services")
+  weight            Float
+  unitId            Int?            @map("unit_id")
+  unit              Unit?           @relation(fields: [unitId], references: [id])
+  productGroupId    Int?            @map("product_group_id")
+  productGroup      ProductGroup?   @relation(fields: [productGroupId], references: [id])
+  productShortName  String?         @map("product_short_name")
+  purchaseUnit      String?         @map("purchase_unit")
+  conversionFactor  Float?          @default(1) @map("conversion_factor")
+  pricePerPcs       Float?          @map("price_per_pcs")
+  productCompanyId  Int?            @map("product_company_id")
+  productCompany    ProductCompany? @relation(fields: [productCompanyId], references: [id])
+  saleUnit          String?         @map("sale_unit")
+  cartonPack        Int?            @default(1) @map("carton_pack")
+  innerPack         String?         @map("inner_pack")
+  packagingBasic    Boolean         @default(false) @map("packaging_basic")
+  packagingMRP      Boolean         @default(false) @map("packaging_mrp")
+  insuranceTaxBasic Boolean         @default(false) @map("insurance_tax_basic")
+  insuranceTaxMRP   Boolean         @default(false) @map("insurance_tax_mrp")
+
   // GST Details
-  gstRate            Float?            @default(18) @map("gst_rate")
-  gstInclusive       Boolean           @default(true) @map("gst_inclusive")
-  cessRate           Float?            @default(0) @map("cess_rate")
-  hsnChapter         String?           @map("hsn_chapter")
-  gstApplicability   String?           @default("Regular") @map("gst_applicability")
-  
+  gstRate          Float?  @default(18) @map("gst_rate")
+  gstInclusive     Boolean @default(true) @map("gst_inclusive")
+  cessRate         Float?  @default(0) @map("cess_rate")
+  hsnChapter       String? @map("hsn_chapter")
+  gstApplicability String? @default("Regular") @map("gst_applicability")
+
   // Status
-  status              Boolean          @default(true)
-  
+  status Boolean @default(true)
+
   // Main Image
-  mainImage          String?           @map("main_image")
-  
+  mainImage String? @map("main_image")
+
   // Relations
-  userId             Int?
-  user               User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batches            Batch[]
-  relatedImages      ProductImage[]
-  
+  userId        Int?
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batches       Batch[]
+  relatedImages ProductImage[]
+
   // Soft delete
-  deleted            Boolean           @default(false)
-  
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at")
+  deleted Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([productCode])
@@ -89,26 +90,26 @@ model Product {
 }
 
 model Batch {
-  id           Int      @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   // batchNo      String   @unique @map("batch_no")
   batchNo      String?
-  mfgDate      String?  @map("mfg_date")
-  expDate      String?  @map("exp_date")
+  mfgDate      String? @map("mfg_date")
+  expDate      String? @map("exp_date")
   barcode      String
-  basicPrice   Float    @map("basic_price")
-  openingStock Int      @default(0) @map("opening_stock")
+  basicPrice   Float   @map("basic_price")
+  openingStock Int     @default(0) @map("opening_stock")
   mrp          Float
-  purchaseRate Float    @map("purchase_rate")
-  saleRate     Float    @map("sale_rate")
+  purchaseRate Float   @map("purchase_rate")
+  saleRate     Float   @map("sale_rate")
   margin       Float
-  gstAmount    Float?   @default(0) @map("gst_amount")
-  
+  gstAmount    Float?  @default(0) @map("gst_amount")
+
   // Relations
-  productId    Int
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([productId])
   @@index([batchNo])
@@ -117,17 +118,17 @@ model Batch {
 }
 
 model ProductImage {
-  id         Int      @id @default(autoincrement())
-  imageUrl   String   @map("image_url")
-  imageType  String?  @default("related") @map("image_type") // 'main' or 'related'
-  sortOrder  Int?     @default(0) @map("sort_order")
-  
+  id        Int     @id @default(autoincrement())
+  imageUrl  String  @map("image_url")
+  imageType String? @default("related") @map("image_type") // 'main' or 'related'
+  sortOrder Int?    @default(0) @map("sort_order")
+
   // Relations
-  productId  Int
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([productId])
   @@map("product_images")
@@ -194,19 +195,19 @@ model Salesman {
 }
 
 model Customer {
-  id           Int       @id @default(autoincrement())
-  companyName  String    @map("company_name")
-  personName   String    @map("person_name")
-  phoneNo      String    @map("phone_no")
+  id           Int      @id @default(autoincrement())
+  companyName  String   @map("company_name")
+  personName   String   @map("person_name")
+  phoneNo      String   @map("phone_no")
   email        String?
-  customerType String?   @map("customer_type")
+  customerType String?  @map("customer_type")
   city         String?
   address      String
   pincode      String?
-  status       Boolean   @default(true)
-  deleted      Boolean   @default(false)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  status       Boolean  @default(true)
+  deleted      Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@unique([phoneNo])
   @@index([companyName])
@@ -215,16 +216,16 @@ model Customer {
 }
 
 model Area {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   state       String?
   region      String?
   city        String?
   description String?
-  status      Boolean   @default(true)
-  deleted     Boolean   @default(false)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  status      Boolean  @default(true)
+  deleted     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   pincode     String?
 
   @@unique([name])
@@ -235,16 +236,16 @@ model Area {
 }
 
 model Van {
-  id          Int       @id @default(autoincrement())
-  name        String
-  vehicleNo   String?   @map("vehicle_no")
-  model       String?
-  area        String?
-  city        String?
-  status      Boolean   @default(true)
-  deleted     Boolean   @default(false)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  name      String
+  vehicleNo String?  @map("vehicle_no")
+  model     String?
+  area      String?
+  city      String?
+  status    Boolean  @default(true)
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([vehicleNo])
   @@index([area])
@@ -253,41 +254,40 @@ model Van {
 }
 
 model Account {
-  id             Int       @id @default(autoincrement())
-  accountHolder  String    @map("account_holder")
-  ifscCode       String    @map("ifsc_code")
-  bankName       String    @map("bank_name")
-  description    String?
-  qrCode         String?   @map("qr_code")
-  gpayNo         String?   @map("gpay_no")
-  status         Boolean   @default(true)
-  deleted        Boolean   @default(false)
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  accountHolder String   @map("account_holder")
+  ifscCode      String   @map("ifsc_code")
+  bankName      String   @map("bank_name")
+  description   String?
+  qrCode        String?  @map("qr_code")
+  gpayNo        String?  @map("gpay_no")
+  status        Boolean  @default(true)
+  deleted       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@index([ifscCode])
   @@index([bankName])
   @@map("accounts")
 }
 
-model Supplier {
-  id          Int      @id @default(autoincrement())
-  name        String
-  phoneNo     String
-  email       String?
-  address     String?
-
-  status      Boolean  @default(true)
-  deleted     Boolean  @default(false)
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@unique([phoneNo])
-  @@index([name])
-  @@map("suppliers")
-}
-
 model SchemaVersion {
   version Int @id @default(1)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String // 'success', 'warning', 'error', 'info', 'create', 'update', 'delete'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
 }

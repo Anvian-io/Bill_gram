@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { BreadcrumbWrapper } from "../custom_ui/CustomBreadCrumb";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut,Wifi, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import { NotificationsDropdown } from "../Notifications/NotificationsDropdown";
+import { NotificationsDropdown } from "../Notifications/NotificationsDropdown";
 import { useNavigate } from "react-router-dom";
 // import { useTheme } from "../../contexts/ThemeProvider";
+
 
 // Define types
 interface TimeState {
@@ -38,6 +39,17 @@ export function Header({ isExpanded, pages }: HeaderProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   // const { theme } = useTheme();
+  const [wsConnected, setWsConnected] = useState(false);
+
+  useEffect(() => {
+  const handleConnectionChange = (connected: boolean) => {
+    setWsConnected(connected);
+  };
+  
+  // Get initial connection status
+  // You might need to expose a method to get current status from webSocketService
+  // For now, we'll assume it starts disconnected
+});
 
   useEffect(() => {
     // Get user from localStorage
@@ -244,8 +256,17 @@ export function Header({ isExpanded, pages }: HeaderProps) {
 
       {/* Right - Icons & Time */}
       <div className="flex items-center gap-4">
+          {/* WebSocket Status Indicator */}
+  <div className="flex items-center gap-1" title={wsConnected ? "Connected to real-time notifications" : "Disconnected"}>
+    {wsConnected ? (
+      <Wifi className="h-4 w-4 text-green-500" />
+    ) : (
+      <WifiOff className="h-4 w-4 text-red-500" />
+    )}
+  </div>
+
         {/* Notification */}
-        {/* <NotificationsDropdown /> */}
+        <NotificationsDropdown />
 
         {/* Profile with Dropdown */}
         <div className="relative" ref={dropdownRef}>

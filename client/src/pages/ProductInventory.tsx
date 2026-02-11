@@ -64,6 +64,7 @@ import { type Product, type ProductFormData } from "@/types/product";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { useDebounce } from "@/utils/debounce";
 import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { triggerNotification } from "../services/notificationService"; // Import the notification service
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -403,9 +404,11 @@ export default function ProductInventory() {
       }
     } catch (error: any) {
       console.error("Error fetching products:", error);
-      toast.error("Failed to fetch products", {
-        description: error.response?.data?.message || "Please try again later",
-      });
+      triggerNotification(
+        "Error Loading Products",
+        error.response?.data?.message || "Failed to fetch products. Please try again.",
+        "error"
+      );
       setProducts([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -559,12 +562,18 @@ export default function ProductInventory() {
     if (productToDelete) {
       try {
         await productService.deleteProduct(productToDelete.id);
-        toast.success("Product deleted successfully!");
+        triggerNotification(
+          "Product Deleted",
+          `Product "${productToDelete.productBrand}" has been deleted successfully`,
+          "delete"
+        );
         fetchProducts(); // Refresh the list
       } catch (error: any) {
-        toast.error("Failed to delete product", {
-          description: error.response?.data?.message || "Please try again",
-        });
+        triggerNotification(
+          "Delete Failed",
+          error.response?.data?.message || "Failed to delete product. Please try again.",
+          "error"
+        );
       } finally {
         setProductToDelete(null);
         setDeleteOpen(false);
@@ -579,9 +588,11 @@ export default function ProductInventory() {
       setEditingProduct(productDetail);
       setIsModalOpen(true);
     } catch (error: any) {
-      toast.error("Failed to load product details", {
-        description: error.response?.data?.message || "Please try again",
-      });
+      triggerNotification(
+        "Failed to Load Product",
+        error.response?.data?.message || "Failed to load product details.",
+        "error"
+      );
     }
   };
 
@@ -593,20 +604,30 @@ export default function ProductInventory() {
       if (id) {
         // Update existing product
         await productService.updateProduct(id, data);
-        toast.success("Product updated successfully!");
+        triggerNotification(
+          "Product Updated",
+          `Product "${data.productBrand}" has been updated successfully`,
+          "update"
+        );
       } else {
         // Add new product
-        await productService.createProduct(data);
-        toast.success("Product created successfully!");
+        const newProduct = await productService.createProduct(data);
+        triggerNotification(
+          "Product Created",
+          `Product "${data.productBrand}" has been created successfully`,
+          "create"
+        );
       }
 
       setIsModalOpen(false);
       fetchProducts(); // Refresh the list
     } catch (error: any) {
       console.error("Error saving product:", error);
-      toast.error("Failed to save product", {
-        description: error.response?.data?.message || "Please try again",
-      });
+      triggerNotification(
+        "Save Failed",
+        error.response?.data?.message || "Failed to save product. Please try again.",
+        "error"
+      );
       throw error; // Re-throw to let the form know there was an error
     } finally {
       setIsSubmitting(false);
@@ -616,7 +637,11 @@ export default function ProductInventory() {
   // Refresh data
   const handleRefresh = () => {
     fetchProducts();
-    toast.info("Refreshing product data...");
+    triggerNotification(
+      "Refreshing Data",
+      "Refreshing product data...",
+      "info"
+    );
   };
 
   // Active filters count
@@ -989,7 +1014,6 @@ export default function ProductInventory() {
                                   }
                                   placeholder="dd/mm/yyyy or select"
                                   className="pr-10"
-                                  // disabled={isLoading}
                                 />
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -997,7 +1021,6 @@ export default function ProductInventory() {
                                       variant="ghost"
                                       size="icon"
                                       className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                      // disabled={isLoading}
                                     >
                                       <Calendar className="h-4 w-4 text-muted-foreground" />
                                     </Button>
@@ -1024,7 +1047,6 @@ export default function ProductInventory() {
                                     setMfgDateInput("");
                                     clearFilter("mfgDate");
                                   }}
-                                  // disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1046,7 +1068,6 @@ export default function ProductInventory() {
                                   }
                                   placeholder="dd/mm/yyyy or select"
                                   className="pr-10"
-                                  // disabled={isLoading}
                                 />
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -1054,7 +1075,6 @@ export default function ProductInventory() {
                                       variant="ghost"
                                       size="icon"
                                       className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                      // disabled={isLoading}
                                     >
                                       <Calendar className="h-4 w-4 text-muted-foreground" />
                                     </Button>
@@ -1081,7 +1101,6 @@ export default function ProductInventory() {
                                     setExpDateInput("");
                                     clearFilter("expDate");
                                   }}
-                                  // disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>

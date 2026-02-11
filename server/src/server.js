@@ -12,11 +12,17 @@ import vanRoutes from "./route/vanRoutes.js";
 import accountRoutes from "./route/accountRoutes.js";
 import productRoutes from "./route/productRoutes.js";
 import imageRoutes from "./route/imageRoutes.js";
-import supplierRoutes from "./route/supplierRoutes.js";
+import notificationRoutes from "./route/notificationRoutes.js"; // Add this
+import { createServer } from "http";
+import { notificationController } from "./controllers/notificationController.js"; // Add this
 
 const app = express();
 const PORT = 3001;
 
+// Create HTTP server for WebSocket
+const server = createServer(app);
+
+// Middleware
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -49,8 +55,8 @@ const startServer = async () => {
     app.use("/api/accounts", accountRoutes);
     app.use("/api/products", productRoutes);
     app.use("/api/images", imageRoutes);
-    app.use("/api/suppliers", supplierRoutes);
-
+    app.use("/api/notifications", notificationRoutes); // Add this
+    
     // Health check
     app.get("/api/health", (req, res) => {
       res.json({
@@ -61,9 +67,13 @@ const startServer = async () => {
       });
     });
 
+    // Setup WebSocket server
+    notificationController.setupWebSocketServer(server);
+
     // Start server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✅ Backend server running on http://localhost:${PORT}`);
+      console.log(`✅ WebSocket server running on ws://localhost:${PORT}/ws`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
