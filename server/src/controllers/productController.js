@@ -645,7 +645,29 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
       status: true,
       deleted: false,
     },
-    include: {
+    select: {
+      id: true,
+      productCode: true,
+      productBrand: true,
+      productShortName: true,
+      description: true,
+      hsnSacCode: true,
+      goodsServices: true,
+      weight: true,
+      pricePerPcs: true,
+      gstRate: true,
+      gstInclusive: true,
+      cessRate: true,
+      cartonPack: true,
+      innerPack: true,
+      saleUnit: true,
+      purchaseUnit: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      conversionFactor: true,
+      productShortName:true,
+      productBrand:true,
       unit: {
         select: {
           id: true,
@@ -668,109 +690,18 @@ export const getActiveProducts = asyncHandler(async (req, res) => {
           phone: true,
         },
       },
-      batches: {
-        where: {
-          openingStock: { gt: 0 },
-        },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          batchNo: true,
-          mfgDate: true,
-          expDate: true,
-          barcode: true,
-          basicPrice: true,
-          openingStock: true,
-          mrp: true,
-          purchaseRate: true,
-          saleRate: true,
-          margin: true,
-          gstAmount: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      },
-      relatedImages: {
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          imageUrl: true,
-          imageType: true,
-          sortOrder: true,
-        },
-      },
     },
     orderBy: {
       productBrand: "asc",
     },
   });
 
-  // Calculate total stock for each product
-  const productsWithStock = products.map((product) => {
-    // Calculate total opening stock from all batches
-    const totalOpeningStock = product.batches.reduce(
-      (sum, batch) => sum + (batch.openingStock || 0),
-      0,
-    );
-
-    // Calculate available batches count
-    const availableBatchesCount = product.batches.length;
-
-    // Convert image paths to public URLs
-    const relatedImages = product.relatedImages.map((img) => ({
-      ...img,
-      imageUrl: getImageUrl(img.imageUrl),
-    }));
-
-    return {
-      id: product.id,
-      productCode: product.productCode,
-      productBrand: product.productBrand,
-      productShortName: product.productShortName,
-      description: product.description,
-      hsnSacCode: product.hsnSacCode,
-      goodsServices: product.goodsServices,
-      weight: product.weight,
-      pricePerPcs: product.pricePerPcs,
-      gstRate: product.gstRate,
-      gstInclusive: product.gstInclusive,
-      cessRate: product.cessRate,
-      mainImage: getImageUrl(product.mainImage),
-      unit: product.unit,
-      productGroup: product.productGroup,
-      productCompany: product.productCompany,
-      relatedImages,
-      // Batches as array
-      batches: product.batches,
-      // Stock summary
-      totalOpeningStock,
-      availableBatchesCount,
-      // Additional useful fields
-      cartonPack: product.cartonPack,
-      innerPack: product.innerPack,
-      saleUnit: product.saleUnit,
-      purchaseUnit: product.purchaseUnit,
-      status: product.status,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-    };
-  });
-
-  // Filter out products that have no available stock if needed
-  // Optional: If you want to show only products with stock
-  // const productsWithStockAvailable = productsWithStock.filter(product => product.totalOpeningStock > 0);
-
   return sendResponse(
     res,
     true,
     {
-      products: productsWithStock,
-      count: productsWithStock.length,
-      // summary: {
-      //   totalProducts: productsWithStock.length,
-      //   productsWithStock: productsWithStock.filter(p => p.totalOpeningStock > 0).length,
-      //   totalStockQuantity: productsWithStock.reduce((sum, p) => sum + p.totalOpeningStock, 0)
-      // }
+      products,
+      count: products.length,
     },
     "Active products retrieved successfully",
     statusType.OK,
@@ -1240,6 +1171,104 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get Active Batches for a Product
+ * Returns only batches with openingStock > 0 for a product that is active and not deleted
+ */
+export const getProductBatches = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Verify product exists and is active (status true, not deleted)
+  const product = await prisma.product.findFirst({
+    where: {
+      id: parseInt(id),
+      status: true,
+      deleted: false,
+    },
+    select: {
+      id: true,
+      productCode: true,
+      productBrand: true,
+      productShortName: true,
+      unit: {
+        select: {
+          id: true,
+          name: true,
+          symbol: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Active product not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  // Fetch batches with positive opening stock
+  const batches = await prisma.batch.findMany({
+    where: {
+      productId: parseInt(id),
+      openingStock: { gt: 0 },
+    },
+    orderBy: [
+      { expDate: 'asc' }, // Soon-to-expire first
+      { createdAt: 'desc' },
+    ],
+    select: {
+      id: true,
+      batchNo: true,
+      mfgDate: true,
+      expDate: true,
+      barcode: true,
+      basicPrice: true,
+      openingStock: true,
+      mrp: true,
+      purchaseRate: true,
+      saleRate: true,
+      margin: true,
+      gstAmount: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  // Calculate total available stock for the product
+  const totalStock = batches.reduce(
+    (sum, batch) => sum + (batch.openingStock || 0),
+    0,
+  );
+
+  return sendResponse(
+    res,
+    true,
+    {
+      product: {
+        id: product.id,
+        productCode: product.productCode,
+        productBrand: product.productBrand,
+        productShortName: product.productShortName,
+        unit: product.unit,
+      },
+      batches,
+      summary: {
+        totalBatches: batches.length,
+        totalStock,
+      },
+    },
+    "Product batches retrieved successfully",
+    statusType.OK,
+  );
+});
+
 // Export all functions
 export const productController = {
   createProduct,
@@ -1248,4 +1277,5 @@ export const productController = {
   getProductById,
   updateProduct,
   deleteProduct,
+  getProductBatches,
 };

@@ -5,6 +5,7 @@ import {
   type PaginatedResponse,
   type ApiResponse,
   type ProductFilters,
+  type ProductBatchesResponse,
 } from "@/types/product";
 
 export const productService = {
@@ -44,7 +45,7 @@ export const productService = {
       await apiClient.get<ApiResponse<{ products: Product[] }>>(
         "/products/active",
       );
-      console.log('date',response.data)
+    console.log("date", response.data);
     return response.data.data.products || [];
   },
 
@@ -77,5 +78,12 @@ export const productService = {
   // Delete product
   async deleteProduct(id: number): Promise<void> {
     await apiClient.delete<ApiResponse<void>>(`/products/${id}`);
+  },
+
+  async getProductBatches(id: number): Promise<ProductBatchesResponse> {
+    const response = await apiClient.get<ApiResponse<ProductBatchesResponse>>(
+      `/products/${id}/batches`,
+    );
+    return response.data.data;
   },
 };

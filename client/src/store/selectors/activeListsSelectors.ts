@@ -60,7 +60,7 @@ export const selectActiveProductGroupsData = createSelector(
 export const selectActiveProductsData = createSelector(
   selectActiveProducts,
   (products) => {
-    // console.log("products.data", products.data);
+    console.log("products.data", products.data);
     return products.data;
   },
 );

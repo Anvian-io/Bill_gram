@@ -101,7 +101,7 @@ export interface Product {
   };
   createdAt: string;
   updatedAt: string;
-  
+
   // Add this field for total opening stock
   totalOpeningStock?: number;
 }
@@ -196,5 +196,20 @@ export interface PaginatedResponse<T> {
       hasNextPage: boolean;
       hasPrevPage: boolean;
     };
+  };
+}
+
+export interface ProductBatchesResponse {
+  product: {
+    id: number;
+    productCode: string;
+    productBrand: string;
+    productShortName: string | null;
+    unit: Unit | null;
+  };
+  batches: Batch[];
+  summary: {
+    totalBatches: number;
+    totalStock: number;
   };
 }

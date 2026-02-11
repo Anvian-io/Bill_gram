@@ -1,4 +1,3 @@
-// components/forms/BatchSelectionModal.tsx
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -21,95 +20,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Search,
   Package,
   Calendar,
-  Hash,
   IndianRupee,
   X,
   Check,
   Filter,
+  AlertCircle,
+  Loader2,
   Download,
   Eye,
-  Plus,
-  AlertCircle,
+  Hash,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Batch, PurchaseHistory } from "@/types/purchase";
+import { productService } from "@/services/productService";
+import type { Batch } from "@/types/product";
 
-interface BatchSelectionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  productId: number;
-  productCode: string;
-  description: string;
-  onBatchSelect?: (batch: Batch, aQty: number, mQty: number) => void;
+// Static mock purchase history (same for all products)
+interface PurchaseHistory {
+  batch: string;
+  invoiceNo: string;
+  date: string;
+  quantity: number;
+  rate: number;
+  amount: number;
 }
-
-const mockBatches: Batch[] = [
-  {
-    batchNo: "250712182734",
-    mfgDate: "2024-07-12",
-    expDate: "2025-07-12",
-    barcode: "BOUR 10RS",
-    currentStock: 3384,
-    tempStock: 3384,
-    mrp: 9.0,
-    pRate: 6.68,
-    lastPRate: 6.68,
-    pack: 1,
-  },
-  {
-    batchNo: "250712182735",
-    mfgDate: "2024-08-01",
-    expDate: "2025-08-01",
-    barcode: "BOUR 20RS",
-    currentStock: 2500,
-    tempStock: 2500,
-    mrp: 18.0,
-    pRate: 12.5,
-    lastPRate: 12.5,
-    pack: 1,
-  },
-  {
-    batchNo: "250712182736",
-    mfgDate: "2024-06-15",
-    expDate: "2025-06-15",
-    barcode: "BOUR 5RS",
-    currentStock: 5000,
-    tempStock: 5000,
-    mrp: 4.5,
-    pRate: 3.2,
-    lastPRate: 3.2,
-    pack: 1,
-  },
-  {
-    batchNo: "250712182737",
-    mfgDate: "2024-05-20",
-    expDate: "2025-05-20",
-    barcode: "BOUR 50RS",
-    currentStock: 1500,
-    tempStock: 1500,
-    mrp: 45.0,
-    pRate: 32.5,
-    lastPRate: 32.5,
-    pack: 1,
-  },
-  {
-    batchNo: "250712182738",
-    mfgDate: "2024-04-10",
-    expDate: "2025-04-10",
-    barcode: "BOUR 100RS",
-    currentStock: 800,
-    tempStock: 800,
-    mrp: 90.0,
-    pRate: 65.0,
-    lastPRate: 65.0,
-    pack: 1,
-  },
-];
 
 const mockPurchaseHistory: PurchaseHistory[] = [
   {
@@ -154,32 +91,80 @@ const mockPurchaseHistory: PurchaseHistory[] = [
   },
 ];
 
+interface BatchSelectionModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  productId: number;
+  productCode: string;
+  description: string;
+  cartonPack: number; // new: carton pack size
+  conversionFactor: number; // new: conversion factor for weight/volume
+  onBatchSelect?: (batch: Batch, aQty: number, mQty: number) => void;
+}
+
 export default function BatchSelectionModal({
   open,
   onOpenChange,
   productId,
   productCode,
   description,
+  cartonPack,
+  conversionFactor,
   onBatchSelect,
 }: BatchSelectionModalProps) {
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [aQty, setAQty] = useState<number>(1);
-  const [mQty, setMQty] = useState<number>(1);
+  const [mQty, setMQty] = useState<number>(0);
   const [searchBatch, setSearchBatch] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("batch");
   const [showBatchError, setShowBatchError] = useState<boolean>(false);
 
-  const filteredBatches = mockBatches.filter(
+  // Real batch data from API
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch batches when modal opens and productId is available
+  useEffect(() => {
+    if (open && productId) {
+      fetchBatches();
+    }
+  }, [open, productId]);
+
+  const fetchBatches = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await productService.getProductBatches(productId);
+      // response contains { product, batches, summary }
+      setBatches(response.batches);
+    } catch (err) {
+      console.error("Failed to fetch batches:", err);
+      setError("Failed to load batches. Please try again.");
+      toast.error("Failed to load batches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate M Qty whenever aQty or product factors change
+  useEffect(() => {
+    const calculatedMQty = aQty * cartonPack * conversionFactor;
+    setMQty(calculatedMQty);
+  }, [aQty, cartonPack, conversionFactor]);
+
+  const filteredBatches = batches.filter(
     (batch) =>
       batch.batchNo.toLowerCase().includes(searchBatch.toLowerCase()) ||
-      batch.barcode.toLowerCase().includes(searchBatch.toLowerCase()),
+      (batch.barcode &&
+        batch.barcode.toLowerCase().includes(searchBatch.toLowerCase())),
   );
 
   const handleBatchSelect = (batch: Batch) => {
     setSelectedBatch(batch);
     setShowBatchError(false);
     toast.success(`Batch ${batch.batchNo} selected`, {
-      description: `Rate: ₹${batch.pRate.toFixed(2)} | MRP: ₹${batch.mrp.toFixed(2)}`,
+      description: `Rate: ₹${batch.purchaseRate.toFixed(2)} | MRP: ₹${batch.mrp.toFixed(2)}`,
     });
   };
 
@@ -197,7 +182,7 @@ export default function BatchSelectionModal({
       onBatchSelect(selectedBatch, aQty, mQty);
       onOpenChange(false);
       toast.success(`Batch ${selectedBatch.batchNo} applied`, {
-        description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${(selectedBatch.pRate * aQty).toFixed(2)}`,
+        description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${(selectedBatch.purchaseRate * aQty).toFixed(2)}`,
       });
     }
   };
@@ -218,7 +203,6 @@ export default function BatchSelectionModal({
       description: "Create new batch functionality would open here",
     });
     // In a real app, you would open a form to create a new batch
-    // This could be another modal or a form within this modal
   };
 
   // Reset state when modal opens/closes
@@ -226,12 +210,12 @@ export default function BatchSelectionModal({
     if (open) {
       setSelectedBatch(null);
       setAQty(1);
-      setMQty(1);
+      setMQty(1 * cartonPack * conversionFactor); // initial calculation
       setSearchBatch("");
       setActiveTab("batch");
       setShowBatchError(false);
     }
-  }, [open]);
+  }, [open, cartonPack, conversionFactor]);
 
   return (
     <Dialog
@@ -271,7 +255,7 @@ export default function BatchSelectionModal({
               variant="outline"
               className="gap-2 border-primary/50 hover:border-primary hover:bg-primary/5"
             >
-              <Plus className="h-4 w-4" />
+              <Package className="h-4 w-4" />
               New Batch
             </Button>
 
@@ -296,18 +280,17 @@ export default function BatchSelectionModal({
 
               <div className="flex flex-col gap-1">
                 <Label htmlFor="mQty" className="text-sm font-medium">
-                  M Qty
+                  M Qty (Weight/Volume)
                 </Label>
                 <div className="flex items-center">
                   <Input
                     id="mQty"
                     type="number"
-                    min="1"
+                    min="0"
                     value={mQty}
-                    onChange={(e) =>
-                      setMQty(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                    className="w-24"
+                    readOnly
+                    disabled
+                    className="w-24 bg-muted cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -321,9 +304,9 @@ export default function BatchSelectionModal({
               </Badge>
               <span className="text-sm font-medium flex items-center">
                 <IndianRupee className="h-3 w-3 mr-1" />
-                {selectedBatch.pRate.toFixed(2)} × {aQty} =
+                {selectedBatch.purchaseRate.toFixed(2)} × {aQty} =
                 <span className="ml-1 font-bold">
-                  ₹{(selectedBatch.pRate * aQty).toFixed(2)}
+                  ₹{(selectedBatch.purchaseRate * aQty).toFixed(2)}
                 </span>
               </span>
             </div>
@@ -378,39 +361,61 @@ export default function BatchSelectionModal({
 
             {/* Batch Selection Table */}
             <div className="rounded-md border max-h-50 overflow-y-auto">
-              <Table className="">
+              <Table>
                 <TableHeader>
                   <TableRow className="bg-secondary/50">
                     <TableHead className="font-semibold">Select</TableHead>
-                    <TableHead className="font-semibold">Batch</TableHead>
+                    <TableHead className="font-semibold">Batch No</TableHead>
                     <TableHead className="font-semibold">MFG Date</TableHead>
                     <TableHead className="font-semibold">EXP Date</TableHead>
                     <TableHead className="font-semibold">Barcode</TableHead>
                     <TableHead className="font-semibold">
                       Current Stock
                     </TableHead>
-                    <TableHead className="font-semibold">Temp Stock</TableHead>
                     <TableHead className="font-semibold">MRP</TableHead>
-                    <TableHead className="font-semibold">P.Rate</TableHead>
-                    <TableHead className="font-semibold">Last P.Rate</TableHead>
+                    <TableHead className="font-semibold">P. Rate</TableHead>
                     <TableHead className="font-semibold">Pack</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBatches.length === 0 ? (
+                  {loading ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Loading batches...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={9}
+                        className="text-center py-8 text-destructive"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <AlertCircle className="h-8 w-8" />
+                          <p>{error}</p>
+                          <Button variant="outline" onClick={fetchBatches}>
+                            Retry
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredBatches.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Package className="h-12 w-12 text-muted-foreground/50" />
                           <p className="text-muted-foreground">
-                            No batches found
+                            No active batches found for this product
                           </p>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSearchBatch("")}
+                            onClick={handleNewBatch}
                           >
-                            Clear search
+                            Create New Batch
                           </Button>
                         </div>
                       </TableCell>
@@ -418,9 +423,9 @@ export default function BatchSelectionModal({
                   ) : (
                     filteredBatches.map((batch) => (
                       <TableRow
-                        key={batch.batchNo}
+                        key={batch.id}
                         className={`hover:bg-secondary/30 cursor-pointer ${
-                          selectedBatch?.batchNo === batch.batchNo
+                          selectedBatch?.id === batch.id
                             ? "bg-primary/10 border-l-4 border-l-primary"
                             : ""
                         }`}
@@ -430,12 +435,12 @@ export default function BatchSelectionModal({
                           <div className="flex items-center justify-center">
                             <div
                               className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedBatch?.batchNo === batch.batchNo
+                                selectedBatch?.id === batch.id
                                   ? "border-primary bg-primary"
                                   : "border-muted-foreground"
                               }`}
                             >
-                              {selectedBatch?.batchNo === batch.batchNo && (
+                              {selectedBatch?.id === batch.id && (
                                 <Check className="h-3 w-3 text-white" />
                               )}
                             </div>
@@ -464,13 +469,7 @@ export default function BatchSelectionModal({
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-1">
                             <Package className="h-3 w-3 text-muted-foreground" />
-                            {batch.currentStock.toLocaleString()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-1">
-                            <Package className="h-3 w-3 text-muted-foreground" />
-                            {batch.tempStock.toLocaleString()}
+                            {batch.openingStock?.toLocaleString() || 0}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -485,20 +484,12 @@ export default function BatchSelectionModal({
                           <div className="flex items-center">
                             <IndianRupee className="h-3 w-3 mr-1 text-green-600" />
                             <span className="font-bold text-green-700">
-                              {batch.pRate.toFixed(2)}
+                              {batch.purchaseRate.toFixed(2)}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <IndianRupee className="h-3 w-3 mr-1 text-muted-foreground" />
-                            <span className="font-medium">
-                              {batch.lastPRate.toFixed(2)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{batch.pack}</Badge>
+                          <Badge variant="secondary">1</Badge>
                         </TableCell>
                       </TableRow>
                     ))
@@ -508,7 +499,7 @@ export default function BatchSelectionModal({
             </div>
           </TabsContent>
 
-          {/* PURCHASE HISTORY TAB */}
+          {/* PURCHASE HISTORY TAB - STATIC MOCK DATA */}
           <TabsContent value="history" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">
@@ -534,75 +525,72 @@ export default function BatchSelectionModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockPurchaseHistory
-                    .filter((history) => {
-                      // Filter by selected batch if any, otherwise show all
-                      if (selectedBatch) {
-                        return history.batch === selectedBatch.batchNo;
-                      }
-                      return true;
-                    })
-                    .map((history, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono">
-                          <Badge variant="outline">{history.batch}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Hash className="h-3 w-3 text-muted-foreground" />
-                            {history.invoiceNo}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            {history.date}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-1">
-                            <Package className="h-3 w-3 text-muted-foreground" />
-                            {history.quantity.toLocaleString()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <IndianRupee className="h-3 w-3 mr-1" />
-                            {history.rate.toFixed(2)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <IndianRupee className="h-3 w-3 mr-1" />
-                            <span className="font-medium">
-                              {history.amount.toFixed(2)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const batch = mockBatches.find(
-                                (b) => b.batchNo === history.batch,
-                              );
-                              if (batch) {
-                                setSelectedBatch(batch);
-                                setActiveTab("batch");
-                                setAQty(history.quantity);
-                                setShowBatchError(false);
-                                toast.info("Batch selected from history", {
-                                  description: `Batch ${batch.batchNo} loaded with quantity ${history.quantity}`,
-                                });
-                              }
-                            }}
-                          >
-                            Use
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                  {mockPurchaseHistory.map((history, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-mono">
+                        <Badge variant="outline">{history.batch}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Hash className="h-3 w-3 text-muted-foreground" />
+                          {history.invoiceNo}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          {history.date}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1">
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          {history.quantity.toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <IndianRupee className="h-3 w-3 mr-1" />
+                          {history.rate.toFixed(2)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <IndianRupee className="h-3 w-3 mr-1" />
+                          <span className="font-medium">
+                            {history.amount.toFixed(2)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            // Find matching batch in real batches list by batch number
+                            const batch = batches.find(
+                              (b) => b.batchNo === history.batch,
+                            );
+                            if (batch) {
+                              setSelectedBatch(batch);
+                              setActiveTab("batch");
+                              setAQty(history.quantity);
+                              setShowBatchError(false);
+                              toast.info("Batch selected from history", {
+                                description: `Batch ${batch.batchNo} loaded with quantity ${history.quantity}`,
+                              });
+                            } else {
+                              toast.error("Batch not available", {
+                                description: `Batch ${history.batch} is not currently in stock`,
+                              });
+                            }
+                          }}
+                        >
+                          Use
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
@@ -621,8 +609,8 @@ export default function BatchSelectionModal({
                   <span className="flex items-center">
                     <IndianRupee className="h-3 w-3 mr-1" />
                     <span className="font-medium">
-                      {selectedBatch.pRate.toFixed(2)} × {aQty} = ₹
-                      {(selectedBatch.pRate * aQty).toFixed(2)}
+                      {selectedBatch.purchaseRate.toFixed(2)} × {aQty} = ₹
+                      {(selectedBatch.purchaseRate * aQty).toFixed(2)}
                     </span>
                   </span>
                 </div>

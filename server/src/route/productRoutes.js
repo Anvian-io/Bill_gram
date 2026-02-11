@@ -21,4 +21,7 @@ router.put("/:id", productController.updateProduct);
 // Delete a product (soft delete)
 router.delete("/:id", productController.deleteProduct);
 
+// Get batches associated with a product
+router.get("/:id/batches", productController.getProductBatches);
+
 export default router;

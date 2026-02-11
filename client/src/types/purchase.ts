@@ -1,5 +1,7 @@
 // types/purchase.ts
 
+import type { number } from "zod";
+
 export interface PurchaseItem {
   id: number;
   productId: number;
@@ -98,6 +100,9 @@ export type PurchaseFormData = {
     sch1Amount: number;
     sch2Percent: number;
     sch2Amount: number;
+    conversionFactor: number;
+    cartonPack: number;
+    productBrand:string;
   }>;
   remarks: string;
   grossAmount: number;

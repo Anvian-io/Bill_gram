@@ -71,44 +71,18 @@ import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
 
-// Mock product data (you might want to fetch this from Redux/API)
-const mockProducts = [
-  {
-    id: 1,
-    productCode: "G6",
-    description: "ECLARIS JAR",
-    price: 118.0,
-    gstRate: 5,
-  },
-  {
-    id: 2,
-    productCode: "10087",
-    description: "CRUNCHY MUNCHY S",
-    price: 3.54,
-    gstRate: 5,
-  },
-  {
-    id: 3,
-    productCode: "K1",
-    description: "KRACK IT S RS",
-    price: 3.54,
-    gstRate: 5,
-  },
-  {
-    id: 4,
-    productCode: "M50",
-    description: "GLUCO-G S RS",
-    price: 3.7,
-    gstRate: 5,
-  },
-  {
-    id: 5,
-    productCode: "G13",
-    description: "LOLLYPOP BIG JAR S",
-    price: 155.0,
-    gstRate: 5,
-  },
-];
+// Extend Product type to include cartonPack and conversionFactor
+// Make sure your actual Product type has these fields, or adapt as needed.
+interface ProductWithFactors {
+  id: number;
+  productCode: string;
+  description: string;
+  pricePerPcs?: number;
+  gstRate?: number;
+  cartonPack: number;
+  conversionFactor: number;
+  productBrand: string;
+}
 
 // Define the schema for form validation
 const purchaseSchema = z.object({
@@ -138,6 +112,9 @@ const purchaseSchema = z.object({
         sch1Amount: z.coerce.number().min(0).default(0),
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
+        // Store product factors to use for recalculation even if product not in list?
+        cartonPack: z.coerce.number().optional(),
+        conversionFactor: z.coerce.number().optional(),
       }),
     )
     .min(1, "At least one product item is required"),
@@ -182,56 +159,6 @@ const defaultValues: PurchaseFormData = {
   finalAmount: 0,
 };
 
-// Sample data for testing
-const sampleData: PurchaseFormData = {
-  invoiceDate: new Date().toISOString().split("T")[0],
-  supplierId: 1,
-  invoiceNo: `P${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}001`,
-  gstDetails: "Against GST",
-  items: [
-    {
-      productId: 1,
-      productCode: "G6",
-      description: "ECLARIS JAR",
-      rate: 118.0,
-      aQty: 12,
-      mQty: 12,
-      totalAmount: 1416.0,
-      taxRate: 5,
-      taxAmount: 70.8,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
-    },
-    {
-      productId: 2,
-      productCode: "10087",
-      description: "CRUNCHY MUNCHY S",
-      rate: 3.54,
-      aQty: 1440,
-      mQty: 1440,
-      totalAmount: 5097.6,
-      taxRate: 5,
-      taxAmount: 254.88,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
-    },
-  ],
-  remarks: "",
-  grossAmount: 6513.6,
-  boxUnit: 22.48,
-  cessInsurance: 0,
-  scheme1: 0,
-  discountPercent: 0,
-  tax: 325.68,
-  amountAdd: 0,
-  creditAmount: 0,
-  finalAmount: 6839.28,
-};
-
 export default function PurchaseForm({
   open,
   onOpenChange,
@@ -253,10 +180,12 @@ export default function PurchaseForm({
     productId: number;
     productCode: string;
     description: string;
+    cartonPack: number;
+    conversionFactor: number;
   } | null>(null);
 
-  // Get data from Redux store
-  const { suppliers } = useActiveLists();
+  // Get data from Redux store – ensure products include cartonPack & conversionFactor
+  const { suppliers, products } = useActiveLists();
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema) as any,
@@ -275,7 +204,6 @@ export default function PurchaseForm({
       );
       const tax = items.reduce((sum, item) => sum + item.taxAmount, 0);
 
-      // Get other values from form
       const boxUnit = form.getValues("boxUnit") || 0;
       const cessInsurance = form.getValues("cessInsurance") || 0;
       const scheme1 = form.getValues("scheme1") || 0;
@@ -283,7 +211,6 @@ export default function PurchaseForm({
       const amountAdd = form.getValues("amountAdd") || 0;
       const creditAmount = form.getValues("creditAmount") || 0;
 
-      // Calculate final amount
       const discountAmount = grossAmount * (discountPercent / 100);
       const finalAmount =
         grossAmount +
@@ -295,7 +222,6 @@ export default function PurchaseForm({
         discountAmount -
         creditAmount;
 
-      // Update form values
       form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
       form.setValue("tax", parseFloat(tax.toFixed(2)));
       form.setValue(
@@ -306,14 +232,6 @@ export default function PurchaseForm({
 
     calculateTotals();
   }, [items, form]);
-
-  // Load sample data into form
-  const loadSampleData = () => {
-    form.reset(sampleData);
-    toast.success("Sample data loaded", {
-      description: "Fill in real data before submitting.",
-    });
-  };
 
   // Reset form when editingPurchase changes
   useEffect(() => {
@@ -330,11 +248,26 @@ export default function PurchaseForm({
     return supplier ? supplier.name : "Select supplier";
   };
 
+  const findProduct = (productId: number) => {
+    return products.find((p) => p.id === productId) as
+      | ProductWithFactors
+      | undefined;
+  };
+
   const findProductName = (productId: number) => {
-    const product = mockProducts.find((p) => p.id === productId);
+    const product = findProduct(productId);
     return product
-      ? `${product.productCode}, ${product.description}`
+      ? `${product.productCode}, ${product.productBrand}`
       : "Select product";
+  };
+
+  // Calculate M Qty based on A Qty and product factors
+  const calculateMQty = (
+    aQty: number,
+    product?: ProductWithFactors,
+  ): number => {
+    if (!product) return 0;
+    return aQty * (product.cartonPack || 0) * (product.conversionFactor || 0);
   };
 
   // Handle item changes
@@ -355,7 +288,6 @@ export default function PurchaseForm({
       const aQty = field === "aQty" ? value : item.aQty;
       const taxRate = item.taxRate;
 
-      // Calculate total amount and tax
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
 
@@ -375,30 +307,47 @@ export default function PurchaseForm({
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
+    // Special handling for aQty: recalculate mQty using product factors
+    if (field === "aQty") {
+      const product = findProduct(item.productId);
+      if (product) {
+        updatedItems[index].mQty = calculateMQty(value, product);
+        // Also store the factors for future reference (e.g., after batch selection)
+        updatedItems[index].cartonPack = product.cartonPack;
+        updatedItems[index].conversionFactor = product.conversionFactor;
+      }
+    }
+
     form.setValue("items", updatedItems);
   };
 
   // Handle batch selection from modal
   const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
     if (pendingBatchSelection) {
-      const { index } = pendingBatchSelection;
+      const { index, cartonPack, conversionFactor } = pendingBatchSelection;
       const updatedItems = [...items];
       const item = updatedItems[index];
+
+      // Recalculate mQty using the product's own factors (to be safe)
+      const product = findProduct(item.productId);
+      const calculatedMQty = product
+        ? calculateMQty(aQty, product)
+        : aQty * cartonPack * conversionFactor;
 
       // Update item with batch information
       updatedItems[index] = {
         ...item,
-        rate: batch.pRate,
+        rate: batch.purchaseRate,
         aQty: aQty,
-        mQty: mQty,
-        totalAmount: batch.pRate * aQty,
-        taxAmount: batch.pRate * aQty * (item.taxRate / 100),
+        mQty: calculatedMQty,
+        totalAmount: batch.purchaseRate * aQty,
+        taxAmount: batch.purchaseRate * aQty * (item.taxRate / 100),
       };
 
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.pRate.toFixed(2)} | Qty: A=${aQty}, M=${mQty}`,
+        description: `Rate: ₹${batch.purchaseRate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${calculatedMQty}`,
       });
 
       // Clear pending selection
@@ -409,7 +358,6 @@ export default function PurchaseForm({
   // Handle batch modal close
   const handleBatchModalClose = () => {
     setBatchModalOpen(false);
-    // Don't clear pendingBatchSelection immediately to allow animation
     setTimeout(() => {
       setPendingBatchSelection(null);
     }, 300);
@@ -423,11 +371,19 @@ export default function PurchaseForm({
     }
 
     const item = items[index];
+    const product = findProduct(item.productId);
+    if (!product) {
+      toast.error("Product details not found");
+      return;
+    }
+
     setPendingBatchSelection({
       index,
       productId: item.productId,
       productCode: item.productCode || "",
       description: item.description || "",
+      cartonPack: product.cartonPack,
+      conversionFactor: product.conversionFactor,
     });
     setBatchModalOpen(true);
   };
@@ -448,6 +404,9 @@ export default function PurchaseForm({
       sch1Amount: 0,
       sch2Percent: 0,
       sch2Amount: 0,
+      cartonPack: 0,
+      conversionFactor: 0,
+      productBrand: "",
     };
     form.setValue("items", [...items, newItem]);
   };
@@ -460,22 +419,30 @@ export default function PurchaseForm({
     }
   };
 
-  // Handle product selection - UPDATED TO OPEN BATCH MODAL IMMEDIATELY
+  // Handle product selection – opens batch modal automatically
   const handleProductSelect = (index: number, productId: number) => {
-    const product = mockProducts.find((p) => p.id === productId);
+    const product = findProduct(productId);
     if (product) {
       const updatedItems = [...items];
+      const aQty = 1; // default A Qty
+      const mQty = calculateMQty(aQty, product);
+
       updatedItems[index] = {
         ...updatedItems[index],
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
-        rate: product.price,
-        taxRate: product.gstRate,
-        aQty: 1,
-        mQty: 1,
-        totalAmount: product.price,
-        taxAmount: product.price * (product.gstRate / 100),
+        productBrand: product.productBrand, // <-- add this
+
+        rate: product.pricePerPcs || 0,
+        taxRate: product.gstRate || 5,
+        aQty,
+        mQty,
+        totalAmount: (product.pricePerPcs || 0) * aQty,
+        taxAmount:
+          (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
+        cartonPack: product.cartonPack,
+        conversionFactor: product.conversionFactor,
       };
       form.setValue("items", updatedItems);
 
@@ -483,12 +450,14 @@ export default function PurchaseForm({
       setProductOpen(false);
       setActiveProductIndex(null);
 
-      // Set pending batch selection and open batch modal
+      // Open batch modal immediately
       setPendingBatchSelection({
         index,
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
+        cartonPack: product.cartonPack,
+        conversionFactor: product.conversionFactor,
       });
       setBatchModalOpen(true);
     }
@@ -515,7 +484,6 @@ export default function PurchaseForm({
 
   const onSubmit = async (data: PurchaseFormData) => {
     console.log("Form submitted with data:", data);
-
     try {
       await onSave(data, editingPurchase?.id);
     } catch (error) {
@@ -541,20 +509,6 @@ export default function PurchaseForm({
                   ? "Edit Purchase Invoice"
                   : "Add New Purchase Invoice"}
               </DialogTitle>
-
-              {!editingPurchase && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={loadSampleData}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2"
-                >
-                  <Package className="h-4 w-4" />
-                  Load Sample Data
-                </Button>
-              )}
             </div>
 
             <DialogDescription>
@@ -756,7 +710,9 @@ export default function PurchaseForm({
                         </TableHead>
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">A. Qty</TableHead>
-                        <TableHead className="font-semibold">M. Qty</TableHead>
+                        <TableHead className="font-semibold">
+                          M. Qty *
+                        </TableHead>
                         <TableHead className="font-semibold">Amount</TableHead>
                         <TableHead className="font-semibold">Sch1%</TableHead>
                         <TableHead className="font-semibold">
@@ -832,10 +788,10 @@ export default function PurchaseForm({
                                           No product found.
                                         </CommandEmpty>
                                         <CommandGroup>
-                                          {mockProducts.map((product) => (
+                                          {products.map((product) => (
                                             <CommandItem
                                               key={product.id}
-                                              value={`${product.id} ${product.productCode} ${product.description}`}
+                                              value={`${product.id} ${product.productCode} ${product.productBrand}`}
                                               onSelect={() => {
                                                 handleProductSelect(
                                                   index,
@@ -848,7 +804,7 @@ export default function PurchaseForm({
                                                   {product.productCode}
                                                 </span>
                                                 <span className="text-xs text-muted-foreground">
-                                                  {product.description}
+                                                  {product.productBrand}
                                                 </span>
                                               </div>
                                               <Check
@@ -909,22 +865,16 @@ export default function PurchaseForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty */}
+                              {/* M. Qty - DISABLED & AUTO-CALCULATED */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
                                     type="number"
                                     step="1"
                                     value={item.mQty}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "mQty",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting}
+                                    readOnly
+                                    disabled
+                                    className="w-20 bg-muted cursor-not-allowed"
                                   />
                                 </div>
                               </TableCell>
@@ -1066,6 +1016,10 @@ export default function PurchaseForm({
                       </AnimatePresence>
                     </TableBody>
                   </Table>
+                  <div className="p-2 text-xs text-muted-foreground border-t">
+                    * M Qty is automatically calculated as A Qty × Carton Pack ×
+                    Conversion Factor and cannot be edited.
+                  </div>
                 </div>
               </div>
 
@@ -1436,6 +1390,8 @@ export default function PurchaseForm({
           productId={pendingBatchSelection.productId}
           productCode={pendingBatchSelection.productCode}
           description={pendingBatchSelection.description}
+          cartonPack={pendingBatchSelection.cartonPack}
+          conversionFactor={pendingBatchSelection.conversionFactor}
           onBatchSelect={handleBatchSelect}
         />
       )}
