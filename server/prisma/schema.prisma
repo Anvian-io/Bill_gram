@@ -24,6 +24,7 @@ model User {
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
   Notification Notification[]
+  purchaseInvoices PurchaseInvoice[]
 
   @@map("users")
 }
@@ -79,6 +80,9 @@ model Product {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  purchaseHistories    PurchaseHistory[]
+
   @@index([userId])
   @@index([productCode])
   @@index([productBrand])
@@ -111,6 +115,8 @@ model Batch {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  purchaseHistories    PurchaseHistory[]
   @@index([productId])
   @@index([batchNo])
   @@index([barcode])
@@ -284,6 +290,9 @@ model Supplier {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  purchaseInvoices PurchaseInvoice[]
+  purchaseHistories PurchaseHistory[]
+
   @@unique([phoneNo])
   @@index([name])
   @@map("suppliers")
@@ -308,4 +317,112 @@ model Notification {
   @@index([read])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// ========== PURCHASE MODULES ==========
+
+model PurchaseInvoice {
+  id             Int                     @id @default(autoincrement())
+  invoiceNo      String
+  invoiceDate    DateTime
+  supplierId     Int
+  supplier       Supplier               @relation(fields: [supplierId], references: [id])
+  gstDetails     String?                @default("Against GST")
+  remarks        String?
+  
+  // Financial summary
+  grossAmount    Float
+  boxUnit        Float?                 @default(0)
+  cessInsurance  Float?                 @default(0)
+  scheme1        Float?                 @default(0)
+  discountPercent Float?                @default(0)
+  tax            Float?                 @default(0)
+  amountAdd      Float?                 @default(0)
+  creditAmount   Float?                 @default(0)
+  finalAmount    Float
+
+  // Status and ownership
+  status         String?                @default("Pending") // Pending, Paid, Cancelled
+  userId         Int?                   // from session, optional
+  user           User?                 @relation(fields: [userId], references: [id])
+
+  // Relations
+  items          PurchaseInvoiceItem[]
+  histories      PurchaseHistory[]     // optional, link back for audit
+
+  // Soft delete
+  deleted        Boolean               @default(false)
+
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  @@index([supplierId])
+  @@index([invoiceNo])
+  @@index([invoiceDate])
+  @@index([deleted])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceItem {
+  id                 Int    @id @default(autoincrement())
+  purchaseInvoiceId  Int
+  purchaseInvoice    PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  
+  productId          Int
+  product            Product @relation(fields: [productId], references: [id])
+  
+  batchId            Int?   // mandatory in controller validation
+  batch              Batch? @relation(fields: [batchId], references: [id])
+
+  // Pricing & quantity
+  rate               Float
+  aQty               Int
+  mQty               Int?    // auto‑calculated, stored for reference
+  totalAmount        Float
+
+  // Taxes & schemes
+  taxRate            Float
+  taxAmount          Float
+  sch1Percent        Float?  @default(0)
+  sch1Amount         Float?  @default(0)
+  sch2Percent        Float?  @default(0)
+  sch2Amount         Float?  @default(0)
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([purchaseInvoiceId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("purchase_invoice_items")
+}
+
+// Audit log – every purchase creates one entry per product
+model PurchaseHistory {
+  id                Int    @id @default(autoincrement())
+  productId         Int
+  product           Product @relation(fields: [productId], references: [id])
+  
+  batchId           Int?
+  batch             Batch?  @relation(fields: [batchId], references: [id])
+  
+  purchaseInvoiceId Int?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+
+  // Snapshot data for reporting
+  invoiceNo         String
+  invoiceDate       DateTime
+  supplierId        Int
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  rate              Float
+  aQty              Int
+  totalAmount       Float
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([batchId])
+  @@index([purchaseInvoiceId])
+  @@index([invoiceDate])
+  @@map("purchase_histories")
 }
