@@ -71,8 +71,9 @@ import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
 
-// Extend Product type to include cartonPack and conversionFactor
-// Make sure your actual Product type has these fields, or adapt as needed.
+// ----------------------------------------------------------------------
+// Types & Interfaces
+// ----------------------------------------------------------------------
 interface ProductWithFactors {
   id: number;
   productCode: string;
@@ -84,7 +85,9 @@ interface ProductWithFactors {
   productBrand: string;
 }
 
-// Define the schema for form validation
+// ----------------------------------------------------------------------
+// Schema Validation (with batchId)
+// ----------------------------------------------------------------------
 const purchaseSchema = z.object({
   // Header Information
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -112,9 +115,10 @@ const purchaseSchema = z.object({
         sch1Amount: z.coerce.number().min(0).default(0),
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
-        // Store product factors to use for recalculation even if product not in list?
+        batchId: z.coerce.number().optional(), // <-- NEW
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
+        productBrand: z.string().optional(),
       }),
     )
     .min(1, "At least one product item is required"),
@@ -132,6 +136,9 @@ const purchaseSchema = z.object({
   finalAmount: z.coerce.number().positive("Final amount must be positive"),
 });
 
+// ----------------------------------------------------------------------
+// Component Props
+// ----------------------------------------------------------------------
 interface PurchaseFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -140,7 +147,9 @@ interface PurchaseFormModalProps {
   isSubmitting?: boolean;
 }
 
-// Initial form values
+// ----------------------------------------------------------------------
+// Initial Values
+// ----------------------------------------------------------------------
 const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 0,
@@ -159,6 +168,9 @@ const defaultValues: PurchaseFormData = {
   finalAmount: 0,
 };
 
+// ----------------------------------------------------------------------
+// Component
+// ----------------------------------------------------------------------
 export default function PurchaseForm({
   open,
   onOpenChange,
@@ -166,7 +178,7 @@ export default function PurchaseForm({
   onSave,
   isSubmitting = false,
 }: PurchaseFormModalProps) {
-  // State for dropdown open/close
+  // State for dropdowns
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
@@ -184,9 +196,10 @@ export default function PurchaseForm({
     conversionFactor: number;
   } | null>(null);
 
-  // Get data from Redux store – ensure products include cartonPack & conversionFactor
+  // Get data from Redux store
   const { suppliers, products } = useActiveLists();
 
+  // Form hook
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema) as any,
     defaultValues,
@@ -195,7 +208,9 @@ export default function PurchaseForm({
   // Watch items for UI updates
   const items = form.watch("items");
 
-  // Calculate totals whenever items change
+  // --------------------------------------------------------------------
+  // Calculations
+  // --------------------------------------------------------------------
   useEffect(() => {
     const calculateTotals = () => {
       const grossAmount = items.reduce(
@@ -242,7 +257,9 @@ export default function PurchaseForm({
     }
   }, [editingPurchase, form]);
 
-  // Helper functions using Redux data
+  // --------------------------------------------------------------------
+  // Helper functions
+  // --------------------------------------------------------------------
   const findSupplierName = (supplierId: number) => {
     const supplier = suppliers.find((s) => s.id === supplierId);
     return supplier ? supplier.name : "Select supplier";
@@ -261,7 +278,6 @@ export default function PurchaseForm({
       : "Select product";
   };
 
-  // Calculate M Qty based on A Qty and product factors
   const calculateMQty = (
     aQty: number,
     product?: ProductWithFactors,
@@ -270,7 +286,9 @@ export default function PurchaseForm({
     return aQty * (product.cartonPack || 0) * (product.conversionFactor || 0);
   };
 
-  // Handle item changes
+  // --------------------------------------------------------------------
+  // Item handlers
+  // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
     field: keyof PurchaseFormData["items"][0],
@@ -282,7 +300,7 @@ export default function PurchaseForm({
     // Update the field
     updatedItems[index] = { ...item, [field]: value };
 
-    // If rate or aQty changes, recalculate total amount and tax
+    // Rate or aQty change → recalc totalAmount & taxAmount
     if (field === "rate" || field === "aQty") {
       const rate = field === "rate" ? value : item.rate;
       const aQty = field === "aQty" ? value : item.aQty;
@@ -295,24 +313,23 @@ export default function PurchaseForm({
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // If tax rate changes, recalculate tax
+    // Tax rate change → recalc taxAmount
     if (field === "taxRate") {
       const taxAmount = item.totalAmount * (value / 100);
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // If total amount changes, recalculate tax
+    // Total amount change → recalc taxAmount
     if (field === "totalAmount") {
       const taxAmount = value * (item.taxRate / 100);
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // Special handling for aQty: recalculate mQty using product factors
+    // A Qty change → recalc M Qty (auto)
     if (field === "aQty") {
       const product = findProduct(item.productId);
       if (product) {
         updatedItems[index].mQty = calculateMQty(value, product);
-        // Also store the factors for future reference (e.g., after batch selection)
         updatedItems[index].cartonPack = product.cartonPack;
         updatedItems[index].conversionFactor = product.conversionFactor;
       }
@@ -321,22 +338,27 @@ export default function PurchaseForm({
     form.setValue("items", updatedItems);
   };
 
-  // Handle batch selection from modal
+  // --------------------------------------------------------------------
+  // Batch selection
+  // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
     if (pendingBatchSelection) {
-      const { index, cartonPack, conversionFactor } = pendingBatchSelection;
+      const { index } = pendingBatchSelection;
       const updatedItems = [...items];
       const item = updatedItems[index];
 
-      // Recalculate mQty using the product's own factors (to be safe)
+      // Recalculate M Qty (using product factors)
       const product = findProduct(item.productId);
       const calculatedMQty = product
         ? calculateMQty(aQty, product)
-        : aQty * cartonPack * conversionFactor;
+        : aQty *
+          pendingBatchSelection.cartonPack *
+          pendingBatchSelection.conversionFactor;
 
       // Update item with batch information
       updatedItems[index] = {
         ...item,
+        batchId: batch.id, // <-- store batchId
         rate: batch.purchaseRate,
         aQty: aQty,
         mQty: calculatedMQty,
@@ -350,12 +372,10 @@ export default function PurchaseForm({
         description: `Rate: ₹${batch.purchaseRate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${calculatedMQty}`,
       });
 
-      // Clear pending selection
       setPendingBatchSelection(null);
     }
   };
 
-  // Handle batch modal close
   const handleBatchModalClose = () => {
     setBatchModalOpen(false);
     setTimeout(() => {
@@ -363,7 +383,6 @@ export default function PurchaseForm({
     }, 300);
   };
 
-  // Open batch selection modal
   const openBatchModal = (index: number) => {
     if (!items[index].productId) {
       toast.error("Please select a product first");
@@ -388,7 +407,9 @@ export default function PurchaseForm({
     setBatchModalOpen(true);
   };
 
-  // Add new product row
+  // --------------------------------------------------------------------
+  // Row management
+  // --------------------------------------------------------------------
   const addProductRow = () => {
     const newItem: PurchaseFormData["items"][0] = {
       productId: 0,
@@ -404,6 +425,7 @@ export default function PurchaseForm({
       sch1Amount: 0,
       sch2Percent: 0,
       sch2Amount: 0,
+      batchId: undefined, // <-- NEW
       cartonPack: 0,
       conversionFactor: 0,
       productBrand: "",
@@ -411,7 +433,6 @@ export default function PurchaseForm({
     form.setValue("items", [...items, newItem]);
   };
 
-  // Remove product row
   const removeProductRow = (index: number) => {
     if (items.length > 0) {
       const updatedItems = items.filter((_, i) => i !== index);
@@ -419,12 +440,14 @@ export default function PurchaseForm({
     }
   };
 
-  // Handle product selection – opens batch modal automatically
+  // --------------------------------------------------------------------
+  // Product selection
+  // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
       const updatedItems = [...items];
-      const aQty = 1; // default A Qty
+      const aQty = 1;
       const mQty = calculateMQty(aQty, product);
 
       updatedItems[index] = {
@@ -432,8 +455,7 @@ export default function PurchaseForm({
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
-        productBrand: product.productBrand, // <-- add this
-
+        productBrand: product.productBrand,
         rate: product.pricePerPcs || 0,
         taxRate: product.gstRate || 5,
         aQty,
@@ -443,10 +465,11 @@ export default function PurchaseForm({
           (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
+        batchId: undefined, // <-- clear previous batchId
       };
       form.setValue("items", updatedItems);
 
-      // Close the product dropdown
+      // Close product dropdown
       setProductOpen(false);
       setActiveProductIndex(null);
 
@@ -463,7 +486,9 @@ export default function PurchaseForm({
     }
   };
 
-  // Handle scheme percentage changes
+  // --------------------------------------------------------------------
+  // Scheme handlers
+  // --------------------------------------------------------------------
   const handleSchemeChange = (
     index: number,
     schemeType: "sch1Percent" | "sch2Percent",
@@ -482,6 +507,9 @@ export default function PurchaseForm({
     form.setValue("items", updatedItems);
   };
 
+  // --------------------------------------------------------------------
+  // Form submission
+  // --------------------------------------------------------------------
   const onSubmit = async (data: PurchaseFormData) => {
     console.log("Form submitted with data:", data);
     try {
@@ -497,6 +525,9 @@ export default function PurchaseForm({
     toast.error("Please fix all validation errors before submitting.");
   };
 
+  // --------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -510,7 +541,6 @@ export default function PurchaseForm({
                   : "Add New Purchase Invoice"}
               </DialogTitle>
             </div>
-
             <DialogDescription>
               {editingPurchase
                 ? "Update purchase invoice details"
@@ -523,7 +553,7 @@ export default function PurchaseForm({
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
-              {/* Header Section - Full Row */}
+              {/* Header Section */}
               <div className="rounded-lg border p-4 bg-card">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -556,7 +586,7 @@ export default function PurchaseForm({
                     )}
                   />
 
-                  {/* Supplier Dropdown - Command Component */}
+                  {/* Supplier */}
                   <FormField
                     control={form.control}
                     name="supplierId"
@@ -865,7 +895,7 @@ export default function PurchaseForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty - DISABLED & AUTO-CALCULATED */}
+                              {/* M. Qty - DISABLED */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
@@ -924,7 +954,7 @@ export default function PurchaseForm({
                               {/* Sch1 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch1Amount.toFixed(2)}
+                                  ₹{item.sch1Amount}
                                 </div>
                               </TableCell>
 
@@ -952,7 +982,7 @@ export default function PurchaseForm({
                               {/* Sch2 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch2Amount.toFixed(2)}
+                                  ₹{item.sch2Amount}
                                 </div>
                               </TableCell>
 
@@ -980,7 +1010,7 @@ export default function PurchaseForm({
                               {/* Tax Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.taxAmount.toFixed(2)}
+                                  ₹{item.taxAmount}
                                 </div>
                               </TableCell>
 
@@ -1023,7 +1053,7 @@ export default function PurchaseForm({
                 </div>
               </div>
 
-              {/* Summary Section - Colorful and Formal */}
+              {/* Summary Section (unchanged) */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
@@ -1312,7 +1342,7 @@ export default function PurchaseForm({
                           />
                         </div>
 
-                        {/* Final Amount - Full Width */}
+                        {/* Final Amount */}
                         <div className="col-span-2 md:col-span-4 mt-4">
                           <div className="bg-[var(--summary-bg-final)] rounded-xl p-5 border border-[var(--summary-border-final)] shadow-md">
                             <div className="flex items-center justify-between mb-3">
@@ -1382,7 +1412,7 @@ export default function PurchaseForm({
         </DialogContent>
       </Dialog>
 
-      {/* Batch Selection Modal - Opens automatically when product is selected */}
+      {/* Batch Selection Modal */}
       {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}

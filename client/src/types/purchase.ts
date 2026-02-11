@@ -1,15 +1,48 @@
-// types/purchase.ts
+// ========== API Response Wrappers ==========
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
 
-import type { number } from "zod";
+export interface PaginatedResponse<T> {
+  purchases: T[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
 
+// ========== Filters ==========
+export interface PurchaseFilters {
+  search?: string;
+  invoiceNo?: string;
+  supplierId?: string | number;
+  fromDate?: Date | string;
+  toDate?: Date | string;
+  minAmount?: number | string;
+  maxAmount?: number | string;
+  status?: "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled";
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  showDeleted?: boolean;
+}
+
+// ========== Core Types ==========
 export interface PurchaseItem {
   id: number;
   productId: number;
   productCode: string;
   description: string;
   rate: number;
-  aQty: number; // Added: A. Qty
-  mQty: number; // Added: M. Qty
+  aQty: number;
+  mQty: number;
   totalAmount: number;
   taxRate: number;
   taxAmount: number;
@@ -17,6 +50,10 @@ export interface PurchaseItem {
   sch1Amount: number;
   sch2Percent: number;
   sch2Amount: number;
+  batchId?: number;
+  cartonPack?: number;
+  conversionFactor?: number;
+  productBrand?: string;
 }
 
 export interface Purchase {
@@ -26,7 +63,7 @@ export interface Purchase {
   supplier: {
     id: number;
     name: string;
-    // gstin: string;
+    phoneNo?: string;
   };
   gstDetails: string;
   items: PurchaseItem[];
@@ -48,39 +85,28 @@ export interface Purchase {
 export interface Supplier {
   id: number;
   name: string;
-  gstin: string;
-}
-
-export interface Product {
-  id: number;
-  productCode: string;
-  description: string;
-  price: number;
-  gstRate: number;
+  gstin?: string;
+  phoneNo?: string;
+  email?: string;
+  address?: string;
 }
 
 export interface Batch {
+  id: number;
   batchNo: string;
   mfgDate: string;
   expDate: string;
   barcode: string;
-  currentStock: number;
-  tempStock: number;
+  openingStock: number;
   mrp: number;
-  pRate: number;
-  lastPRate: number;
-  pack: number;
+  purchaseRate: number;
+  saleRate: number;
+  margin: number;
+  gstAmount: number;
+  productId: number;
 }
 
-export interface PurchaseHistory {
-  batch: string;
-  invoiceNo: string;
-  date: string;
-  quantity: number;
-  rate: number;
-  amount: number;
-}
-
+// ========== Form Data ==========
 export type PurchaseFormData = {
   invoiceDate: string;
   supplierId: number;
@@ -91,8 +117,8 @@ export type PurchaseFormData = {
     productCode: string;
     description: string;
     rate: number;
-    aQty: number; // Added: A. Qty
-    mQty: number; // Added: M. Qty
+    aQty: number;
+    mQty: number;
     totalAmount: number;
     taxRate: number;
     taxAmount: number;
@@ -100,9 +126,10 @@ export type PurchaseFormData = {
     sch1Amount: number;
     sch2Percent: number;
     sch2Amount: number;
-    conversionFactor: number;
+    batchId?: number;
     cartonPack: number;
-    productBrand:string;
+    conversionFactor: number;
+    productBrand: string;
   }>;
   remarks: string;
   grossAmount: number;

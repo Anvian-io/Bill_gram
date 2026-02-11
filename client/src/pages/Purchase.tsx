@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -12,27 +12,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
-  Eye,
+  Plus,
   Edit,
   Trash2,
   Search,
   X,
-  Calendar,
-  Plus,
-  FileText,
-  Building,
-  Percent,
-  DollarSign,
+  RefreshCw,
   Package,
   ShoppingCart,
-  TrendingUp,
-  RefreshCw,
-  Hash,
   IndianRupee,
   ChevronsUpDown,
   Check,
+  Calendar,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,12 +51,12 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
-} from "../components/FramerVariants";
+} from "@/components/FramerVariants";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
-import PurchaseForm from "../components/forms/PurchaseForm";
-import type { Purchase, PurchaseFormData } from "@/types/purchase";
+import PurchaseForm from "@/components/forms/PurchaseForm";
+import { purchaseService } from "@/services/purchaseService";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import {
   Command,
@@ -75,50 +66,17 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import type {
+  Purchase,
+  PurchaseFormData,
+  PurchaseFilters,
+} from "@/types/purchase";
 
-// Mock product data (you might want to fetch this from Redux/API)
-const mockProducts = [
-  {
-    id: 1,
-    productCode: "G6",
-    description: "ECLARIS JAR",
-    price: 118.0,
-    gstRate: 5,
-  },
-  {
-    id: 2,
-    productCode: "10087",
-    description: "CRUNCHY MUNCHY S",
-    price: 3.54,
-    gstRate: 5,
-  },
-  {
-    id: 3,
-    productCode: "K1",
-    description: "KRACK IT S RS",
-    price: 3.54,
-    gstRate: 5,
-  },
-  {
-    id: 4,
-    productCode: "M50",
-    description: "GLUCO-G S RS",
-    price: 3.7,
-    gstRate: 5,
-  },
-  {
-    id: 5,
-    productCode: "G13",
-    description: "LOLLYPOP BIG JAR S",
-    price: 155.0,
-    gstRate: 5,
-  },
-];
-
-// Date utility functions
+// ----------------------------------------------------------------------
+// Date Utilities
+// ----------------------------------------------------------------------
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
-
   const formats = [
     "dd/MM/yyyy",
     "dd-MM-yyyy",
@@ -126,18 +84,14 @@ const parseDateFromString = (dateString: string): Date | undefined => {
     "dd/MM/yy",
     "yyyy-MM-dd",
   ];
-
   for (const fmt of formats) {
     try {
       const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch (error) {
-      // Continue to next format
+      if (isValid(parsed)) return parsed;
+    } catch {
+      // continue
     }
   }
-
   return undefined;
 };
 
@@ -146,122 +100,105 @@ const formatDateToDisplay = (date: Date | undefined): string => {
   return format(date, "dd/MM/yyyy");
 };
 
-// Main Purchase Page Component
+// ----------------------------------------------------------------------
+// Main Component
+// ----------------------------------------------------------------------
 export default function Purchase() {
-  // State for purchases
+  // State
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
-
-  // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
     null,
   );
-
-  // Get data from Redux store
-  const { suppliers } = useActiveLists();
-
-  // State for Command dropdowns
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Filter state
-  const [filters, setFilters] = useState({
+  // Filters state – aligned with PurchaseFilters type (uses fromDate)
+  const [filters, setFilters] = useState<PurchaseFilters>({
     search: "",
     invoiceNo: "",
-    supplier: "all" as string | "all",
+    supplierId: "all",
     minAmount: "",
     maxAmount: "",
-    invoiceDate: undefined as Date | undefined,
-    status: "all" as
-      | "all"
-      | "Pending"
-      | "Paid"
-      | "Partially Paid"
-      | "Cancelled",
+    fromDate: undefined,
+    status: "all",
+    page: 1,
+    limit: 10,
+    showDeleted: false,
   });
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalItems, setTotalItems] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Local state for immediate input values
-  const [searchInput, setSearchInput] = useState<string>("");
-  const [invoiceNoInput, setInvoiceNoInput] = useState<string>("");
-  const [minAmountInput, setMinAmountInput] = useState<string>("");
-  const [maxAmountInput, setMaxAmountInput] = useState<string>("");
-  const [invoiceDateInput, setInvoiceDateInput] = useState<string>("");
+  // Local inputs (before debounce)
+  const [searchInput, setSearchInput] = useState("");
+  const [invoiceNoInput, setInvoiceNoInput] = useState("");
+  const [minAmountInput, setMinAmountInput] = useState("");
+  const [maxAmountInput, setMaxAmountInput] = useState("");
+  const [fromDateInput, setFromDateInput] = useState("");
 
-  // Create debounced filter functions
+  // Hooks
+  const { suppliers } = useActiveLists();
+
+  // --------------------------------------------------------------------
+  // Debounced filter setters
+  // --------------------------------------------------------------------
   const debouncedSetSearch = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
   }, 300);
-
   const debouncedSetInvoiceNo = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, invoiceNo: value }));
   }, 300);
-
   const debouncedSetMinAmount = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, minAmount: value }));
   }, 300);
-
   const debouncedSetMaxAmount = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, maxAmount: value }));
   }, 300);
 
-  // Handle input changes with debounce
+  // --------------------------------------------------------------------
+  // Input handlers
+  // --------------------------------------------------------------------
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
     debouncedSetSearch(value);
   };
-
   const handleInvoiceNoChange = (value: string) => {
     setInvoiceNoInput(value);
     debouncedSetInvoiceNo(value);
   };
-
   const handleMinAmountChange = (value: string) => {
     setMinAmountInput(value);
     debouncedSetMinAmount(value);
   };
-
   const handleMaxAmountChange = (value: string) => {
     setMaxAmountInput(value);
     debouncedSetMaxAmount(value);
   };
-
-  const handleInvoiceDateInputChange = (value: string) => {
-    setInvoiceDateInput(value);
-    const parsedDate = parseDateFromString(value);
-    if (parsedDate) {
-      setFilters((prev) => ({ ...prev, invoiceDate: parsedDate }));
+  const handleFromDateInputChange = (value: string) => {
+    setFromDateInput(value);
+    const parsed = parseDateFromString(value);
+    if (parsed) {
+      setFilters((prev) => ({ ...prev, fromDate: parsed }));
     } else if (value === "") {
-      setFilters((prev) => ({ ...prev, invoiceDate: undefined }));
+      setFilters((prev) => ({ ...prev, fromDate: undefined }));
     }
   };
-
-  const handleInvoiceDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, invoiceDate: date }));
-    if (date) {
-      setInvoiceDateInput(formatDateToDisplay(date));
-    } else {
-      setInvoiceDateInput("");
-    }
+  const handleFromDateSelect = (date: Date | undefined) => {
+    setFilters((prev) => ({ ...prev, fromDate: date }));
+    setFromDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  // Handle filter changes
+  // Generic filter change
   const handleFilterChange = (field: string, value: any) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   // Clear all filters
@@ -269,31 +206,36 @@ export default function Purchase() {
     setFilters({
       search: "",
       invoiceNo: "",
-      supplier: "all",
+      supplierId: "all",
       minAmount: "",
       maxAmount: "",
-      invoiceDate: undefined,
+      fromDate: undefined,
       status: "all",
+      page: 1,
+      limit: itemsPerPage,
+      showDeleted: false,
     });
     setSearchInput("");
     setInvoiceNoInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
-    setInvoiceDateInput("");
+    setFromDateInput("");
   };
 
-  // Clear specific filter
-  const clearFilter = (filterName: keyof typeof filters) => {
+  // Clear a single filter
+  const clearFilter = (filterName: keyof PurchaseFilters) => {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "supplier" || filterName === "status"
+        filterName === "supplierId" || filterName === "status"
           ? "all"
-          : filterName === "invoiceDate"
+          : filterName === "fromDate"
             ? undefined
-            : "",
+            : filterName === "showDeleted"
+              ? false
+              : "",
     }));
-
+    // Clear input field
     switch (filterName) {
       case "search":
         setSearchInput("");
@@ -307,70 +249,44 @@ export default function Purchase() {
       case "maxAmount":
         setMaxAmountInput("");
         break;
-      case "invoiceDate":
-        setInvoiceDateInput("");
+      case "fromDate":
+        setFromDateInput("");
         break;
     }
   };
 
-  // Fetch purchases data (mock for now - replace with actual API call)
+  // --------------------------------------------------------------------
+  // API Calls
+  // --------------------------------------------------------------------
   const fetchPurchases = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockPurchases: Purchase[] = [
-        {
-          id: 1,
-          invoiceNo: "501622",
-          invoiceDate: "2024-01-15",
-          supplier: {
-            id: 1,
-            name: "MARINO FOOD PRODUCTS",
-            // gstin: "27ABCDE1234F1Z5",
-          },
-          gstDetails: "Against GST",
-          items: [
-            {
-              id: 1,
-              productId: 1,
-              productCode: "G6",
-              description: "ECLARIS JAR",
-              rate: 118.0,
-              aQty: 12,
-              mQty: 12,
-              totalAmount: 1416.0,
-              taxRate: 5,
-              taxAmount: 70.8,
-              sch1Percent: 0,
-              sch1Amount: 0,
-              sch2Percent: 0,
-              sch2Amount: 0,
-            },
-          ],
-          remarks: "",
-          grossAmount: 6513.6,
-          boxUnit: 22.48,
-          cessInsurance: 0,
-          scheme1: 0,
-          discountPercent: 0,
-          tax: 325.68,
-          amountAdd: 0,
-          creditAmount: 0,
-          finalAmount: 6839.28,
-          status: "Paid",
-          createdAt: "2024-01-15T10:30:00Z",
-          updatedAt: "2024-01-15T10:30:00Z",
-        },
-      ];
+      const apiFilters: PurchaseFilters = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: filters.search || undefined,
+        invoiceNo: filters.invoiceNo || undefined,
+        supplierId:
+          filters.supplierId !== "all" ? filters.supplierId : undefined,
+        minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
+        maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+        fromDate: filters.fromDate,
+        status: filters.status !== "all" ? filters.status : undefined,
+        showDeleted: filters.showDeleted,
+      };
 
-      setPurchases(mockPurchases);
-      setTotalItems(mockPurchases.length);
-      setTotalPages(Math.ceil(mockPurchases.length / itemsPerPage));
+      const response = await purchaseService.getPurchases(
+        currentPage,
+        itemsPerPage,
+        apiFilters,
+      );
+
+      setPurchases(response.purchases || []);
+      setTotalItems(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
     } catch (error) {
       console.error("Error fetching purchases:", error);
-      toast.error("Failed to fetch purchases", {
-        description: "Please try again later",
-      });
+      toast.error("Failed to fetch purchases");
       setPurchases([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -379,102 +295,99 @@ export default function Purchase() {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchPurchases();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, filters]);
 
-  // Filter purchases based on current filters
-  const filteredPurchases = useMemo(() => {
-    return purchases.filter((purchase) => {
-      // Search filter
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const matches =
-          purchase.invoiceNo.toLowerCase().includes(searchLower) ||
-          purchase.supplier.name.toLowerCase().includes(searchLower) ||
-          (purchase.remarks &&
-            purchase.remarks.toLowerCase().includes(searchLower)) ||
-          purchase.items.some(
-            (item) =>
-              item.productCode.toLowerCase().includes(searchLower) ||
-              item.description.toLowerCase().includes(searchLower),
-          );
-        if (!matches) return false;
-      }
-
-      // Invoice No filter
-      if (
-        filters.invoiceNo &&
-        !purchase.invoiceNo.includes(filters.invoiceNo)
-      ) {
-        return false;
-      }
-
-      // Supplier filter
-      if (
-        filters.supplier !== "all" &&
-        purchase.supplier.id.toString() !== filters.supplier
-      ) {
-        return false;
-      }
-
-      // Amount range filter
-      if (
-        filters.minAmount &&
-        purchase.finalAmount < parseFloat(filters.minAmount)
-      ) {
-        return false;
-      }
-      if (
-        filters.maxAmount &&
-        purchase.finalAmount > parseFloat(filters.maxAmount)
-      ) {
-        return false;
-      }
-
-      // Invoice date filter
-      if (filters.invoiceDate) {
-        const purchaseDate = new Date(purchase.invoiceDate);
-        const filterDate = new Date(filters.invoiceDate);
-        if (
-          purchaseDate.getDate() !== filterDate.getDate() ||
-          purchaseDate.getMonth() !== filterDate.getMonth() ||
-          purchaseDate.getFullYear() !== filterDate.getFullYear()
-        ) {
-          return false;
-        }
-      }
-
-      // Status filter
-      if (filters.status !== "all" && purchase.status !== filters.status) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [purchases, filters]);
-
-  // Update pagination based on filtered purchases
   useEffect(() => {
-    setTotalItems(filteredPurchases.length);
-    setTotalPages(Math.ceil(filteredPurchases.length / itemsPerPage));
-  }, [filteredPurchases, itemsPerPage]);
+    setCurrentPage(1);
+  }, [filters, itemsPerPage]);
 
-  // Get current page purchases
-  const currentPurchases = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredPurchases.slice(startIndex, endIndex);
-  }, [filteredPurchases, currentPage, itemsPerPage]);
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // --------------------------------------------------------------------
+  // CRUD Handlers
+  // --------------------------------------------------------------------
+  const handleAddPurchase = () => {
+    setEditingPurchase(null);
+    setIsModalOpen(true);
   };
 
-  // Format date for display
+  const handleEditPurchase = (purchase: Purchase) => {
+    setEditingPurchase(purchase);
+    setIsModalOpen(true);
+  };
+
+  const confirmDeletePurchase = (purchase: Purchase) => {
+    setPurchaseToDelete(purchase);
+    setDeleteOpen(true);
+  };
+
+  const handleDeletePurchase = async () => {
+    if (!purchaseToDelete) return;
+    try {
+      await purchaseService.deletePurchase(purchaseToDelete.id);
+      toast.success("Purchase deleted successfully");
+      fetchPurchases();
+    } catch (error: any) {
+      toast.error("Failed to delete purchase", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setPurchaseToDelete(null);
+      setDeleteOpen(false);
+    }
+  };
+
+  const handleSavePurchase = async (data: PurchaseFormData, id?: number) => {
+    setIsSubmitting(true);
+    try {
+      if (id) {
+        await purchaseService.updatePurchase(id, data);
+        toast.success("Purchase updated successfully");
+      } else {
+        await purchaseService.createPurchase(data);
+        toast.success("Purchase created successfully");
+      }
+      setIsModalOpen(false);
+      fetchPurchases();
+    } catch (error: any) {
+      toast.error("Failed to save purchase", {
+        description: error.response?.data?.message || "Please try again",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchPurchases();
+    toast.info("Refreshing purchase data...");
+  };
+
+  // --------------------------------------------------------------------
+  // Helper functions
+  // --------------------------------------------------------------------
+  const activeFiltersCount =
+    Object.entries(filters).filter(
+      ([key, value]) =>
+        key !== "search" &&
+        key !== "fromDate" &&
+        key !== "toDate" &&
+        value &&
+        value !== "all" &&
+        value !== "" &&
+        !(value instanceof Date) &&
+        !(key === "showDeleted" && !value),
+    ).length + (filters.fromDate ? 1 : 0);
+
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const getSupplierName = (id: string | number) => {
+    if (id === "all" || !id) return "All Suppliers";
+    const supplier = suppliers.find((s) => s.id.toString() === id.toString());
+    return supplier ? supplier.name : "Select Supplier";
+  };
+
   const formatDateTime = (dateString: string) => {
     if (!dateString) return "N/A";
     try {
@@ -490,182 +403,9 @@ export default function Purchase() {
     }
   };
 
-  // Handle Add Purchase
-  const handleAddPurchase = () => {
-    setEditingPurchase(null);
-    setIsModalOpen(true);
-  };
-
-  // Handle Edit Purchase
-  const handleEditPurchase = (purchase: Purchase) => {
-    setEditingPurchase(purchase);
-    setIsModalOpen(true);
-  };
-
-  // Handle Delete Purchase
-  const confirmDeletePurchase = (purchase: Purchase) => {
-    setPurchaseToDelete(purchase);
-    setDeleteOpen(true);
-  };
-
-  const handleDeletePurchase = async () => {
-    if (purchaseToDelete) {
-      try {
-        setPurchases(purchases.filter((p) => p.id !== purchaseToDelete.id));
-        toast.success("Purchase deleted successfully!");
-      } catch (error: any) {
-        toast.error("Failed to delete purchase", {
-          description: "Please try again",
-        });
-      } finally {
-        setPurchaseToDelete(null);
-        setDeleteOpen(false);
-      }
-    }
-  };
-
-  // Handle Save Purchase
-  const handleSavePurchase = async (data: PurchaseFormData, id?: number) => {
-    setIsSubmitting(true);
-
-    try {
-      const supplier = suppliers.find((s) => s.id === data.supplierId);
-
-      if (!supplier) {
-        throw new Error("Supplier not found");
-      }
-
-      if (id) {
-        // Update existing purchase
-        const updatedPurchase: Purchase = {
-          id,
-          invoiceNo: data.invoiceNo,
-          invoiceDate: data.invoiceDate,
-          supplier: {
-            id: supplier.id,
-            name: supplier.name,
-            // gstin: supplier.gstin || "",
-          },
-          gstDetails: data.gstDetails || "Against GST",
-          items: data.items.map((item, index) => ({
-            id: index + 1,
-            productId: item.productId,
-            productCode: item.productCode,
-            description: item.description,
-            rate: item.rate,
-            aQty: item.aQty,
-            mQty: item.mQty,
-            totalAmount: item.totalAmount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            sch1Percent: item.sch1Percent,
-            sch1Amount: item.sch1Amount,
-            sch2Percent: item.sch2Percent,
-            sch2Amount: item.sch2Amount,
-          })),
-          remarks: data.remarks || "",
-          grossAmount: data.grossAmount,
-          boxUnit: data.boxUnit,
-          cessInsurance: data.cessInsurance,
-          scheme1: data.scheme1,
-          discountPercent: data.discountPercent,
-          tax: data.tax,
-          amountAdd: data.amountAdd,
-          creditAmount: data.creditAmount,
-          finalAmount: data.finalAmount,
-          status: "Pending",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setPurchases(purchases.map((p) => (p.id === id ? updatedPurchase : p)));
-        toast.success("Purchase updated successfully!");
-      } else {
-        // Add new purchase
-        const newPurchase: Purchase = {
-          id: purchases.length + 1,
-          invoiceNo: data.invoiceNo,
-          invoiceDate: data.invoiceDate,
-          supplier: {
-            id: supplier.id,
-            name: supplier.name,
-            // gstin: supplier.gstin || "",
-          },
-          gstDetails: data.gstDetails || "Against GST",
-          items: data.items.map((item, index) => ({
-            id: index + 1,
-            productId: item.productId,
-            productCode: item.productCode,
-            description: item.description,
-            rate: item.rate,
-            aQty: item.aQty,
-            mQty: item.mQty,
-            totalAmount: item.totalAmount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            sch1Percent: item.sch1Percent,
-            sch1Amount: item.sch1Amount,
-            sch2Percent: item.sch2Percent,
-            sch2Amount: item.sch2Amount,
-          })),
-          remarks: data.remarks || "",
-          grossAmount: data.grossAmount,
-          boxUnit: data.boxUnit,
-          cessInsurance: data.cessInsurance,
-          scheme1: data.scheme1,
-          discountPercent: data.discountPercent,
-          tax: data.tax,
-          amountAdd: data.amountAdd,
-          creditAmount: data.creditAmount,
-          finalAmount: data.finalAmount,
-          status: "Pending",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setPurchases([newPurchase, ...purchases]);
-        toast.success("Purchase created successfully!");
-      }
-
-      setIsModalOpen(false);
-      fetchPurchases(); // Refresh the list
-    } catch (error: any) {
-      toast.error("Failed to save purchase", {
-        description: error.message || "Please try again",
-      });
-      throw error;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Refresh data
-  const handleRefresh = () => {
-    fetchPurchases();
-    toast.info("Refreshing purchase data...");
-  };
-
-  // Active filters count
-  const activeFiltersCount =
-    Object.entries(filters).filter(
-      ([key, value]) =>
-        key !== "search" &&
-        value &&
-        value !== "all" &&
-        !(value instanceof Date),
-    ).length + (filters.invoiceDate ? 1 : 0);
-
-  // Calculate start and end index for display
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-
-  // Get display name for Command dropdowns
-  const getSupplierName = (id: string) => {
-    if (id === "all") return "All Suppliers";
-    const supplier = suppliers.find((s) => s.id.toString() === id);
-    return supplier ? supplier.name : "Select Supplier";
-  };
-
+  // --------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------
   return (
     <>
       <motion.div
@@ -675,13 +415,12 @@ export default function Purchase() {
         variants={containerVariants}
       >
         <div className="max-w-8xl mx-auto">
-          {/* Header */}
+          {/* Header Section */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              {/* Title */}
               <div>
                 <h1 className="text-3xl font-bold text-heading">
                   Purchase Management
@@ -819,7 +558,7 @@ export default function Purchase() {
                         className="overflow-hidden"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                          {/* Invoice No Filter */}
+                          {/* Invoice No */}
                           <div className="space-y-2">
                             <Label
                               htmlFor="invoiceNo"
@@ -842,10 +581,7 @@ export default function Purchase() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => {
-                                    setInvoiceNoInput("");
-                                    clearFilter("invoiceNo");
-                                  }}
+                                  onClick={() => clearFilter("invoiceNo")}
                                   disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
@@ -854,7 +590,7 @@ export default function Purchase() {
                             </div>
                           </div>
 
-                          {/* Supplier Filter - Command Dropdown */}
+                          {/* Supplier */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Supplier
@@ -871,7 +607,7 @@ export default function Purchase() {
                                   className="w-full justify-between"
                                   disabled={isLoading}
                                 >
-                                  {getSupplierName(filters.supplier)}
+                                  {getSupplierName(filters.supplierId!)}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
@@ -886,14 +622,17 @@ export default function Purchase() {
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
-                                          handleFilterChange("supplier", "all");
+                                          handleFilterChange(
+                                            "supplierId",
+                                            "all",
+                                          );
                                           setSupplierOpen(false);
                                         }}
                                       >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            filters.supplier === "all"
+                                            filters.supplierId === "all"
                                               ? "opacity-100"
                                               : "opacity-0",
                                           )}
@@ -906,7 +645,7 @@ export default function Purchase() {
                                           value={supplier.id.toString()}
                                           onSelect={() => {
                                             handleFilterChange(
-                                              "supplier",
+                                              "supplierId",
                                               supplier.id.toString(),
                                             );
                                             setSupplierOpen(false);
@@ -915,7 +654,7 @@ export default function Purchase() {
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              filters.supplier ===
+                                              filters.supplierId ===
                                                 supplier.id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0",
@@ -936,7 +675,7 @@ export default function Purchase() {
                             </Popover>
                           </div>
 
-                          {/* Amount Range Filter */}
+                          {/* Amount Range */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Amount Range
@@ -963,7 +702,7 @@ export default function Purchase() {
                             </div>
                           </div>
 
-                          {/* Status Filter */}
+                          {/* Status */}
                           <div className="space-y-2">
                             <Label
                               htmlFor="status"
@@ -973,14 +712,9 @@ export default function Purchase() {
                             </Label>
                             <Select
                               value={filters.status}
-                              onValueChange={(
-                                value:
-                                  | "all"
-                                  | "Pending"
-                                  | "Paid"
-                                  | "Partially Paid"
-                                  | "Cancelled",
-                              ) => handleFilterChange("status", value)}
+                              onValueChange={(value) =>
+                                handleFilterChange("status", value)
+                              }
                               disabled={isLoading}
                             >
                               <SelectTrigger id="status">
@@ -1000,7 +734,7 @@ export default function Purchase() {
                             </Select>
                           </div>
 
-                          {/* Invoice Date */}
+                          {/* Invoice Date (fromDate) */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Invoice Date
@@ -1008,9 +742,9 @@ export default function Purchase() {
                             <div className="flex gap-2">
                               <div className="relative flex-1">
                                 <Input
-                                  value={invoiceDateInput}
+                                  value={fromDateInput}
                                   onChange={(e) =>
-                                    handleInvoiceDateInputChange(e.target.value)
+                                    handleFromDateInputChange(e.target.value)
                                   }
                                   placeholder="dd/mm/yyyy or select"
                                   className="pr-10"
@@ -1031,22 +765,19 @@ export default function Purchase() {
                                   >
                                     <CalendarComponent
                                       mode="single"
-                                      selected={filters.invoiceDate}
-                                      onSelect={handleInvoiceDateSelect}
+                                      selected={filters.fromDate}
+                                      onSelect={handleFromDateSelect}
                                       initialFocus
                                     />
                                   </PopoverContent>
                                 </Popover>
                               </div>
-                              {invoiceDateInput && (
+                              {fromDateInput && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => {
-                                    setInvoiceDateInput("");
-                                    clearFilter("invoiceDate");
-                                  }}
+                                  onClick={() => clearFilter("fromDate")}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1072,30 +803,28 @@ export default function Purchase() {
               {activeFiltersCount > 0 && " (filtered)"}
             </p>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">
-                  Items per page:
-                </div>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value) => setItemsPerPage(Number(value))}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue placeholder="10" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="text-sm text-muted-foreground">
+                Items per page:
               </div>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => setItemsPerPage(Number(value))}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </motion.div>
 
-          {/* Purchase Table */}
+          {/* Purchases Table */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
@@ -1141,7 +870,6 @@ export default function Purchase() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
                           >
                             <TableCell
                               colSpan={12}
@@ -1155,13 +883,12 @@ export default function Purchase() {
                               </div>
                             </TableCell>
                           </motion.tr>
-                        ) : currentPurchases.length === 0 ? (
+                        ) : purchases.length === 0 ? (
                           <motion.tr
                             key="no-data"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
                           >
                             <TableCell
                               colSpan={12}
@@ -1171,27 +898,21 @@ export default function Purchase() {
                                 className="flex flex-col items-center justify-center"
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
                               >
                                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50 mb-2" />
                                 <p>No purchases found matching your filters.</p>
-                                <motion.div
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
+                                <Button
+                                  variant="link"
+                                  onClick={clearFilters}
+                                  className="mt-2"
                                 >
-                                  <Button
-                                    variant="link"
-                                    onClick={clearFilters}
-                                    className="mt-2"
-                                  >
-                                    Clear all filters
-                                  </Button>
-                                </motion.div>
+                                  Clear all filters
+                                </Button>
                               </motion.div>
                             </TableCell>
                           </motion.tr>
                         ) : (
-                          currentPurchases.map((purchase, index) => (
+                          purchases.map((purchase, index) => (
                             <motion.tr
                               key={purchase.id}
                               custom={index}
@@ -1201,9 +922,6 @@ export default function Purchase() {
                               variants={rowVariants}
                               className="group border-1"
                               layout
-                              transition={{
-                                layout: { duration: 0.3 },
-                              }}
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div className="font-mono font-medium text-primary">
@@ -1211,14 +929,9 @@ export default function Purchase() {
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div>
-                                  <p className="font-medium">
-                                    {purchase.supplier.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {/* GSTIN: {purchase.supplier.gstin} */}
-                                  </p>
-                                </div>
+                                <p className="font-medium">
+                                  {purchase.supplier.name}
+                                </p>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 {formatDateTime(purchase.invoiceDate)}
@@ -1300,12 +1013,12 @@ export default function Purchase() {
                                     }
                                     className={
                                       purchase.status === "Paid"
-                                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                                         : purchase.status === "Pending"
-                                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400"
+                                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
                                           : purchase.status === "Partially Paid"
-                                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"
-                                            : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                            : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
                                     }
                                   >
                                     {purchase.status}
@@ -1367,8 +1080,8 @@ export default function Purchase() {
             </Card>
           </motion.div>
 
-          {/* Custom Pagination */}
-          {!isLoading && currentPurchases.length > 0 && totalPages > 1 && (
+          {/* Pagination */}
+          {!isLoading && purchases.length > 0 && totalPages > 1 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1377,7 +1090,7 @@ export default function Purchase() {
               <CustomPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={handlePageChange}
+                onPageChange={setCurrentPage}
               />
             </motion.div>
           )}

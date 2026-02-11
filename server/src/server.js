@@ -12,6 +12,9 @@ import vanRoutes from "./route/vanRoutes.js";
 import accountRoutes from "./route/accountRoutes.js";
 import productRoutes from "./route/productRoutes.js";
 import imageRoutes from "./route/imageRoutes.js";
+import purchaseRoute from "./route/purchaseRoutes.js"
+import supplierRoutes from "./route/supplierRoutes.js";
+
 import notificationRoutes from "./route/notificationRoutes.js"; // Add this
 import { createServer } from "http";
 import { notificationController } from "./controllers/notificationController.js"; // Add this
@@ -56,7 +59,9 @@ const startServer = async () => {
     app.use("/api/products", productRoutes);
     app.use("/api/images", imageRoutes);
     app.use("/api/notifications", notificationRoutes); // Add this
-    
+    app.use("/api/purchases", purchaseRoute); // Add this
+        app.use("/api/suppliers", supplierRoutes);
+
     // Health check
     app.get("/api/health", (req, res) => {
       res.json({
