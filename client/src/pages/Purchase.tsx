@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -117,10 +117,9 @@ export default function Purchase() {
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filters state – aligned with PurchaseFilters type (uses fromDate)
+  // Filters state – invoiceNo removed
   const [filters, setFilters] = useState<PurchaseFilters>({
     search: "",
-    invoiceNo: "",
     supplierId: "all",
     minAmount: "",
     maxAmount: "",
@@ -139,7 +138,6 @@ export default function Purchase() {
 
   // Local inputs (before debounce)
   const [searchInput, setSearchInput] = useState("");
-  const [invoiceNoInput, setInvoiceNoInput] = useState("");
   const [minAmountInput, setMinAmountInput] = useState("");
   const [maxAmountInput, setMaxAmountInput] = useState("");
   const [fromDateInput, setFromDateInput] = useState("");
@@ -152,9 +150,6 @@ export default function Purchase() {
   // --------------------------------------------------------------------
   const debouncedSetSearch = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
-  }, 300);
-  const debouncedSetInvoiceNo = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, invoiceNo: value }));
   }, 300);
   const debouncedSetMinAmount = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, minAmount: value }));
@@ -169,10 +164,6 @@ export default function Purchase() {
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
     debouncedSetSearch(value);
-  };
-  const handleInvoiceNoChange = (value: string) => {
-    setInvoiceNoInput(value);
-    debouncedSetInvoiceNo(value);
   };
   const handleMinAmountChange = (value: string) => {
     setMinAmountInput(value);
@@ -205,7 +196,6 @@ export default function Purchase() {
   const clearFilters = () => {
     setFilters({
       search: "",
-      invoiceNo: "",
       supplierId: "all",
       minAmount: "",
       maxAmount: "",
@@ -216,7 +206,6 @@ export default function Purchase() {
       showDeleted: false,
     });
     setSearchInput("");
-    setInvoiceNoInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
     setFromDateInput("");
@@ -240,14 +229,11 @@ export default function Purchase() {
       case "search":
         setSearchInput("");
         break;
-      case "invoiceNo":
-        setInvoiceNoInput("");
-        break;
       case "minAmount":
         setMinAmountInput("");
         break;
       case "maxAmount":
-        setMaxAmountInput("");
+        setMaxAmountInput(""); // fixed
         break;
       case "fromDate":
         setFromDateInput("");
@@ -265,7 +251,6 @@ export default function Purchase() {
         page: currentPage,
         limit: itemsPerPage,
         search: filters.search || undefined,
-        invoiceNo: filters.invoiceNo || undefined,
         supplierId:
           filters.supplierId !== "all" ? filters.supplierId : undefined,
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
@@ -311,9 +296,17 @@ export default function Purchase() {
     setIsModalOpen(true);
   };
 
-  const handleEditPurchase = (purchase: Purchase) => {
-    setEditingPurchase(purchase);
-    setIsModalOpen(true);
+  const handleEditPurchase = async (purchase: Purchase) => {
+    try {
+      setIsLoading(true);
+      const fullPurchase = await purchaseService.getPurchase(purchase.id);
+      setEditingPurchase(fullPurchase);
+      setIsModalOpen(true);
+    } catch (error) {
+      toast.error("Failed to load purchase details");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const confirmDeletePurchase = (purchase: Purchase) => {
@@ -371,7 +364,6 @@ export default function Purchase() {
       ([key, value]) =>
         key !== "search" &&
         key !== "fromDate" &&
-        key !== "toDate" &&
         value &&
         value !== "all" &&
         value !== "" &&
@@ -558,38 +550,6 @@ export default function Purchase() {
                         className="overflow-hidden"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                          {/* Invoice No */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="invoiceNo"
-                              className="text-sm font-medium"
-                            >
-                              Invoice No
-                            </Label>
-                            <div className="flex gap-2">
-                              <Input
-                                id="invoiceNo"
-                                placeholder="Enter invoice no"
-                                value={invoiceNoInput}
-                                onChange={(e) =>
-                                  handleInvoiceNoChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              {invoiceNoInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("invoiceNo")}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
                           {/* Supplier */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
@@ -1052,7 +1012,14 @@ export default function Purchase() {
                                     size="icon"
                                     onClick={() => handleEditPurchase(purchase)}
                                     className="h-8 w-8 hover:bg-green-100"
-                                    disabled={isLoading}
+                                    disabled={
+                                      isLoading || purchase.status !== "Pending"
+                                    }
+                                    title={
+                                      purchase.status !== "Pending"
+                                        ? "Only pending invoices can be edited"
+                                        : "Edit purchase"
+                                    }
                                   >
                                     <Edit className="h-4 w-4 text-green-600" />
                                   </Button>
@@ -1063,7 +1030,7 @@ export default function Purchase() {
                                       confirmDeletePurchase(purchase)
                                     }
                                     className="h-8 w-8 hover:bg-red-100"
-                                    disabled={isLoading}
+                                    disabled={isLoading || purchase.deleted}
                                   >
                                     <Trash2 className="h-4 w-4 text-red-600" />
                                   </Button>

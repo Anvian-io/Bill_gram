@@ -20,10 +20,10 @@ export interface PaginatedResponse<T> {
 // ========== Filters ==========
 export interface PurchaseFilters {
   search?: string;
-  invoiceNo?: string;
+  // invoiceNo is removed – auto-generated
   supplierId?: string | number;
-  fromDate?: Date | string;
-  toDate?: Date | string;
+  fromDate?: Date; // ← only Date, never string
+  toDate?: Date;
   minAmount?: number | string;
   maxAmount?: number | string;
   status?: "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled";
@@ -78,6 +78,7 @@ export interface Purchase {
   creditAmount: number;
   finalAmount: number;
   status: "Pending" | "Paid" | "Partially Paid" | "Cancelled";
+  deleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,8 +111,7 @@ export interface Batch {
 export type PurchaseFormData = {
   invoiceDate: string;
   supplierId: number;
-  invoiceNo: string;
-  gstDetails: string;
+  gstDetails: string; // invoiceNo removed – auto-generated
   items: Array<{
     productId: number;
     productCode: string;

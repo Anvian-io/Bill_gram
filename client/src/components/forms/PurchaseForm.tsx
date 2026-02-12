@@ -37,15 +37,12 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
-  X as XIcon,
   Plus,
   Trash2,
   Percent,
-  Search,
   Package,
   Hash,
   FileText,
-  Building,
   ChevronsUpDown,
   Check,
   IndianRupee,
@@ -86,16 +83,13 @@ interface ProductWithFactors {
 }
 
 // ----------------------------------------------------------------------
-// Schema Validation (with batchId)
+// Schema Validation (invoiceNo removed – auto‑generated)
 // ----------------------------------------------------------------------
 const purchaseSchema = z.object({
-  // Header Information
   invoiceDate: z.string().min(1, "Invoice date is required"),
   supplierId: z.coerce.number().min(1, "Supplier is required"),
-  invoiceNo: z.string().min(1, "Invoice number is required"),
   gstDetails: z.string().optional(),
 
-  // Product Items
   items: z
     .array(
       z.object({
@@ -115,7 +109,7 @@ const purchaseSchema = z.object({
         sch1Amount: z.coerce.number().min(0).default(0),
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
-        batchId: z.coerce.number().optional(), // <-- NEW
+        batchId: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
         productBrand: z.string().optional(),
@@ -123,7 +117,6 @@ const purchaseSchema = z.object({
     )
     .min(1, "At least one product item is required"),
 
-  // Summary Information
   remarks: z.string().optional(),
   grossAmount: z.coerce.number().min(0, "Gross amount must be positive"),
   boxUnit: z.coerce.number().min(0).default(0),
@@ -148,12 +141,12 @@ interface PurchaseFormModalProps {
 }
 
 // ----------------------------------------------------------------------
-// Initial Values
+// Initial Values – invoiceNo removed
 // ----------------------------------------------------------------------
 const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
-  supplierId: 0,
   invoiceNo: "",
+  supplierId: 0,
   gstDetails: "Against GST",
   items: [],
   remarks: "",
@@ -251,7 +244,41 @@ export default function PurchaseForm({
   // Reset form when editingPurchase changes
   useEffect(() => {
     if (editingPurchase) {
-      form.reset(editingPurchase);
+      // The backend now returns the full purchase with all item fields
+      form.reset({
+        invoiceDate: editingPurchase.invoiceDate.split("T")[0],
+        supplierId: editingPurchase.supplier.id,
+        gstDetails: editingPurchase.gstDetails,
+        items: editingPurchase.items.map((item: any) => ({
+          productId: item.productId,
+          productCode: item.productCode,
+          description: item.description,
+          rate: item.rate,
+          aQty: item.aQty,
+          mQty: item.mQty ?? 0,
+          totalAmount: item.totalAmount,
+          taxRate: item.taxRate,
+          taxAmount: item.taxAmount,
+          sch1Percent: item.sch1Percent ?? 0,
+          sch1Amount: item.sch1Amount ?? 0,
+          sch2Percent: item.sch2Percent ?? 0,
+          sch2Amount: item.sch2Amount ?? 0,
+          batchId: item.batchId,
+          cartonPack: item.cartonPack ?? 0,
+          conversionFactor: item.conversionFactor ?? 1,
+          productBrand: item.productBrand ?? "",
+        })),
+        remarks: editingPurchase.remarks,
+        grossAmount: editingPurchase.grossAmount,
+        boxUnit: editingPurchase.boxUnit,
+        cessInsurance: editingPurchase.cessInsurance,
+        scheme1: editingPurchase.scheme1,
+        discountPercent: editingPurchase.discountPercent,
+        tax: editingPurchase.tax,
+        amountAdd: editingPurchase.amountAdd,
+        creditAmount: editingPurchase.creditAmount,
+        finalAmount: editingPurchase.finalAmount,
+      });
     } else {
       form.reset(defaultValues);
     }
@@ -297,10 +324,8 @@ export default function PurchaseForm({
     const updatedItems = [...items];
     const item = updatedItems[index];
 
-    // Update the field
     updatedItems[index] = { ...item, [field]: value };
 
-    // Rate or aQty change → recalc totalAmount & taxAmount
     if (field === "rate" || field === "aQty") {
       const rate = field === "rate" ? value : item.rate;
       const aQty = field === "aQty" ? value : item.aQty;
@@ -313,19 +338,16 @@ export default function PurchaseForm({
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // Tax rate change → recalc taxAmount
     if (field === "taxRate") {
       const taxAmount = item.totalAmount * (value / 100);
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // Total amount change → recalc taxAmount
     if (field === "totalAmount") {
       const taxAmount = value * (item.taxRate / 100);
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // A Qty change → recalc M Qty (auto)
     if (field === "aQty") {
       const product = findProduct(item.productId);
       if (product) {
@@ -347,7 +369,6 @@ export default function PurchaseForm({
       const updatedItems = [...items];
       const item = updatedItems[index];
 
-      // Recalculate M Qty (using product factors)
       const product = findProduct(item.productId);
       const calculatedMQty = product
         ? calculateMQty(aQty, product)
@@ -355,10 +376,9 @@ export default function PurchaseForm({
           pendingBatchSelection.cartonPack *
           pendingBatchSelection.conversionFactor;
 
-      // Update item with batch information
       updatedItems[index] = {
         ...item,
-        batchId: batch.id, // <-- store batchId
+        batchId: batch.id,
         rate: batch.purchaseRate,
         aQty: aQty,
         mQty: calculatedMQty,
@@ -425,7 +445,7 @@ export default function PurchaseForm({
       sch1Amount: 0,
       sch2Percent: 0,
       sch2Amount: 0,
-      batchId: undefined, // <-- NEW
+      batchId: undefined,
       cartonPack: 0,
       conversionFactor: 0,
       productBrand: "",
@@ -465,15 +485,13 @@ export default function PurchaseForm({
           (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
-        batchId: undefined, // <-- clear previous batchId
+        batchId: undefined,
       };
       form.setValue("items", updatedItems);
 
-      // Close product dropdown
       setProductOpen(false);
       setActiveProductIndex(null);
 
-      // Open batch modal immediately
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -511,9 +529,12 @@ export default function PurchaseForm({
   // Form submission
   // --------------------------------------------------------------------
   const onSubmit = async (data: PurchaseFormData) => {
-    console.log("Form submitted with data:", data);
+    // Remove invoiceNo – backend will generate it
+    const payload = { ...data };
+    // @ts-ignore – we don't send invoiceNo at all
+    delete payload.invoiceNo;
     try {
-      await onSave(data, editingPurchase?.id);
+      await onSave(payload as PurchaseFormData, editingPurchase?.id);
     } catch (error) {
       console.error("Error in form submission:", error);
       toast.error("Failed to save purchase. Please try again.");
@@ -524,6 +545,10 @@ export default function PurchaseForm({
     console.error("Form validation errors:", errors);
     toast.error("Please fix all validation errors before submitting.");
   };
+
+  // Determine if form should be read‑only (editing a non‑pending invoice)
+  const isReadOnly =
+    editingPurchase && editingPurchase.status !== "Pending" ? true : false;
 
   // --------------------------------------------------------------------
   // Render
@@ -537,13 +562,20 @@ export default function PurchaseForm({
               <DialogTitle className="text-2xl flex items-center gap-2">
                 <FileText className="h-6 w-6" />
                 {editingPurchase
-                  ? "Edit Purchase Invoice"
+                  ? `Invoice ${editingPurchase.invoiceNo}`
                   : "Add New Purchase Invoice"}
               </DialogTitle>
+              {editingPurchase && editingPurchase.status !== "Pending" && (
+                <Badge variant="secondary" className="ml-2">
+                  Read‑only
+                </Badge>
+              )}
             </div>
             <DialogDescription>
               {editingPurchase
-                ? "Update purchase invoice details"
+                ? editingPurchase.status === "Pending"
+                  ? "Update purchase invoice details"
+                  : "View purchase invoice details (read‑only)"
                 : "Create a new purchase invoice"}
             </DialogDescription>
           </DialogHeader>
@@ -553,7 +585,7 @@ export default function PurchaseForm({
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
-              {/* Header Section */}
+              {/* Header Section – invoiceNo removed */}
               <div className="rounded-lg border p-4 bg-card">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -577,7 +609,7 @@ export default function PurchaseForm({
                               value={field.value}
                               onChange={field.onChange}
                               className="pl-10"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || isReadOnly}
                             />
                           </div>
                         </FormControl>
@@ -609,7 +641,7 @@ export default function PurchaseForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               >
                                 {field.value
                                   ? findSupplierName(field.value)
@@ -629,8 +661,10 @@ export default function PurchaseForm({
                                       key={supplier.id}
                                       value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(supplier.id);
-                                        setSupplierOpen(false);
+                                        if (!isReadOnly) {
+                                          field.onChange(supplier.id);
+                                          setSupplierOpen(false);
+                                        }
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -665,29 +699,6 @@ export default function PurchaseForm({
                     )}
                   />
 
-                  {/* Invoice No */}
-                  <FormField
-                    control={form.control}
-                    name="invoiceNo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm">Invoice No. *</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="e.g., 501622"
-                              className="pl-10"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* GST Details */}
                   <FormField
                     control={form.control}
@@ -699,13 +710,31 @@ export default function PurchaseForm({
                           <Input
                             placeholder="e.g., Against GST"
                             {...field}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isReadOnly}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Display Invoice Number when editing (read‑only) */}
+                  {editingPurchase && (
+                    <FormItem>
+                      <FormLabel className="text-sm">Invoice No.</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            value={editingPurchase.invoiceNo}
+                            readOnly
+                            disabled
+                            className="pl-10 bg-muted"
+                          />
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
                 </div>
               </div>
 
@@ -715,19 +744,23 @@ export default function PurchaseForm({
                   <div>
                     <h3 className="text-lg font-semibold">Products</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Add products to the purchase invoice
+                      {isReadOnly
+                        ? "View product details"
+                        : "Add products to the purchase invoice"}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addProductRow}
-                    disabled={isSubmitting}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addProductRow}
+                      disabled={isSubmitting}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto border rounded-lg">
@@ -767,8 +800,9 @@ export default function PurchaseForm({
                               colSpan={13}
                               className="text-center py-8 text-muted-foreground"
                             >
-                              No products added. Click "Add Product" to get
-                              started.
+                              No products added.{" "}
+                              {!isReadOnly &&
+                                'Click "Add Product" to get started.'}
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -784,74 +818,82 @@ export default function PurchaseForm({
 
                               {/* Product Selection */}
                               <TableCell>
-                                <Popover
-                                  open={
-                                    productOpen && activeProductIndex === index
-                                  }
-                                  onOpenChange={(open) => {
-                                    if (open) {
-                                      setActiveProductIndex(index);
-                                    } else {
-                                      setActiveProductIndex(null);
+                                {isReadOnly ? (
+                                  <div className="py-2 px-3 text-sm">
+                                    {item.productCode} – {item.description}
+                                  </div>
+                                ) : (
+                                  <Popover
+                                    open={
+                                      productOpen &&
+                                      activeProductIndex === index
                                     }
-                                    setProductOpen(open);
-                                  }}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      className="w-full justify-between"
-                                      disabled={isSubmitting}
-                                    >
-                                      {item.productId
-                                        ? findProductName(item.productId)
-                                        : "Select product"}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-full p-0">
-                                    <Command>
-                                      <CommandInput placeholder="Search products..." />
-                                      <CommandList>
-                                        <CommandEmpty>
-                                          No product found.
-                                        </CommandEmpty>
-                                        <CommandGroup>
-                                          {products.map((product) => (
-                                            <CommandItem
-                                              key={product.id}
-                                              value={`${product.id} ${product.productCode} ${product.productBrand}`}
-                                              onSelect={() => {
-                                                handleProductSelect(
-                                                  index,
-                                                  product.id,
-                                                );
-                                              }}
-                                            >
-                                              <div className="flex flex-col">
-                                                <span className="font-medium">
-                                                  {product.productCode}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                  {product.productBrand}
-                                                </span>
-                                              </div>
-                                              <Check
-                                                className={cn(
-                                                  "ml-auto h-4 w-4",
-                                                  product.id === item.productId
-                                                    ? "opacity-100"
-                                                    : "opacity-0",
-                                                )}
-                                              />
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setActiveProductIndex(index);
+                                      } else {
+                                        setActiveProductIndex(null);
+                                      }
+                                      setProductOpen(open);
+                                    }}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className="w-full justify-between"
+                                        disabled={isSubmitting || isReadOnly}
+                                      >
+                                        {item.productId
+                                          ? findProductName(item.productId)
+                                          : "Select product"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0">
+                                      <Command>
+                                        <CommandInput placeholder="Search products..." />
+                                        <CommandList>
+                                          <CommandEmpty>
+                                            No product found.
+                                          </CommandEmpty>
+                                          <CommandGroup>
+                                            {products.map((product) => (
+                                              <CommandItem
+                                                key={product.id}
+                                                value={`${product.id} ${product.productCode} ${product.productBrand}`}
+                                                onSelect={() => {
+                                                  handleProductSelect(
+                                                    index,
+                                                    product.id,
+                                                  );
+                                                }}
+                                              >
+                                                <div className="flex flex-col">
+                                                  <span className="font-medium">
+                                                    {product.productCode}
+                                                  </span>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {product.productBrand}
+                                                  </span>
+                                                </div>
+                                                <Check
+                                                  className={cn(
+                                                    "ml-auto h-4 w-4",
+                                                    product.id ===
+                                                      item.productId
+                                                      ? "opacity-100"
+                                                      : "opacity-0",
+                                                  )}
+                                                />
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
                               </TableCell>
 
                               {/* Rate */}
@@ -870,7 +912,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-24 pl-7"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -890,7 +932,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-20"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -925,7 +967,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-24 pl-7"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -945,7 +987,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -954,7 +996,7 @@ export default function PurchaseForm({
                               {/* Sch1 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch1Amount}
+                                  ₹{item.sch1Amount.toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -973,7 +1015,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -982,7 +1024,7 @@ export default function PurchaseForm({
                               {/* Sch2 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch2Amount}
+                                  ₹{item.sch2Amount.toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1001,7 +1043,7 @@ export default function PurchaseForm({
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -1010,34 +1052,40 @@ export default function PurchaseForm({
                               {/* Tax Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.taxAmount}
+                                  ₹{item.taxAmount.toFixed(2)}
                                 </div>
                               </TableCell>
 
                               {/* Actions */}
                               <TableCell>
                                 <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openBatchModal(index)}
-                                    disabled={!item.productId || isSubmitting}
-                                    className="h-7 w-7 p-0"
-                                    title="Select Batch"
-                                  >
-                                    <Layers className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeProductRow(index)}
-                                    disabled={isSubmitting}
-                                    className="h-7 w-7 p-0"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  {!isReadOnly && (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openBatchModal(index)}
+                                        disabled={
+                                          !item.productId || isSubmitting
+                                        }
+                                        className="h-7 w-7 p-0"
+                                        title="Select Batch"
+                                      >
+                                        <Layers className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeProductRow(index)}
+                                        disabled={isSubmitting}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1053,7 +1101,7 @@ export default function PurchaseForm({
                 </div>
               </div>
 
-              {/* Summary Section (unchanged) */}
+              {/* Summary Section – unchanged, but disabled if readOnly */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
@@ -1073,7 +1121,7 @@ export default function PurchaseForm({
                                 placeholder="Enter any additional remarks, notes, or special instructions..."
                                 className="min-h-[120px] bg-white dark:bg-gray-900 border-[var(--remarks-border)] focus:border-[var(--primary)]"
                                 {...field}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               />
                             </FormControl>
                             <FormMessage />
@@ -1081,7 +1129,9 @@ export default function PurchaseForm({
                         )}
                       />
                       <p className="text-xs text-[var(--remarks-text)] mt-2">
-                        Add any special instructions or notes for this invoice.
+                        {isReadOnly
+                          ? "Read‑only view"
+                          : "Add any special instructions or notes for this invoice."}
                       </p>
                     </div>
                   </div>
@@ -1095,7 +1145,7 @@ export default function PurchaseForm({
                       </h4>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Gross Amount */}
+                        {/* All summary fields – they are read‑only anyway */}
                         <div className="bg-[var(--summary-bg-1)] rounded-lg p-3 border border-[var(--summary-border-1)]">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-[var(--summary-text-1)]">
@@ -1397,15 +1447,17 @@ export default function PurchaseForm({
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
                 >
-                  Cancel
+                  {isReadOnly ? "Close" : "Cancel"}
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? "Saving..."
-                    : editingPurchase
-                      ? "Update Purchase"
-                      : "Create Purchase"}
-                </Button>
+                {!isReadOnly && (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting
+                      ? "Saving..."
+                      : editingPurchase
+                        ? "Update Purchase"
+                        : "Create Purchase"}
+                  </Button>
+                )}
               </DialogFooter>
             </form>
           </Form>
