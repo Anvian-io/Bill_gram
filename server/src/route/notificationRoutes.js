@@ -10,6 +10,7 @@ router.use(authenticateToken);
 // Protected routes
 router.post("/", notificationController.createNotification);
 router.get("/", notificationController.getUserNotifications);
+router.get("/all", notificationController.getAllNotifications); // Admin view
 router.put("/:id/read", notificationController.markAsRead);
 router.put("/read-all", notificationController.markAllAsRead);
 router.get("/unread-count", notificationController.getUnreadCount);

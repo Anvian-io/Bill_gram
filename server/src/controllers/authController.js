@@ -18,9 +18,10 @@ export const register = asyncHandler(async (req, res) => {
   if (!username || !email || !password) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Missing required fields (username, email, password)",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -35,7 +36,13 @@ export const register = asyncHandler(async (req, res) => {
   });
 
   if (existingUser) {
-    return sendResponse(res, statusType.CONFLICT, null, "User already exists");
+    return sendResponse(
+      res,
+      false,
+      null,
+      "User already exists",
+      statusType.CONFLICT,
+    );
   }
 
   // Hash password
@@ -62,38 +69,15 @@ export const register = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.CREATED,
+    true,
     {
       message: "User registered successfully",
       user,
     },
     "Registration successful",
+    statusType.CREATED,
   );
 });
-
-export const authenticateToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "No token provided" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // This will set userId and email
-    next();
-  } catch (error) {
-    console.error("Token verification error:", error);
-
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ error: "Invalid token" });
-    } else if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ error: "Token has expired" });
-    }
-
-    return res.status(500).json({ error: "Token verification failed" });
-  }
-};
 
 // Login user
 export const login = asyncHandler(async (req, res) => {
@@ -103,9 +87,10 @@ export const login = asyncHandler(async (req, res) => {
   if (!email || !password) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Email and password are required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -120,9 +105,10 @@ export const login = asyncHandler(async (req, res) => {
   if (!user) {
     return sendResponse(
       res,
-      statusType.UNAUTHORIZED,
+      false,
       null,
       "Invalid credentials",
+      statusType.UNAUTHORIZED,
     );
   }
 
@@ -131,9 +117,10 @@ export const login = asyncHandler(async (req, res) => {
   if (!validPassword) {
     return sendResponse(
       res,
-      statusType.UNAUTHORIZED,
+      false,
       null,
       "Invalid credentials",
+      statusType.UNAUTHORIZED,
     );
   }
 
@@ -147,12 +134,13 @@ export const login = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     {
       token,
       user: userWithoutPassword,
     },
     "Login successful",
+    statusType.OK,
   );
 });
 
@@ -163,9 +151,10 @@ export const check = asyncHandler(async (req, res) => {
   if (!token) {
     return sendResponse(
       res,
-      statusType.UNAUTHORIZED,
+      false,
       null,
       "No token provided",
+      statusType.UNAUTHORIZED,
     );
   }
 
@@ -187,29 +176,43 @@ export const check = asyncHandler(async (req, res) => {
     });
 
     if (!user) {
-      return sendResponse(res, statusType.NOT_FOUND, null, "User not found");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "User not found",
+        statusType.NOT_FOUND,
+      );
     }
 
-    return sendResponse(res, statusType.OK, { user }, "Token is valid");
+    return sendResponse(res, true, { user }, "Token is valid", statusType.OK);
   } catch (error) {
     console.error("Auth check error:", error);
 
     if (error.name === "JsonWebTokenError") {
-      return sendResponse(res, statusType.UNAUTHORIZED, null, "Invalid token");
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Invalid token",
+        statusType.UNAUTHORIZED,
+      );
     } else if (error.name === "TokenExpiredError") {
       return sendResponse(
         res,
-        statusType.UNAUTHORIZED,
+        false,
         null,
         "Token has expired",
+        statusType.UNAUTHORIZED,
       );
     }
 
     return sendResponse(
       res,
-      statusType.INTERNAL_SERVER_ERROR,
+      false,
       null,
       "Authentication check failed",
+      statusType.INTERNAL_SERVER_ERROR,
     );
   }
 });
@@ -218,9 +221,10 @@ export const check = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   return sendResponse(
     res,
-    statusType.OK,
+    true,
     null,
     "Logout successful (client should remove token)",
+    statusType.OK,
   );
 });
 
@@ -231,9 +235,10 @@ export const refreshToken = asyncHandler(async (req, res) => {
   if (!refreshToken) {
     return sendResponse(
       res,
-      statusType.BAD_REQUEST,
+      false,
       null,
       "Refresh token is required",
+      statusType.BAD_REQUEST,
     );
   }
 
@@ -250,9 +255,10 @@ export const refreshToken = asyncHandler(async (req, res) => {
     if (!user) {
       return sendResponse(
         res,
-        statusType.UNAUTHORIZED,
+        false,
         null,
         "Invalid refresh token",
+        statusType.UNAUTHORIZED,
       );
     }
 
@@ -272,21 +278,91 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     return sendResponse(
       res,
-      statusType.OK,
+      true,
       {
         token: newToken,
         refreshToken: newRefreshToken,
       },
       "Token refreshed successfully",
+      statusType.OK,
     );
   } catch (error) {
     console.error("Refresh token error:", error);
 
     return sendResponse(
       res,
-      statusType.UNAUTHORIZED,
+      false,
       null,
       "Invalid or expired refresh token",
+      statusType.UNAUTHORIZED,
+    );
+  }
+});
+
+export const authenticateToken = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(" ")[1];
+
+  if (!token) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "No token provided",
+      statusType.UNAUTHORIZED
+    );
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Validate that decoded contains a user identifier
+    if (!decoded.userId && !decoded.id) {
+      console.error('Token payload missing userId/id:', decoded);
+      return sendResponse(
+        res,
+        false,
+        null,
+        'Invalid token payload',
+        statusType.UNAUTHORIZED
+      );
+    }
+
+    req.user = {
+      id: decoded.id || decoded.userId,
+      userId: decoded.userId || decoded.id,
+      email: decoded.email,
+      username: decoded.username
+    };
+    
+    next();
+  } catch (error) {
+    console.error("Token verification error:", error.message);
+
+    if (error.name === "JsonWebTokenError") {
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Invalid token",
+        statusType.UNAUTHORIZED
+      );
+    } else if (error.name === "TokenExpiredError") {
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Token has expired",
+        statusType.UNAUTHORIZED
+      );
+    }
+
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Token verification failed",
+      statusType.INTERNAL_SERVER_ERROR
     );
   }
 });

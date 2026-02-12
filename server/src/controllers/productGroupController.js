@@ -5,12 +5,11 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../utils/index.js";
-
+import { createNotification } from "../utils/notificationHelper.js";
 // Create Product Group
 export const createProductGroup = asyncHandler(async (req, res) => {
   const { name, description, status = true } = req.body;
 
-  // Validate required fields
   if (!name) {
     return sendResponse(
       res,
@@ -24,7 +23,6 @@ export const createProductGroup = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Check if product group already exists
   const existingGroup = await prisma.productGroup.findFirst({
     where: {
       name,
@@ -42,7 +40,6 @@ export const createProductGroup = asyncHandler(async (req, res) => {
     );
   }
 
-  // Create product group
   const productGroup = await prisma.productGroup.create({
     data: {
       name,
@@ -58,6 +55,14 @@ export const createProductGroup = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
+
+  // Send notification to all users
+  await createNotification({
+    title: "New Product Group Created",
+    message: `Product group "${name}" has been created by ${req.user?.username || 'Admin'}`,
+    type: "success",
+    // category: "product_group"
+  }, res);
 
   return sendResponse(
     res,
@@ -246,7 +251,6 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Check if product group exists
   const existingGroup = await prisma.productGroup.findFirst({
     where: {
       id: parseInt(id),
@@ -264,7 +268,6 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
     );
   }
 
-  // Check if new name conflicts with other groups
   if (name && name !== existingGroup.name) {
     const nameConflict = await prisma.productGroup.findFirst({
       where: {
@@ -287,7 +290,6 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
     }
   }
 
-  // Update product group
   const updatedProductGroup = await prisma.productGroup.update({
     where: {
       id: parseInt(id),
@@ -308,6 +310,14 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
     },
   });
 
+  // Send notification to all users
+  await createNotification({
+    title: "Product Group Updated",
+    message: `Product group "${updatedProductGroup.name}" has been updated by ${req.user?.username || 'Admin'}`,
+    type: "info",
+    // category: "product_group"
+  }, res);
+
   return sendResponse(
     res,
     true,
@@ -327,7 +337,6 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Check if product group exists
   const existingGroup = await prisma.productGroup.findFirst({
     where: {
       id: parseInt(id),
@@ -345,7 +354,6 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
     );
   }
 
-  // Soft delete
   await prisma.productGroup.update({
     where: {
       id: parseInt(id),
@@ -355,6 +363,14 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
       status: false,
     },
   });
+
+  // Send notification to all users
+  await createNotification({
+    title: "Product Group Deleted",
+    message: `Product group "${existingGroup.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+    type: "warning",
+    // category: "product_group"
+  }, res);
 
   return sendResponse(
     res,
@@ -382,12 +398,10 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Convert all IDs to numbers
   const productGroupIds = ids
     .map((id) => parseInt(id))
     .filter((id) => !isNaN(id));
 
-  // Check if all groups exist
   const existingGroups = await prisma.productGroup.findMany({
     where: {
       id: { in: productGroupIds },
@@ -405,7 +419,6 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
     );
   }
 
-  // Perform bulk soft delete
   await prisma.productGroup.updateMany({
     where: {
       id: { in: productGroupIds },
@@ -415,6 +428,16 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
       status: false,
     },
   });
+
+  const groupNames = existingGroups.map(g => g.name).join(", ");
+
+  // Send notification to all users
+  await createNotification({
+    title: "Product Groups Bulk Deleted",
+    message: `${productGroupIds.length} product groups (${groupNames}) have been deleted by ${req.user?.username || 'Admin'}`,
+    type: "warning",
+    // category: "product_group"
+  }, res);
 
   return sendResponse(
     res,
