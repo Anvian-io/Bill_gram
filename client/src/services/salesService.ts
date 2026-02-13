@@ -38,10 +38,11 @@ export const salesService = {
   },
 
   async getSale(id: number): Promise<Sales> {
-    const response = await apiClient.get<ApiResponse<{ sales: Sales }>>(
+    const response = await apiClient.get<ApiResponse<{ sale: Sales }>>(
       `/sales/${id}`,
     );
-    return response.data.data.sales;
+    // console.log("API response for getSale:", response.data);
+    return response.data.data.sale;
   },
 
   async createSale(data: SalesFormData): Promise<Sales> {

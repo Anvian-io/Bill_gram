@@ -66,11 +66,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { SalesFormData } from "@/types/sales";
-import BatchSelectionModal from "./BatchSelection";
+import BatchSelectionModal from "./BatchSelectionModal"; // <-- updated import
 import { useActiveLists } from "@/hooks/useActiveLists";
 
 // ----------------------------------------------------------------------
-// Types & Interfaces (includes cartonPack & conversionFactor)
+// Types & Interfaces
 // ----------------------------------------------------------------------
 interface ProductWithFactors {
   id: number;
@@ -83,7 +83,7 @@ interface ProductWithFactors {
 }
 
 // ----------------------------------------------------------------------
-// Schema Validation (invoiceNo removed)
+// Schema Validation
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -186,7 +186,7 @@ export default function SalesForm({
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
-
+  console.log(editingSales)
   // State for batch selection modal
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingBatchSelection, setPendingBatchSelection] = useState<{
@@ -251,9 +251,11 @@ export default function SalesForm({
     calculateTotals();
   }, [items, form]);
 
-  // Reset form when editingSales changes (with fallbacks for null/undefined)
+  // Reset form when editingSales changes
   useEffect(() => {
+    console.log("Editing sales changed:", editingSales);
     if (editingSales) {
+      console.log(editingSales)
       form.reset({
         invoiceDate:
           editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
@@ -356,7 +358,7 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Item handlers (ensure numbers)
+  // Item handlers
   // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
@@ -369,7 +371,6 @@ export default function SalesForm({
 
     updatedItems[index] = { ...item, [field]: numValue };
 
-    // Recalculate totals when rate, aQty, or taxRate changes
     if (field === "rate" || field === "aQty" || field === "taxRate") {
       const rate = field === "rate" ? numValue : item.rate;
       const aQty = field === "aQty" ? numValue : item.aQty;
@@ -385,7 +386,6 @@ export default function SalesForm({
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     }
 
-    // When aQty changes, recalc mQty using product factors
     if (field === "aQty") {
       const product = findProduct(item.productId);
       if (product) {
@@ -410,17 +410,17 @@ export default function SalesForm({
       updatedItems[index] = {
         ...item,
         batchId: batch.id,
-        rate: batch.sRate ?? 0,
+        rate: batch.saleRate ?? 0, // use sales rate
         aQty,
         mQty,
-        totalAmount: (batch.sRate ?? 0) * aQty,
-        taxAmount: (batch.sRate ?? 0) * aQty * ((item.taxRate ?? 5) / 100),
+        totalAmount: (batch.saleRate ?? 0) * aQty,
+        taxAmount: (batch.saleRate ?? 0) * aQty * ((item.taxRate ?? 5) / 100),
       };
 
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.sRate} | A Qty: ${aQty} | M Qty: ${mQty}`,
+        description: `Rate: ₹${batch.saleRate} | A Qty: ${aQty} | M Qty: ${mQty}`,
       });
 
       setPendingBatchSelection(null);
@@ -520,7 +520,7 @@ export default function SalesForm({
       setProductOpen(false);
       setActiveProductIndex(null);
 
-      // Immediately open batch selection for the new product
+      // Immediately open batch selection
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -1210,7 +1210,7 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty - DISABLED (auto‑calculated) */}
+                              {/* M. Qty */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
@@ -1737,7 +1737,7 @@ export default function SalesForm({
         </DialogContent>
       </Dialog>
 
-      {/* Batch Selection Modal */}
+      {/* Batch Selection Modal (Sales version) */}
       {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}

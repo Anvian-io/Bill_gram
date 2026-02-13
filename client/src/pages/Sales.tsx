@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -18,7 +18,6 @@ import {
   X,
   Calendar,
   Plus,
-  FileText,
   Package,
   ShoppingCart,
   RefreshCw,
@@ -292,9 +291,19 @@ export default function Sales() {
     setIsModalOpen(true);
   };
 
-  const handleEditSales = (sale: Sales) => {
-    setEditingSales(sale);
-    setIsModalOpen(true);
+  // Edit handler - fetch full details before opening modal
+  const handleEditSales = async (sale: Sales) => {
+    try {
+      setIsLoading(true);
+      const fullSale = await salesService.getSale(sale.id);
+      console.log("Fetched sale for editing:", fullSale);
+      setEditingSales(fullSale);
+      setIsModalOpen(true);
+    } catch (error) {
+      toast.error("Failed to load sale details");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const confirmDeleteSales = (sale: Sales) => {

@@ -515,7 +515,7 @@ export const getSaleById = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
-// 4. UPDATE SALES INVOICE
+// 4. UPDATE SALES INVOICE (FIXED)
 // --------------------------------------------------------------------
 export const updateSale = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -545,7 +545,7 @@ export const updateSale = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
-  // Check invoice exists and not deleted
+  // Check invoice exists and is not deleted
   const existingInvoice = await prisma.salesInvoice.findFirst({
     where: { id: parseInt(id), deleted: false },
     include: { items: { include: { batch: true } } },
@@ -560,7 +560,28 @@ export const updateSale = asyncHandler(async (req, res) => {
     );
   }
 
-  // If invoiceNo changed, check uniqueness
+  // --- VALIDATION OF REQUIRED FIELDS (cannot be null) ---
+  // These fields are mandatory in the schema. If they are provided in the request,
+  // they must be non‑null. If not provided, the existing value will be kept.
+  const requiredFields = [
+    { name: 'areaId', value: areaId },
+    { name: 'vanId', value: vanId },
+    { name: 'salesmanId', value: salesmanId },
+    { name: 'address', value: address },
+  ];
+  for (const field of requiredFields) {
+    if (field.value === null) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `${field.name} cannot be set to null`,
+        statusType.BAD_REQUEST,
+      );
+    }
+  }
+
+  // If invoiceNo is changed, check uniqueness
   if (invoiceNo && invoiceNo !== existingInvoice.invoiceNo) {
     const conflict = await prisma.salesInvoice.findFirst({
       where: { invoiceNo, deleted: false, NOT: { id: parseInt(id) } },
@@ -576,12 +597,28 @@ export const updateSale = asyncHandler(async (req, res) => {
     }
   }
 
+  // Validate customer if changed
+  if (customerId && customerId !== existingInvoice.customerId) {
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, deleted: false },
+    });
+    if (!customer) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Customer not found",
+        statusType.NOT_FOUND,
+      );
+    }
+  }
+
   // Validate optional foreign keys if changed
-  if (areaId && areaId !== existingInvoice.areaId) {
+  if (areaId !== undefined && areaId !== existingInvoice.areaId) {
     const area = await prisma.area.findFirst({
       where: { id: areaId, deleted: false },
     });
-    if (!area)
+    if (!area) {
       return sendResponse(
         res,
         false,
@@ -589,12 +626,13 @@ export const updateSale = asyncHandler(async (req, res) => {
         "Area not found",
         statusType.NOT_FOUND,
       );
+    }
   }
-  if (vanId && vanId !== existingInvoice.vanId) {
+  if (vanId !== undefined && vanId !== existingInvoice.vanId) {
     const van = await prisma.van.findFirst({
       where: { id: vanId, deleted: false },
     });
-    if (!van)
+    if (!van) {
       return sendResponse(
         res,
         false,
@@ -602,12 +640,13 @@ export const updateSale = asyncHandler(async (req, res) => {
         "Van not found",
         statusType.NOT_FOUND,
       );
+    }
   }
-  if (salesmanId && salesmanId !== existingInvoice.salesmanId) {
+  if (salesmanId !== undefined && salesmanId !== existingInvoice.salesmanId) {
     const salesman = await prisma.salesman.findFirst({
       where: { id: salesmanId, deleted: false },
     });
-    if (!salesman)
+    if (!salesman) {
       return sendResponse(
         res,
         false,
@@ -615,9 +654,10 @@ export const updateSale = asyncHandler(async (req, res) => {
         "Salesman not found",
         statusType.NOT_FOUND,
       );
+    }
   }
 
-  // Validate new items (if provided)
+  // Validate new items if provided
   if (items) {
     for (const item of items) {
       if (
@@ -662,13 +702,13 @@ export const updateSale = asyncHandler(async (req, res) => {
     }
   }
 
-  // --- Transaction ---
+  // --- TRANSACTION ---
   try {
-    await prisma.$transaction(async (tx) => {
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
       // 1. Reverse stock from old items (add back)
       for (const oldItem of existingInvoice.items) {
         if (oldItem.batchId) {
-          await updateBatchStock(tx, oldItem.batchId, oldItem.aQty); // positive because we are adding back
+          await updateBatchStock(tx, oldItem.batchId, oldItem.aQty); // positive delta
         }
       }
 
@@ -681,7 +721,7 @@ export const updateSale = asyncHandler(async (req, res) => {
       });
 
       // 3. Update invoice header
-      await tx.salesInvoice.update({
+      const updated = await tx.salesInvoice.update({
         where: { id: existingInvoice.id },
         data: {
           invoiceDate: invoiceDate
@@ -729,7 +769,7 @@ export const updateSale = asyncHandler(async (req, res) => {
       // 4. Create new items & deduct stock
       if (items) {
         for (const item of items) {
-          // Optional: check stock sufficiency
+          // Check stock sufficiency
           const batch = await tx.batch.findUnique({
             where: { id: item.batchId },
           });
@@ -773,15 +813,37 @@ export const updateSale = asyncHandler(async (req, res) => {
           },
           items,
           customerId || existingInvoice.customerId,
+          areaId !== undefined ? areaId : existingInvoice.areaId,
+          vanId !== undefined ? vanId : existingInvoice.vanId,
+          salesmanId !== undefined
+            ? salesmanId
+            : existingInvoice.salesmanId,
         );
       }
+
+      // Return the updated invoice with relations (optional)
+      return await tx.salesInvoice.findUnique({
+        where: { id: existingInvoice.id },
+        include: {
+          customer: true,
+          area: true,
+          van: true,
+          salesman: true,
+          items: {
+            include: {
+              product: true,
+              batch: true,
+            },
+          },
+        },
+      });
     });
 
     return sendResponse(
       res,
       true,
-      { message: "Sales invoice updated successfully" },
-      "Update successful",
+      { sale: updatedInvoice },
+      "Sales invoice updated successfully",
       statusType.OK,
     );
   } catch (error) {
