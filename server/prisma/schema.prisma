@@ -25,6 +25,7 @@ model User {
   updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
   Notification Notification[]
   purchaseInvoices PurchaseInvoice[]
+  salesInvoices SalesInvoice[]
 
   @@map("users")
 }
@@ -82,6 +83,8 @@ model Product {
 
   purchaseInvoiceItems PurchaseInvoiceItem[]
   purchaseHistories    PurchaseHistory[]
+  saleHistories     SalesHistory[]
+  salesInvoiceItems     SalesInvoiceItem[]
 
   @@index([userId])
   @@index([productCode])
@@ -117,6 +120,8 @@ model Batch {
 
   purchaseInvoiceItems PurchaseInvoiceItem[]
   purchaseHistories    PurchaseHistory[]
+  saleHistories     SalesHistory[]
+  salesInvoiceItems     SalesInvoiceItem[]
   @@index([productId])
   @@index([batchNo])
   @@index([barcode])
@@ -196,6 +201,9 @@ model Salesman {
   createdAt DateTime  @default(now()) @map("created_at")
   deletedAt DateTime? @map("deleted_at")
 
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
+
   @@unique([phoneNo])
   @@map("salesmen")
 }
@@ -214,6 +222,9 @@ model Customer {
   deleted      Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
 
   @@unique([phoneNo])
   @@index([companyName])
@@ -234,6 +245,9 @@ model Area {
   updatedAt   DateTime @updatedAt @map("updated_at")
   pincode     String?
 
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
+
   @@unique([name])
   @@index([state])
   @@index([region])
@@ -252,6 +266,9 @@ model Van {
   deleted   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
 
   @@index([vehicleNo])
   @@index([area])
@@ -425,4 +442,128 @@ model PurchaseHistory {
   @@index([purchaseInvoiceId])
   @@index([invoiceDate])
   @@map("purchase_histories")
+}
+
+// ========== SALES MODULES ==========
+
+model SalesInvoice {
+  id             Int                   @id @default(autoincrement())
+  invoiceNo      String
+  invoiceDate    DateTime
+  areaId         Int
+  area           Area                  @relation(fields: [areaId], references: [id])
+  customerId     Int
+  customer       Customer              @relation(fields: [customerId], references: [id])
+  vanId          Int
+  van            Van                   @relation(fields: [vanId], references: [id])
+  salesmanId     Int
+  salesman       Salesman              @relation(fields: [salesmanId], references: [id])
+  address        String
+  gstDetails     String?               @default("Against GST")
+  remarks        String?
+
+  // Financial summary
+  grossAmount    Float
+  boxUnit        Float?                @default(0)
+  cessInsurance  Float?                @default(0)
+  scheme1        Float?                @default(0)
+  discountPercent Float?                @default(0)
+  tax            Float?                 @default(0)
+  amountAdd      Float?                 @default(0)
+  creditAmount   Float?                 @default(0)
+  finalAmount    Float
+
+  // Status and ownership
+  status         String?                @default("Pending") // Pending, Paid, Cancelled, Delivered
+  userId         Int?                   // from session, optional
+  user           User?                  @relation(fields: [userId], references: [id])
+
+  // Relations
+  items          SalesInvoiceItem[]
+  histories      SalesHistory[]
+
+  // Soft delete
+  deleted        Boolean                @default(false)
+
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@index([areaId])
+  @@index([vanId])
+  @@index([salesmanId])
+  @@index([invoiceNo])
+  @@index([invoiceDate])
+  @@index([deleted])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceItem {
+  id               Int    @id @default(autoincrement())
+  salesInvoiceId   Int
+  salesInvoice     SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+
+  productId        Int
+  product          Product @relation(fields: [productId], references: [id])
+
+  batchId          Int?   // mandatory in controller validation
+  batch            Batch? @relation(fields: [batchId], references: [id])
+
+  // Pricing & quantity
+  rate             Float
+  aQty             Int
+  mQty             Int?    // auto‑calculated, stored for reference
+  totalAmount      Float
+
+  // Taxes & schemes
+  taxRate          Float
+  taxAmount        Float
+  sch1Percent      Float?  @default(0)
+  sch1Amount       Float?  @default(0)
+  sch2Percent      Float?  @default(0)
+  sch2Amount       Float?  @default(0)
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([salesInvoiceId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("sales_invoice_items")
+}
+
+// Audit log – every sale creates one entry per product
+model SalesHistory {
+  id                Int    @id @default(autoincrement())
+  productId         Int
+  product           Product @relation(fields: [productId], references: [id])
+
+  batchId           Int?
+  batch             Batch?  @relation(fields: [batchId], references: [id])
+
+  salesInvoiceId    Int?
+  salesInvoice      SalesInvoice? @relation(fields: [salesInvoiceId], references: [id])
+
+  // Snapshot data for reporting
+  invoiceNo         String
+  invoiceDate       DateTime
+  customerId        Int
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  areaId            Int
+  area              Area? @relation(fields: [areaId], references: [id])
+  vanId             Int
+  van               Van? @relation(fields: [vanId], references: [id])
+  salesmanId        Int
+  salesman          Salesman? @relation(fields: [salesmanId], references: [id])
+  rate              Float
+  aQty              Int
+  totalAmount       Float
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([batchId])
+  @@index([salesInvoiceId])
+  @@index([invoiceDate])
+  @@map("sales_histories")
 }
