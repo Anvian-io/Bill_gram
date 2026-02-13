@@ -352,7 +352,7 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
-    const numValue = value === "" ? 0 : Number(value) || 0;
+    const numValue = String(value) === "" ? 0 : Number(value) || 0;
     updatedItems[index] = { ...item, [field]: numValue };
 
     if (field === "rate" || field === "aQty" || field === "taxRate") {
@@ -497,7 +497,7 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
-    const numValue = value === "" ? 0 : Number(value) || 0;
+    const numValue = String(value) === "" ? 0 : Number(value) || 0;
 
     updatedItems[index] = {
       ...item,
@@ -1697,6 +1697,8 @@ export default function SalesForm({
           productCode={pendingBatchSelection.productCode}
           description={pendingBatchSelection.description}
           onBatchSelect={handleBatchSelect}
+          cartonPack={0}
+          conversionFactor={0}
         />
       )}
     </>
