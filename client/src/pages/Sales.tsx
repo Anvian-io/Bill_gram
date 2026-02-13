@@ -12,9 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
-  Eye,
   Edit,
   Trash2,
   Search,
@@ -22,17 +19,9 @@ import {
   Calendar,
   Plus,
   FileText,
-  User,
-  MapPin,
-  Truck,
-  UserCog,
-  Percent,
-  DollarSign,
   Package,
   ShoppingCart,
-  TrendingUp,
   RefreshCw,
-  Hash,
   IndianRupee,
   Check,
   ChevronsUpDown,
@@ -62,13 +51,12 @@ import {
   rowVariants,
   headerVariants,
   buttonVariants,
-  badgeVariants,
 } from "../components/FramerVariants";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
 import SalesForm from "../components/forms/SalesForm";
-import type { Sales, SalesFormData } from "@/types/sales";
+import type { Sales, SalesFormData, SalesFilters } from "@/types/sales";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import {
   Command,
@@ -78,11 +66,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { salesService } from "@/services/salesService";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
-
   const formats = [
     "dd/MM/yyyy",
     "dd-MM-yyyy",
@@ -90,18 +78,14 @@ const parseDateFromString = (dateString: string): Date | undefined => {
     "dd/MM/yy",
     "yyyy-MM-dd",
   ];
-
   for (const fmt of formats) {
     try {
       const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch (error) {
-      // Continue to next format
+      if (isValid(parsed)) return parsed;
+    } catch {
+      // continue
     }
   }
-
   return undefined;
 };
 
@@ -110,7 +94,6 @@ const formatDateToDisplay = (date: Date | undefined): string => {
   return format(date, "dd/MM/yyyy");
 };
 
-// Main Sales Page Component
 export default function Sales() {
   // State for sales
   const [sales, setSales] = useState<Sales[]>([]);
@@ -125,27 +108,22 @@ export default function Sales() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [salesToDelete, setSalesToDelete] = useState<Sales | null>(null);
 
-  // Get data from Redux store using the hook
+  // Get data from Redux store
   const { areas, customers, salesmen, vans } = useActiveLists();
 
-  // Filter state
-  const [filters, setFilters] = useState({
+  // Filter state (using fromDate/toDate)
+  const [filters, setFilters] = useState<SalesFilters>({
     search: "",
     invoiceNo: "",
-    area: "all" as string | "all",
-    customer: "all" as string | "all",
-    van: "all" as string | "all",
-    salesman: "all" as string | "all",
+    areaId: "all",
+    customerId: "all",
+    vanId: "all",
+    salesmanId: "all",
     minAmount: "",
     maxAmount: "",
-    invoiceDate: undefined as Date | undefined,
-    status: "all" as
-      | "all"
-      | "Pending"
-      | "Paid"
-      | "Partially Paid"
-      | "Cancelled"
-      | "Delivered",
+    fromDate: undefined,
+    toDate: undefined,
+    status: "all",
   });
 
   // State for Command dropdowns
@@ -155,20 +133,20 @@ export default function Sales() {
   const [salesmanOpen, setSalesmanOpen] = useState(false);
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalItems, setTotalItems] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Local state for immediate input values
-  const [searchInput, setSearchInput] = useState<string>("");
-  const [invoiceNoInput, setInvoiceNoInput] = useState<string>("");
-  const [minAmountInput, setMinAmountInput] = useState<string>("");
-  const [maxAmountInput, setMaxAmountInput] = useState<string>("");
-  const [invoiceDateInput, setInvoiceDateInput] = useState<string>("");
+  // Local input values
+  const [searchInput, setSearchInput] = useState("");
+  const [invoiceNoInput, setInvoiceNoInput] = useState("");
+  const [minAmountInput, setMinAmountInput] = useState("");
+  const [maxAmountInput, setMaxAmountInput] = useState("");
+  const [invoiceDateInput, setInvoiceDateInput] = useState("");
 
-  // Create debounced filter functions
+  // Debounced filter setters
   const debouncedSetSearch = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
   }, 300);
@@ -185,7 +163,7 @@ export default function Sales() {
     setFilters((prev) => ({ ...prev, maxAmount: value }));
   }, 300);
 
-  // Handle input changes with debounce
+  // Input handlers
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
     debouncedSetSearch(value);
@@ -209,42 +187,34 @@ export default function Sales() {
   const handleInvoiceDateInputChange = (value: string) => {
     setInvoiceDateInput(value);
     const parsedDate = parseDateFromString(value);
-    if (parsedDate) {
-      setFilters((prev) => ({ ...prev, invoiceDate: parsedDate }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, invoiceDate: undefined }));
-    }
-  };
-
-  const handleInvoiceDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, invoiceDate: date }));
-    if (date) {
-      setInvoiceDateInput(formatDateToDisplay(date));
-    } else {
-      setInvoiceDateInput("");
-    }
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
-      [field]: value,
+      fromDate: parsedDate || (value === "" ? undefined : prev.fromDate),
+      toDate: parsedDate || (value === "" ? undefined : prev.toDate),
     }));
   };
 
-  // Clear all filters
+  const handleInvoiceDateSelect = (date: Date | undefined) => {
+    setFilters((prev) => ({ ...prev, fromDate: date, toDate: date }));
+    setInvoiceDateInput(date ? formatDateToDisplay(date) : "");
+  };
+
+  const handleFilterChange = (field: keyof SalesFilters, value: any) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
   const clearFilters = () => {
     setFilters({
       search: "",
       invoiceNo: "",
-      area: "all",
-      customer: "all",
-      van: "all",
-      salesman: "all",
+      areaId: "all",
+      customerId: "all",
+      vanId: "all",
+      salesmanId: "all",
       minAmount: "",
       maxAmount: "",
-      invoiceDate: undefined,
+      fromDate: undefined,
+      toDate: undefined,
       status: "all",
     });
     setSearchInput("");
@@ -252,116 +222,42 @@ export default function Sales() {
     setMinAmountInput("");
     setMaxAmountInput("");
     setInvoiceDateInput("");
+    setCurrentPage(1);
   };
 
-  // Clear specific filter
-  const clearFilter = (filterName: keyof typeof filters) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterName]:
-        filterName === "area" ||
-        filterName === "customer" ||
-        filterName === "van" ||
-        filterName === "salesman" ||
-        filterName === "status"
-          ? "all"
-          : filterName === "invoiceDate"
-            ? undefined
-            : "",
-    }));
-
-    switch (filterName) {
-      case "search":
-        setSearchInput("");
-        break;
-      case "invoiceNo":
-        setInvoiceNoInput("");
-        break;
-      case "minAmount":
-        setMinAmountInput("");
-        break;
-      case "maxAmount":
-        setMaxAmountInput("");
-        break;
-      case "invoiceDate":
-        setInvoiceDateInput("");
-        break;
-    }
+  const clearDateFilter = () => {
+    setFilters((prev) => ({ ...prev, fromDate: undefined, toDate: undefined }));
+    setInvoiceDateInput("");
   };
 
-  // Fetch sales data (mock for now - replace with actual API call)
+  // Fetch sales from API
   const fetchSales = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockSales: Sales[] = [
-        {
-          id: 1,
-          invoiceNo: "S501622",
-          invoiceDate: "2024-01-15",
-          area: {
-            id: 1,
-            name: "Mumbai Central",
-          },
-          customer: {
-            id: 1,
-            name: "Reliance Fresh",
-            code: "C001",
-          },
-          van: {
-            id: 1,
-            name: "Delivery Van 1",
-            number: "MH01AB1234",
-          },
-          salesman: {
-            id: 1,
-            name: "Amit Sharma",
-            code: "S001",
-          },
-          address: "Mumbai Central",
-          gstDetails: "Against GST",
-          items: [
-            {
-              id: 1,
-              productId: 1,
-              productCode: "G6",
-              description: "ECLARIS JAR",
-              rate: 130.0,
-              aQty: 10,
-              mQty: 10,
-              totalAmount: 1300.0,
-              taxRate: 5,
-              taxAmount: 65.0,
-              sch1Percent: 0,
-              sch1Amount: 0,
-              sch2Percent: 0,
-              sch2Amount: 0,
-            },
-          ],
-          remarks: "",
-          grossAmount: 6100.0,
-          boxUnit: 20.0,
-          cessInsurance: 0,
-          scheme1: 0,
-          discountPercent: 5,
-          tax: 305.0,
-          amountAdd: 0,
-          creditAmount: 0,
-          finalAmount: 6405.0,
-          status: "Paid",
-          createdAt: "2024-01-15T10:30:00Z",
-          updatedAt: "2024-01-15T10:30:00Z",
-        },
-      ];
-
-      setSales(mockSales);
-      setTotalItems(mockSales.length);
-      setTotalPages(Math.ceil(mockSales.length / itemsPerPage));
+      const apiFilters: SalesFilters = {
+        ...filters,
+        areaId: filters.areaId === "all" ? undefined : filters.areaId,
+        customerId:
+          filters.customerId === "all" ? undefined : filters.customerId,
+        vanId: filters.vanId === "all" ? undefined : filters.vanId,
+        salesmanId:
+          filters.salesmanId === "all" ? undefined : filters.salesmanId,
+        status: filters.status === "all" ? undefined : filters.status,
+        minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
+        maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+        // fromDate/toDate already correct
+      };
+      const response = await salesService.getSales(
+        currentPage,
+        itemsPerPage,
+        apiFilters,
+      );
+      setSales(response.sales);
+      setTotalItems(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
     } catch (error) {
       console.error("Error fetching sales:", error);
-      toast.error("Failed to fetch sales", {
-        description: "Please try again later",
-      });
+      toast.error("Failed to fetch sales");
       setSales([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -370,117 +266,9 @@ export default function Sales() {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchSales();
-  }, [currentPage, itemsPerPage]);
-
-  // Filter sales based on current filters
-  const filteredSales = useMemo(() => {
-    return sales.filter((sale) => {
-      // Search filter
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const matches =
-          sale.invoiceNo.toLowerCase().includes(searchLower) ||
-          sale.customer.name.toLowerCase().includes(searchLower) ||
-          sale.area.name.toLowerCase().includes(searchLower) ||
-          sale.van.name.toLowerCase().includes(searchLower) ||
-          sale.salesman.name.toLowerCase().includes(searchLower) ||
-          (sale.remarks && sale.remarks.toLowerCase().includes(searchLower)) ||
-          sale.items.some(
-            (item) =>
-              item.productCode.toLowerCase().includes(searchLower) ||
-              item.description.toLowerCase().includes(searchLower),
-          );
-        if (!matches) return false;
-      }
-
-      // Invoice No filter
-      if (filters.invoiceNo && !sale.invoiceNo.includes(filters.invoiceNo)) {
-        return false;
-      }
-
-      // Area filter
-      if (filters.area !== "all" && sale.area.id.toString() !== filters.area) {
-        return false;
-      }
-
-      // Customer filter
-      if (
-        filters.customer !== "all" &&
-        sale.customer.id.toString() !== filters.customer
-      ) {
-        return false;
-      }
-
-      // Van filter
-      if (filters.van !== "all" && sale.van.id.toString() !== filters.van) {
-        return false;
-      }
-
-      // Salesman filter
-      if (
-        filters.salesman !== "all" &&
-        sale.salesman.id.toString() !== filters.salesman
-      ) {
-        return false;
-      }
-
-      // Amount range filter
-      if (
-        filters.minAmount &&
-        sale.finalAmount < parseFloat(filters.minAmount)
-      ) {
-        return false;
-      }
-      if (
-        filters.maxAmount &&
-        sale.finalAmount > parseFloat(filters.maxAmount)
-      ) {
-        return false;
-      }
-
-      // Invoice date filter
-      if (filters.invoiceDate) {
-        const saleDate = new Date(sale.invoiceDate);
-        const filterDate = new Date(filters.invoiceDate);
-        if (
-          saleDate.getDate() !== filterDate.getDate() ||
-          saleDate.getMonth() !== filterDate.getMonth() ||
-          saleDate.getFullYear() !== filterDate.getFullYear()
-        ) {
-          return false;
-        }
-      }
-
-      // Status filter
-      if (filters.status !== "all" && sale.status !== filters.status) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [sales, filters]);
-
-  // Update pagination based on filtered sales
-  useEffect(() => {
-    setTotalItems(filteredSales.length);
-    setTotalPages(Math.ceil(filteredSales.length / itemsPerPage));
-  }, [filteredSales, itemsPerPage]);
-
-  // Get current page sales
-  const currentSales = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredSales.slice(startIndex, endIndex);
-  }, [filteredSales, currentPage, itemsPerPage]);
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, [currentPage, itemsPerPage, filters]);
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
@@ -498,189 +286,56 @@ export default function Sales() {
     }
   };
 
-  // Handle Add Sales
+  // Handlers
   const handleAddSales = () => {
     setEditingSales(null);
     setIsModalOpen(true);
   };
 
-  // Handle Edit Sales
   const handleEditSales = (sale: Sales) => {
     setEditingSales(sale);
     setIsModalOpen(true);
   };
 
-  // Handle Delete Sales
   const confirmDeleteSales = (sale: Sales) => {
     setSalesToDelete(sale);
     setDeleteOpen(true);
   };
 
   const handleDeleteSales = async () => {
-    if (salesToDelete) {
-      try {
-        setSales(sales.filter((s) => s.id !== salesToDelete.id));
-        toast.success("Sales deleted successfully!");
-      } catch (error: any) {
-        toast.error("Failed to delete sales", {
-          description: "Please try again",
-        });
-      } finally {
-        setSalesToDelete(null);
-        setDeleteOpen(false);
-      }
+    if (!salesToDelete) return;
+    try {
+      await salesService.deleteSale(salesToDelete.id);
+      toast.success("Sales deleted successfully");
+      fetchSales();
+    } catch (error) {
+      toast.error("Failed to delete sales");
+    } finally {
+      setSalesToDelete(null);
+      setDeleteOpen(false);
     }
   };
 
-  // Handle Save Sales
   const handleSaveSales = async (data: SalesFormData, id?: number) => {
     setIsSubmitting(true);
-
     try {
-      const area = areas.find((a) => a.id === data.areaId);
-      const customer = customers.find((c) => c.id === data.customerId);
-      const van = vans.find((v) => v.id === data.vanId);
-      const salesman = salesmen.find((s) => s.id === data.salesmanId);
-
-      if (!area || !customer || !van || !salesman) {
-        throw new Error("Required fields not found");
-      }
-
       if (id) {
-        // Update existing sales
-        const updatedSales: Sales = {
-          id,
-          invoiceNo: data.invoiceNo,
-          invoiceDate: data.invoiceDate,
-          area: {
-            id: area.id,
-            name: area.name,
-          },
-          customer: {
-            id: customer.id,
-            name: customer.companyName || customer.personName || customer.name,
-            code: `C${customer.id.toString().padStart(3, "0")}`,
-          },
-          van: {
-            id: van.id,
-            name: van.name,
-            number: van.vehicleNo || "",
-          },
-          salesman: {
-            id: salesman.id,
-            name: salesman.name,
-            code: `S${salesman.id.toString().padStart(3, "0")}`,
-          },
-          address: data.address,
-          gstDetails: data.gstDetails || "Against GST",
-          items: data.items.map((item, index) => ({
-            id: index + 1,
-            productId: item.productId,
-            productCode: item.productCode,
-            description: item.description,
-            rate: item.rate,
-            aQty: item.aQty,
-            mQty: item.mQty,
-            totalAmount: item.totalAmount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            sch1Percent: item.sch1Percent,
-            sch1Amount: item.sch1Amount,
-            sch2Percent: item.sch2Percent,
-            sch2Amount: item.sch2Amount,
-          })),
-          remarks: data.remarks || "",
-          grossAmount: data.grossAmount,
-          boxUnit: data.boxUnit,
-          cessInsurance: data.cessInsurance,
-          scheme1: data.scheme1,
-          discountPercent: data.discountPercent,
-          tax: data.tax,
-          amountAdd: data.amountAdd,
-          creditAmount: data.creditAmount,
-          finalAmount: data.finalAmount,
-          status: "Pending",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setSales(sales.map((s) => (s.id === id ? updatedSales : s)));
-        toast.success("Sales updated successfully!");
+        await salesService.updateSale(id, data);
+        toast.success("Sales updated successfully");
       } else {
-        // Add new sales
-        const newSales: Sales = {
-          id: sales.length + 1,
-          invoiceNo: data.invoiceNo,
-          invoiceDate: data.invoiceDate,
-          area: {
-            id: area.id,
-            name: area.name,
-          },
-          customer: {
-            id: customer.id,
-            name: customer.companyName || customer.personName || customer.name,
-            code: `C${customer.id.toString().padStart(3, "0")}`,
-          },
-          van: {
-            id: van.id,
-            name: van.name,
-            number: van.vehicleNo || "",
-          },
-          salesman: {
-            id: salesman.id,
-            name: salesman.name,
-            code: `S${salesman.id.toString().padStart(3, "0")}`,
-          },
-          address: data.address,
-          gstDetails: data.gstDetails || "Against GST",
-          items: data.items.map((item, index) => ({
-            id: index + 1,
-            productId: item.productId,
-            productCode: item.productCode,
-            description: item.description,
-            rate: item.rate,
-            aQty: item.aQty,
-            mQty: item.mQty,
-            totalAmount: item.totalAmount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            sch1Percent: item.sch1Percent,
-            sch1Amount: item.sch1Amount,
-            sch2Percent: item.sch2Percent,
-            sch2Amount: item.sch2Amount,
-          })),
-          remarks: data.remarks || "",
-          grossAmount: data.grossAmount,
-          boxUnit: data.boxUnit,
-          cessInsurance: data.cessInsurance,
-          scheme1: data.scheme1,
-          discountPercent: data.discountPercent,
-          tax: data.tax,
-          amountAdd: data.amountAdd,
-          creditAmount: data.creditAmount,
-          finalAmount: data.finalAmount,
-          status: "Pending",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setSales([newSales, ...sales]);
-        toast.success("Sales created successfully!");
+        await salesService.createSale(data);
+        toast.success("Sales created successfully");
       }
-
       setIsModalOpen(false);
-      fetchSales(); // Refresh the list
+      fetchSales();
     } catch (error: any) {
-      toast.error("Failed to save sales", {
-        description: error.message || "Please try again",
-      });
+      toast.error(error.message || "Failed to save sales");
       throw error;
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Refresh data
   const handleRefresh = () => {
     fetchSales();
     toast.info("Refreshing sales data...");
@@ -693,14 +348,13 @@ export default function Sales() {
         key !== "search" &&
         value &&
         value !== "all" &&
-        !(value instanceof Date),
-    ).length + (filters.invoiceDate ? 1 : 0);
+        !(value instanceof Date) &&
+        value !== "",
+    ).length + (filters.fromDate ? 1 : 0);
 
-  // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Get display names for Command dropdowns
   const getAreaName = (id: string) => {
     if (id === "all") return "All Areas";
     const area = areas.find((a) => a.id.toString() === id);
@@ -711,7 +365,7 @@ export default function Sales() {
     if (id === "all") return "All Customers";
     const customer = customers.find((c) => c.id.toString() === id);
     return customer
-      ? customer.companyName || customer.personName
+      ? customer.companyName || customer.personName || ""
       : "Select Customer";
   };
 
@@ -742,7 +396,6 @@ export default function Sales() {
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              {/* Title */}
               <div>
                 <h1 className="text-3xl font-bold text-heading">
                   Sales Management
@@ -834,7 +487,6 @@ export default function Sales() {
             <Card className="overflow-hidden">
               <CardContent className="p-1">
                 <div className="flex flex-col gap-4 p-1">
-                  {/* Filter Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Filter className="h-5 w-5 text-muted-foreground" />
@@ -869,7 +521,6 @@ export default function Sales() {
                     </div>
                   </div>
 
-                  {/* Filter Controls */}
                   <AnimatePresence>
                     {showFilters && (
                       <motion.div
@@ -905,7 +556,7 @@ export default function Sales() {
                                   className="h-10 w-10"
                                   onClick={() => {
                                     setInvoiceNoInput("");
-                                    clearFilter("invoiceNo");
+                                    handleFilterChange("invoiceNo", "");
                                   }}
                                   disabled={isLoading}
                                 >
@@ -915,7 +566,7 @@ export default function Sales() {
                             </div>
                           </div>
 
-                          {/* Area Filter - Command Dropdown */}
+                          {/* Area Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">Area</Label>
                             <Popover open={areaOpen} onOpenChange={setAreaOpen}>
@@ -927,7 +578,7 @@ export default function Sales() {
                                   className="w-full justify-between"
                                   disabled={isLoading}
                                 >
-                                  {getAreaName(filters.area)}
+                                  {getAreaName(filters.areaId as string)}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
@@ -940,14 +591,14 @@ export default function Sales() {
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
-                                          handleFilterChange("area", "all");
+                                          handleFilterChange("areaId", "all");
                                           setAreaOpen(false);
                                         }}
                                       >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            filters.area === "all"
+                                            filters.areaId === "all"
                                               ? "opacity-100"
                                               : "opacity-0",
                                           )}
@@ -960,7 +611,7 @@ export default function Sales() {
                                           value={area.id.toString()}
                                           onSelect={() => {
                                             handleFilterChange(
-                                              "area",
+                                              "areaId",
                                               area.id.toString(),
                                             );
                                             setAreaOpen(false);
@@ -969,7 +620,7 @@ export default function Sales() {
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              filters.area ===
+                                              filters.areaId ===
                                                 area.id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0",
@@ -985,7 +636,7 @@ export default function Sales() {
                             </Popover>
                           </div>
 
-                          {/* Customer Filter - Command Dropdown */}
+                          {/* Customer Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Customer
@@ -1002,7 +653,9 @@ export default function Sales() {
                                   className="w-full justify-between"
                                   disabled={isLoading}
                                 >
-                                  {getCustomerName(filters.customer)}
+                                  {getCustomerName(
+                                    filters.customerId as string,
+                                  )}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
@@ -1017,14 +670,17 @@ export default function Sales() {
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
-                                          handleFilterChange("customer", "all");
+                                          handleFilterChange(
+                                            "customerId",
+                                            "all",
+                                          );
                                           setCustomerOpen(false);
                                         }}
                                       >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            filters.customer === "all"
+                                            filters.customerId === "all"
                                               ? "opacity-100"
                                               : "opacity-0",
                                           )}
@@ -1037,7 +693,7 @@ export default function Sales() {
                                           value={customer.id.toString()}
                                           onSelect={() => {
                                             handleFilterChange(
-                                              "customer",
+                                              "customerId",
                                               customer.id.toString(),
                                             );
                                             setCustomerOpen(false);
@@ -1046,7 +702,7 @@ export default function Sales() {
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              filters.customer ===
+                                              filters.customerId ===
                                                 customer.id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0",
@@ -1068,7 +724,7 @@ export default function Sales() {
                             </Popover>
                           </div>
 
-                          {/* Van Filter - Command Dropdown */}
+                          {/* Van Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">Van</Label>
                             <Popover open={vanOpen} onOpenChange={setVanOpen}>
@@ -1080,7 +736,7 @@ export default function Sales() {
                                   className="w-full justify-between"
                                   disabled={isLoading}
                                 >
-                                  {getVanName(filters.van)}
+                                  {getVanName(filters.vanId as string)}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
@@ -1093,14 +749,14 @@ export default function Sales() {
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
-                                          handleFilterChange("van", "all");
+                                          handleFilterChange("vanId", "all");
                                           setVanOpen(false);
                                         }}
                                       >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            filters.van === "all"
+                                            filters.vanId === "all"
                                               ? "opacity-100"
                                               : "opacity-0",
                                           )}
@@ -1113,7 +769,7 @@ export default function Sales() {
                                           value={van.id.toString()}
                                           onSelect={() => {
                                             handleFilterChange(
-                                              "van",
+                                              "vanId",
                                               van.id.toString(),
                                             );
                                             setVanOpen(false);
@@ -1122,7 +778,8 @@ export default function Sales() {
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              filters.van === van.id.toString()
+                                              filters.vanId ===
+                                                van.id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0",
                                             )}
@@ -1142,7 +799,7 @@ export default function Sales() {
                             </Popover>
                           </div>
 
-                          {/* Salesman Filter - Command Dropdown */}
+                          {/* Salesman Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Salesman
@@ -1159,7 +816,9 @@ export default function Sales() {
                                   className="w-full justify-between"
                                   disabled={isLoading}
                                 >
-                                  {getSalesmanName(filters.salesman)}
+                                  {getSalesmanName(
+                                    filters.salesmanId as string,
+                                  )}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
@@ -1174,14 +833,17 @@ export default function Sales() {
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
-                                          handleFilterChange("salesman", "all");
+                                          handleFilterChange(
+                                            "salesmanId",
+                                            "all",
+                                          );
                                           setSalesmanOpen(false);
                                         }}
                                       >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            filters.salesman === "all"
+                                            filters.salesmanId === "all"
                                               ? "opacity-100"
                                               : "opacity-0",
                                           )}
@@ -1194,7 +856,7 @@ export default function Sales() {
                                           value={salesman.id.toString()}
                                           onSelect={() => {
                                             handleFilterChange(
-                                              "salesman",
+                                              "salesmanId",
                                               salesman.id.toString(),
                                             );
                                             setSalesmanOpen(false);
@@ -1203,7 +865,7 @@ export default function Sales() {
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              filters.salesman ===
+                                              filters.salesmanId ===
                                                 salesman.id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0",
@@ -1224,7 +886,7 @@ export default function Sales() {
                             </Popover>
                           </div>
 
-                          {/* Amount Range Filter */}
+                          {/* Amount Range */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
                               Amount Range
@@ -1282,7 +944,7 @@ export default function Sales() {
                                   >
                                     <CalendarComponent
                                       mode="single"
-                                      selected={filters.invoiceDate}
+                                      selected={filters.fromDate}
                                       onSelect={handleInvoiceDateSelect}
                                       initialFocus
                                     />
@@ -1294,10 +956,7 @@ export default function Sales() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => {
-                                    setInvoiceDateInput("");
-                                    clearFilter("invoiceDate");
-                                  }}
+                                  onClick={clearDateFilter}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1445,7 +1104,7 @@ export default function Sales() {
                               </div>
                             </TableCell>
                           </motion.tr>
-                        ) : currentSales.length === 0 ? (
+                        ) : sales.length === 0 ? (
                           <motion.tr
                             key="no-data"
                             initial={{ opacity: 0 }}
@@ -1481,7 +1140,7 @@ export default function Sales() {
                             </TableCell>
                           </motion.tr>
                         ) : (
-                          currentSales.map((sale, index) => (
+                          sales.map((sale, index) => (
                             <motion.tr
                               key={sale.id}
                               custom={index}
@@ -1491,9 +1150,7 @@ export default function Sales() {
                               variants={rowVariants}
                               className="group border-1"
                               layout
-                              transition={{
-                                layout: { duration: 0.3 },
-                              }}
+                              transition={{ layout: { duration: 0.3 } }}
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div className="font-mono font-medium text-primary">
@@ -1503,15 +1160,20 @@ export default function Sales() {
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div>
                                   <p className="font-medium">
-                                    {sale.customer.name}
+                                    {sale.customer.companyName ||
+                                      sale.customer.personName}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    Code: {sale.customer.code}
+                                    {sale.customer.phoneNo &&
+                                      `Phone: ${sale.customer.phoneNo}`}
                                   </p>
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <Badge variant="outline" className="bg-blue-500">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-500"
+                                >
                                   {sale.area.name}
                                 </Badge>
                               </TableCell>
@@ -1521,7 +1183,7 @@ export default function Sales() {
                                     {sale.van.name}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {sale.van.number}
+                                    {sale.van.vehicleNo}
                                   </p>
                                 </div>
                               </TableCell>
@@ -1531,7 +1193,7 @@ export default function Sales() {
                                     {sale.salesman.name}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    Code: {sale.salesman.code}
+                                    {sale.salesman.phoneNo}
                                   </p>
                                 </div>
                               </TableCell>
@@ -1651,8 +1313,8 @@ export default function Sales() {
             </Card>
           </motion.div>
 
-          {/* Custom Pagination */}
-          {!isLoading && currentSales.length > 0 && totalPages > 1 && (
+          {/* Pagination */}
+          {!isLoading && sales.length > 0 && totalPages > 1 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1661,7 +1323,7 @@ export default function Sales() {
               <CustomPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={handlePageChange}
+                onPageChange={setCurrentPage}
               />
             </motion.div>
           )}

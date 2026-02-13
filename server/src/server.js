@@ -14,6 +14,7 @@ import productRoutes from "./controllers/Product/productRoutes.js";
 import imageRoutes from "./controllers/Image/imageRoutes.js";
 import purchaseRoute from "./controllers/Purchase/purchaseRoutes.js";
 import supplierRoutes from "./controllers/Supplier/supplierRoutes.js";
+import salesRoutes from "./controllers/Sales/salesRoutes.js";
 
 import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
 import { createServer } from "http";

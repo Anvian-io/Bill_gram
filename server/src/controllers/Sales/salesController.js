@@ -267,7 +267,7 @@ export const createSale = asyncHandler(async (req, res) => {
     // Optional: update invoiceNo with prefix (like purchase controller does)
     const updated = await prisma.salesInvoice.update({
       where: { id: result.id },
-      data: { invoiceNo: `S-${result.id}` }, // example prefix
+      data: { invoiceNo: `SINV-${result.id}` }, // or any format you prefer
     });
 
     return sendResponse(

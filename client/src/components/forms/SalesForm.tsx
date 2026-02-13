@@ -37,33 +37,29 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
-  X as XIcon,
   Plus,
   Trash2,
   Percent,
-  Search,
   Package,
   Hash,
   FileText,
-  User,
-  MapPin,
-  Truck,
-  UserCog,
   ChevronsUpDown,
   Check,
   IndianRupee,
   Layers,
-  Building,
   Calendar,
-  Tag,
-  Gift,
-  Shield,
   CreditCard,
   DollarSign,
+  Gift,
+  Shield,
+  Tag,
+  MapPin,
+  Truck,
+  UserCog,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CustomDateInput } from "../custom_ui/CustomDateInput";
 import {
   Table,
   TableBody,
@@ -75,60 +71,31 @@ import {
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import { format } from "date-fns";
 
-// Mock product data (you might want to fetch this from Redux as well)
-const mockProducts = [
-  {
-    id: 1,
-    productCode: "G6",
-    description: "ECLARIS JAR",
-    price: 130.0,
-    gstRate: 5,
-  },
-  {
-    id: 2,
-    productCode: "10087",
-    description: "CRUNCHY MUNCHY S",
-    price: 4.0,
-    gstRate: 5,
-  },
-  {
-    id: 3,
-    productCode: "K1",
-    description: "KRACK IT S RS",
-    price: 4.2,
-    gstRate: 5,
-  },
-  {
-    id: 4,
-    productCode: "M50",
-    description: "GLUCO-G S RS",
-    price: 4.5,
-    gstRate: 5,
-  },
-  {
-    id: 5,
-    productCode: "G13",
-    description: "LOLLYPOP BIG JAR S",
-    price: 170.0,
-    gstRate: 5,
-  },
-];
+// ----------------------------------------------------------------------
+// Types & Interfaces
+// ----------------------------------------------------------------------
+interface ProductWithPrice {
+  id: number;
+  productCode: string;
+  description: string;
+  pricePerPcs?: number;
+  gstRate?: number;
+}
 
-// Define the schema for form validation
+// ----------------------------------------------------------------------
+// Schema Validation (invoiceNo removed)
+// ----------------------------------------------------------------------
 const salesSchema = z.object({
-  // Header Information
   invoiceDate: z.string().min(1, "Invoice date is required"),
   areaId: z.coerce.number().min(1, "Area is required"),
   customerId: z.coerce.number().min(1, "Customer is required"),
   vanId: z.coerce.number().min(1, "Van is required"),
   salesmanId: z.coerce.number().min(1, "Salesman is required"),
   address: z.string().min(1, "Address is required"),
-  invoiceNo: z.string().min(1, "Invoice number is required"),
+  // invoiceNo is not included – backend will generate it
   gstDetails: z.string().optional(),
 
-  // Product Items
   items: z
     .array(
       z.object({
@@ -148,11 +115,11 @@ const salesSchema = z.object({
         sch1Amount: z.coerce.number().min(0).default(0),
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
+        batchId: z.coerce.number().optional(),
       }),
     )
     .min(1, "At least one product item is required"),
 
-  // Summary Information
   remarks: z.string().optional(),
   grossAmount: z.coerce.number().min(0, "Gross amount must be positive"),
   boxUnit: z.coerce.number().min(0).default(0),
@@ -165,6 +132,9 @@ const salesSchema = z.object({
   finalAmount: z.coerce.number().positive("Final amount must be positive"),
 });
 
+// ----------------------------------------------------------------------
+// Component Props
+// ----------------------------------------------------------------------
 interface SalesFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -173,7 +143,9 @@ interface SalesFormModalProps {
   isSubmitting?: boolean;
 }
 
-// Initial form values
+// ----------------------------------------------------------------------
+// Initial Values (invoiceNo removed)
+// ----------------------------------------------------------------------
 const defaultValues: SalesFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   areaId: 0,
@@ -181,7 +153,6 @@ const defaultValues: SalesFormData = {
   vanId: 0,
   salesmanId: 0,
   address: "",
-  invoiceNo: "",
   gstDetails: "Against GST",
   items: [],
   remarks: "",
@@ -196,60 +167,9 @@ const defaultValues: SalesFormData = {
   finalAmount: 0,
 };
 
-// Sample data for testing
-const sampleData: SalesFormData = {
-  invoiceDate: new Date().toISOString().split("T")[0],
-  areaId: 1,
-  customerId: 1,
-  vanId: 1,
-  salesmanId: 1,
-  address: "Sample Address",
-  invoiceNo: `S${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}001`,
-  gstDetails: "Against GST",
-  items: [
-    {
-      productId: 1,
-      productCode: "G6",
-      description: "ECLARIS JAR",
-      rate: 130.0,
-      aQty: 10,
-      mQty: 10,
-      totalAmount: 1300.0,
-      taxRate: 5,
-      taxAmount: 65.0,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
-    },
-    {
-      productId: 2,
-      productCode: "10087",
-      description: "CRUNCHY MUNCHY S",
-      rate: 4.0,
-      aQty: 1200,
-      mQty: 1200,
-      totalAmount: 4800.0,
-      taxRate: 5,
-      taxAmount: 240.0,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
-    },
-  ],
-  remarks: "",
-  grossAmount: 6100.0,
-  boxUnit: 20.0,
-  cessInsurance: 0,
-  scheme1: 0,
-  discountPercent: 5,
-  tax: 305.0,
-  amountAdd: 0,
-  creditAmount: 0,
-  finalAmount: 6405.0,
-};
-
+// ----------------------------------------------------------------------
+// Component
+// ----------------------------------------------------------------------
 export default function SalesForm({
   open,
   onOpenChange,
@@ -257,7 +177,7 @@ export default function SalesForm({
   onSave,
   isSubmitting = false,
 }: SalesFormModalProps) {
-  // State for dropdown open/close
+  // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
@@ -277,7 +197,7 @@ export default function SalesForm({
   } | null>(null);
 
   // Get data from Redux store
-  const { areas, customers, salesmen, vans } = useActiveLists();
+  const { areas, customers, salesmen, vans, products } = useActiveLists();
 
   const form = useForm<SalesFormData>({
     resolver: zodResolver(salesSchema) as any,
@@ -286,27 +206,27 @@ export default function SalesForm({
 
   // Watch items for UI updates
   const items = form.watch("items");
-  const areaId = form.watch("areaId");
   const customerId = form.watch("customerId");
 
-  // Calculate totals whenever items change
+  // --------------------------------------------------------------------
+  // Calculations (with safe number handling)
+  // --------------------------------------------------------------------
   useEffect(() => {
     const calculateTotals = () => {
-      const grossAmount = items.reduce(
-        (sum, item) => sum + item.totalAmount,
-        0,
-      );
-      const tax = items.reduce((sum, item) => sum + item.taxAmount, 0);
+      const grossAmount = items.reduce((sum, item) => {
+        return sum + (Number(item.totalAmount) || 0);
+      }, 0);
+      const tax = items.reduce((sum, item) => {
+        return sum + (Number(item.taxAmount) || 0);
+      }, 0);
 
-      // Get other values from form
-      const boxUnit = form.getValues("boxUnit") || 0;
-      const cessInsurance = form.getValues("cessInsurance") || 0;
-      const scheme1 = form.getValues("scheme1") || 0;
-      const discountPercent = form.getValues("discountPercent") || 0;
-      const amountAdd = form.getValues("amountAdd") || 0;
-      const creditAmount = form.getValues("creditAmount") || 0;
+      const boxUnit = Number(form.getValues("boxUnit")) || 0;
+      const cessInsurance = Number(form.getValues("cessInsurance")) || 0;
+      const scheme1 = Number(form.getValues("scheme1")) || 0;
+      const discountPercent = Number(form.getValues("discountPercent")) || 0;
+      const amountAdd = Number(form.getValues("amountAdd")) || 0;
+      const creditAmount = Number(form.getValues("creditAmount")) || 0;
 
-      // Calculate final amount
       const discountAmount = grossAmount * (discountPercent / 100);
       const finalAmount =
         grossAmount +
@@ -318,7 +238,6 @@ export default function SalesForm({
         discountAmount -
         creditAmount;
 
-      // Update form values
       form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
       form.setValue("tax", parseFloat(tax.toFixed(2)));
       form.setValue(
@@ -330,24 +249,62 @@ export default function SalesForm({
     calculateTotals();
   }, [items, form]);
 
-  // Load sample data into form
-  const loadSampleData = () => {
-    form.reset(sampleData);
-    toast.success("Sample data loaded", {
-      description: "Fill in real data before submitting.",
-    });
-  };
-
   // Reset form when editingSales changes
   useEffect(() => {
     if (editingSales) {
-      form.reset(editingSales);
+      form.reset({
+        invoiceDate: editingSales.invoiceDate.split("T")[0],
+        areaId: editingSales.area.id,
+        customerId: editingSales.customer.id,
+        vanId: editingSales.van.id,
+        salesmanId: editingSales.salesman.id,
+        address: editingSales.address,
+        gstDetails: editingSales.gstDetails,
+        items: editingSales.items.map((item: any) => ({
+          productId: item.productId,
+          productCode: item.productCode,
+          description: item.description,
+          rate: item.rate,
+          aQty: item.aQty,
+          mQty: item.mQty ?? 0,
+          totalAmount: item.totalAmount,
+          taxRate: item.taxRate,
+          taxAmount: item.taxAmount,
+          sch1Percent: item.sch1Percent ?? 0,
+          sch1Amount: item.sch1Amount ?? 0,
+          sch2Percent: item.sch2Percent ?? 0,
+          sch2Amount: item.sch2Amount ?? 0,
+          batchId: item.batchId,
+        })),
+        remarks: editingSales.remarks,
+        grossAmount: editingSales.grossAmount,
+        boxUnit: editingSales.boxUnit,
+        cessInsurance: editingSales.cessInsurance,
+        scheme1: editingSales.scheme1,
+        discountPercent: editingSales.discountPercent,
+        tax: editingSales.tax,
+        amountAdd: editingSales.amountAdd,
+        creditAmount: editingSales.creditAmount,
+        finalAmount: editingSales.finalAmount,
+      });
     } else {
       form.reset(defaultValues);
     }
   }, [editingSales, form]);
 
-  // Helper functions using Redux data
+  // Update address when customer changes
+  useEffect(() => {
+    if (customerId) {
+      const customer = customers.find((c) => c.id === customerId);
+      if (customer) {
+        form.setValue("address", customer.address || "");
+      }
+    }
+  }, [customerId, form, customers]);
+
+  // --------------------------------------------------------------------
+  // Helper functions
+  // --------------------------------------------------------------------
   const findAreaName = (areaId: number) => {
     const area = areas.find((a) => a.id === areaId);
     return area
@@ -372,31 +329,22 @@ export default function SalesForm({
     return salesman ? `${salesman.name}` : "Select salesman";
   };
 
+  const findProduct = (productId: number) => {
+    return products.find((p) => p.id === productId) as
+      | ProductWithPrice
+      | undefined;
+  };
+
   const findProductName = (productId: number) => {
-    const product = mockProducts.find((p) => p.id === productId);
+    const product = findProduct(productId);
     return product
       ? `${product.productCode}, ${product.description}`
       : "Select product";
   };
 
-  // Handle area change (removed filtering logic for customers and salesmen)
-  useEffect(() => {
-    // We're removing the resetting of customer and salesman based on area
-    // Customers and salesmen will now remain independent of area selection
-    // This useEffect is kept for any other area-related logic if needed
-  }, [areaId, form, areas]);
-
-  // Handle customer change to update address
-  useEffect(() => {
-    if (customerId) {
-      const customer = customers.find((c) => c.id === customerId);
-      if (customer) {
-        form.setValue("address", customer.address || "");
-      }
-    }
-  }, [customerId, form, customers]);
-
-  // Handle item changes
+  // --------------------------------------------------------------------
+  // Item handlers (safe number parsing)
+  // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
     field: keyof SalesFormData["items"][0],
@@ -404,52 +352,40 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
+    const numValue = value === "" ? 0 : Number(value) || 0;
+    updatedItems[index] = { ...item, [field]: numValue };
 
-    // Update the field
-    updatedItems[index] = { ...item, [field]: value };
-
-    // If rate or aQty changes, recalculate total amount and tax
-    if (field === "rate" || field === "aQty") {
-      const rate = field === "rate" ? value : item.rate;
-      const aQty = field === "aQty" ? value : item.aQty;
-      const taxRate = item.taxRate;
-
-      // Calculate total amount and tax
+    if (field === "rate" || field === "aQty" || field === "taxRate") {
+      const rate = field === "rate" ? numValue : item.rate;
+      const aQty = field === "aQty" ? numValue : item.aQty;
+      const taxRate = field === "taxRate" ? numValue : item.taxRate;
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
-
-      updatedItems[index].totalAmount = parseFloat(totalAmount.toFixed(2));
-      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
-    }
-
-    // If tax rate changes, recalculate tax
-    if (field === "taxRate") {
-      const taxAmount = item.totalAmount * (value / 100);
-      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
-    }
-
-    // If total amount changes, recalculate tax
-    if (field === "totalAmount") {
-      const taxAmount = value * (item.taxRate / 100);
-      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+      updatedItems[index].totalAmount = Number(totalAmount.toFixed(2));
+      updatedItems[index].taxAmount = Number(taxAmount.toFixed(2));
+    } else if (field === "totalAmount") {
+      const taxAmount = numValue * (item.taxRate / 100);
+      updatedItems[index].taxAmount = Number(taxAmount.toFixed(2));
     }
 
     form.setValue("items", updatedItems);
   };
 
-  // Handle batch selection from modal
+  // --------------------------------------------------------------------
+  // Batch selection
+  // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
     if (pendingBatchSelection) {
       const { index } = pendingBatchSelection;
       const updatedItems = [...items];
       const item = updatedItems[index];
 
-      // Update item with batch information
       updatedItems[index] = {
         ...item,
+        batchId: batch.id,
         rate: batch.sRate,
-        aQty: aQty,
-        mQty: mQty,
+        aQty,
+        mQty,
         totalAmount: batch.sRate * aQty,
         taxAmount: batch.sRate * aQty * (item.taxRate / 100),
       };
@@ -460,21 +396,17 @@ export default function SalesForm({
         description: `Rate: ₹${batch.sRate} | Qty: A=${aQty}, M=${mQty}`,
       });
 
-      // Clear pending selection
       setPendingBatchSelection(null);
     }
   };
 
-  // Handle batch modal close
   const handleBatchModalClose = () => {
     setBatchModalOpen(false);
-    // Don't clear pendingBatchSelection immediately to allow animation
     setTimeout(() => {
       setPendingBatchSelection(null);
     }, 300);
   };
 
-  // Open batch selection modal
   const openBatchModal = (index: number) => {
     if (!items[index].productId) {
       toast.error("Please select a product first");
@@ -491,7 +423,9 @@ export default function SalesForm({
     setBatchModalOpen(true);
   };
 
-  // Add new product row
+  // --------------------------------------------------------------------
+  // Row management
+  // --------------------------------------------------------------------
   const addProductRow = () => {
     const newItem: SalesFormData["items"][0] = {
       productId: 0,
@@ -511,7 +445,6 @@ export default function SalesForm({
     form.setValue("items", [...items, newItem]);
   };
 
-  // Remove product row
   const removeProductRow = (index: number) => {
     if (items.length > 0) {
       const updatedItems = items.filter((_, i) => i !== index);
@@ -519,9 +452,11 @@ export default function SalesForm({
     }
   };
 
-  // Handle product selection - UPDATED TO OPEN BATCH MODAL IMMEDIATELY
+  // --------------------------------------------------------------------
+  // Product selection
+  // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
-    const product = mockProducts.find((p) => p.id === productId);
+    const product = findProduct(productId);
     if (product) {
       const updatedItems = [...items];
       updatedItems[index] = {
@@ -529,20 +464,19 @@ export default function SalesForm({
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
-        rate: product.price,
-        taxRate: product.gstRate,
+        rate: product.pricePerPcs || 0,
+        taxRate: product.gstRate || 5,
         aQty: 1,
         mQty: 1,
-        totalAmount: product.price,
-        taxAmount: product.price * (product.gstRate / 100),
+        totalAmount: (product.pricePerPcs || 0) * 1,
+        taxAmount:
+          (product.pricePerPcs || 0) * 1 * ((product.gstRate || 5) / 100),
       };
       form.setValue("items", updatedItems);
 
-      // Close the product dropdown
       setProductOpen(false);
       setActiveProductIndex(null);
 
-      // Set pending batch selection and open batch modal
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -553,7 +487,9 @@ export default function SalesForm({
     }
   };
 
-  // Handle scheme percentage changes
+  // --------------------------------------------------------------------
+  // Scheme handlers
+  // --------------------------------------------------------------------
   const handleSchemeChange = (
     index: number,
     schemeType: "sch1Percent" | "sch2Percent",
@@ -561,20 +497,22 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
+    const numValue = value === "" ? 0 : Number(value) || 0;
 
     updatedItems[index] = {
       ...item,
-      [schemeType]: value,
+      [schemeType]: numValue,
       [schemeType === "sch1Percent" ? "sch1Amount" : "sch2Amount"]:
-        item.totalAmount * (value / 100),
+        item.totalAmount * (numValue / 100),
     };
 
     form.setValue("items", updatedItems);
   };
 
+  // --------------------------------------------------------------------
+  // Form submission
+  // --------------------------------------------------------------------
   const onSubmit = async (data: SalesFormData) => {
-    console.log("Form submitted with data:", data);
-
     try {
       await onSave(data, editingSales?.id);
     } catch (error) {
@@ -588,6 +526,9 @@ export default function SalesForm({
     toast.error("Please fix all validation errors before submitting.");
   };
 
+  const isReadOnly =
+    editingSales && editingSales.status !== "Pending" ? true : false;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -596,27 +537,21 @@ export default function SalesForm({
             <div className="flex items-center justify-between">
               <DialogTitle className="text-2xl flex items-center gap-2">
                 <FileText className="h-6 w-6" />
-                {editingSales ? "Edit Sales Invoice" : "Add New Sales Invoice"}
+                {editingSales
+                  ? `Invoice ${editingSales.invoiceNo}`
+                  : "Add New Sales Invoice"}
               </DialogTitle>
-
-              {!editingSales && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={loadSampleData}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2"
-                >
-                  <Package className="h-4 w-4" />
-                  Load Sample Data
-                </Button>
+              {editingSales && editingSales.status !== "Pending" && (
+                <Badge variant="secondary" className="ml-2">
+                  Read‑only
+                </Badge>
               )}
             </div>
-
             <DialogDescription>
               {editingSales
-                ? "Update sales invoice details"
+                ? editingSales.status === "Pending"
+                  ? "Update sales invoice details"
+                  : "View sales invoice details (read‑only)"
                 : "Create a new sales invoice"}
             </DialogDescription>
           </DialogHeader>
@@ -626,13 +561,13 @@ export default function SalesForm({
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
-              {/* Header Section - Full Row */}
+              {/* Header Section */}
               <div className="rounded-lg border p-4 bg-card">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Invoice Details
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
@@ -650,7 +585,7 @@ export default function SalesForm({
                               value={field.value}
                               onChange={field.onChange}
                               className="pl-10"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || isReadOnly}
                             />
                           </div>
                         </FormControl>
@@ -659,7 +594,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Area Dropdown - Command Component */}
+                  {/* Area */}
                   <FormField
                     control={form.control}
                     name="areaId"
@@ -677,7 +612,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               >
                                 {field.value
                                   ? findAreaName(field.value)
@@ -697,8 +632,10 @@ export default function SalesForm({
                                       key={area.id}
                                       value={`${area.id} ${area.name} ${area.city || ""}`}
                                       onSelect={() => {
-                                        field.onChange(area.id);
-                                        setAreaOpen(false);
+                                        if (!isReadOnly) {
+                                          field.onChange(area.id);
+                                          setAreaOpen(false);
+                                        }
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -732,7 +669,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Customer Dropdown - Command Component */}
+                  {/* Customer */}
                   <FormField
                     control={form.control}
                     name="customerId"
@@ -753,7 +690,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               >
                                 {field.value
                                   ? findCustomerName(field.value)
@@ -773,8 +710,10 @@ export default function SalesForm({
                                       key={customer.id}
                                       value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(customer.id);
-                                        setCustomerOpen(false);
+                                        if (!isReadOnly) {
+                                          field.onChange(customer.id);
+                                          setCustomerOpen(false);
+                                        }
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -822,7 +761,7 @@ export default function SalesForm({
                               placeholder="Customer address"
                               className="pl-10"
                               {...field}
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || isReadOnly}
                             />
                           </div>
                         </FormControl>
@@ -831,7 +770,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Van Dropdown - Command Component */}
+                  {/* Van */}
                   <FormField
                     control={form.control}
                     name="vanId"
@@ -849,7 +788,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               >
                                 {field.value
                                   ? findVanName(field.value)
@@ -869,8 +808,10 @@ export default function SalesForm({
                                       key={van.id}
                                       value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(van.id);
-                                        setVanOpen(false);
+                                        if (!isReadOnly) {
+                                          field.onChange(van.id);
+                                          setVanOpen(false);
+                                        }
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -903,7 +844,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Salesman Dropdown - Command Component */}
+                  {/* Salesman */}
                   <FormField
                     control={form.control}
                     name="salesmanId"
@@ -924,7 +865,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               >
                                 {field.value
                                   ? findSalesmanName(field.value)
@@ -944,8 +885,10 @@ export default function SalesForm({
                                       key={salesman.id}
                                       value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(salesman.id);
-                                        setSalesmanOpen(false);
+                                        if (!isReadOnly) {
+                                          field.onChange(salesman.id);
+                                          setSalesmanOpen(false);
+                                        }
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -980,29 +923,6 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Invoice No */}
-                  <FormField
-                    control={form.control}
-                    name="invoiceNo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm">Invoice No. *</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="e.g., S501622"
-                              className="pl-10"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* GST Details */}
                   <FormField
                     control={form.control}
@@ -1014,13 +934,31 @@ export default function SalesForm({
                           <Input
                             placeholder="e.g., Against GST"
                             {...field}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isReadOnly}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Display Invoice Number when editing (read-only) */}
+                  {editingSales && (
+                    <FormItem>
+                      <FormLabel className="text-sm">Invoice No.</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            value={editingSales.invoiceNo}
+                            readOnly
+                            disabled
+                            className="pl-10 bg-muted"
+                          />
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
                 </div>
               </div>
 
@@ -1030,19 +968,23 @@ export default function SalesForm({
                   <div>
                     <h3 className="text-lg font-semibold">Products</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Add products to the sales invoice
+                      {isReadOnly
+                        ? "View product details"
+                        : "Add products to the sales invoice"}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addProductRow}
-                    disabled={isSubmitting}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addProductRow}
+                      disabled={isSubmitting}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto border rounded-lg">
@@ -1080,8 +1022,9 @@ export default function SalesForm({
                               colSpan={13}
                               className="text-center py-8 text-muted-foreground"
                             >
-                              No products added. Click "Add Product" to get
-                              started.
+                              No products added.{" "}
+                              {!isReadOnly &&
+                                'Click "Add Product" to get started.'}
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -1097,74 +1040,82 @@ export default function SalesForm({
 
                               {/* Product Selection */}
                               <TableCell>
-                                <Popover
-                                  open={
-                                    productOpen && activeProductIndex === index
-                                  }
-                                  onOpenChange={(open) => {
-                                    if (open) {
-                                      setActiveProductIndex(index);
-                                    } else {
-                                      setActiveProductIndex(null);
+                                {isReadOnly ? (
+                                  <div className="py-2 px-3 text-sm">
+                                    {item.productCode} – {item.description}
+                                  </div>
+                                ) : (
+                                  <Popover
+                                    open={
+                                      productOpen &&
+                                      activeProductIndex === index
                                     }
-                                    setProductOpen(open);
-                                  }}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      className="w-full justify-between"
-                                      disabled={isSubmitting}
-                                    >
-                                      {item.productId
-                                        ? findProductName(item.productId)
-                                        : "Select product"}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-full p-0">
-                                    <Command>
-                                      <CommandInput placeholder="Search products..." />
-                                      <CommandList>
-                                        <CommandEmpty>
-                                          No product found.
-                                        </CommandEmpty>
-                                        <CommandGroup>
-                                          {mockProducts.map((product) => (
-                                            <CommandItem
-                                              key={product.id}
-                                              value={`${product.id} ${product.productCode} ${product.description}`}
-                                              onSelect={() => {
-                                                handleProductSelect(
-                                                  index,
-                                                  product.id,
-                                                );
-                                              }}
-                                            >
-                                              <div className="flex flex-col">
-                                                <span className="font-medium">
-                                                  {product.productCode}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                  {product.description}
-                                                </span>
-                                              </div>
-                                              <Check
-                                                className={cn(
-                                                  "ml-auto h-4 w-4",
-                                                  product.id === item.productId
-                                                    ? "opacity-100"
-                                                    : "opacity-0",
-                                                )}
-                                              />
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setActiveProductIndex(index);
+                                      } else {
+                                        setActiveProductIndex(null);
+                                      }
+                                      setProductOpen(open);
+                                    }}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className="w-full justify-between"
+                                        disabled={isSubmitting || isReadOnly}
+                                      >
+                                        {item.productId
+                                          ? findProductName(item.productId)
+                                          : "Select product"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0">
+                                      <Command>
+                                        <CommandInput placeholder="Search products..." />
+                                        <CommandList>
+                                          <CommandEmpty>
+                                            No product found.
+                                          </CommandEmpty>
+                                          <CommandGroup>
+                                            {products.map((product) => (
+                                              <CommandItem
+                                                key={product.id}
+                                                value={`${product.id} ${product.productCode} ${product.description}`}
+                                                onSelect={() => {
+                                                  handleProductSelect(
+                                                    index,
+                                                    product.id,
+                                                  );
+                                                }}
+                                              >
+                                                <div className="flex flex-col">
+                                                  <span className="font-medium">
+                                                    {product.productCode}
+                                                  </span>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {product.description}
+                                                  </span>
+                                                </div>
+                                                <Check
+                                                  className={cn(
+                                                    "ml-auto h-4 w-4",
+                                                    product.id ===
+                                                      item.productId
+                                                      ? "opacity-100"
+                                                      : "opacity-0",
+                                                  )}
+                                                />
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
                               </TableCell>
 
                               {/* Rate */}
@@ -1179,11 +1130,11 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "rate",
-                                        parseFloat(e.target.value) || 0,
+                                        e.target.value,
                                       )
                                     }
                                     className="w-24 pl-7"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -1199,11 +1150,11 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "aQty",
-                                        parseFloat(e.target.value) || 0,
+                                        e.target.value,
                                       )
                                     }
                                     className="w-20"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -1219,11 +1170,11 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "mQty",
-                                        parseFloat(e.target.value) || 0,
+                                        e.target.value,
                                       )
                                     }
                                     className="w-20"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -1240,11 +1191,11 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "totalAmount",
-                                        parseFloat(e.target.value) || 0,
+                                        e.target.value,
                                       )
                                     }
                                     className="w-24 pl-7"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                 </div>
                               </TableCell>
@@ -1260,11 +1211,11 @@ export default function SalesForm({
                                       handleSchemeChange(
                                         index,
                                         "sch1Percent",
-                                        parseFloat(e.target.value) || 0,
+                                        Number(e.target.value),
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -1288,11 +1239,11 @@ export default function SalesForm({
                                       handleSchemeChange(
                                         index,
                                         "sch2Percent",
-                                        parseFloat(e.target.value) || 0,
+                                        Number(e.target.value),
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -1316,11 +1267,11 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "taxRate",
-                                        parseFloat(e.target.value) || 0,
+                                        e.target.value,
                                       )
                                     }
                                     className="w-20 pl-6"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                 </div>
@@ -1336,27 +1287,33 @@ export default function SalesForm({
                               {/* Actions */}
                               <TableCell>
                                 <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openBatchModal(index)}
-                                    disabled={!item.productId || isSubmitting}
-                                    className="h-7 w-7 p-0"
-                                    title="Select Batch"
-                                  >
-                                    <Layers className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeProductRow(index)}
-                                    disabled={isSubmitting}
-                                    className="h-7 w-7 p-0"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  {!isReadOnly && (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openBatchModal(index)}
+                                        disabled={
+                                          !item.productId || isSubmitting
+                                        }
+                                        className="h-7 w-7 p-0"
+                                        title="Select Batch"
+                                      >
+                                        <Layers className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeProductRow(index)}
+                                        disabled={isSubmitting}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1368,10 +1325,10 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Summary Section - Colorful and Formal */}
+              {/* Summary Section */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Remarks - Left Side */}
+                  {/* Remarks */}
                   <div className="lg:col-span-1">
                     <div className="bg-[var(--remarks-bg)] rounded-lg p-4 border border-[var(--remarks-border)]">
                       <h4 className="font-semibold mb-3 text-[var(--remarks-text)] flex items-center gap-2">
@@ -1388,7 +1345,7 @@ export default function SalesForm({
                                 placeholder="Enter any additional remarks, notes, or special instructions..."
                                 className="min-h-[120px] bg-white dark:bg-gray-900 border-[var(--remarks-border)] focus:border-[var(--primary)]"
                                 {...field}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isReadOnly}
                               />
                             </FormControl>
                             <FormMessage />
@@ -1396,12 +1353,14 @@ export default function SalesForm({
                         )}
                       />
                       <p className="text-xs text-[var(--remarks-text)] mt-2">
-                        Add any special instructions or notes for this invoice.
+                        {isReadOnly
+                          ? "Read‑only view"
+                          : "Add any special instructions or notes for this invoice."}
                       </p>
                     </div>
                   </div>
 
-                  {/* Summary - Right Side - Colorful Grid */}
+                  {/* Summary Grid */}
                   <div className="lg:col-span-3">
                     <div className="bg-[var(--summary-container-bg)] rounded-xl p-5 border border-[var(--summary-container-border)] shadow-sm">
                       <h4 className="font-semibold mb-4 text-[var(--summary-container-text)] flex items-center gap-2">
@@ -1657,7 +1616,7 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Final Amount - Full Width */}
+                        {/* Final Amount */}
                         <div className="col-span-2 md:col-span-4 mt-4">
                           <div className="bg-[var(--summary-bg-final)] rounded-xl p-5 border border-[var(--summary-border-final)] shadow-md">
                             <div className="flex items-center justify-between mb-3">
@@ -1705,34 +1664,31 @@ export default function SalesForm({
                 </div>
               </div>
 
-              <DialogFooter className="pt-6">
+              <DialogFooter className="pt-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
-                  className="border-gray-300"
                 >
-                  Cancel
+                  {isReadOnly ? "Close" : "Cancel"}
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  {isSubmitting
-                    ? "Saving..."
-                    : editingSales
-                      ? "Update Sales Invoice"
-                      : "Create Sales Invoice"}
-                </Button>
+                {!isReadOnly && (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting
+                      ? "Saving..."
+                      : editingSales
+                        ? "Update Sales"
+                        : "Create Sales"}
+                  </Button>
+                )}
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
 
-      {/* Batch Selection Modal - Opens automatically when product is selected */}
+      {/* Batch Selection Modal */}
       {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}
