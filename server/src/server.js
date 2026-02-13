@@ -61,7 +61,8 @@ const startServer = async () => {
     app.use("/api/images", imageRoutes);
     app.use("/api/notifications", notificationRoutes); // Add this
     app.use("/api/purchases", purchaseRoute); // Add this
-        app.use("/api/suppliers", supplierRoutes);
+    app.use("/api/suppliers", supplierRoutes);
+    app.use("/api/sales", salesRoutes);
 
     // Health check
     app.get("/api/health", (req, res) => {

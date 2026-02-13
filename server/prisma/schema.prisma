@@ -448,7 +448,7 @@ model PurchaseHistory {
 
 model SalesInvoice {
   id             Int                   @id @default(autoincrement())
-  invoiceNo      String
+  invoiceNo      String?
   invoiceDate    DateTime
   areaId         Int
   area           Area                  @relation(fields: [areaId], references: [id])

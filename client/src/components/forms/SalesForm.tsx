@@ -54,9 +54,6 @@ import {
   Shield,
   Tag,
   MapPin,
-  Truck,
-  UserCog,
-  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -73,14 +70,16 @@ import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
 
 // ----------------------------------------------------------------------
-// Types & Interfaces
+// Types & Interfaces (includes cartonPack & conversionFactor)
 // ----------------------------------------------------------------------
-interface ProductWithPrice {
+interface ProductWithFactors {
   id: number;
   productCode: string;
   description: string;
   pricePerPcs?: number;
   gstRate?: number;
+  cartonPack: number;
+  conversionFactor: number;
 }
 
 // ----------------------------------------------------------------------
@@ -93,7 +92,6 @@ const salesSchema = z.object({
   vanId: z.coerce.number().min(1, "Van is required"),
   salesmanId: z.coerce.number().min(1, "Salesman is required"),
   address: z.string().min(1, "Address is required"),
-  // invoiceNo is not included – backend will generate it
   gstDetails: z.string().optional(),
 
   items: z
@@ -116,6 +114,8 @@ const salesSchema = z.object({
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
         batchId: z.coerce.number().optional(),
+        cartonPack: z.coerce.number().optional(),
+        conversionFactor: z.coerce.number().optional(),
       }),
     )
     .min(1, "At least one product item is required"),
@@ -144,7 +144,7 @@ interface SalesFormModalProps {
 }
 
 // ----------------------------------------------------------------------
-// Initial Values (invoiceNo removed)
+// Initial Values
 // ----------------------------------------------------------------------
 const defaultValues: SalesFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
@@ -194,6 +194,8 @@ export default function SalesForm({
     productId: number;
     productCode: string;
     description: string;
+    cartonPack: number;
+    conversionFactor: number;
   } | null>(null);
 
   // Get data from Redux store
@@ -249,43 +251,46 @@ export default function SalesForm({
     calculateTotals();
   }, [items, form]);
 
-  // Reset form when editingSales changes
+  // Reset form when editingSales changes (with fallbacks for null/undefined)
   useEffect(() => {
     if (editingSales) {
       form.reset({
-        invoiceDate: editingSales.invoiceDate.split("T")[0],
-        areaId: editingSales.area.id,
-        customerId: editingSales.customer.id,
-        vanId: editingSales.van.id,
-        salesmanId: editingSales.salesman.id,
-        address: editingSales.address,
-        gstDetails: editingSales.gstDetails,
-        items: editingSales.items.map((item: any) => ({
-          productId: item.productId,
-          productCode: item.productCode,
-          description: item.description,
-          rate: item.rate,
-          aQty: item.aQty,
+        invoiceDate:
+          editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
+        areaId: editingSales.area?.id ?? 0,
+        customerId: editingSales.customer?.id ?? 0,
+        vanId: editingSales.van?.id ?? 0,
+        salesmanId: editingSales.salesman?.id ?? 0,
+        address: editingSales.address ?? "",
+        gstDetails: editingSales.gstDetails ?? "Against GST",
+        items: (editingSales.items ?? []).map((item: any) => ({
+          productId: item.productId ?? 0,
+          productCode: item.productCode ?? "",
+          description: item.description ?? "",
+          rate: item.rate ?? 0,
+          aQty: item.aQty ?? 0,
           mQty: item.mQty ?? 0,
-          totalAmount: item.totalAmount,
-          taxRate: item.taxRate,
-          taxAmount: item.taxAmount,
+          totalAmount: item.totalAmount ?? 0,
+          taxRate: item.taxRate ?? 5,
+          taxAmount: item.taxAmount ?? 0,
           sch1Percent: item.sch1Percent ?? 0,
           sch1Amount: item.sch1Amount ?? 0,
           sch2Percent: item.sch2Percent ?? 0,
           sch2Amount: item.sch2Amount ?? 0,
-          batchId: item.batchId,
+          batchId: item.batchId ?? undefined,
+          cartonPack: item.cartonPack ?? 0,
+          conversionFactor: item.conversionFactor ?? 1,
         })),
-        remarks: editingSales.remarks,
-        grossAmount: editingSales.grossAmount,
-        boxUnit: editingSales.boxUnit,
-        cessInsurance: editingSales.cessInsurance,
-        scheme1: editingSales.scheme1,
-        discountPercent: editingSales.discountPercent,
-        tax: editingSales.tax,
-        amountAdd: editingSales.amountAdd,
-        creditAmount: editingSales.creditAmount,
-        finalAmount: editingSales.finalAmount,
+        remarks: editingSales.remarks ?? "",
+        grossAmount: editingSales.grossAmount ?? 0,
+        boxUnit: editingSales.boxUnit ?? 0,
+        cessInsurance: editingSales.cessInsurance ?? 0,
+        scheme1: editingSales.scheme1 ?? 0,
+        discountPercent: editingSales.discountPercent ?? 0,
+        tax: editingSales.tax ?? 0,
+        amountAdd: editingSales.amountAdd ?? 0,
+        creditAmount: editingSales.creditAmount ?? 0,
+        finalAmount: editingSales.finalAmount ?? 0,
       });
     } else {
       form.reset(defaultValues);
@@ -331,7 +336,7 @@ export default function SalesForm({
 
   const findProduct = (productId: number) => {
     return products.find((p) => p.id === productId) as
-      | ProductWithPrice
+      | ProductWithFactors
       | undefined;
   };
 
@@ -342,8 +347,16 @@ export default function SalesForm({
       : "Select product";
   };
 
+  const calculateMQty = (
+    aQty: number,
+    product?: ProductWithFactors,
+  ): number => {
+    if (!product) return 0;
+    return aQty * (product.cartonPack || 0) * (product.conversionFactor || 0);
+  };
+
   // --------------------------------------------------------------------
-  // Item handlers (safe number parsing)
+  // Item handlers (ensure numbers)
   // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
@@ -352,20 +365,34 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
-    const numValue = String(value) === "" ? 0 : Number(value) || 0;
+    const numValue = value === "" ? 0 : Number(value) || 0;
+
     updatedItems[index] = { ...item, [field]: numValue };
 
+    // Recalculate totals when rate, aQty, or taxRate changes
     if (field === "rate" || field === "aQty" || field === "taxRate") {
       const rate = field === "rate" ? numValue : item.rate;
       const aQty = field === "aQty" ? numValue : item.aQty;
       const taxRate = field === "taxRate" ? numValue : item.taxRate;
+
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
-      updatedItems[index].totalAmount = Number(totalAmount.toFixed(2));
-      updatedItems[index].taxAmount = Number(taxAmount.toFixed(2));
+
+      updatedItems[index].totalAmount = parseFloat(totalAmount.toFixed(2));
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
     } else if (field === "totalAmount") {
       const taxAmount = numValue * (item.taxRate / 100);
-      updatedItems[index].taxAmount = Number(taxAmount.toFixed(2));
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+    }
+
+    // When aQty changes, recalc mQty using product factors
+    if (field === "aQty") {
+      const product = findProduct(item.productId);
+      if (product) {
+        updatedItems[index].mQty = calculateMQty(numValue, product);
+        updatedItems[index].cartonPack = product.cartonPack;
+        updatedItems[index].conversionFactor = product.conversionFactor;
+      }
     }
 
     form.setValue("items", updatedItems);
@@ -383,17 +410,17 @@ export default function SalesForm({
       updatedItems[index] = {
         ...item,
         batchId: batch.id,
-        rate: batch.sRate,
+        rate: batch.sRate ?? 0,
         aQty,
         mQty,
-        totalAmount: batch.sRate * aQty,
-        taxAmount: batch.sRate * aQty * (item.taxRate / 100),
+        totalAmount: (batch.sRate ?? 0) * aQty,
+        taxAmount: (batch.sRate ?? 0) * aQty * ((item.taxRate ?? 5) / 100),
       };
 
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.sRate} | Qty: A=${aQty}, M=${mQty}`,
+        description: `Rate: ₹${batch.sRate} | A Qty: ${aQty} | M Qty: ${mQty}`,
       });
 
       setPendingBatchSelection(null);
@@ -414,11 +441,19 @@ export default function SalesForm({
     }
 
     const item = items[index];
+    const product = findProduct(item.productId);
+    if (!product) {
+      toast.error("Product details not found");
+      return;
+    }
+
     setPendingBatchSelection({
       index,
       productId: item.productId,
       productCode: item.productCode || "",
       description: item.description || "",
+      cartonPack: product.cartonPack,
+      conversionFactor: product.conversionFactor,
     });
     setBatchModalOpen(true);
   };
@@ -441,6 +476,8 @@ export default function SalesForm({
       sch1Amount: 0,
       sch2Percent: 0,
       sch2Amount: 0,
+      cartonPack: 0,
+      conversionFactor: 0,
     };
     form.setValue("items", [...items, newItem]);
   };
@@ -459,6 +496,9 @@ export default function SalesForm({
     const product = findProduct(productId);
     if (product) {
       const updatedItems = [...items];
+      const aQty = 1;
+      const mQty = calculateMQty(aQty, product);
+
       updatedItems[index] = {
         ...updatedItems[index],
         productId: product.id,
@@ -466,22 +506,28 @@ export default function SalesForm({
         description: product.description,
         rate: product.pricePerPcs || 0,
         taxRate: product.gstRate || 5,
-        aQty: 1,
-        mQty: 1,
-        totalAmount: (product.pricePerPcs || 0) * 1,
+        aQty,
+        mQty,
+        totalAmount: (product.pricePerPcs || 0) * aQty,
         taxAmount:
-          (product.pricePerPcs || 0) * 1 * ((product.gstRate || 5) / 100),
+          (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
+        cartonPack: product.cartonPack,
+        conversionFactor: product.conversionFactor,
+        batchId: undefined,
       };
       form.setValue("items", updatedItems);
 
       setProductOpen(false);
       setActiveProductIndex(null);
 
+      // Immediately open batch selection for the new product
       setPendingBatchSelection({
         index,
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
+        cartonPack: product.cartonPack,
+        conversionFactor: product.conversionFactor,
       });
       setBatchModalOpen(true);
     }
@@ -497,7 +543,7 @@ export default function SalesForm({
   ) => {
     const updatedItems = [...items];
     const item = updatedItems[index];
-    const numValue = String(value) === "" ? 0 : Number(value) || 0;
+    const numValue = Number(value) || 0;
 
     updatedItems[index] = {
       ...item,
@@ -529,6 +575,9 @@ export default function SalesForm({
   const isReadOnly =
     editingSales && editingSales.status !== "Pending" ? true : false;
 
+  // --------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -582,7 +631,7 @@ export default function SalesForm({
                             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               type="date"
-                              value={field.value}
+                              value={field.value ?? ""}
                               onChange={field.onChange}
                               className="pl-10"
                               disabled={isSubmitting || isReadOnly}
@@ -942,7 +991,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Display Invoice Number when editing (read-only) */}
+                  {/* Display Invoice Number when editing (read‑only) */}
                   {editingSales && (
                     <FormItem>
                       <FormLabel className="text-sm">Invoice No.</FormLabel>
@@ -997,7 +1046,9 @@ export default function SalesForm({
                         </TableHead>
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">A. Qty</TableHead>
-                        <TableHead className="font-semibold">M. Qty</TableHead>
+                        <TableHead className="font-semibold">
+                          M. Qty *
+                        </TableHead>
                         <TableHead className="font-semibold">Amount</TableHead>
                         <TableHead className="font-semibold">Sch1%</TableHead>
                         <TableHead className="font-semibold">
@@ -1125,7 +1176,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.rate}
+                                    value={item.rate ?? 0}
                                     onChange={(e) =>
                                       handleItemChange(
                                         index,
@@ -1145,7 +1196,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="1"
-                                    value={item.aQty}
+                                    value={item.aQty ?? 0}
                                     onChange={(e) =>
                                       handleItemChange(
                                         index,
@@ -1159,22 +1210,16 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty */}
+                              {/* M. Qty - DISABLED (auto‑calculated) */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
                                     type="number"
                                     step="1"
-                                    value={item.mQty}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "mQty",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting || isReadOnly}
+                                    value={item.mQty ?? 0}
+                                    readOnly
+                                    disabled
+                                    className="w-20 bg-muted cursor-not-allowed"
                                   />
                                 </div>
                               </TableCell>
@@ -1186,7 +1231,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.totalAmount}
+                                    value={item.totalAmount ?? 0}
                                     onChange={(e) =>
                                       handleItemChange(
                                         index,
@@ -1206,7 +1251,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.sch1Percent}
+                                    value={item.sch1Percent ?? 0}
                                     onChange={(e) =>
                                       handleSchemeChange(
                                         index,
@@ -1224,7 +1269,7 @@ export default function SalesForm({
                               {/* Sch1 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch1Amount.toFixed(2)}
+                                  ₹{(item.sch1Amount ?? 0).toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1234,7 +1279,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.sch2Percent}
+                                    value={item.sch2Percent ?? 0}
                                     onChange={(e) =>
                                       handleSchemeChange(
                                         index,
@@ -1252,7 +1297,7 @@ export default function SalesForm({
                               {/* Sch2 Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.sch2Amount.toFixed(2)}
+                                  ₹{(item.sch2Amount ?? 0).toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1262,7 +1307,7 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.taxRate}
+                                    value={item.taxRate ?? 5}
                                     onChange={(e) =>
                                       handleItemChange(
                                         index,
@@ -1280,7 +1325,7 @@ export default function SalesForm({
                               {/* Tax Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{item.taxAmount.toFixed(2)}
+                                  ₹{(item.taxAmount ?? 0).toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1322,6 +1367,10 @@ export default function SalesForm({
                       </AnimatePresence>
                     </TableBody>
                   </Table>
+                  <div className="p-2 text-xs text-muted-foreground border-t">
+                    * M Qty is automatically calculated as A Qty × Carton Pack ×
+                    Conversion Factor and cannot be edited.
+                  </div>
                 </div>
               </div>
 
@@ -1696,9 +1745,9 @@ export default function SalesForm({
           productId={pendingBatchSelection.productId}
           productCode={pendingBatchSelection.productCode}
           description={pendingBatchSelection.description}
+          cartonPack={pendingBatchSelection.cartonPack}
+          conversionFactor={pendingBatchSelection.conversionFactor}
           onBatchSelect={handleBatchSelect}
-          cartonPack={0}
-          conversionFactor={0}
         />
       )}
     </>

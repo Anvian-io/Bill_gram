@@ -22,14 +22,17 @@ const updateBatchStock = async (prisma, batchId, deltaQty) => {
 /**
  * Helper: Create sales history entries for an invoice
  */
-const createSalesHistory = async (prisma, invoice, items, customerId) => {
+const createSalesHistory = async (prisma, invoice, items, customerId, areaId, vanId, salesmanId) => {
   const historyData = items.map((item) => ({
     productId: item.productId,
     batchId: item.batchId,
     salesInvoiceId: invoice.id,
-    invoiceNo: invoice.invoiceNo,
+    invoiceNo: `SINV-${invoice.id}`, // or use invoice.invoiceNo if already updated
     invoiceDate: invoice.invoiceDate,
     customerId,
+    areaId,
+    vanId,
+    salesmanId,
     rate: item.rate,
     aQty: item.aQty,
     totalAmount: item.totalAmount,
@@ -65,12 +68,12 @@ export const createSale = asyncHandler(async (req, res) => {
   } = req.body;
 
   // --- Validation ---
-  if (!invoiceDate || !customerId || !invoiceNo || !items?.length) {
+  if (!invoiceDate || !customerId || !items?.length) {
     return sendResponse(
       res,
       false,
       null,
-      "Missing required fields (invoiceDate, customerId, invoiceNo, items)",
+      "Missing required fields (invoiceDate, customerId, items)",
       statusType.BAD_REQUEST,
     );
   }
@@ -93,18 +96,18 @@ export const createSale = asyncHandler(async (req, res) => {
   }
 
   // Verify invoice number uniqueness (global)
-  const existing = await prisma.salesInvoice.findFirst({
-    where: { invoiceNo, deleted: false },
-  });
-  if (existing) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      "Invoice number already exists",
-      statusType.CONFLICT,
-    );
-  }
+  // const existing = await prisma.salesInvoice.findFirst({
+  //   where: { invoiceNo, deleted: false },
+  // });
+  // if (existing) {
+  //   return sendResponse(
+  //     res,
+  //     false,
+  //     null,
+  //     "Invoice number already exists",
+  //     statusType.CONFLICT,
+  //   );
+  // }
 
   // Validate optional foreign keys if provided
   if (areaId) {
@@ -211,7 +214,7 @@ export const createSale = asyncHandler(async (req, res) => {
       // 1. Create invoice
       const invoice = await tx.salesInvoice.create({
         data: {
-          invoiceNo,
+          // invoiceNo,
           invoiceDate: new Date(invoiceDate),
           customerId,
           areaId: areaId || null,
@@ -259,7 +262,7 @@ export const createSale = asyncHandler(async (req, res) => {
       }
 
       // 3. Create sales history entries
-      await createSalesHistory(tx, invoice, items, customerId);
+      await createSalesHistory(tx, invoice, items, customerId,areaId,vanId,salesmanId);
 
       return invoice;
     });

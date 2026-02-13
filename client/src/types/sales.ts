@@ -66,6 +66,8 @@ export interface SalesFormData {
     sch2Percent: number;
     sch2Amount: number;
     batchId?: number;
+    cartonPack?: number;
+    conversionFactor?: number;
   }>;
   remarks: string;
   grossAmount: number;
@@ -96,6 +98,8 @@ export interface SalesItem {
   sch2Percent: number;
   sch2Amount: number;
   batchId?: number;
+  cartonPack?: number;
+  conversionFactor?: number;
 }
 
 export interface Sales {

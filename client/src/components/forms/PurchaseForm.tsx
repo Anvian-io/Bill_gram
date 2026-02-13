@@ -145,7 +145,7 @@ interface PurchaseFormModalProps {
 // ----------------------------------------------------------------------
 const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
-  invoiceNo: "",
+  // invoiceNo: "",
   supplierId: 0,
   gstDetails: "Against GST",
   items: [],
