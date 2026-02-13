@@ -80,6 +80,7 @@ interface ProductWithFactors {
   gstRate?: number;
   cartonPack: number;
   conversionFactor: number;
+  productBrand: string;
 }
 
 // ----------------------------------------------------------------------
@@ -345,7 +346,7 @@ export default function SalesForm({
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
-      ? `${product.productCode}, ${product.description}`
+      ? `${product.productCode}, ${product.productBrand}`
       : "Select product";
   };
 
@@ -1147,7 +1148,7 @@ export default function SalesForm({
                                                     {product.productCode}
                                                   </span>
                                                   <span className="text-xs text-muted-foreground">
-                                                    {product.description}
+                                                    {product.productBrand}
                                                   </span>
                                                 </div>
                                                 <Check
