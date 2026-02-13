@@ -1,23 +1,23 @@
 import express from "express";
 import cors from "cors";
 import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
-import productGroupRoutes from "./route/productGroupRoutes.js";
-import authRoutes from "./route/auth.js";
-import unitRoutes from "./route/unitRoutes.js";
-import productCompanyRoutes from "./route/productCompanyRoutes.js";
-import salesmanRoutes from "./route/salesmanRoutes.js";
-import customerRoutes from "./route/customerRoutes.js";
-import areaRoutes from "./route/areaRoutes.js";
-import vanRoutes from "./route/vanRoutes.js";
-import accountRoutes from "./route/accountRoutes.js";
-import productRoutes from "./route/productRoutes.js";
-import imageRoutes from "./route/imageRoutes.js";
-import purchaseRoute from "./route/purchaseRoutes.js"
-import supplierRoutes from "./route/supplierRoutes.js";
+import productGroupRoutes from "./controllers/Product_Group/productGroupRoutes.js";
+import authRoutes from "./controllers/Auth/auth.js";
+import unitRoutes from "./controllers/Unit/unitRoutes.js";
+import productCompanyRoutes from "./controllers/Product_Company/productCompanyRoutes.js";
+import salesmanRoutes from "./controllers/Salesman/salesmanRoutes.js";
+import customerRoutes from "./controllers/Customer/customerRoutes.js";
+import areaRoutes from "./controllers/Area/areaRoutes.js";
+import vanRoutes from "./controllers/Van/vanRoutes.js";
+import accountRoutes from "./controllers/Account/accountRoutes.js";
+import productRoutes from "./controllers/Product/productRoutes.js";
+import imageRoutes from "./controllers/Image/imageRoutes.js";
+import purchaseRoute from "./controllers/Purchase/purchaseRoutes.js";
+import supplierRoutes from "./controllers/Supplier/supplierRoutes.js";
 
-import notificationRoutes from "./route/notificationRoutes.js"; // Add this
+import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
 import { createServer } from "http";
-import { notificationController } from "./controllers/notificationController.js"; // Add this
+import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
 
 const app = express();
 const PORT = 3001;
