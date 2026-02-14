@@ -336,8 +336,12 @@ export const getProducts = asyncHandler(async (req, res) => {
     sortOrder = "desc",
     minStock,
     maxStock,
-    mfgDate,
-    expDate,
+    // Manufacturing date range
+    mfgFromDate,
+    mfgToDate,
+    // Expiry date range
+    expFromDate,
+    expToDate,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -368,18 +372,14 @@ export const getProducts = asyncHandler(async (req, res) => {
   // Product code filter
   if (productCode) {
     andConditions.push({
-      productCode: {
-        contains: productCode,
-      },
+      productCode: { contains: productCode },
     });
   }
 
   // Product brand filter
   if (productBrand) {
     andConditions.push({
-      productBrand: {
-        contains: productBrand,
-      },
+      productBrand: { contains: productBrand },
     });
   }
 
@@ -409,7 +409,6 @@ export const getProducts = asyncHandler(async (req, res) => {
         ? parseInt(maxStock)
         : 999999999;
 
-    // Use raw query to get product IDs with stock in range
     const productsWithStock = await prisma.$queryRaw`
       SELECT productId 
       FROM batches 
@@ -418,43 +417,32 @@ export const getProducts = asyncHandler(async (req, res) => {
       AND SUM(opening_stock) <= ${max}
     `;
 
-    const productIds = productsWithStock.map((p) => p.productId);
+    const productIds = (productsWithStock).map((p) => p.productId);
 
     if (productIds.length > 0) {
-      andConditions.push({
-        id: { in: productIds },
-      });
+      andConditions.push({ id: { in: productIds } });
     } else {
-      // If no products match stock criteria, return empty results
-      andConditions.push({
-        id: { in: [] },
-      });
+      andConditions.push({ id: { in: [] } }); // empty result
     }
   }
 
-  // Manufacturing Date Filter - handle as string
-  if (mfgDate) {
-    // The date comes in YYYY-MM-DD format from frontend
-    // We need to use string comparison since the field is likely a string
+  // Manufacturing date range – batches must have mfgDate within range
+  if (mfgFromDate || mfgToDate) {
+    const mfgCondition = {};
+    if (mfgFromDate) mfgCondition.gte = mfgFromDate; // YYYY-MM-DD
+    if (mfgToDate) mfgCondition.lte = mfgToDate;
     andConditions.push({
-      batches: {
-        some: {
-          mfgDate: mfgDate, // Direct string comparison
-        },
-      },
+      batches: { some: { mfgDate: mfgCondition } },
     });
   }
 
-  // Expiry Date Filter - handle as string
-  if (expDate) {
-    // The date comes in YYYY-MM-DD format from frontend
-    // We need to use string comparison since the field is likely a string
+  // Expiry date range
+  if (expFromDate || expToDate) {
+    const expCondition = {};
+    if (expFromDate) expCondition.gte = expFromDate;
+    if (expToDate) expCondition.lte = expToDate;
     andConditions.push({
-      batches: {
-        some: {
-          expDate: expDate, // Direct string comparison
-        },
-      },
+      batches: { some: { expDate: expCondition } },
     });
   }
 
@@ -462,31 +450,11 @@ export const getProducts = asyncHandler(async (req, res) => {
   if (search) {
     andConditions.push({
       OR: [
-        {
-          productCode: {
-            contains: search,
-          },
-        },
-        {
-          productBrand: {
-            contains: search,
-          },
-        },
-        {
-          description: {
-            contains: search,
-          },
-        },
-        {
-          productShortName: {
-            contains: search,
-          },
-        },
-        {
-          hsnSacCode: {
-            contains: search,
-          },
-        },
+        { productCode: { contains: search  } },
+        { productBrand: { contains: search  } },
+        { description: { contains: search  } },
+        { productShortName: { contains: search  } },
+        { hsnSacCode: { contains: search  } },
       ],
     });
   }
@@ -504,22 +472,18 @@ export const getProducts = asyncHandler(async (req, res) => {
   const validSortOrder = ["asc", "desc"];
 
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "createdAt"]:
-      validSortOrder.includes(sortOrder.toLowerCase())
-        ? sortOrder.toLowerCase()
+    [validSortFields.includes(sortBy ) ? sortBy : "createdAt"]:
+      validSortOrder.includes((sortOrder ).toLowerCase())
+        ? (sortOrder ).toLowerCase()
         : "desc",
   };
 
-  // Build batch where condition for the include to filter returned batches
-  const batchWhere = {};
-  if (mfgDate) {
-    batchWhere.mfgDate = mfgDate; // String comparison
-  }
-  if (expDate) {
-    batchWhere.expDate = expDate; // String comparison
-  }
+  // Build batch where condition for the include (to filter returned batches by date range if needed)
+  // But we already filtered products by batch existence; we may still want to return all batches of those products.
+  // If you want to also filter the batches returned per product, you can add a where clause inside include.
+  // For simplicity, we return all batches of matched products.
 
-  // Query with relations - INCLUDING RELATED IMAGES
+  // Query with relations
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
@@ -527,52 +491,22 @@ export const getProducts = asyncHandler(async (req, res) => {
       take: validatedLimit,
       orderBy,
       include: {
-        unit: {
-          select: {
-            id: true,
-            name: true,
-            symbol: true,
-          },
-        },
-        productGroup: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        productCompany: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        batches: {
-          orderBy: { createdAt: "desc" },
-          where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
-        },
+        unit: { select: { id: true, name: true, symbol: true } },
+        productGroup: { select: { id: true, name: true } },
+        productCompany: { select: { id: true, name: true } },
+        batches: { orderBy: { createdAt: "desc" } },
         relatedImages: {
           orderBy: { sortOrder: "asc" },
-          select: {
-            id: true,
-            imageUrl: true,
-            imageType: true,
-            sortOrder: true,
-          },
+          select: { id: true, imageUrl: true, imageType: true, sortOrder: true },
         },
-        _count: {
-          select: {
-            batches: true,
-            relatedImages: true,
-          },
-        },
+        _count: { select: { batches: true, relatedImages: true } },
       },
     }),
     prisma.product.count({ where }),
   ]);
 
-  // Convert to public URLs instead of file paths
+  // Convert file paths to public URLs
   const productsWithUrls = products.map((product) => {
-    // Calculate total opening stock from all batches
     const totalOpeningStock = product.batches.reduce(
       (sum, batch) => sum + (batch.openingStock || 0),
       0,
