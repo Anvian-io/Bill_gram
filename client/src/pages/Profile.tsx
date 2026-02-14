@@ -39,12 +39,11 @@ import {
   ImageIcon,
   X,
   Save,
-  ArrowLeft,
 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
 import type { User } from "@/types/user";
-import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { getFullImageUrl } from "@/utils/imageUtils";
 
 // Validation schema
 const profileSchema = z.object({
@@ -71,7 +70,6 @@ const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get user from localStorage
