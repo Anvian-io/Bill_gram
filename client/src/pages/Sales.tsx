@@ -93,6 +93,11 @@ const formatDateToDisplay = (date: Date | undefined): string => {
   return format(date, "dd/MM/yyyy");
 };
 
+const formatDateForAPI = (date: Date | undefined): string | undefined => {
+  if (!date) return undefined;
+  return format(date, "yyyy-MM-dd");
+};
+
 export default function Sales() {
   // State for sales
   const [sales, setSales] = useState<Sales[]>([]);
@@ -110,7 +115,7 @@ export default function Sales() {
   // Get data from Redux store
   const { areas, customers, salesmen, vans } = useActiveLists();
 
-  // Filter state (using fromDate/toDate)
+  // Filter state – now with fromDate/toDate and minAmount/maxAmount
   const [filters, setFilters] = useState<SalesFilters>({
     search: "",
     invoiceNo: "",
@@ -138,12 +143,13 @@ export default function Sales() {
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Local input values
+  // Local input values (before debounce)
   const [searchInput, setSearchInput] = useState("");
   const [invoiceNoInput, setInvoiceNoInput] = useState("");
   const [minAmountInput, setMinAmountInput] = useState("");
   const [maxAmountInput, setMaxAmountInput] = useState("");
-  const [invoiceDateInput, setInvoiceDateInput] = useState("");
+  const [fromDateInput, setFromDateInput] = useState("");
+  const [toDateInput, setToDateInput] = useState("");
 
   // Debounced filter setters
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -183,25 +189,42 @@ export default function Sales() {
     debouncedSetMaxAmount(value);
   };
 
-  const handleInvoiceDateInputChange = (value: string) => {
-    setInvoiceDateInput(value);
-    const parsedDate = parseDateFromString(value);
-    setFilters((prev) => ({
-      ...prev,
-      fromDate: parsedDate || (value === "" ? undefined : prev.fromDate),
-      toDate: parsedDate || (value === "" ? undefined : prev.toDate),
-    }));
+  // From Date handlers
+  const handleFromDateInputChange = (value: string) => {
+    setFromDateInput(value);
+    const parsed = parseDateFromString(value);
+    if (parsed) {
+      setFilters((prev) => ({ ...prev, fromDate: parsed }));
+    } else if (value === "") {
+      setFilters((prev) => ({ ...prev, fromDate: undefined }));
+    }
+  };
+  const handleFromDateSelect = (date: Date | undefined) => {
+    setFilters((prev) => ({ ...prev, fromDate: date }));
+    setFromDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  const handleInvoiceDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, fromDate: date, toDate: date }));
-    setInvoiceDateInput(date ? formatDateToDisplay(date) : "");
+  // To Date handlers
+  const handleToDateInputChange = (value: string) => {
+    setToDateInput(value);
+    const parsed = parseDateFromString(value);
+    if (parsed) {
+      setFilters((prev) => ({ ...prev, toDate: parsed }));
+    } else if (value === "") {
+      setFilters((prev) => ({ ...prev, toDate: undefined }));
+    }
+  };
+  const handleToDateSelect = (date: Date | undefined) => {
+    setFilters((prev) => ({ ...prev, toDate: date }));
+    setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
+  // Generic filter change for selects
   const handleFilterChange = (field: keyof SalesFilters, value: any) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Clear all filters
   const clearFilters = () => {
     setFilters({
       search: "",
@@ -220,21 +243,59 @@ export default function Sales() {
     setInvoiceNoInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
-    setInvoiceDateInput("");
+    setFromDateInput("");
+    setToDateInput("");
     setCurrentPage(1);
   };
 
-  const clearDateFilter = () => {
-    setFilters((prev) => ({ ...prev, fromDate: undefined, toDate: undefined }));
-    setInvoiceDateInput("");
+  // Clear a single filter
+  const clearFilter = (filterName: keyof SalesFilters) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterName]:
+        filterName === "areaId" ||
+        filterName === "customerId" ||
+        filterName === "vanId" ||
+        filterName === "salesmanId" ||
+        filterName === "status"
+          ? "all"
+          : filterName === "fromDate" || filterName === "toDate"
+            ? undefined
+            : "",
+    }));
+
+    // Clear the corresponding input field
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "invoiceNo":
+        setInvoiceNoInput("");
+        break;
+      case "minAmount":
+        setMinAmountInput("");
+        break;
+      case "maxAmount":
+        setMaxAmountInput("");
+        break;
+      case "fromDate":
+        setFromDateInput("");
+        break;
+      case "toDate":
+        setToDateInput("");
+        break;
+    }
   };
 
   // Fetch sales from API
   const fetchSales = async () => {
     setIsLoading(true);
     try {
-      const apiFilters: SalesFilters = {
-        ...filters,
+      const apiFilters: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: filters.search || undefined,
+        invoiceNo: filters.invoiceNo || undefined,
         areaId: filters.areaId === "all" ? undefined : filters.areaId,
         customerId:
           filters.customerId === "all" ? undefined : filters.customerId,
@@ -244,8 +305,16 @@ export default function Sales() {
         status: filters.status === "all" ? undefined : filters.status,
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
-        // fromDate/toDate already correct
       };
+
+      // Add date range if present
+      if (filters.fromDate) {
+        apiFilters.fromDate = formatDateForAPI(filters.fromDate);
+      }
+      if (filters.toDate) {
+        apiFilters.toDate = formatDateForAPI(filters.toDate);
+      }
+
       const response = await salesService.getSales(
         currentPage,
         itemsPerPage,
@@ -268,11 +337,14 @@ export default function Sales() {
   useEffect(() => {
     let mounted = true;
 
-    const fetchSales = async () => {
+    const loadSales = async () => {
       setIsLoading(true);
       try {
-        const apiFilters: SalesFilters = {
-          ...filters,
+        const apiFilters: any = {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: filters.search || undefined,
+          invoiceNo: filters.invoiceNo || undefined,
           areaId: filters.areaId === "all" ? undefined : filters.areaId,
           customerId:
             filters.customerId === "all" ? undefined : filters.customerId,
@@ -283,13 +355,21 @@ export default function Sales() {
           minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
           maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         };
+
+        if (filters.fromDate) {
+          apiFilters.fromDate = formatDateForAPI(filters.fromDate);
+        }
+        if (filters.toDate) {
+          apiFilters.toDate = formatDateForAPI(filters.toDate);
+        }
+
         const response = await salesService.getSales(
           currentPage,
           itemsPerPage,
           apiFilters,
         );
 
-        if (!mounted) return; // Ignore if component unmounted or effect re-ran
+        if (!mounted) return;
 
         setSales(response.sales);
         setTotalItems(response.pagination.total);
@@ -308,12 +388,29 @@ export default function Sales() {
       }
     };
 
-    fetchSales();
+    loadSales();
 
     return () => {
-      mounted = false; // Cleanup: mark as unmounted
+      mounted = false;
     };
   }, [currentPage, itemsPerPage, filters]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    filters.search,
+    filters.invoiceNo,
+    filters.areaId,
+    filters.customerId,
+    filters.vanId,
+    filters.salesmanId,
+    filters.minAmount,
+    filters.maxAmount,
+    filters.fromDate,
+    filters.toDate,
+    filters.status,
+  ]);
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
@@ -331,13 +428,12 @@ export default function Sales() {
     }
   };
 
-  // Handlers
+  // Handlers for CRUD
   const handleAddSales = () => {
     setEditingSales(null);
     setIsModalOpen(true);
   };
 
-  // Edit handler - fetch full details before opening modal
   const handleEditSales = async (sale: Sales) => {
     try {
       setIsLoading(true);
@@ -405,7 +501,9 @@ export default function Sales() {
         value !== "all" &&
         !(value instanceof Date) &&
         value !== "",
-    ).length + (filters.fromDate ? 1 : 0);
+    ).length +
+    (filters.fromDate ? 1 : 0) +
+    (filters.toDate ? 1 : 0);
 
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
@@ -609,10 +707,7 @@ export default function Sales() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={() => {
-                                    setInvoiceNoInput("");
-                                    handleFilterChange("invoiceNo", "");
-                                  }}
+                                  onClick={() => clearFilter("invoiceNo")}
                                   disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
@@ -968,19 +1063,19 @@ export default function Sales() {
                             </div>
                           </div>
 
-                          {/* Invoice Date */}
+                          {/* Invoice Date From */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
-                              Invoice Date
+                              Invoice Date From
                             </Label>
                             <div className="flex gap-2">
                               <div className="relative flex-1">
                                 <Input
-                                  value={invoiceDateInput}
+                                  value={fromDateInput}
                                   onChange={(e) =>
-                                    handleInvoiceDateInputChange(e.target.value)
+                                    handleFromDateInputChange(e.target.value)
                                   }
-                                  placeholder="dd/mm/yyyy or select"
+                                  placeholder="dd/mm/yyyy"
                                   className="pr-10"
                                 />
                                 <Popover>
@@ -1000,18 +1095,69 @@ export default function Sales() {
                                     <CalendarComponent
                                       mode="single"
                                       selected={filters.fromDate}
-                                      onSelect={handleInvoiceDateSelect}
+                                      onSelect={handleFromDateSelect}
                                       initialFocus
                                     />
                                   </PopoverContent>
                                 </Popover>
                               </div>
-                              {invoiceDateInput && (
+                              {fromDateInput && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-10 w-10"
-                                  onClick={clearDateFilter}
+                                  onClick={() => clearFilter("fromDate")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Invoice Date To */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Invoice Date To
+                            </Label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  value={toDateInput}
+                                  onChange={(e) =>
+                                    handleToDateInputChange(e.target.value)
+                                  }
+                                  placeholder="dd/mm/yyyy"
+                                  className="pr-10"
+                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                    >
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="end"
+                                  >
+                                    <CalendarComponent
+                                      mode="single"
+                                      selected={filters.toDate}
+                                      onSelect={handleToDateSelect}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                              {toDateInput && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => clearFilter("toDate")}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1095,7 +1241,7 @@ export default function Sales() {
             </div>
           </motion.div>
 
-          {/* Sales Table */}
+          {/* Sales Table (unchanged) */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
