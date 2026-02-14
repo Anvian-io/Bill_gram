@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -151,6 +151,11 @@ export default function Sales() {
   const [fromDateInput, setFromDateInput] = useState("");
   const [toDateInput, setToDateInput] = useState("");
 
+  // Ref to track if initial load is done
+  const initialLoadDone = useRef(false);
+  // Ref to track current request to prevent race conditions
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Debounced filter setters
   const debouncedSetSearch = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
@@ -287,8 +292,16 @@ export default function Sales() {
     }
   };
 
-  // Fetch sales from API
-  const fetchSales = async () => {
+  // Memoized fetch function to prevent recreating on every render
+  const fetchSales = useCallback(async () => {
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     try {
       const apiFilters: any = {
@@ -320,83 +333,73 @@ export default function Sales() {
         itemsPerPage,
         apiFilters,
       );
-      setSales(response.sales);
-      setTotalItems(response.pagination.total);
-      setTotalPages(response.pagination.totalPages);
-    } catch (error) {
+
+      // Only update state if this request wasn't aborted
+      if (!abortControllerRef.current.signal.aborted) {
+        setSales(response.sales);
+        setTotalItems(response.pagination.total);
+        setTotalPages(response.pagination.totalPages);
+      }
+    } catch (error: any) {
+      // Don't show error if request was cancelled
+      if (error.name === "AbortError" || error.message?.includes("aborted")) {
+        return;
+      }
       console.error("Error fetching sales:", error);
       toast.error("Failed to fetch sales");
       setSales([]);
       setTotalItems(0);
       setTotalPages(1);
     } finally {
-      setIsLoading(false);
+      // Only set loading to false if this was the most recent request
+      if (!abortControllerRef.current?.signal.aborted) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [
+    currentPage,
+    itemsPerPage,
+    filters.search,
+    filters.invoiceNo,
+    filters.areaId,
+    filters.customerId,
+    filters.vanId,
+    filters.salesmanId,
+    filters.status,
+    filters.minAmount,
+    filters.maxAmount,
+    filters.fromDate,
+    filters.toDate,
+  ]);
 
+  // Effect for initial load and when dependencies change
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    const loadSales = async () => {
-      setIsLoading(true);
-      try {
-        const apiFilters: any = {
-          page: currentPage,
-          limit: itemsPerPage,
-          search: filters.search || undefined,
-          invoiceNo: filters.invoiceNo || undefined,
-          areaId: filters.areaId === "all" ? undefined : filters.areaId,
-          customerId:
-            filters.customerId === "all" ? undefined : filters.customerId,
-          vanId: filters.vanId === "all" ? undefined : filters.vanId,
-          salesmanId:
-            filters.salesmanId === "all" ? undefined : filters.salesmanId,
-          status: filters.status === "all" ? undefined : filters.status,
-          minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
-          maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
-        };
-
-        if (filters.fromDate) {
-          apiFilters.fromDate = formatDateForAPI(filters.fromDate);
-        }
-        if (filters.toDate) {
-          apiFilters.toDate = formatDateForAPI(filters.toDate);
-        }
-
-        const response = await salesService.getSales(
-          currentPage,
-          itemsPerPage,
-          apiFilters,
-        );
-
-        if (!mounted) return;
-
-        setSales(response.sales);
-        setTotalItems(response.pagination.total);
-        setTotalPages(response.pagination.totalPages);
-      } catch (error) {
-        if (!mounted) return;
-        console.error("Error fetching sales:", error);
-        toast.error("Failed to fetch sales");
-        setSales([]);
-        setTotalItems(0);
-        setTotalPages(1);
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+    const loadData = async () => {
+      if (!isMounted) return;
+      await fetchSales();
+      if (isMounted) {
+        initialLoadDone.current = true;
       }
     };
 
-    loadSales();
+    loadData();
 
     return () => {
-      mounted = false;
+      isMounted = false;
+      // Cancel any pending requests on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, [currentPage, itemsPerPage, filters]);
+  }, [fetchSales]);
 
-  // Reset to first page when filters change
+  // Reset to first page when filter values change (not the whole filters object)
   useEffect(() => {
+    // Skip on initial render
+    if (!initialLoadDone.current) return;
+
     setCurrentPage(1);
   }, [
     filters.search,
