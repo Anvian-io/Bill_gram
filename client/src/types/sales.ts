@@ -52,6 +52,7 @@ export interface SalesFormData {
   // invoiceNo removed – backend generates it
   gstDetails: string;
   items: Array<{
+    batchOpeningStock: number | undefined;
     productId: number;
     productCode: string;
     description: string;

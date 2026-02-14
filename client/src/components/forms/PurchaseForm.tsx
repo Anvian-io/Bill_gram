@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -363,7 +363,7 @@ export default function PurchaseForm({
   // --------------------------------------------------------------------
   // Batch selection
   // --------------------------------------------------------------------
-  const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
+  const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
       const { index } = pendingBatchSelection;
       const updatedItems = [...items];
@@ -1106,8 +1106,8 @@ export default function PurchaseForm({
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
                   <div className="lg:col-span-1">
-                    <div className="bg-[var(--remarks-bg)] rounded-lg p-4 border border-[var(--remarks-border)]">
-                      <h4 className="font-semibold mb-3 text-[var(--remarks-text)] flex items-center gap-2">
+                    <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
+                      <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Remarks & Notes
                       </h4>
@@ -1119,7 +1119,7 @@ export default function PurchaseForm({
                             <FormControl>
                               <Textarea
                                 placeholder="Enter any additional remarks, notes, or special instructions..."
-                                className="min-h-[120px] bg-white dark:bg-gray-900 border-[var(--remarks-border)] focus:border-[var(--primary)]"
+                                className="min-h-30 bg-white dark:bg-gray-900 border-remarks-border focus:border-primary"
                                 {...field}
                                 disabled={isSubmitting || isReadOnly}
                               />
@@ -1128,7 +1128,7 @@ export default function PurchaseForm({
                           </FormItem>
                         )}
                       />
-                      <p className="text-xs text-[var(--remarks-text)] mt-2">
+                      <p className="text-xs text-remarks-text mt-2">
                         {isReadOnly
                           ? "Read‑only view"
                           : "Add any special instructions or notes for this invoice."}
@@ -1138,20 +1138,20 @@ export default function PurchaseForm({
 
                   {/* Summary - Right Side - Colorful Grid */}
                   <div className="lg:col-span-3">
-                    <div className="bg-[var(--summary-container-bg)] rounded-xl p-5 border border-[var(--summary-container-border)] shadow-sm">
-                      <h4 className="font-semibold mb-4 text-[var(--summary-container-text)] flex items-center gap-2">
+                    <div className="bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm">
+                      <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
                         Invoice Summary
                       </h4>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* All summary fields – they are read‑only anyway */}
-                        <div className="bg-[var(--summary-bg-1)] rounded-lg p-3 border border-[var(--summary-border-1)]">
+                        <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-1)]">
+                            <span className="text-xs font-medium text-summary-text-1">
                               Gross Amount
                             </span>
-                            <Tag className="h-3 w-3 text-[var(--summary-icon-1)]" />
+                            <Tag className="h-3 w-3 text-summary-icon-1" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1160,14 +1160,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-1)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-1" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-1)] text-[var(--summary-text-1)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-1 text-summary-text-1 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1177,12 +1177,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Box/Unit */}
-                        <div className="bg-[var(--summary-bg-2)] rounded-lg p-3 border border-[var(--summary-border-2)]">
+                        <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-2)]">
+                            <span className="text-xs font-medium text-summary-text-2">
                               Box/Unit
                             </span>
-                            <Package className="h-3 w-3 text-[var(--summary-icon-2)]" />
+                            <Package className="h-3 w-3 text-summary-icon-2" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1191,14 +1191,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-2)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-2" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-2)] text-[var(--summary-text-2)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1208,12 +1208,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* CESS/INS */}
-                        <div className="bg-[var(--summary-bg-3)] rounded-lg p-3 border border-[var(--summary-border-3)]">
+                        <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-3)]">
+                            <span className="text-xs font-medium text-summary-text-3">
                               CESS/INS
                             </span>
-                            <Shield className="h-3 w-3 text-[var(--summary-icon-3)]" />
+                            <Shield className="h-3 w-3 text-summary-icon-3" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1222,14 +1222,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-3)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-3" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-3)] text-[var(--summary-text-3)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1239,12 +1239,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Scheme 1 */}
-                        <div className="bg-[var(--summary-bg-4)] rounded-lg p-3 border border-[var(--summary-border-4)]">
+                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-4)]">
+                            <span className="text-xs font-medium text-summary-text-4">
                               Scheme 1
                             </span>
-                            <Gift className="h-3 w-3 text-[var(--summary-icon-4)]" />
+                            <Gift className="h-3 w-3 text-summary-icon-4" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1253,14 +1253,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-4)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-4)] text-[var(--summary-text-4)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1270,12 +1270,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Discount % */}
-                        <div className="bg-[var(--summary-bg-5)] rounded-lg p-3 border border-[var(--summary-border-5)]">
+                        <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-5)]">
+                            <span className="text-xs font-medium text-summary-text-5">
                               Discount %
                             </span>
-                            <Percent className="h-3 w-3 text-[var(--summary-icon-5)]" />
+                            <Percent className="h-3 w-3 text-summary-icon-5" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1290,7 +1290,7 @@ export default function PurchaseForm({
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-5)] text-[var(--summary-text-5)] font-medium text-center"
+                                      className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
                                     />
                                   </div>
                                 </FormControl>
@@ -1300,12 +1300,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Tax */}
-                        <div className="bg-[var(--summary-bg-6)] rounded-lg p-3 border border-[var(--summary-border-6)]">
+                        <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-6)]">
+                            <span className="text-xs font-medium text-summary-text-6">
                               Tax Amount
                             </span>
-                            <FileText className="h-3 w-3 text-[var(--summary-icon-6)]" />
+                            <FileText className="h-3 w-3 text-summary-icon-6" />
                           </div>
                           <FormField
                             control={form.control}

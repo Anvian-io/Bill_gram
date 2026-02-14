@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -99,7 +99,7 @@ interface BatchSelectionModalProps {
   description: string;
   cartonPack: number; // new: carton pack size
   conversionFactor: number; // new: conversion factor for weight/volume
-  onBatchSelect?: (batch: Batch, aQty: number, mQty: number) => void;
+  onBatchSelect?: (batch: Batch, aQty: number) => void;
 }
 
 export default function BatchSelectionModal({
@@ -179,7 +179,7 @@ export default function BatchSelectionModal({
     }
 
     if (selectedBatch && onBatchSelect) {
-      onBatchSelect(selectedBatch, aQty, mQty);
+      onBatchSelect(selectedBatch, aQty);
       onOpenChange(false);
       toast.success(`Batch ${selectedBatch.batchNo} applied`, {
         description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${(selectedBatch.purchaseRate * aQty).toFixed(2)}`,

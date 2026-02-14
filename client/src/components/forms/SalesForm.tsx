@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -66,7 +66,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { SalesFormData } from "@/types/sales";
-import BatchSelectionModal from "./BatchSelectionModal"; // <-- updated import
+import BatchSelectionModal from "./BatchSelectionModal";
 import { useActiveLists } from "@/hooks/useActiveLists";
 
 // ----------------------------------------------------------------------
@@ -115,6 +115,7 @@ const salesSchema = z.object({
         sch2Percent: z.coerce.number().min(0).max(100).default(0),
         sch2Amount: z.coerce.number().min(0).default(0),
         batchId: z.coerce.number().optional(),
+        batchOpeningStock: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
       }),
@@ -187,7 +188,7 @@ export default function SalesForm({
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
-  console.log(editingSales)
+  console.log(editingSales);
   // State for batch selection modal
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingBatchSelection, setPendingBatchSelection] = useState<{
@@ -256,7 +257,7 @@ export default function SalesForm({
   useEffect(() => {
     console.log("Editing sales changed:", editingSales);
     if (editingSales) {
-      console.log(editingSales)
+      console.log(editingSales);
       form.reset({
         invoiceDate:
           editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
@@ -268,8 +269,8 @@ export default function SalesForm({
         gstDetails: editingSales.gstDetails ?? "Against GST",
         items: (editingSales.items ?? []).map((item: any) => ({
           productId: item.productId ?? 0,
-          productCode: item.productCode ?? "",
-          description: item.description ?? "",
+          productCode: item.product?.productCode ?? "",
+          description: item.product?.description ?? "",
           rate: item.rate ?? 0,
           aQty: item.aQty ?? 0,
           mQty: item.mQty ?? 0,
@@ -281,6 +282,8 @@ export default function SalesForm({
           sch2Percent: item.sch2Percent ?? 0,
           sch2Amount: item.sch2Amount ?? 0,
           batchId: item.batchId ?? undefined,
+          // Extract opening stock from the nested batch object
+          batchOpeningStock: item.batch?.openingStock ?? undefined,
           cartonPack: item.cartonPack ?? 0,
           conversionFactor: item.conversionFactor ?? 1,
         })),
@@ -359,7 +362,7 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Item handlers
+  // Item handlers (with stock validation)
   // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
@@ -369,6 +372,22 @@ export default function SalesForm({
     const updatedItems = [...items];
     const item = updatedItems[index];
     const numValue = value === "" ? 0 : Number(value) || 0;
+
+    // Special validation for aQty: cannot exceed batch opening stock
+    if (field === "aQty" && item.batchId && item.batchOpeningStock) {
+      if (numValue > item.batchOpeningStock) {
+        toast.error(
+          `Only ${item.batchOpeningStock} stock available for this batch`,
+          {
+            description: `Maximum A Qty allowed is ${item.batchOpeningStock}`,
+          },
+        );
+        // Clamp to max stock
+        updatedItems[index] = { ...item, aQty: item.batchOpeningStock };
+        form.setValue("items", updatedItems);
+        return;
+      }
+    }
 
     updatedItems[index] = { ...item, [field]: numValue };
 
@@ -400,7 +419,7 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Batch selection
+  // Batch selection (now includes openingStock)
   // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
     if (pendingBatchSelection) {
@@ -411,7 +430,8 @@ export default function SalesForm({
       updatedItems[index] = {
         ...item,
         batchId: batch.id,
-        rate: batch.saleRate ?? 0, // use sales rate
+        batchOpeningStock: batch.openingStock, // store opening stock
+        rate: batch.saleRate ?? 0,
         aQty,
         mQty,
         totalAmount: (batch.saleRate ?? 0) * aQty,
@@ -421,7 +441,7 @@ export default function SalesForm({
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.saleRate} | A Qty: ${aQty} | M Qty: ${mQty}`,
+        description: `Rate: ₹${batch.saleRate} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
       });
 
       setPendingBatchSelection(null);
@@ -479,6 +499,7 @@ export default function SalesForm({
       sch2Amount: 0,
       cartonPack: 0,
       conversionFactor: 0,
+      batchOpeningStock: 0,
     };
     form.setValue("items", [...items, newItem]);
   };
@@ -491,7 +512,7 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Product selection
+  // Product selection (triggers batch modal)
   // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
@@ -515,6 +536,7 @@ export default function SalesForm({
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
         batchId: undefined,
+        batchOpeningStock: undefined,
       };
       form.setValue("items", updatedItems);
 
@@ -1211,7 +1233,7 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty */}
+                              {/* M. Qty (read-only) */}
                               <TableCell>
                                 <div className="relative">
                                   <Input

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -151,6 +151,21 @@ export default function BatchSelectionModal({
     setMQty(calculatedMQty);
   }, [aQty, cartonPack, conversionFactor]);
 
+  // Clamp A Qty when selected batch changes or stock updates
+  useEffect(() => {
+    if (selectedBatch && selectedBatch.openingStock !== undefined) {
+      if (aQty > selectedBatch.openingStock) {
+        setAQty(selectedBatch.openingStock);
+        toast.warning(
+          `Quantity adjusted to available stock (${selectedBatch.openingStock})`,
+          {
+            description: `Maximum A Qty for batch ${selectedBatch.batchNo} is ${selectedBatch.openingStock}`,
+          },
+        );
+      }
+    }
+  }, [selectedBatch, aQty]);
+
   const filteredBatches = batches.filter(
     (batch) =>
       batch.batchNo.toLowerCase().includes(searchBatch.toLowerCase()) ||
@@ -161,8 +176,15 @@ export default function BatchSelectionModal({
   const handleBatchSelect = (batch: Batch) => {
     setSelectedBatch(batch);
     setShowBatchError(false);
+    // If current aQty > stock, adjust it
+    if (batch.openingStock !== undefined && aQty > batch.openingStock) {
+      setAQty(batch.openingStock);
+      toast.info(`Quantity adjusted to ${batch.openingStock} based on stock`, {
+        description: `Batch ${batch.batchNo} has only ${batch.openingStock} available.`,
+      });
+    }
     toast.success(`Batch ${batch.batchNo} selected`, {
-      description: `Rate: ₹${batch.saleRate?.toFixed(2) || "N/A"} | MRP: ₹${batch.mrp.toFixed(2)}`,
+      description: `Rate: ₹${batch.saleRate?.toFixed(2) || "N/A"} | MRP: ₹${batch.mrp.toFixed(2)} | Stock: ${batch.openingStock}`,
     });
   };
 
@@ -172,6 +194,17 @@ export default function BatchSelectionModal({
       toast.error("Please select a batch", {
         description: "Batch selection is required to proceed",
         icon: <AlertCircle className="h-4 w-4" />,
+      });
+      return;
+    }
+
+    // Double-check stock before applying
+    if (
+      selectedBatch.openingStock !== undefined &&
+      aQty > selectedBatch.openingStock
+    ) {
+      toast.error(`Only ${selectedBatch.openingStock} stock available`, {
+        description: `Cannot apply A Qty of ${aQty}. Adjust quantity.`,
       });
       return;
     }
@@ -266,10 +299,26 @@ export default function BatchSelectionModal({
                     id="aQty"
                     type="number"
                     min="1"
+                    max={selectedBatch?.openingStock ?? 999999}
                     value={aQty}
-                    onChange={(e) =>
-                      setAQty(Math.max(1, parseInt(e.target.value) || 1))
-                    }
+                    onChange={(e) => {
+                      const newVal = Math.max(1, parseInt(e.target.value) || 1);
+                      if (
+                        selectedBatch &&
+                        selectedBatch.openingStock !== undefined &&
+                        newVal > selectedBatch.openingStock
+                      ) {
+                        toast.error(
+                          `Only ${selectedBatch.openingStock} stock available`,
+                          {
+                            description: `Batch ${selectedBatch.batchNo} has only ${selectedBatch.openingStock} items.`,
+                          },
+                        );
+                        setAQty(selectedBatch.openingStock);
+                      } else {
+                        setAQty(newVal);
+                      }
+                    }}
                     className="w-24"
                   />
                 </div>
@@ -304,6 +353,9 @@ export default function BatchSelectionModal({
                 {selectedBatch.saleRate?.toFixed(2) || "0.00"} × {aQty} =
                 <span className="ml-1 font-bold">
                   ₹{((selectedBatch.saleRate || 0) * aQty).toFixed(2)}
+                </span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  Stock: {selectedBatch.openingStock}
                 </span>
               </span>
             </div>
@@ -603,8 +655,11 @@ export default function BatchSelectionModal({
                   <span className="flex items-center">
                     <IndianRupee className="h-3 w-3 mr-1" />
                     <span className="font-medium">
-                      {selectedBatch.saleRate?.toFixed(2) || "0.00"} × {aQty} = ₹
-                      {((selectedBatch.saleRate || 0) * aQty).toFixed(2)}
+                      {selectedBatch.saleRate?.toFixed(2) || "0.00"} × {aQty} =
+                      ₹{((selectedBatch.saleRate || 0) * aQty).toFixed(2)}
+                    </span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      Stock: {selectedBatch.openingStock}
                     </span>
                   </span>
                 </div>
