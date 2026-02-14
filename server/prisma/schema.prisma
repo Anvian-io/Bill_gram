@@ -350,7 +350,7 @@ model Notification {
 
 model PurchaseInvoice {
   id             Int                     @id @default(autoincrement())
-  invoiceNo      String
+  invoiceNo      String?
   invoiceDate    DateTime
   supplierId     Int
   supplier       Supplier               @relation(fields: [supplierId], references: [id])

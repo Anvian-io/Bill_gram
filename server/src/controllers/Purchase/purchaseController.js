@@ -27,7 +27,7 @@ const createPurchaseHistory = async (prisma, invoice, items, supplierId) => {
     productId: item.productId,
     batchId: item.batchId,
     purchaseInvoiceId: invoice.id,
-    invoiceNo: invoice.invoiceNo,
+    invoiceNo: `INV-${invoice.id}`,
     invoiceDate: invoice.invoiceDate,
     supplierId,
     rate: item.rate,
@@ -61,7 +61,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
   } = req.body;
 
   // --- Validation ---
-  if (!invoiceDate || !supplierId || !invoiceNo || !items?.length) {
+  if (!invoiceDate || !supplierId || !items?.length) {
     return sendResponse(
       res,
       false,
@@ -89,18 +89,18 @@ export const createPurchase = asyncHandler(async (req, res) => {
   }
 
   // Verify invoice number uniqueness (per user? we'll just check globally)
-  const existing = await prisma.purchaseInvoice.findFirst({
-    where: { invoiceNo, deleted: false },
-  });
-  if (existing) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      "Invoice number already exists",
-      statusType.CONFLICT,
-    );
-  }
+  // const existing = await prisma.purchaseInvoice.findFirst({
+  //   where: { invoiceNo, deleted: false },
+  // });
+  // if (existing) {
+  //   return sendResponse(
+  //     res,
+  //     false,
+  //     null,
+  //     "Invoice number already exists",
+  //     statusType.CONFLICT,
+  //   );
+  // }
 
   // Validate each item
   for (const item of items) {
@@ -153,7 +153,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
       // 1. Create invoice
       const invoice = await tx.purchaseInvoice.create({
         data: {
-          invoiceNo,
+          // invoiceNo,
           invoiceDate: new Date(invoiceDate),
           supplierId,
           gstDetails: gstDetails || "Against GST",
@@ -238,6 +238,8 @@ export const getAllPurchases = asyncHandler(async (req, res) => {
     supplierId,
     fromDate,
     toDate,
+    minAmount,
+    maxAmount,
     status,
     showDeleted = "false",
     sortBy = "createdAt",
@@ -268,11 +270,35 @@ export const getAllPurchases = asyncHandler(async (req, res) => {
     andConditions.push({ supplierId: parseInt(supplierId) });
   }
 
+  // Date range filter
   if (fromDate || toDate) {
     const dateFilter = {};
-    if (fromDate) dateFilter.gte = new Date(fromDate);
-    if (toDate) dateFilter.lte = new Date(toDate);
+
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0); // Start of day
+      dateFilter.gte = start.toISOString();
+    }
+
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999); // End of day
+      dateFilter.lte = end.toISOString();
+    }
+
     andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  // Amount range filter (on finalAmount)
+  if (minAmount || maxAmount) {
+    const amountFilter = {};
+    if (minAmount) {
+      amountFilter.gte = parseFloat(minAmount);
+    }
+    if (maxAmount) {
+      amountFilter.lte = parseFloat(maxAmount);
+    }
+    andConditions.push({ finalAmount: amountFilter });
   }
 
   if (status) {

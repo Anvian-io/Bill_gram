@@ -307,6 +307,8 @@ export const getAllSales = asyncHandler(async (req, res) => {
     salesmanId,
     fromDate,
     toDate,
+    minAmount,
+    maxAmount,
     status,
     showDeleted = "false",
     sortBy = "createdAt",
@@ -330,27 +332,44 @@ export const getAllSales = asyncHandler(async (req, res) => {
   }
 
   if (invoiceNo) {
-    andConditions.push({ invoiceNo: { contains: invoiceNo } });
+    andConditions.push({ invoiceNo: { contains: invoiceNo  } });
   }
 
   if (customerId) {
-    andConditions.push({ customerId: parseInt(customerId) });
+    andConditions.push({ customerId: parseInt(customerId ) });
   }
   if (areaId) {
-    andConditions.push({ areaId: parseInt(areaId) });
+    andConditions.push({ areaId: parseInt(areaId ) });
   }
   if (vanId) {
-    andConditions.push({ vanId: parseInt(vanId) });
+    andConditions.push({ vanId: parseInt(vanId ) });
   }
   if (salesmanId) {
-    andConditions.push({ salesmanId: parseInt(salesmanId) });
+    andConditions.push({ salesmanId: parseInt(salesmanId ) });
   }
 
+  // Date range filter (invoiceDate)
   if (fromDate || toDate) {
     const dateFilter = {};
-    if (fromDate) dateFilter.gte = new Date(fromDate);
-    if (toDate) dateFilter.lte = new Date(toDate);
+    if (fromDate) {
+      dateFilter.gte = new Date(fromDate );
+    }
+    if (toDate) {
+      dateFilter.lte = new Date(toDate );
+    }
     andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  // Amount range filter (finalAmount)
+  if (minAmount || maxAmount) {
+    const amountFilter = {};
+    if (minAmount) {
+      amountFilter.gte = parseFloat(minAmount );
+    }
+    if (maxAmount) {
+      amountFilter.lte = parseFloat(maxAmount );
+    }
+    andConditions.push({ finalAmount: amountFilter });
   }
 
   if (status) {
@@ -361,13 +380,13 @@ export const getAllSales = asyncHandler(async (req, res) => {
   if (search) {
     andConditions.push({
       OR: [
-        { invoiceNo: { contains: search } },
-        { customer: { companyName: { contains: search } } },
-        { customer: { personName: { contains: search } } },
-        { remarks: { contains: search } },
-        { area: { name: { contains: search } } },
-        { van: { name: { contains: search } } },
-        { salesman: { name: { contains: search } } },
+        { invoiceNo: { contains: search  } },
+        { customer: { companyName: { contains: search  } } },
+        { customer: { personName: { contains: search  } } },
+        { remarks: { contains: search  } },
+        { area: { name: { contains: search  } } },
+        { van: { name: { contains: search  } } },
+        { salesman: { name: { contains: search  } } },
       ],
     });
   }
@@ -384,7 +403,7 @@ export const getAllSales = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "createdAt"]:
+    [validSortFields.includes(sortBy ) ? sortBy : "createdAt"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
