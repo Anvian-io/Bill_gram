@@ -24,7 +24,6 @@ import {
   Image as ImageIcon,
   Layers,
   Building,
-  Package2,
   Percent,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
@@ -172,14 +171,6 @@ export default function ProductInventory() {
 
   const debouncedSetProductBrand = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, productBrand: value }));
-  }, 300);
-
-  const debouncedSetBarcode = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, barcode: value }));
-  }, 300);
-
-  const debouncedSetProductName = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, productName: value }));
   }, 300);
 
   const debouncedSetMinStock = useDebounce((value: string) => {

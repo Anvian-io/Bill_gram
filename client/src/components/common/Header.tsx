@@ -39,7 +39,7 @@ export function Header({ isExpanded, pages }: HeaderProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   // const { theme } = useTheme();
-  const [wsConnected, setWsConnected] = useState(false);
+  const [wsConnected] = useState(false);
 
   useEffect(() => {
   // const handleConnectionChange = (connected: boolean) => {
