@@ -10,6 +10,7 @@ import {
   Settings,
   Layers,
   type LucideIcon,
+  Bell,
 } from "lucide-react";
 
 export interface NavItem {
@@ -113,10 +114,10 @@ export const navItems: NavItem[] = [
     pages: "Home, Profile",
   },
   {
-    icon: Settings,
-    label: "Settings",
-    href: "/settings",
-    id: "settings",
-    pages: "Home, Settings",
+    icon: Bell,
+    label: "Notifications",
+    href: "/notifications",
+    id: "notifications",
+    pages: "Home, Notifications",
   },
 ];
