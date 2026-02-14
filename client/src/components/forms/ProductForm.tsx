@@ -66,7 +66,7 @@ import { cn } from "@/lib/utils";
 import { CustomDateInput } from "../custom_ui/CustomDateInput";
 
 // API Base URL - Adjust according to your environment
-const API_BASE_URL = "http://localhost:3001";
+// const API_BASE_URL = "http://localhost:3001";
 
 // Define the schema for form validation
 const productSchema = z.object({

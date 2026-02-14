@@ -42,9 +42,9 @@ export function Header({ isExpanded, pages }: HeaderProps) {
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-  const handleConnectionChange = (connected: boolean) => {
-    setWsConnected(connected);
-  };
+  // const handleConnectionChange = (connected: boolean) => {
+  //   setWsConnected(connected);
+  // };
   
   // Get initial connection status
   // You might need to expose a method to get current status from webSocketService

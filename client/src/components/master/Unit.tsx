@@ -252,26 +252,26 @@ export default function UnitComponent() {
     setLocalSymbol("");
   };
 
-  // Clear specific filter
-  const clearFilter = (filterName: keyof typeof filters) => {
-    if (filterName === "search") {
-      setLocalSearch("");
-    } else if (filterName === "name") {
-      setLocalName("");
-    } else if (filterName === "symbol") {
-      setLocalSymbol("");
-    }
+  // // Clear specific filter
+  // const clearFilter = (filterName: keyof typeof filters) => {
+  //   if (filterName === "search") {
+  //     setLocalSearch("");
+  //   } else if (filterName === "name") {
+  //     setLocalName("");
+  //   } else if (filterName === "symbol") {
+  //     setLocalSymbol("");
+  //   }
 
-    setFilters((prev) => ({
-      ...prev,
-      [filterName]:
-        filterName === "status"
-          ? "all"
-          : filterName === "showDeleted"
-            ? false
-            : "",
-    }));
-  };
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     [filterName]:
+  //       filterName === "status"
+  //         ? "all"
+  //         : filterName === "showDeleted"
+  //           ? false
+  //           : "",
+  //   }));
+  // };
 
   // Clear search input
   const clearSearch = () => {

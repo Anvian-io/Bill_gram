@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  Download,
-  Upload,
   Eye,
   Edit,
   Trash2,
@@ -47,7 +45,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, parse, isValid } from "date-fns";
-import { cn } from "@/lib/utils";
 import {
   containerVariants,
   itemVariants,
@@ -63,7 +60,7 @@ import { productService } from "@/services/productService";
 import { type Product, type ProductFormData } from "@/types/product";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { useDebounce } from "@/utils/debounce";
-import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { getFullImageUrl } from "@/utils/imageUtils";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -159,8 +156,6 @@ export default function ProductInventory() {
   const [searchInput, setSearchInput] = useState<string>("");
   const [productCodeInput, setProductCodeInput] = useState<string>("");
   const [productBrandInput, setProductBrandInput] = useState<string>("");
-  const [barcodeInput, setBarcodeInput] = useState<string>("");
-  const [productNameInput, setProductNameInput] = useState<string>("");
   const [minStockInput, setMinStockInput] = useState<string>("");
   const [maxStockInput, setMaxStockInput] = useState<string>("");
   const [mfgDateInput, setMfgDateInput] = useState<string>("");
@@ -211,18 +206,6 @@ export default function ProductInventory() {
   const handleProductBrandChange = (value: string) => {
     setProductBrandInput(value);
     debouncedSetProductBrand(value);
-  };
-
-  // Handle barcode input change with debounce
-  const handleBarcodeChange = (value: string) => {
-    setBarcodeInput(value);
-    debouncedSetBarcode(value);
-  };
-
-  // Handle product name input change with debounce
-  const handleProductNameChange = (value: string) => {
-    setProductNameInput(value);
-    debouncedSetProductName(value);
   };
 
   // Handle min stock input change with debounce
@@ -467,8 +450,6 @@ export default function ProductInventory() {
     setSearchInput("");
     setProductCodeInput("");
     setProductBrandInput("");
-    setBarcodeInput("");
-    setProductNameInput("");
     setMinStockInput("");
     setMaxStockInput("");
     setMfgDateInput("");
@@ -501,12 +482,6 @@ export default function ProductInventory() {
         break;
       case "productBrand":
         setProductBrandInput("");
-        break;
-      case "barcode":
-        setBarcodeInput("");
-        break;
-      case "productName":
-        setProductNameInput("");
         break;
       case "minStock":
         setMinStockInput("");
