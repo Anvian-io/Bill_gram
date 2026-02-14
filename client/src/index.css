@@ -503,6 +503,7 @@
 /* Optional: Smooth scrolling for the entire page */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 /* Optional: Custom styling for specific containers */
