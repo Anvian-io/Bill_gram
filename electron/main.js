@@ -46,7 +46,7 @@ function createWindow() {
     "did-fail-load",
     (event, errorCode, errorDescription) => {
       console.error("Failed to load:", errorCode, errorDescription);
-    }
+    },
   );
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -96,7 +96,7 @@ function startBackend() {
     console.error("Backend file not found at:", backendPath);
     dialog.showErrorBox(
       "Backend Error",
-      `Backend server file not found at: ${backendPath}`
+      `Backend server file not found at: ${backendPath}`,
     );
     return;
   }
@@ -105,12 +105,15 @@ function startBackend() {
   console.log("Database directory:", dbDir);
 
   backendProcess = spawn("node", [backendPath], {
-    stdio: "inherit",
+    stdio: "ignore", // 👈 important
+    windowsHide: true, // 👈 VERY important (removes black window)
     env: {
       ...process.env,
       NODE_ENV: process.env.NODE_ENV || "production",
     },
   });
+
+  backendProcess.unref();
 
   backendProcess.on("error", (err) => {
     console.error("Failed to start backend:", err);
