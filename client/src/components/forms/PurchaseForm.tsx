@@ -1314,14 +1314,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-6)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-6" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-6)] text-[var(--summary-text-6)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-6 text-summary-text-6 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1331,12 +1331,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Add Amount */}
-                        <div className="bg-[var(--summary-bg-7)] rounded-lg p-3 border border-[var(--summary-border-7)]">
+                        <div className="bg-summary-bg-7 rounded-lg p-3 border border-summary-border-7">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-7)]">
+                            <span className="text-xs font-medium text-summary-text-7">
                               Add Amount
                             </span>
-                            <Plus className="h-3 w-3 text-[var(--summary-icon-7)]" />
+                            <Plus className="h-3 w-3 text-summary-icon-7" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1345,14 +1345,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-7)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-7" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-7)] text-[var(--summary-text-7)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1362,12 +1362,12 @@ export default function PurchaseForm({
                         </div>
 
                         {/* Credit Amount */}
-                        <div className="bg-[var(--summary-bg-8)] rounded-lg p-3 border border-[var(--summary-border-8)]">
+                        <div className="bg-summary-bg-8 rounded-lg p-3 border border-summary-border-8">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-8)]">
+                            <span className="text-xs font-medium text-summary-text-8">
                               Credit Amount
                             </span>
-                            <CreditCard className="h-3 w-3 text-[var(--summary-icon-8)]" />
+                            <CreditCard className="h-3 w-3 text-summary-icon-8" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1376,14 +1376,14 @@ export default function PurchaseForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-8)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-8" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-8)] text-[var(--summary-text-8)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1394,15 +1394,15 @@ export default function PurchaseForm({
 
                         {/* Final Amount */}
                         <div className="col-span-2 md:col-span-4 mt-4">
-                          <div className="bg-[var(--summary-bg-final)] rounded-xl p-5 border border-[var(--summary-border-final)] shadow-md">
+                          <div className="bg-summary-bg-final rounded-xl p-5 border border-summary-border-final shadow-md">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <DollarSign className="h-5 w-5 text-[var(--summary-text-final)]" />
-                                <span className="text-lg font-bold text-[var(--summary-text-final)]">
+                                <DollarSign className="h-5 w-5 text-summary-text-final" />
+                                <span className="text-lg font-bold text-summary-text-final">
                                   Final Amount
                                 </span>
                               </div>
-                              <Badge className="bg-white/20 text-[var(--summary-text-final)] hover:bg-white/30 border-0">
+                              <Badge className="bg-white/20 text-summary-text-final hover:bg-white/30 border-0">
                                 PAYABLE
                               </Badge>
                             </div>
@@ -1413,12 +1413,12 @@ export default function PurchaseForm({
                                 <FormItem>
                                   <FormControl>
                                     <div className="relative">
-                                      <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-[var(--summary-text-final)]" />
+                                      <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-summary-text-final" />
                                       <Input
                                         type="number"
                                         step="0.01"
                                         {...field}
-                                        className="pl-12 h-14 text-2xl font-bold bg-white/10 text-[var(--summary-text-final)] border-white/30 placeholder:text-white/60"
+                                        className="pl-12 h-14 text-2xl font-bold bg-white/10 text-summary-text-final border-white/30 placeholder:text-white/60"
                                         readOnly
                                         disabled
                                       />
@@ -1427,7 +1427,7 @@ export default function PurchaseForm({
                                 </FormItem>
                               )}
                             />
-                            <p className="text-xs text-[var(--summary-text-final)]/80 mt-3 flex items-center gap-1">
+                            <p className="text-xs text-(--summary-text-final)/80 mt-3 flex items-center gap-1">
                               <span className="font-medium">Note:</span> This is
                               the total payable amount including all taxes and
                               adjustments.

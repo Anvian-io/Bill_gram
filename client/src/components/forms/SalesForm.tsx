@@ -1402,8 +1402,8 @@ export default function SalesForm({
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks */}
                   <div className="lg:col-span-1">
-                    <div className="bg-[var(--remarks-bg)] rounded-lg p-4 border border-[var(--remarks-border)]">
-                      <h4 className="font-semibold mb-3 text-[var(--remarks-text)] flex items-center gap-2">
+                    <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
+                      <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Remarks & Notes
                       </h4>
@@ -1415,7 +1415,7 @@ export default function SalesForm({
                             <FormControl>
                               <Textarea
                                 placeholder="Enter any additional remarks, notes, or special instructions..."
-                                className="min-h-[120px] bg-white dark:bg-gray-900 border-[var(--remarks-border)] focus:border-[var(--primary)]"
+                                className="min-h-30 bg-white dark:bg-gray-900 border-remarks-border focus:border-primary"
                                 {...field}
                                 disabled={isSubmitting || isReadOnly}
                               />
@@ -1424,7 +1424,7 @@ export default function SalesForm({
                           </FormItem>
                         )}
                       />
-                      <p className="text-xs text-[var(--remarks-text)] mt-2">
+                      <p className="text-xs text-remarks-text mt-2">
                         {isReadOnly
                           ? "Read‑only view"
                           : "Add any special instructions or notes for this invoice."}
@@ -1434,20 +1434,20 @@ export default function SalesForm({
 
                   {/* Summary Grid */}
                   <div className="lg:col-span-3">
-                    <div className="bg-[var(--summary-container-bg)] rounded-xl p-5 border border-[var(--summary-container-border)] shadow-sm">
-                      <h4 className="font-semibold mb-4 text-[var(--summary-container-text)] flex items-center gap-2">
+                    <div className="bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm">
+                      <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
                         Invoice Summary
                       </h4>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Gross Amount */}
-                        <div className="bg-[var(--summary-bg-1)] rounded-lg p-3 border border-[var(--summary-border-1)]">
+                        <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-1)]">
+                            <span className="text-xs font-medium text-summary-text-1">
                               Gross Amount
                             </span>
-                            <Tag className="h-3 w-3 text-[var(--summary-icon-1)]" />
+                            <Tag className="h-3 w-3 text-summary-icon-1" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1456,14 +1456,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-1)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-1" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-1)] text-[var(--summary-text-1)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-1 text-summary-text-1 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1473,12 +1473,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Box/Unit */}
-                        <div className="bg-[var(--summary-bg-2)] rounded-lg p-3 border border-[var(--summary-border-2)]">
+                        <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-2)]">
+                            <span className="text-xs font-medium text-summary-text-2">
                               Box/Unit
                             </span>
-                            <Package className="h-3 w-3 text-[var(--summary-icon-2)]" />
+                            <Package className="h-3 w-3 text-summary-icon-2" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1487,14 +1487,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-2)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-2" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-2)] text-[var(--summary-text-2)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1504,12 +1504,12 @@ export default function SalesForm({
                         </div>
 
                         {/* CESS/INS */}
-                        <div className="bg-[var(--summary-bg-3)] rounded-lg p-3 border border-[var(--summary-border-3)]">
+                        <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-3)]">
+                            <span className="text-xs font-medium text-summary-text-3">
                               CESS/INS
                             </span>
-                            <Shield className="h-3 w-3 text-[var(--summary-icon-3)]" />
+                            <Shield className="h-3 w-3 text-summary-icon-3" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1518,14 +1518,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-3)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-3" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-3)] text-[var(--summary-text-3)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1535,12 +1535,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Scheme 1 */}
-                        <div className="bg-[var(--summary-bg-4)] rounded-lg p-3 border border-[var(--summary-border-4)]">
+                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-4)]">
+                            <span className="text-xs font-medium text-summary-text-4">
                               Scheme 1
                             </span>
-                            <Gift className="h-3 w-3 text-[var(--summary-icon-4)]" />
+                            <Gift className="h-3 w-3 text-summary-icon-4" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1549,14 +1549,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-4)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-4)] text-[var(--summary-text-4)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1566,12 +1566,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Discount % */}
-                        <div className="bg-[var(--summary-bg-5)] rounded-lg p-3 border border-[var(--summary-border-5)]">
+                        <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-5)]">
+                            <span className="text-xs font-medium text-summary-text-5">
                               Discount %
                             </span>
-                            <Percent className="h-3 w-3 text-[var(--summary-icon-5)]" />
+                            <Percent className="h-3 w-3 text-summary-icon-5" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1586,7 +1586,7 @@ export default function SalesForm({
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-5)] text-[var(--summary-text-5)] font-medium text-center"
+                                      className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
                                     />
                                   </div>
                                 </FormControl>
@@ -1596,12 +1596,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Tax */}
-                        <div className="bg-[var(--summary-bg-6)] rounded-lg p-3 border border-[var(--summary-border-6)]">
+                        <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-6)]">
+                            <span className="text-xs font-medium text-summary-text-6">
                               Tax Amount
                             </span>
-                            <FileText className="h-3 w-3 text-[var(--summary-icon-6)]" />
+                            <FileText className="h-3 w-3 text-summary-icon-6" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1610,14 +1610,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-6)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-6" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-6)] text-[var(--summary-text-6)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-6 text-summary-text-6 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1627,12 +1627,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Add Amount */}
-                        <div className="bg-[var(--summary-bg-7)] rounded-lg p-3 border border-[var(--summary-border-7)]">
+                        <div className="bg-summary-bg-7 rounded-lg p-3 border border-summary-border-7">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-7)]">
+                            <span className="text-xs font-medium text-summary-text-7">
                               Add Amount
                             </span>
-                            <Plus className="h-3 w-3 text-[var(--summary-icon-7)]" />
+                            <Plus className="h-3 w-3 text-summary-icon-7" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1641,14 +1641,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-7)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-7" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-7)] text-[var(--summary-text-7)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1658,12 +1658,12 @@ export default function SalesForm({
                         </div>
 
                         {/* Credit Amount */}
-                        <div className="bg-[var(--summary-bg-8)] rounded-lg p-3 border border-[var(--summary-border-8)]">
+                        <div className="bg-summary-bg-8 rounded-lg p-3 border border-summary-border-8">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-[var(--summary-text-8)]">
+                            <span className="text-xs font-medium text-summary-text-8">
                               Credit Amount
                             </span>
-                            <CreditCard className="h-3 w-3 text-[var(--summary-icon-8)]" />
+                            <CreditCard className="h-3 w-3 text-summary-icon-8" />
                           </div>
                           <FormField
                             control={form.control}
@@ -1672,14 +1672,14 @@ export default function SalesForm({
                               <FormItem>
                                 <FormControl>
                                   <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-[var(--summary-text-8)]" />
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-8" />
                                     <Input
                                       type="number"
                                       step="0.01"
                                       {...field}
                                       readOnly
                                       disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-[var(--summary-border-8)] text-[var(--summary-text-8)] font-medium"
+                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1690,15 +1690,15 @@ export default function SalesForm({
 
                         {/* Final Amount */}
                         <div className="col-span-2 md:col-span-4 mt-4">
-                          <div className="bg-[var(--summary-bg-final)] rounded-xl p-5 border border-[var(--summary-border-final)] shadow-md">
+                          <div className="bg-summary-bg-final rounded-xl p-5 border border-summary-border-final shadow-md">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <DollarSign className="h-5 w-5 text-[var(--summary-text-final)]" />
-                                <span className="text-lg font-bold text-[var(--summary-text-final)]">
+                                <DollarSign className="h-5 w-5 text-summary-text-final" />
+                                <span className="text-lg font-bold text-summary-text-final">
                                   Final Amount
                                 </span>
                               </div>
-                              <Badge className="bg-white/20 text-[var(--summary-text-final)] hover:bg-white/30 border-0">
+                              <Badge className="bg-white/20 text-summary-text-final hover:bg-white/30 border-0">
                                 PAYABLE
                               </Badge>
                             </div>
@@ -1709,12 +1709,12 @@ export default function SalesForm({
                                 <FormItem>
                                   <FormControl>
                                     <div className="relative">
-                                      <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-[var(--summary-text-final)]" />
+                                      <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-summary-text-final" />
                                       <Input
                                         type="number"
                                         step="0.01"
                                         {...field}
-                                        className="pl-12 h-14 text-2xl font-bold bg-white/10 text-[var(--summary-text-final)] border-white/30 placeholder:text-white/60"
+                                        className="pl-12 h-14 text-2xl font-bold bg-white/10 text-summary-text-final border-white/30 placeholder:text-white/60"
                                         readOnly
                                         disabled
                                       />
@@ -1723,7 +1723,7 @@ export default function SalesForm({
                                 </FormItem>
                               )}
                             />
-                            <p className="text-xs text-[var(--summary-text-final)]/80 mt-3 flex items-center gap-1">
+                            <p className="text-xs text-(--summary-text-final)/80 mt-3 flex items-center gap-1">
                               <span className="font-medium">Note:</span> This is
                               the total payable amount including all taxes and
                               adjustments.
