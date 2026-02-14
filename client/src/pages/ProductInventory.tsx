@@ -1365,7 +1365,7 @@ export default function ProductInventory() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-xs">
-                                  <div className="line-clamp-2 text-sm">
+                                  <div className="text-sm text-muted-foreground h-16 overflow-y-auto prose prose-sm text-wrap w-60">
                                     {product.description || "No description"}
                                   </div>
                                 </TableCell>

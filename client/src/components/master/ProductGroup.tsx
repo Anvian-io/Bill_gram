@@ -619,18 +619,17 @@ export default function ProductGroup() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} groups
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} groups
+              {filters.status !== "all" ||
+              filters.name ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -777,7 +776,7 @@ export default function ProductGroup() {
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-muted-foreground h-16 overflow-y-auto prose prose-sm text-wrap w-60">
                                 {group.description}
                               </p>
                             </TableCell>
