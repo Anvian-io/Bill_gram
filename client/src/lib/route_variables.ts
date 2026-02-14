@@ -7,7 +7,7 @@ import {
   // Store,
   Download,
   User,
-  Settings,
+  // Settings,
   Layers,
   type LucideIcon,
   Bell,
