@@ -1,11 +1,11 @@
 import express from "express";
 import { notificationController } from "./notificationController.js";
-// import { authenticateToken } from "../../controllers/authController.js";
+import { authenticateToken } from "../../controllers/Auth/authController.js";
 
 const router = express.Router();
 
 // All notification routes require authentication
-// router.use(authenticateToken);
+router.use(authenticateToken);
 
 // Protected routes
 router.post("/", notificationController.createNotification);
