@@ -26,7 +26,7 @@ import Customer from "../components/master/Customer";
 import Area from "../components/master/Area";
 import Van from "../components/master/Van";
 import Account from "../components/master/Account";
-
+import Supplier from "@/components/master/Supplier";
 interface SidebarItem {
   id: string;
   label: string;
@@ -67,7 +67,14 @@ export default function MasterInventory() {
       badge: 42,
       category: "product",
     },
-
+    {
+      id: "supplier",
+      label: "Supplier",
+      icon: <Building className="h-5 w-5" />,
+      component: <Supplier />,
+      badge: 12,
+      category: "sales",
+    },
     // Sales Management
     {
       id: "salesman",
@@ -110,7 +117,7 @@ export default function MasterInventory() {
       component: <Account />,
       badge: 36,
       category: "finance",
-    },
+    }
   ];
 
   // Category sections

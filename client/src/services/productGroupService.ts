@@ -73,4 +73,12 @@ export const productGroupService = {
     );
     return response.data.data;
   },
+
+    async getActiveProductGroups(): Promise<ProductGroup[]> {
+      const response = await apiClient.get<
+        ApiResponse<{ productGroups: ProductGroup[] }>
+      >("/product-groups/active");
+      // console.log("response.data.data.groups", response.data);
+      return response.data.data.productGroups || [];
+    },
 };

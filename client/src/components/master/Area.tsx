@@ -47,6 +47,7 @@ import {
 } from "../FramerVariants";
 import { areaService } from "@/services/areaService";
 import { type Area, type AreaFilters } from "@/types/area";
+import { useDebounce } from "@/utils/debounce";
 
 // Define the API response structure
 interface AreasResponse {
@@ -94,6 +95,64 @@ export default function AreaComponent() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Local state for immediate input values (before debounce)
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [nameInput, setNameInput] = useState<string>("");
+  const [cityInput, setCityInput] = useState<string>("");
+  const [stateInput, setStateInput] = useState<string>("");
+  const [regionInput, setRegionInput] = useState<string>("");
+
+  // Create debounced filter functions
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetName = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  const debouncedSetCity = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, city: value }));
+  }, 300);
+
+  const debouncedSetState = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, state: value }));
+  }, 300);
+
+  const debouncedSetRegion = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, region: value }));
+  }, 300);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  // Handle name input change with debounce
+  const handleNameChange = (value: string) => {
+    setNameInput(value);
+    debouncedSetName(value);
+  };
+
+  // Handle city input change with debounce
+  const handleCityChange = (value: string) => {
+    setCityInput(value);
+    debouncedSetCity(value);
+  };
+
+  // Handle state input change with debounce
+  const handleStateChange = (value: string) => {
+    setStateInput(value);
+    debouncedSetState(value);
+  };
+
+  // Handle region input change with debounce
+  const handleRegionChange = (value: string) => {
+    setRegionInput(value);
+    debouncedSetRegion(value);
+  };
 
   // Safely handle areas data
   const displayAreas = useMemo(() => {
@@ -180,7 +239,7 @@ export default function AreaComponent() {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Handle filter changes for non-text fields
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -199,6 +258,11 @@ export default function AreaComponent() {
       status: "all",
       showDeleted: false,
     });
+    setSearchInput("");
+    setNameInput("");
+    setCityInput("");
+    setStateInput("");
+    setRegionInput("");
   };
 
   // Clear specific filter
@@ -212,6 +276,25 @@ export default function AreaComponent() {
             ? false
             : "",
     }));
+
+    // Also clear the corresponding input state
+    switch (filterName) {
+      case "search":
+        setSearchInput("");
+        break;
+      case "name":
+        setNameInput("");
+        break;
+      case "city":
+        setCityInput("");
+        break;
+      case "state":
+        setStateInput("");
+        break;
+      case "region":
+        setRegionInput("");
+        break;
+    }
   };
 
   // Handle page change
@@ -354,16 +437,19 @@ export default function AreaComponent() {
                 type="search"
                 placeholder="Search areas by name, state, region, or city..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                disabled={isLoading}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                // disabled={isLoading}
               />
-              {filters.search && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
                   disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
@@ -416,7 +502,7 @@ export default function AreaComponent() {
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -475,19 +561,20 @@ export default function AreaComponent() {
                             <Input
                               id="areaName"
                               placeholder="Enter area name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={nameInput}
+                              onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
-                            {filters.name && (
+                            {nameInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={() => {
+                                  setNameInput("");
+                                  clearFilter("name");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -505,19 +592,92 @@ export default function AreaComponent() {
                             <Input
                               id="city"
                               placeholder="Enter city"
-                              value={filters.city}
-                              onChange={(e) =>
-                                handleFilterChange("city", e.target.value)
-                              }
+                              value={cityInput}
+                              onChange={(e) => handleCityChange(e.target.value)}
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
-                            {filters.city && (
+                            {cityInput && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("city")}
+                                onClick={() => {
+                                  setCityInput("");
+                                  clearFilter("city");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* State Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="state"
+                            className="text-sm font-medium"
+                          >
+                            State
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="state"
+                              placeholder="Enter state"
+                              value={stateInput}
+                              onChange={(e) =>
+                                handleStateChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {stateInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setStateInput("");
+                                  clearFilter("state");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Region Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="region"
+                            className="text-sm font-medium"
+                          >
+                            Region
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="region"
+                              placeholder="Enter region"
+                              value={regionInput}
+                              onChange={(e) =>
+                                handleRegionChange(e.target.value)
+                              }
+                              className="flex-1"
+                              // disabled={isLoading}
+                            />
+                            {regionInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setRegionInput("");
+                                  clearFilter("region");
+                                }}
                                 disabled={isLoading}
                               >
                                 <X className="h-4 w-4" />
@@ -606,9 +766,10 @@ export default function AreaComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} areas
                 {filters.status !== "all" ||
@@ -622,7 +783,8 @@ export default function AreaComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

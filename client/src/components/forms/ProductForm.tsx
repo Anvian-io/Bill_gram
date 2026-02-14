@@ -19,13 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -33,29 +26,47 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import {
-  // Upload,
-  X,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  X as XIcon,
   Image as ImageIcon,
   Plus,
   Trash2,
-  // Save,
-  // ArrowLeft,
   Percent,
   Package,
   Shield,
-  // Calendar,
   Hash,
-  // Barcode,
-  // Layers,
-  // DollarSign,
-  // PackageOpen,
-  // Scale,
-  // Briefcase,
   Tag,
   FileText,
   Box,
+  Database,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
+import { toast } from "sonner";
+import { imageService } from "@/services/imageService";
+import {
+  type ProductFormData as ImportedProductFormData,
+  type Product,
+} from "@/types/product";
+import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { cn } from "@/lib/utils";
+import { CustomDateInput } from "../custom_ui/CustomDateInput";
+
+// API Base URL - Adjust according to your environment
+// const API_BASE_URL = "http://localhost:3001";
 
 // Define the schema for form validation
 const productSchema = z.object({
@@ -64,12 +75,12 @@ const productSchema = z.object({
   productBrand: z.string().min(1, "Product brand is required"),
   description: z.string().min(1, "Description is required"),
   hsnSacCode: z.string().min(1, "HSN/SAC code is required"),
-  goodsOrServices: z.enum(["Goods", "Services"], {
+  goodsServices: z.enum(["Goods", "Services"], {
     message: "Please select Goods or Services",
   }),
   weight: z.coerce.number().positive("Weight must be positive"),
-  unit: z.string().min(1, "Unit is required"),
-  productGroup: z.string().min(1, "Product group is required"),
+  unitId: z.coerce.number().min(1, "Unit is required"),
+  productGroupId: z.coerce.number().min(1, "Product group is required"),
 
   // Additional Info
   productShortName: z.string().min(1, "Short name is required"),
@@ -77,8 +88,8 @@ const productSchema = z.object({
   conversionFactor: z.coerce
     .number()
     .positive("Conversion factor must be positive"),
-  pricePerPCS: z.coerce.number().positive("Price must be positive"),
-  productCompany: z.string().min(1, "Product company is required"),
+  pricePerPcs: z.coerce.number().positive("Price must be positive"),
+  productCompanyId: z.coerce.number().min(1, "Product company is required"),
   saleUnit: z.string().min(1, "Sale unit is required"),
   cartonPack: z.coerce.number().positive("Carton pack must be positive"),
   innerPack: z.string().optional(),
@@ -100,6 +111,13 @@ const productSchema = z.object({
     .enum(["Regular", "Composition", "Exempt"])
     .default("Regular"),
 
+  // Status
+  status: z.boolean().default(true),
+
+  // Images
+  mainImage: z.string().optional(),
+  relatedImages: z.array(z.string()).default([]),
+
   // Batch Details
   batches: z
     .array(
@@ -120,53 +138,14 @@ const productSchema = z.object({
     .default([]),
 });
 
-export type ProductFormData = z.infer<typeof productSchema>;
+// Use the inferred type from schema
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingProduct?: {
-    id: number;
-    productCode: string;
-    productBrand: string;
-    description: string;
-    hsnSacCode: string;
-    goodsOrServices: "Goods" | "Services";
-    weight: number;
-    unit: string;
-    productGroup: string;
-    productShortName: string;
-    purchaseUnit: string;
-    conversionFactor: number;
-    pricePerPCS: number;
-    productCompany: string;
-    saleUnit: string;
-    cartonPack: number;
-    innerPack?: string;
-    packagingBasic: boolean;
-    packagingMRP: boolean;
-    insuranceTaxBasic: boolean;
-    insuranceTaxMRP: boolean;
-    gstRate: number;
-    gstInclusive: boolean;
-    cessRate: number;
-    hsnChapter?: string;
-    gstApplicability: "Regular" | "Composition" | "Exempt";
-    batches: Array<{
-      bNo: string;
-      mfgDate: string | null;
-      expDate: string | null;
-      barcode: string;
-      basicPrice: number;
-      openingStock: number;
-      mrp: number;
-      pRate: number;
-      sRate: number;
-      margin: number;
-      gstAmount: number;
-    }>;
-  } | null;
-  onSave: (data: ProductFormData, id?: number) => void;
+  editingProduct?: Product | null;
+  onSave: (data: ImportedProductFormData, id?: number) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -176,16 +155,16 @@ const defaultValues: ProductFormData = {
   productBrand: "",
   description: "",
   hsnSacCode: "",
-  goodsOrServices: "Goods",
+  goodsServices: "Goods",
   weight: 1,
-  unit: "GM",
-  productGroup: "",
+  unitId: 0,
+  productGroupId: 0,
   productShortName: "",
-  purchaseUnit: "PCS",
+  purchaseUnit: "",
   conversionFactor: 1,
-  pricePerPCS: 0,
-  productCompany: "",
-  saleUnit: "PCS",
+  pricePerPcs: 0,
+  productCompanyId: 0,
+  saleUnit: "",
   cartonPack: 24,
   innerPack: "",
   packagingBasic: true,
@@ -197,6 +176,9 @@ const defaultValues: ProductFormData = {
   cessRate: 0,
   hsnChapter: "",
   gstApplicability: "Regular",
+  status: true,
+  mainImage: "",
+  relatedImages: [],
   batches: [
     {
       bNo: "",
@@ -214,11 +196,72 @@ const defaultValues: ProductFormData = {
   ],
 };
 
-// Units options
-const unitOptions = ["GM", "KG", "PCS", "L", "ML", "M", "CM", "MM"];
-const productGroupOptions = ["ELITE", "PREMIUM", "STANDARD", "BASIC"];
-const purchaseSaleUnitOptions = ["PCS", "BOX", "CARTON", "KG", "GM", "L"];
-const gstApplicabilityOptions = ["Regular", "Composition", "Exempt"];
+// Sample data for testing
+const sampleData: ProductFormData = {
+  productCode: "SAMPLE001",
+  productBrand: "Sample Brand Deluxe",
+  description: "High-quality sample product for demonstration purposes",
+  hsnSacCode: "18069010",
+  goodsServices: "Goods",
+  weight: 0.5,
+  unitId: 1,
+  productGroupId: 1,
+  productShortName: "Sample Deluxe",
+  purchaseUnit: "1",
+  conversionFactor: 1.5,
+  pricePerPcs: 299.99,
+  productCompanyId: 1,
+  saleUnit: "2",
+  cartonPack: 24,
+  innerPack: "6 units per inner pack",
+  packagingBasic: true,
+  packagingMRP: true,
+  insuranceTaxBasic: false,
+  insuranceTaxMRP: true,
+  gstRate: 18,
+  gstInclusive: true,
+  cessRate: 2.5,
+  hsnChapter: "18",
+  gstApplicability: "Regular",
+  status: true,
+  mainImage: "",
+  relatedImages: [],
+  batches: [
+    {
+      bNo: "BATCH001",
+      mfgDate: "2024-01-15",
+      expDate: "2025-01-14",
+      barcode: "123456789012",
+      basicPrice: 199.99,
+      openingStock: 1000,
+      mrp: 349.99,
+      pRate: 199.99,
+      sRate: 299.99,
+      margin: 100,
+      gstAmount: 36,
+    },
+    {
+      bNo: "BATCH002",
+      mfgDate: "2024-02-01",
+      expDate: "2025-01-31",
+      barcode: "123456789013",
+      basicPrice: 205.5,
+      openingStock: 750,
+      mrp: 359.99,
+      pRate: 205.5,
+      sRate: 315.5,
+      margin: 110,
+      gstAmount: 37,
+    },
+  ],
+};
+
+// GST options
+const gstApplicabilityOptions = [
+  { value: "Regular", label: "Regular" },
+  { value: "Composition", label: "Composition" },
+  { value: "Exempt", label: "Exempt" },
+];
 
 export default function ProductFormModal({
   open,
@@ -227,9 +270,23 @@ export default function ProductFormModal({
   onSave,
   isSubmitting = false,
 }: ProductFormModalProps) {
-  const [mainImage, setMainImage] = useState<File | null>(null);
-  const [relatedImages, setRelatedImages] = useState<File[]>([]);
-  const { units } = useActiveLists();
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [relatedImageFiles, setRelatedImageFiles] = useState<File[]>([]);
+  const [uploadedMainImage, setUploadedMainImage] = useState<string>("");
+  const [uploadedRelatedImages, setUploadedRelatedImages] = useState<string[]>(
+    [],
+  );
+
+  // State for dropdown open/close
+  const [unitIdOpen, setUnitIdOpen] = useState(false);
+  const [productGroupIdOpen, setProductGroupIdOpen] = useState(false);
+  const [productCompanyIdOpen, setProductCompanyIdOpen] = useState(false);
+  const [purchaseUnitOpen, setPurchaseUnitOpen] = useState(false);
+  const [saleUnitOpen, setSaleUnitOpen] = useState(false);
+  const [gstApplicabilityOpen, setGstApplicabilityOpen] = useState(false);
+
+  const { units, productCompanies, groups } = useActiveLists();
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
     defaultValues,
@@ -239,6 +296,45 @@ export default function ProductFormModal({
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
 
+  // Clean up object URLs
+  useEffect(() => {
+    return () => {
+      if (mainImageFile) {
+        URL.revokeObjectURL(URL.createObjectURL(mainImageFile));
+      }
+      relatedImageFiles.forEach((file) => {
+        URL.revokeObjectURL(URL.createObjectURL(file));
+      });
+    };
+  }, [mainImageFile, relatedImageFiles]);
+
+  // Load sample data into form
+  const loadSampleData = () => {
+    const firstUnit = units.length > 0 ? units[0].id : 0;
+    const firstGroup = groups.length > 0 ? groups[0].id : 0;
+    const firstCompany =
+      productCompanies.length > 0 ? productCompanies[0].id : 0;
+
+    const sampleWithFirstOptions = {
+      ...sampleData,
+      unitId: firstUnit,
+      productGroupId: firstGroup,
+      productCompanyId: firstCompany,
+      purchaseUnit: firstUnit.toString(),
+      saleUnit: firstUnit.toString(),
+    };
+
+    form.reset(sampleWithFirstOptions);
+    setMainImageFile(null);
+    setRelatedImageFiles([]);
+    setUploadedMainImage("");
+    setUploadedRelatedImages([]);
+
+    toast.success("Sample data loaded. Images will remain empty.", {
+      description: "Fill in real data before submitting.",
+    });
+  };
+
   // Reset form when editingProduct changes
   useEffect(() => {
     if (editingProduct) {
@@ -247,42 +343,94 @@ export default function ProductFormModal({
         productBrand: editingProduct.productBrand,
         description: editingProduct.description,
         hsnSacCode: editingProduct.hsnSacCode,
-        goodsOrServices: editingProduct.goodsOrServices,
+        goodsServices: editingProduct.goodsServices as "Goods" | "Services",
         weight: editingProduct.weight,
-        unit: editingProduct.unit,
-        productGroup: editingProduct.productGroup,
-        productShortName: editingProduct.productShortName,
-        purchaseUnit: editingProduct.purchaseUnit,
-        conversionFactor: editingProduct.conversionFactor,
-        pricePerPCS: editingProduct.pricePerPCS,
-        productCompany: editingProduct.productCompany,
-        saleUnit: editingProduct.saleUnit,
-        cartonPack: editingProduct.cartonPack,
+        unitId: editingProduct.unitId || 0,
+        productGroupId: editingProduct.productGroupId || 0,
+        productShortName: editingProduct.productShortName || "",
+        purchaseUnit: editingProduct.purchaseUnit || "",
+        conversionFactor: editingProduct.conversionFactor || 1,
+        pricePerPcs: editingProduct.pricePerPcs || 0,
+        productCompanyId: editingProduct.productCompanyId || 0,
+        saleUnit: editingProduct.saleUnit || "",
+        cartonPack: editingProduct.cartonPack || 24,
         innerPack: editingProduct.innerPack || "",
         packagingBasic: editingProduct.packagingBasic,
         packagingMRP: editingProduct.packagingMRP,
         insuranceTaxBasic: editingProduct.insuranceTaxBasic,
         insuranceTaxMRP: editingProduct.insuranceTaxMRP,
-        gstRate: editingProduct.gstRate,
+        gstRate: editingProduct.gstRate || 18,
         gstInclusive: editingProduct.gstInclusive,
-        cessRate: editingProduct.cessRate,
+        cessRate: editingProduct.cessRate || 0,
         hsnChapter: editingProduct.hsnChapter || "",
-        gstApplicability: editingProduct.gstApplicability,
-        batches: editingProduct.batches,
+        gstApplicability: editingProduct.gstApplicability as
+          | "Regular"
+          | "Composition"
+          | "Exempt",
+        status: editingProduct.status,
+        mainImage: extractFilename(editingProduct.mainImage || ""),
+        relatedImages:
+          editingProduct.relatedImages?.map((img) =>
+            extractFilename(img.imageUrl),
+          ) || [],
+        batches:
+          editingProduct.batches?.map((batch) => ({
+            bNo: batch.batchNo,
+            mfgDate: batch.mfgDate,
+            expDate: batch.expDate,
+            barcode: batch.barcode,
+            basicPrice: batch.basicPrice,
+            openingStock: batch.openingStock,
+            mrp: batch.mrp,
+            pRate: batch.purchaseRate,
+            sRate: batch.saleRate,
+            margin: batch.margin,
+            gstAmount: batch.gstAmount || 0,
+          })) || [],
       });
+
+      const mainImg = extractFilename(editingProduct.mainImage || "");
+      setUploadedMainImage(mainImg);
+
+      const relatedImgs =
+        editingProduct.relatedImages?.map((img) =>
+          extractFilename(img.imageUrl),
+        ) || [];
+      setUploadedRelatedImages(relatedImgs);
     } else {
       form.reset(defaultValues);
-      setMainImage(null);
-      setRelatedImages([]);
+      setMainImageFile(null);
+      setRelatedImageFiles([]);
+      setUploadedMainImage("");
+      setUploadedRelatedImages([]);
     }
   }, [editingProduct, form]);
 
-  // Calculate margin for a batch
+  // Helper functions
+  const findUnitName = (unitId: number) => {
+    const unit = units.find((u) => u.id === unitId);
+    return unit ? `${unit.symbol} (${unit.name})` : "Select unit";
+  };
+
+  const findGroupName = (groupId: number) => {
+    const group = groups.find((g) => g.id === groupId);
+    return group ? group.name : "Select group";
+  };
+
+  const findCompanyName = (companyId: number) => {
+    const company = productCompanies.find((c) => c.id === companyId);
+    return company ? company.name : "Select company";
+  };
+
+  const findGstApplicabilityLabel = (value: string) => {
+    const option = gstApplicabilityOptions.find((opt) => opt.value === value);
+    return option ? option.label : "Select GST applicability";
+  };
+
   const calculateMargin = (pRate: number, sRate: number) => {
     return sRate - pRate;
   };
 
-  // Calculate GST amount
   const calculateGST = (amount: number) => {
     return (amount * gstRate) / 100;
   };
@@ -296,13 +444,11 @@ export default function ProductFormModal({
     const updatedBatches = [...batches];
     updatedBatches[index] = { ...updatedBatches[index], [field]: value };
 
-    // Calculate margin if pRate or sRate changes
     if (field === "pRate" || field === "sRate") {
       const pRate = field === "pRate" ? value : updatedBatches[index].pRate;
       const sRate = field === "sRate" ? value : updatedBatches[index].sRate;
       updatedBatches[index].margin = calculateMargin(pRate, sRate);
 
-      // Update GST amount if GST inclusive
       if (form.getValues("gstInclusive")) {
         updatedBatches[index].gstAmount = calculateGST(pRate);
       }
@@ -337,41 +483,140 @@ export default function ProductFormModal({
     }
   };
 
-  // Handle image upload
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle main image upload
+  const handleMainImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      setMainImage(file);
+      try {
+        setMainImageFile(file);
+        const filename = await imageService.uploadImage(file);
+        setUploadedMainImage(filename);
+        form.setValue("mainImage", filename);
+        toast.success("Main image uploaded successfully");
+      } catch (error: any) {
+        toast.error("Failed to upload main image", {
+          description: error.response?.data?.message || "Please try again",
+        });
+        setMainImageFile(null);
+      }
     }
   };
 
-  const handleRelatedImagesUpload = (
+  // Handle related images upload
+  const handleRelatedImagesUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(e.target.files || []);
-    setRelatedImages([...relatedImages, ...files]);
+    if (files.length > 0) {
+      try {
+        const uploadedFilenames: string[] = [];
+        for (const file of files) {
+          const filename = await imageService.uploadImage(file);
+          uploadedFilenames.push(filename);
+        }
+
+        const newRelatedImages = [
+          ...uploadedRelatedImages,
+          ...uploadedFilenames,
+        ];
+        setUploadedRelatedImages(newRelatedImages);
+        setRelatedImageFiles((prev) => [...prev, ...files]);
+        form.setValue("relatedImages", newRelatedImages);
+
+        toast.success(`${files.length} image(s) uploaded successfully`);
+      } catch (error: any) {
+        toast.error("Failed to upload images", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      }
+    }
   };
 
+  // Remove main image
   const removeMainImage = () => {
-    setMainImage(null);
+    setMainImageFile(null);
+    setUploadedMainImage("");
+    form.setValue("mainImage", "");
+    toast.info("Main image removed");
   };
 
-  const removeRelatedImage = (index: number) => {
-    setRelatedImages(relatedImages.filter((_, i) => i !== index));
+  // Remove related image
+  const removeRelatedImage = async (index: number) => {
+    const imageToRemove = uploadedRelatedImages[index];
+    if (imageToRemove) {
+      try {
+        await imageService.deleteImage(imageToRemove);
+        const newImages = uploadedRelatedImages.filter((_, i) => i !== index);
+        setUploadedRelatedImages(newImages);
+        setRelatedImageFiles((prev) => prev.filter((_, i) => i !== index));
+        form.setValue("relatedImages", newImages);
+
+        toast.success("Image removed successfully");
+      } catch (error: any) {
+        toast.error("Failed to remove image", {
+          description: error.response?.data?.message || "Please try again",
+        });
+      }
+    }
   };
 
-  const onSubmit = (data: ProductFormData) => {
-    onSave(data, editingProduct?.id);
+  const onSubmit = async (data: ProductFormData) => {
+    console.log("Form submitted with data:", data);
+
+    try {
+      const formData: ImportedProductFormData = {
+        ...data,
+        goodsServices: data.goodsServices,
+        gstApplicability: data.gstApplicability,
+        batches: data.batches.map((batch) => ({
+          ...batch,
+          mfgDate: batch.mfgDate ?? null,
+          expDate: batch.expDate ?? null,
+          gstAmount: batch.gstAmount || 0,
+        })),
+      };
+
+      console.log("Converted form data:", formData);
+
+      await onSave(formData, editingProduct?.id);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast.error("Failed to save product. Please try again.");
+    }
+  };
+
+  const onError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    toast.error("Please fix all validation errors before submitting.");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="min-w-[90vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            {editingProduct ? "Edit Product" : "Add New Product"}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Package className="h-6 w-6" />
+              {editingProduct ? "Edit Product" : "Add New Product"}
+            </DialogTitle>
+
+            {!editingProduct && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadSampleData}
+                disabled={isSubmitting}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                Load Sample Data
+              </Button>
+            )}
+          </div>
+
           <DialogDescription>
             {editingProduct
               ? "Update product details and inventory information"
@@ -380,7 +625,10 @@ export default function ProductFormModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, onError)}
+            className="space-y-6"
+          >
             {/* Main Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Column 1: Basic Information */}
@@ -474,7 +722,7 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="goodsOrServices"
+                      name="goodsServices"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
@@ -536,62 +784,145 @@ export default function ProductFormModal({
                         )}
                       />
 
+                      {/* Unit Dropdown using Command */}
                       <FormField
                         control={form.control}
-                        name="unit"
+                        name="unitId"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel className="text-sm">Unit *</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={isSubmitting}
+                            <Popover
+                              open={unitIdOpen}
+                              onOpenChange={setUnitIdOpen}
                             >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {unitOptions.map((unit) => (
-                                  <SelectItem key={unit} value={unit}>
-                                    {unit}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={unitIdOpen}
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !field.value && "text-muted-foreground",
+                                    )}
+                                    disabled={isSubmitting}
+                                  >
+                                    {field.value
+                                      ? findUnitName(field.value)
+                                      : "Select unit"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search units..." />
+                                  <CommandList>
+                                    <CommandEmpty>No unit found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {units.map((unit) => (
+                                        <CommandItem
+                                          key={unit.id}
+                                          value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                          onSelect={() => {
+                                            field.onChange(unit.id);
+                                            setUnitIdOpen(false);
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-lg font-bold">
+                                              {unit.symbol}
+                                            </span>
+                                            <div className="flex flex-col">
+                                              <span className="text-[12px] text-muted-foreground">
+                                                {unit.name}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <Check
+                                            className={cn(
+                                              "ml-auto h-4 w-4",
+                                              unit.id === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
 
+                    {/* Product Group Dropdown using Command */}
                     <FormField
                       control={form.control}
-                      name="productGroup"
+                      name="productGroupId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             Product Group *
                           </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={productGroupIdOpen}
+                            onOpenChange={setProductGroupIdOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select group" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {productGroupOptions.map((group) => (
-                                <SelectItem key={group} value={group}>
-                                  {group}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={productGroupIdOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
+                                >
+                                  {field.value
+                                    ? findGroupName(field.value)
+                                    : "Select group"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search groups..." />
+                                <CommandList>
+                                  <CommandEmpty>No group found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {groups.map((group) => (
+                                      <CommandItem
+                                        key={group.id}
+                                        value={`${group.id} ${group.name}`}
+                                        onSelect={() => {
+                                          field.onChange(group.id);
+                                          setProductGroupIdOpen(false);
+                                        }}
+                                      >
+                                        {group.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            group.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -723,66 +1054,147 @@ export default function ProductFormModal({
                       )}
                     />
 
+                    {/* Product Company Dropdown using Command */}
                     <FormField
                       control={form.control}
-                      name="productCompany"
+                      name="productCompanyId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             Product Company *
                           </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Parle Agro Private Limited"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
+                          <Popover
+                            open={productCompanyIdOpen}
+                            onOpenChange={setProductCompanyIdOpen}
+                          >
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={productCompanyIdOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
+                                >
+                                  {field.value
+                                    ? findCompanyName(field.value)
+                                    : "Select company"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search companies..." />
+                                <CommandList>
+                                  <CommandEmpty>No company found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {productCompanies.map((company) => (
+                                      <CommandItem
+                                        key={company.id}
+                                        value={`${company.id} ${company.name}`}
+                                        onSelect={() => {
+                                          field.onChange(company.id);
+                                          setProductCompanyIdOpen(false);
+                                        }}
+                                      >
+                                        {company.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            company.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
                     <div className="grid grid-cols-2 gap-3">
+                      {/* Purchase Unit Dropdown using Command */}
                       <FormField
                         control={form.control}
                         name="purchaseUnit"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel className="text-sm">
                               Purchase Unit *
                             </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={isSubmitting}
+                            <Popover
+                              open={purchaseUnitOpen}
+                              onOpenChange={setPurchaseUnitOpen}
                             >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {units.map((unit) => (
-                                  <SelectItem
-                                    key={unit.id}
-                                    value={unit.id.toString()}
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={purchaseUnitOpen}
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !field.value && "text-muted-foreground",
+                                    )}
+                                    disabled={isSubmitting}
                                   >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-lg font-bold">
-                                        {unit.symbol}
-                                      </span>
-
-                                      <div className="flex flex-col">
-                                        <span className="text-[12px] text-muted-foreground">
-                                          {unit.name}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                    {field.value
+                                      ? findUnitName(parseInt(field.value))
+                                      : "Select unit"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search units..." />
+                                  <CommandList>
+                                    <CommandEmpty>No unit found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {units.map((unit) => (
+                                        <CommandItem
+                                          key={unit.id}
+                                          value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                          onSelect={() => {
+                                            field.onChange(unit.id.toString());
+                                            setPurchaseUnitOpen(false);
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-lg font-bold">
+                                              {unit.symbol}
+                                            </span>
+                                            <div className="flex flex-col">
+                                              <span className="text-[12px] text-muted-foreground">
+                                                {unit.name}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <Check
+                                            className={cn(
+                                              "ml-auto h-4 w-4",
+                                              unit.id.toString() === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -812,7 +1224,7 @@ export default function ProductFormModal({
 
                     <FormField
                       control={form.control}
-                      name="pricePerPCS"
+                      name="pricePerPcs"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
@@ -837,30 +1249,67 @@ export default function ProductFormModal({
                       )}
                     />
 
+                    {/* Sale Unit Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="saleUnit"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">Sale Unit *</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={saleUnitOpen}
+                            onOpenChange={setSaleUnitOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select unit" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {purchaseSaleUnitOptions.map((unit) => (
-                                <SelectItem key={unit} value={unit}>
-                                  {unit}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={saleUnitOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
+                                >
+                                  {field.value
+                                    ? findUnitName(parseInt(field.value))
+                                    : "Select unit"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search units..." />
+                                <CommandList>
+                                  <CommandEmpty>No unit found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {units.map((unit) => (
+                                      <CommandItem
+                                        key={unit.id}
+                                        value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                        onSelect={() => {
+                                          field.onChange(unit.id.toString());
+                                          setSaleUnitOpen(false);
+                                        }}
+                                      >
+                                        {unit.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            unit.id.toString() === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -921,7 +1370,7 @@ export default function ProductFormModal({
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">Main Image</div>
-                        {mainImage && (
+                        {(mainImageFile || uploadedMainImage) && (
                           <Button
                             type="button"
                             variant="ghost"
@@ -930,15 +1379,23 @@ export default function ProductFormModal({
                             disabled={isSubmitting}
                             className="h-6 text-xs gap-1"
                           >
-                            <X className="h-3 w-3" />
+                            <XIcon className="h-3 w-3" />
                             Remove
                           </Button>
                         )}
                       </div>
-                      {mainImage ? (
+                      {mainImageFile ? (
                         <div className="relative group">
                           <img
-                            src={URL.createObjectURL(mainImage)}
+                            src={URL.createObjectURL(mainImageFile)}
+                            alt="Main product"
+                            className="h-32 w-full object-cover rounded-lg border"
+                          />
+                        </div>
+                      ) : uploadedMainImage ? (
+                        <div className="relative group">
+                          <img
+                            src={getFullImageUrl(uploadedMainImage)}
                             alt="Main product"
                             className="h-32 w-full object-cover rounded-lg border"
                           />
@@ -966,7 +1423,7 @@ export default function ProductFormModal({
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-sm font-medium">
-                          Related Images
+                          Related Images ({uploadedRelatedImages.length})
                         </div>
                         <div>
                           <Input
@@ -997,9 +1454,9 @@ export default function ProductFormModal({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <AnimatePresence>
-                          {relatedImages.map((image, index) => (
+                          {relatedImageFiles.map((image, index) => (
                             <motion.div
-                              key={index}
+                              key={`file-${index}`}
                               initial={{ scale: 0.8, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               exit={{ scale: 0.8, opacity: 0 }}
@@ -1018,10 +1475,44 @@ export default function ProductFormModal({
                                 onClick={() => removeRelatedImage(index)}
                                 disabled={isSubmitting}
                               >
-                                <X className="h-3 w-3" />
+                                <XIcon className="h-3 w-3" />
                               </Button>
                             </motion.div>
                           ))}
+
+                          {uploadedRelatedImages
+                            .filter(
+                              (_, index) => index >= relatedImageFiles.length,
+                            )
+                            .map((filename, index) => (
+                              <motion.div
+                                key={`uploaded-${index}`}
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                className="relative w-16 h-16"
+                              >
+                                <img
+                                  src={getFullImageUrl(filename)}
+                                  alt={`Related ${index + 1}`}
+                                  className="h-16 w-16 object-cover rounded-lg border"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+                                  onClick={() =>
+                                    removeRelatedImage(
+                                      relatedImageFiles.length + index,
+                                    )
+                                  }
+                                  disabled={isSubmitting}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </Button>
+                              </motion.div>
+                            ))}
                         </AnimatePresence>
                       </div>
                     </div>
@@ -1037,32 +1528,69 @@ export default function ProductFormModal({
                     GST Details
                   </h3>
                   <div className="space-y-4">
+                    {/* GST Applicability Dropdown using Command */}
                     <FormField
                       control={form.control}
                       name="gstApplicability"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">
                             GST Applicability *
                           </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
+                          <Popover
+                            open={gstApplicabilityOpen}
+                            onOpenChange={setGstApplicabilityOpen}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select applicability" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {gstApplicabilityOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={gstApplicabilityOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                  disabled={isSubmitting}
+                                >
+                                  {field.value
+                                    ? findGstApplicabilityLabel(field.value)
+                                    : "Select applicability"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search GST applicability..." />
+                                <CommandList>
+                                  <CommandEmpty>No option found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {gstApplicabilityOptions.map((option) => (
+                                      <CommandItem
+                                        key={option.value}
+                                        value={option.value}
+                                        onSelect={() => {
+                                          field.onChange(option.value);
+                                          setGstApplicabilityOpen(false);
+                                        }}
+                                      >
+                                        {option.label}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            option.value === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1288,40 +1816,24 @@ export default function ProductFormModal({
 
                         {/* Dates */}
                         <div className="space-y-3">
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              MFG Date
-                            </label>
-                            <Input
-                              type="date"
-                              value={batch.mfgDate || ""}
-                              onChange={(e) =>
-                                handleBatchChange(
-                                  index,
-                                  "mfgDate",
-                                  e.target.value || null,
-                                )
-                              }
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              EXP Date
-                            </label>
-                            <Input
-                              type="date"
-                              value={batch.expDate || ""}
-                              onChange={(e) =>
-                                handleBatchChange(
-                                  index,
-                                  "expDate",
-                                  e.target.value || null,
-                                )
-                              }
-                              disabled={isSubmitting}
-                            />
-                          </div>
+                          <CustomDateInput
+                            value={batch.mfgDate}
+                            onChange={(value) =>
+                              handleBatchChange(index, "mfgDate", value)
+                            }
+                            placeholder="dd/mm/yyyy or select"
+                            disabled={isSubmitting}
+                            label="MFG Date"
+                          />
+                          <CustomDateInput
+                            value={batch.expDate}
+                            onChange={(value) =>
+                              handleBatchChange(index, "expDate", value)
+                            }
+                            placeholder="dd/mm/yyyy or select"
+                            disabled={isSubmitting}
+                            label="EXP Date"
+                          />
                         </div>
 
                         {/* Pricing */}

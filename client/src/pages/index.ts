@@ -4,4 +4,16 @@ import Register from "./Register";
 import ProductInventory from "./ProductInventory";
 import ProductForm from "./ProductForm";
 import MasterInventory from "./MasterInventory";
-export { Dashboard, Login, Register, ProductInventory,ProductForm, MasterInventory };
+import Purchase from "./Purchase";
+import Sales from "./Sales";
+
+export {
+  Dashboard,
+  Login,
+  Register,
+  ProductInventory,
+  ProductForm,
+  MasterInventory,
+  Purchase,
+  Sales
+};

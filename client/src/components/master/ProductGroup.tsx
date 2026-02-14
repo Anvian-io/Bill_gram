@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Filter,
-  // Download,
-  // Upload,
   Plus,
   Edit,
   Trash2,
@@ -21,8 +19,6 @@ import {
   X,
   Layers,
   RefreshCw,
-  // ToggleLeft,
-  // ToggleRight,
   Trash,
   Eye,
   EyeOff,
@@ -38,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch"; // Add this import
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { CustomAlert } from "@/components/custom_ui";
 import ProductGroupForm from "@/components/forms/ProductGroupForm";
@@ -55,6 +51,7 @@ import {
   type ProductGroup,
   type ProductGroupFormData,
 } from "@/types/productGroup";
+import { useDebounce } from "@/utils/debounce"; // Import the debounce hook
 
 // Define the API response structure
 interface ProductGroupsResponse {
@@ -76,7 +73,6 @@ export default function ProductGroup() {
   const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isTogglingStatus, setIsTogglingStatus] = useState<number | null>(null);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -86,13 +82,17 @@ export default function ProductGroup() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ProductGroup | null>(null);
 
-  // Filter state - ADD showDeleted filter
+  // Filter state
   const [filters, setFilters] = useState({
     search: "",
     name: "",
     status: "all" as "all" | "active" | "inactive",
-    showDeleted: false, // NEW: Add showDeleted filter
+    showDeleted: false,
   });
+
+  // Local state for immediate input updates (to fix focus issue)
+  const [localSearch, setLocalSearch] = useState("");
+  const [localName, setLocalName] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -101,9 +101,31 @@ export default function ProductGroup() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
+  // Create debounced filter functions
+  const debouncedSetSearchFilter = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetNameFilter = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  // Handle search input with local state
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+    debouncedSetSearchFilter(value);
+  };
+
+  // Handle name filter input with local state
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalName(value);
+    debouncedSetNameFilter(value);
+  };
+
   // Safely handle product groups data
   const displayGroups = useMemo(() => {
-    // Ensure productGroups is always an array
     if (!productGroups || !Array.isArray(productGroups)) {
       return [];
     }
@@ -111,7 +133,7 @@ export default function ProductGroup() {
   }, [productGroups]);
 
   // Fetch product groups
-  const fetchProductGroups = async () => {
+  const fetchProductGroups = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: any = {
@@ -127,11 +149,10 @@ export default function ProductGroup() {
         params.name = filters.name;
       }
       if (filters.status !== "all") {
-        // Convert string to boolean for API
         params.status = filters.status === "active";
       }
 
-      // NEW: Add showDeleted parameter
+      // Add showDeleted parameter
       if (filters.showDeleted) {
         params.showDeleted = "true";
       }
@@ -142,25 +163,16 @@ export default function ProductGroup() {
         params,
       );
 
-      // Log the response to see the structure
-      console.log("API Response:", response);
-
-      // Type the response as ProductGroupsResponse
       const apiResponse = response as unknown as ProductGroupsResponse;
 
       if (apiResponse?.data) {
         const groups = apiResponse.data.productGroups || [];
         const pagination = apiResponse.data.pagination || {};
 
-        console.log("Groups data:", groups);
-        console.log("Pagination data:", pagination);
-
-        // Ensure we set an array
         setProductGroups(Array.isArray(groups) ? groups : []);
         setTotalItems(pagination.total || 0);
         setTotalPages(pagination.totalPages || 1);
       } else {
-        // If response structure is unexpected, set defaults
         console.error("Unexpected response structure:", response);
         setProductGroups([]);
         setTotalItems(0);
@@ -171,26 +183,34 @@ export default function ProductGroup() {
       toast.error("Failed to fetch product groups", {
         description: error.response?.data?.message || "Please try again later",
       });
-      // Reset to empty array on error
       setProductGroups([]);
       setTotalItems(0);
       setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, filters]);
 
   // Initial fetch
   useEffect(() => {
     fetchProductGroups();
-  }, [currentPage, itemsPerPage, filters]);
+  }, [fetchProductGroups]);
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Sync local states with filters when filters change externally
+  useEffect(() => {
+    setLocalSearch(filters.search);
+  }, [filters.search]);
+
+  useEffect(() => {
+    setLocalName(filters.name);
+  }, [filters.name]);
+
+  // Handle filter changes (for non-input filters)
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -204,21 +224,41 @@ export default function ProductGroup() {
       search: "",
       name: "",
       status: "all",
-      showDeleted: false, // Reset showDeleted as well
+      showDeleted: false,
     });
+    setLocalSearch("");
+    setLocalName("");
   };
 
-  // Clear specific filter
-  const clearFilter = (filterName: keyof typeof filters) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterName]:
-        filterName === "status"
-          ? "all"
-          : filterName === "showDeleted"
-            ? false
-            : "",
-    }));
+  // // Clear specific filter
+  // const clearFilter = (filterName: keyof typeof filters) => {
+  //   if (filterName === "search") {
+  //     setLocalSearch("");
+  //   } else if (filterName === "name") {
+  //     setLocalName("");
+  //   }
+
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     [filterName]:
+  //       filterName === "status"
+  //         ? "all"
+  //         : filterName === "showDeleted"
+  //           ? false
+  //           : "",
+  //   }));
+  // };
+
+  // Clear search input
+  const clearSearch = () => {
+    setLocalSearch("");
+    setFilters((prev) => ({ ...prev, search: "" }));
+  };
+
+  // Clear name filter
+  const clearName = () => {
+    setLocalName("");
+    setFilters((prev) => ({ ...prev, name: "" }));
   };
 
   // Handle page change
@@ -232,16 +272,14 @@ export default function ProductGroup() {
     setIsSubmitting(true);
     try {
       if (id) {
-        // Update existing group
         await productGroupService.updateProductGroup(id, data);
         toast.success("Product group updated successfully!");
       } else {
-        // Add new group
         await productGroupService.createProductGroup(data);
         toast.success("Product group created successfully!");
       }
       setFormOpen(false);
-      fetchProductGroups(); // Refresh the list
+      fetchProductGroups();
     } catch (error: any) {
       toast.error("Failed to save product group", {
         description: error.response?.data?.message || "Please try again",
@@ -269,7 +307,7 @@ export default function ProductGroup() {
       try {
         await productGroupService.deleteProductGroup(groupToDelete.id);
         toast.success("Product group deleted successfully!");
-        fetchProductGroups(); // Refresh the list
+        fetchProductGroups();
       } catch (error: any) {
         toast.error("Failed to delete product group", {
           description: error.response?.data?.message || "Please try again",
@@ -280,26 +318,6 @@ export default function ProductGroup() {
       }
     }
   };
-
-  // Toggle status
-  // const handleToggleStatus = async (id: number) => {
-  //   // setIsTogglingStatus(id);
-  //   try {
-  //     const updatedGroup = await productGroupService.toggleStatus(id);
-  //     setProductGroups((prev) => {
-  //       // Ensure prev is an array
-  //       if (!Array.isArray(prev)) return prev;
-  //       return prev.map((group) => (group.id === id ? updatedGroup : group));
-  //     });
-  //     toast.success("Status updated successfully!");
-  //   } catch (error: any) {
-  //     toast.error("Failed to update status", {
-  //       description: error.response?.data?.message || "Please try again",
-  //     });
-  //   } finally {
-  //     // setIsTogglingStatus(null);
-  //   }
-  // };
 
   // Confirm delete
   const confirmDelete = (group: ProductGroup) => {
@@ -317,7 +335,7 @@ export default function ProductGroup() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Active filters count - UPDATED to include showDeleted
+  // Active filters count
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) =>
       key !== "search" &&
@@ -355,7 +373,7 @@ export default function ProductGroup() {
           className="flex flex-col gap-6 mb-6 w-full"
           variants={headerVariants}
         >
-          <div className="flex justify-between gap-4">
+          <div className="flex justify-between">
             {/* Title */}
             <div>
               <h1 className="text-3xl font-bold text-heading">
@@ -375,15 +393,15 @@ export default function ProductGroup() {
                 type="search"
                 placeholder="Search groups by name or description..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={localSearch}
+                onChange={handleSearchChange}
               />
-              {filters.search && (
+              {localSearch && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
+                  onClick={clearSearch}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -435,7 +453,7 @@ export default function ProductGroup() {
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -482,9 +500,7 @@ export default function ProductGroup() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {" "}
-                        {/* Changed to 4 columns */}
-                        {/* Group Name Filter */}
+                        {/* Group Name Filter - FIXED: Now uses local state */}
                         <div className="space-y-2">
                           <Label
                             htmlFor="groupName"
@@ -496,26 +512,26 @@ export default function ProductGroup() {
                             <Input
                               id="groupName"
                               placeholder="Enter group name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={localName}
+                              onChange={handleNameChange}
                               className="flex-1"
-                              disabled={isLoading}
+                              // disabled={isLoading}
                             />
-                            {filters.name && (
+                            {localName && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={clearName}
                                 disabled={isLoading}
+                                type="button"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
                         </div>
+
                         {/* Status Filter */}
                         <div className="space-y-2">
                           <Label
@@ -541,7 +557,8 @@ export default function ProductGroup() {
                             </SelectContent>
                           </Select>
                         </div>
-                        {/* NEW: Show Deleted Filter */}
+
+                        {/* Show Deleted Filter */}
                         <div className="space-y-2">
                           <Label
                             htmlFor="showDeleted"
@@ -580,6 +597,7 @@ export default function ProductGroup() {
                             </Label>
                           </div>
                         </div>
+
                         {/* Empty column for layout */}
                         <div></div>
                       </div>
@@ -597,9 +615,10 @@ export default function ProductGroup() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} groups
                 {filters.status !== "all" ||
@@ -610,7 +629,8 @@ export default function ProductGroup() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -632,6 +652,7 @@ export default function ProductGroup() {
           </div>
         </motion.div>
 
+        {/* Rest of your component remains the same... */}
         {/* Product Groups Table */}
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
@@ -739,7 +760,6 @@ export default function ProductGroup() {
                                 <div>
                                   <p className="font-medium text-heading">
                                     {group.name}
-                                    {/* Show deleted badge if group is deleted */}
                                     {group.deleted && (
                                       <Badge
                                         variant="destructive"
@@ -834,7 +854,7 @@ export default function ProductGroup() {
                                     size="icon"
                                     onClick={() => handleEdit(group)}
                                     className="h-8 w-8"
-                                    disabled={group.deleted} // Disable edit for deleted items
+                                    disabled={group.deleted}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -849,7 +869,7 @@ export default function ProductGroup() {
                                     size="icon"
                                     onClick={() => confirmDelete(group)}
                                     className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
-                                    disabled={group.deleted} // Disable delete for already deleted items
+                                    disabled={group.deleted}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>

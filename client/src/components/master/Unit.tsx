@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -48,6 +48,7 @@ import {
 } from "../FramerVariants";
 import { unitService } from "@/services/unitService";
 import { type Unit, type UnitFormData } from "@/types/unit";
+import { useDebounce } from "@/utils/debounce"; // Import the debounce hook
 
 // Define the API response structure
 interface UnitsResponse {
@@ -91,12 +92,51 @@ export default function UnitComponent() {
     showDeleted: false,
   });
 
+  // Local state for immediate input updates (to fix focus issue)
+  const [localSearch, setLocalSearch] = useState("");
+  const [localName, setLocalName] = useState("");
+  const [localSymbol, setLocalSymbol] = useState("");
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Create debounced filter functions
+  const debouncedSetSearchFilter = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetNameFilter = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
+  }, 300);
+
+  const debouncedSetSymbolFilter = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, symbol: value }));
+  }, 300);
+
+  // Handle search input with local state
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+    debouncedSetSearchFilter(value);
+  };
+
+  // Handle name filter input with local state
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalName(value);
+    debouncedSetNameFilter(value);
+  };
+
+  // Handle symbol filter input with local state
+  const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSymbol(value);
+    debouncedSetSymbolFilter(value);
+  };
 
   // Safely handle units data
   const displayUnits = useMemo(() => {
@@ -107,7 +147,7 @@ export default function UnitComponent() {
   }, [units]);
 
   // Fetch units
-  const fetchUnits = async () => {
+  const fetchUnits = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: any = {
@@ -165,19 +205,32 @@ export default function UnitComponent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, filters]);
 
   // Initial fetch
   useEffect(() => {
     fetchUnits();
-  }, [currentPage, itemsPerPage, filters]);
+  }, [fetchUnits]);
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, itemsPerPage]);
 
-  // Handle filter changes
+  // Sync local states with filters when filters change externally
+  useEffect(() => {
+    setLocalSearch(filters.search);
+  }, [filters.search]);
+
+  useEffect(() => {
+    setLocalName(filters.name);
+  }, [filters.name]);
+
+  useEffect(() => {
+    setLocalSymbol(filters.symbol);
+  }, [filters.symbol]);
+
+  // Handle filter changes (for non-input filters)
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -194,19 +247,48 @@ export default function UnitComponent() {
       status: "all",
       showDeleted: false,
     });
+    setLocalSearch("");
+    setLocalName("");
+    setLocalSymbol("");
   };
 
-  // Clear specific filter
-  const clearFilter = (filterName: keyof typeof filters) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterName]:
-        filterName === "status"
-          ? "all"
-          : filterName === "showDeleted"
-            ? false
-            : "",
-    }));
+  // // Clear specific filter
+  // const clearFilter = (filterName: keyof typeof filters) => {
+  //   if (filterName === "search") {
+  //     setLocalSearch("");
+  //   } else if (filterName === "name") {
+  //     setLocalName("");
+  //   } else if (filterName === "symbol") {
+  //     setLocalSymbol("");
+  //   }
+
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     [filterName]:
+  //       filterName === "status"
+  //         ? "all"
+  //         : filterName === "showDeleted"
+  //           ? false
+  //           : "",
+  //   }));
+  // };
+
+  // Clear search input
+  const clearSearch = () => {
+    setLocalSearch("");
+    setFilters((prev) => ({ ...prev, search: "" }));
+  };
+
+  // Clear name filter
+  const clearName = () => {
+    setLocalName("");
+    setFilters((prev) => ({ ...prev, name: "" }));
+  };
+
+  // Clear symbol filter
+  const clearSymbol = () => {
+    setLocalSymbol("");
+    setFilters((prev) => ({ ...prev, symbol: "" }));
   };
 
   // Handle page change
@@ -255,6 +337,7 @@ export default function UnitComponent() {
   const handleDelete = async () => {
     if (unitToDelete) {
       try {
+        // console.log("Deleting unit with ID:", unitToDelete);
         await unitService.deleteUnit(unitToDelete.id);
         toast.success("Unit deleted successfully!");
         fetchUnits(); // Refresh the list
@@ -309,6 +392,8 @@ export default function UnitComponent() {
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) =>
       key !== "search" &&
+      key !== "name" &&
+      key !== "symbol" &&
       ((key === "showDeleted" && value) || (value && value !== "all")),
   ).length;
 
@@ -329,20 +414,6 @@ export default function UnitComponent() {
       return "Invalid date";
     }
   };
-
-  // Select all units on current page
-  // const selectAllOnPage = () => {
-  //   const pageUnitIds = displayUnits.map((unit) => unit.id);
-  //   if (pageUnitIds.every((id) => selectedUnits.includes(id))) {
-  //     // If all are selected, deselect all
-  //     setSelectedUnits((prev) =>
-  //       prev.filter((id) => !pageUnitIds.includes(id)),
-  //     );
-  //   } else {
-  //     // Select all
-  //     setSelectedUnits((prev) => [...new Set([...prev, ...pageUnitIds])]);
-  //   }
-  // };
 
   return (
     <motion.div
@@ -377,17 +448,15 @@ export default function UnitComponent() {
                 type="search"
                 placeholder="Search units by name or symbol..."
                 className="pl-10 py-6 text-base"
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                disabled={isLoading}
+                value={localSearch}
+                onChange={handleSearchChange}
               />
-              {filters.search && (
+              {localSearch && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => handleFilterChange("search", "")}
-                  disabled={isLoading}
+                  onClick={clearSearch}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -457,7 +526,7 @@ export default function UnitComponent() {
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-1">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -504,7 +573,7 @@ export default function UnitComponent() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* Unit Name Filter */}
+                        {/* Unit Name Filter - FIXED: Now uses local state */}
                         <div className="space-y-2">
                           <Label
                             htmlFor="unitName"
@@ -516,20 +585,18 @@ export default function UnitComponent() {
                             <Input
                               id="unitName"
                               placeholder="Enter unit name"
-                              value={filters.name}
-                              onChange={(e) =>
-                                handleFilterChange("name", e.target.value)
-                              }
+                              value={localName}
+                              onChange={handleNameChange}
                               className="flex-1"
-                              disabled={isLoading}
                             />
-                            {filters.name && (
+                            {localName && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("name")}
+                                onClick={clearName}
                                 disabled={isLoading}
+                                type="button"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -537,7 +604,7 @@ export default function UnitComponent() {
                           </div>
                         </div>
 
-                        {/* Symbol Filter */}
+                        {/* Symbol Filter - FIXED: Now uses local state */}
                         <div className="space-y-2">
                           <Label
                             htmlFor="symbol"
@@ -549,20 +616,18 @@ export default function UnitComponent() {
                             <Input
                               id="symbol"
                               placeholder="Enter symbol"
-                              value={filters.symbol}
-                              onChange={(e) =>
-                                handleFilterChange("symbol", e.target.value)
-                              }
+                              value={localSymbol}
+                              onChange={handleSymbolChange}
                               className="flex-1"
-                              disabled={isLoading}
                             />
-                            {filters.symbol && (
+                            {localSymbol && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10"
-                                onClick={() => clearFilter("symbol")}
+                                onClick={clearSymbol}
                                 disabled={isLoading}
+                                type="button"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -650,9 +715,10 @@ export default function UnitComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {isLoading ? (
+            {/* {isLoading ? (
               "Loading..."
-            ) : (
+            ) :  */}
+            (
               <>
                 Showing {startIndex} to {endIndex} of {totalItems} units
                 {filters.status !== "all" ||
@@ -664,7 +730,8 @@ export default function UnitComponent() {
                   : ""}
                 {filters.showDeleted && " (including deleted)"}
               </>
-            )}
+            )
+            {/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

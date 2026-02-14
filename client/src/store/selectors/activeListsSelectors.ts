@@ -14,6 +14,9 @@ export const selectActiveSalesmen = (state: RootState) =>
   state.activeLists.salesmen;
 export const selectActiveUnits = (state: RootState) => state.activeLists.units;
 export const selectActiveVans = (state: RootState) => state.activeLists.vans;
+export const selectActiveProductGroups = (state:RootState)=>state.activeLists.groups;
+export const selectActiveProducts = (state:RootState)=>state.activeLists.products;
+export const selectActiveSuppliers = (state:RootState)=>state.activeLists.supplier;
 
 // Memoized selectors for data only
 export const selectActiveAccountsData = createSelector(
@@ -50,7 +53,22 @@ export const selectActiveVansData = createSelector(
   selectActiveVans,
   (vans) => vans.data,
 );
+export const selectActiveProductGroupsData = createSelector(
+  selectActiveProductGroups,
+  (groups) => groups.data,
+);
+export const selectActiveProductsData = createSelector(
+  selectActiveProducts,
+  (products) => {
+    console.log("products.data", products.data);
+    return products.data;
+  },
+);
 
+export const selectActiveSuppliersData = createSelector(
+  selectActiveSuppliers,
+  (suppliers) => suppliers.data,
+);
 // Loading selectors
 export const selectIsLoading = createSelector(
   [
@@ -61,6 +79,9 @@ export const selectIsLoading = createSelector(
     selectActiveSalesmen,
     selectActiveUnits,
     selectActiveVans,
+    selectActiveProductGroups,
+    selectActiveProducts,
+    selectActiveSuppliers
   ],
   (...lists) => lists.some((list) => list.loading),
 );
@@ -75,6 +96,9 @@ export const selectAnyError = createSelector(
     selectActiveSalesmen,
     selectActiveUnits,
     selectActiveVans,
+    selectActiveProductGroups,
+    selectActiveProducts,
+    selectActiveSuppliers
   ],
   (...lists) => {
     const errors = lists.map((list) => list.error).filter(Boolean);

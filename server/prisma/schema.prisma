@@ -10,105 +10,182 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-    url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  username   String   @unique
-  email      String   @unique
-  password   String
-  shop_name  String?
-  phone      String?
-  products   Product[]
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  id           Int            @id @default(autoincrement())
+  username     String         @unique
+  email        String         @unique
+  password     String
+  shop_name    String?
+  phone        String?
+  products     Product[]
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
+  Notification Notification[]
+  purchaseInvoices PurchaseInvoice[]
+  salesInvoices SalesInvoice[]
 
   @@map("users")
 }
 
 model Product {
-  id                 Int     @id @default(autoincrement())
-  productCode        String  @unique @map("product_code")
-  productBrand       String  @map("product_brand")
-  description        String
-  hsnSacCode        String  @map("hsn_sac_code")
-  goodsServices     String  @map("goods_services")
-  weight             Float
-  unit               String
-  productGroup       String  @map("product_group")
-  productShortName  String? @map("product_short_name")
-  brand              String?
-  purchaseUnit      String? @map("purchase_unit")
-  conversionFactor  Float?  @default(1) @map("conversion_factor")
-  pricePerPcs       Float?  @map("price_per_pcs")
-  productCompany    String? @map("product_company")
-  saleUnit          String? @map("sale_unit")
-  cartonPack        Int?    @default(1) @map("carton_pack")
-  innerPack         Int?    @map("inner_pack")
-  packaging         String?
-  insuranceTax      Float?  @map("insurance_tax")
-  basicPrice        Float?  @map("basic_price")
-  openingStock      Int?    @default(0) @map("opening_stock")
-  mrp               Float?
-  purchaseRate      Float?  @map("purchase_rate")
-  saleRate          Float?  @map("sale_rate")
-  margin            Float?
-  batchNumber       String? @map("batch_number")
-  mfgDate           String? @map("mfg_date")
-  expDate           String? @map("exp_date")
-  barcode           String?
-  imageUrl          String? @map("image_url")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
-  userId            Int?
-  user              User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                Int             @id @default(autoincrement())
+  productCode       String          @unique @map("product_code")
+  productBrand      String          @map("product_brand")
+  description       String
+  hsnSacCode        String          @map("hsn_sac_code")
+  goodsServices     String          @map("goods_services")
+  weight            Float
+  unitId            Int?            @map("unit_id")
+  unit              Unit?           @relation(fields: [unitId], references: [id])
+  productGroupId    Int?            @map("product_group_id")
+  productGroup      ProductGroup?   @relation(fields: [productGroupId], references: [id])
+  productShortName  String?         @map("product_short_name")
+  purchaseUnit      String?         @map("purchase_unit")
+  conversionFactor  Float?          @default(1) @map("conversion_factor")
+  pricePerPcs       Float?          @map("price_per_pcs")
+  productCompanyId  Int?            @map("product_company_id")
+  productCompany    ProductCompany? @relation(fields: [productCompanyId], references: [id])
+  saleUnit          String?         @map("sale_unit")
+  cartonPack        Int?            @default(1) @map("carton_pack")
+  innerPack         String?         @map("inner_pack")
+  packagingBasic    Boolean         @default(false) @map("packaging_basic")
+  packagingMRP      Boolean         @default(false) @map("packaging_mrp")
+  insuranceTaxBasic Boolean         @default(false) @map("insurance_tax_basic")
+  insuranceTaxMRP   Boolean         @default(false) @map("insurance_tax_mrp")
+
+  // GST Details
+  gstRate          Float?  @default(18) @map("gst_rate")
+  gstInclusive     Boolean @default(true) @map("gst_inclusive")
+  cessRate         Float?  @default(0) @map("cess_rate")
+  hsnChapter       String? @map("hsn_chapter")
+  gstApplicability String? @default("Regular") @map("gst_applicability")
+
+  // Status
+  status Boolean @default(true)
+
+  // Main Image
+  mainImage String? @map("main_image")
+
+  // Relations
+  userId        Int?
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batches       Batch[]
+  relatedImages ProductImage[]
+
+  // Soft delete
+  deleted Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  purchaseHistories    PurchaseHistory[]
+  saleHistories     SalesHistory[]
+  salesInvoiceItems     SalesInvoiceItem[]
 
   @@index([userId])
   @@index([productCode])
   @@index([productBrand])
+  @@index([unitId])
+  @@index([productGroupId])
+  @@index([productCompanyId])
+  @@index([status])
   @@map("products")
 }
 
+model Batch {
+  id           Int     @id @default(autoincrement())
+  // batchNo      String   @unique @map("batch_no")
+  batchNo      String?
+  mfgDate      String? @map("mfg_date")
+  expDate      String? @map("exp_date")
+  barcode      String
+  basicPrice   Float   @map("basic_price")
+  openingStock Int     @default(0) @map("opening_stock")
+  mrp          Float
+  purchaseRate Float   @map("purchase_rate")
+  saleRate     Float   @map("sale_rate")
+  margin       Float
+  gstAmount    Float?  @default(0) @map("gst_amount")
+
+  // Relations
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  purchaseHistories    PurchaseHistory[]
+  saleHistories     SalesHistory[]
+  salesInvoiceItems     SalesInvoiceItem[]
+  @@index([productId])
+  @@index([batchNo])
+  @@index([barcode])
+  @@map("batches")
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  imageUrl  String  @map("image_url")
+  imageType String? @default("related") @map("image_type") // 'main' or 'related'
+  sortOrder Int?    @default(0) @map("sort_order")
+
+  // Relations
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@map("product_images")
+}
+
 model ProductGroup {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String?
-  status      Boolean  @default(true)
-  deleted     Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  status      Boolean   @default(true)
+  deleted     Boolean   @default(false)
+  products    Product[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@map("product_group")
 }
 
 model Unit {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
   symbol    String
-  status    Boolean  @default(true)
-  deleted   Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  status    Boolean   @default(true)
+  deleted   Boolean   @default(false)
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@unique([name])
   @@unique([symbol])
   @@map("units")
 }
 
-// Add this to your prisma/schema.prisma file
 model ProductCompany {
-  id            Int      @id @default(autoincrement())
-  name          String   @unique
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
   contactPerson String
   email         String
   phone         String
   website       String?
   address       String
-  status        Boolean  @default(true)
-  deleted       Boolean  @default(false)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  status        Boolean   @default(true)
+  deleted       Boolean   @default(false)
+  products      Product[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("product_companies")
 }
@@ -124,24 +201,30 @@ model Salesman {
   createdAt DateTime  @default(now()) @map("created_at")
   deletedAt DateTime? @map("deleted_at")
 
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
+
   @@unique([phoneNo])
   @@map("salesmen")
 }
 
 model Customer {
-  id           Int       @id @default(autoincrement())
-  companyName  String    @map("company_name")
-  personName   String    @map("person_name")
-  phoneNo      String    @map("phone_no")
+  id           Int      @id @default(autoincrement())
+  companyName  String   @map("company_name")
+  personName   String   @map("person_name")
+  phoneNo      String   @map("phone_no")
   email        String?
-  customerType String?   @map("customer_type")
+  customerType String?  @map("customer_type")
   city         String?
   address      String
   pincode      String?
-  status       Boolean   @default(true)
-  deleted      Boolean   @default(false)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  status       Boolean  @default(true)
+  deleted      Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
 
   @@unique([phoneNo])
   @@index([companyName])
@@ -150,17 +233,20 @@ model Customer {
 }
 
 model Area {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   state       String?
   region      String?
   city        String?
   description String?
-  status      Boolean   @default(true)
-  deleted     Boolean   @default(false)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  status      Boolean  @default(true)
+  deleted     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   pincode     String?
+
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
 
   @@unique([name])
   @@index([state])
@@ -170,16 +256,19 @@ model Area {
 }
 
 model Van {
-  id          Int       @id @default(autoincrement())
-  name        String
-  vehicleNo   String?   @map("vehicle_no")
-  model       String?
-  area        String?
-  city        String?
-  status      Boolean   @default(true)
-  deleted     Boolean   @default(false)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  name      String
+  vehicleNo String?  @map("vehicle_no")
+  model     String?
+  area      String?
+  city      String?
+  status    Boolean  @default(true)
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  saleHistories     SalesHistory[]
+  salesInvoices     SalesInvoice[]
 
   @@index([vehicleNo])
   @@index([area])
@@ -188,23 +277,293 @@ model Van {
 }
 
 model Account {
-  id             Int       @id @default(autoincrement())
-  accountHolder  String    @map("account_holder")
-  ifscCode       String    @map("ifsc_code")
-  bankName       String    @map("bank_name")
-  description    String?
-  qrCode         String?   @map("qr_code")
-  gpayNo         String?   @map("gpay_no")
-  status         Boolean   @default(true)
-  deleted        Boolean   @default(false)
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  accountHolder String   @map("account_holder")
+  ifscCode      String   @map("ifsc_code")
+  bankName      String   @map("bank_name")
+  description   String?
+  qrCode        String?  @map("qr_code")
+  gpayNo        String?  @map("gpay_no")
+  status        Boolean  @default(true)
+  deleted       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@index([ifscCode])
   @@index([bankName])
   @@map("accounts")
 }
 
+model Supplier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  phoneNo     String
+  email       String?
+  address     String?
+
+  status      Boolean  @default(true)
+  deleted     Boolean  @default(false)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  purchaseInvoices PurchaseInvoice[]
+  purchaseHistories PurchaseHistory[]
+
+  @@unique([phoneNo])
+  @@index([name])
+  @@map("suppliers")
+}
+
 model SchemaVersion {
   version Int @id @default(1)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String // 'success', 'warning', 'error', 'info', 'create', 'update', 'delete'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ========== PURCHASE MODULES ==========
+
+model PurchaseInvoice {
+  id             Int                     @id @default(autoincrement())
+  invoiceNo      String
+  invoiceDate    DateTime
+  supplierId     Int
+  supplier       Supplier               @relation(fields: [supplierId], references: [id])
+  gstDetails     String?                @default("Against GST")
+  remarks        String?
+  
+  // Financial summary
+  grossAmount    Float
+  boxUnit        Float?                 @default(0)
+  cessInsurance  Float?                 @default(0)
+  scheme1        Float?                 @default(0)
+  discountPercent Float?                @default(0)
+  tax            Float?                 @default(0)
+  amountAdd      Float?                 @default(0)
+  creditAmount   Float?                 @default(0)
+  finalAmount    Float
+
+  // Status and ownership
+  status         String?                @default("Pending") // Pending, Paid, Cancelled
+  userId         Int?                   // from session, optional
+  user           User?                 @relation(fields: [userId], references: [id])
+
+  // Relations
+  items          PurchaseInvoiceItem[]
+  histories      PurchaseHistory[]     // optional, link back for audit
+
+  // Soft delete
+  deleted        Boolean               @default(false)
+
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  @@index([supplierId])
+  @@index([invoiceNo])
+  @@index([invoiceDate])
+  @@index([deleted])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceItem {
+  id                 Int    @id @default(autoincrement())
+  purchaseInvoiceId  Int
+  purchaseInvoice    PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  
+  productId          Int
+  product            Product @relation(fields: [productId], references: [id])
+  
+  batchId            Int?   // mandatory in controller validation
+  batch              Batch? @relation(fields: [batchId], references: [id])
+
+  // Pricing & quantity
+  rate               Float
+  aQty               Int
+  mQty               Int?    // auto‑calculated, stored for reference
+  totalAmount        Float
+
+  // Taxes & schemes
+  taxRate            Float
+  taxAmount          Float
+  sch1Percent        Float?  @default(0)
+  sch1Amount         Float?  @default(0)
+  sch2Percent        Float?  @default(0)
+  sch2Amount         Float?  @default(0)
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([purchaseInvoiceId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("purchase_invoice_items")
+}
+
+// Audit log – every purchase creates one entry per product
+model PurchaseHistory {
+  id                Int    @id @default(autoincrement())
+  productId         Int
+  product           Product @relation(fields: [productId], references: [id])
+  
+  batchId           Int?
+  batch             Batch?  @relation(fields: [batchId], references: [id])
+  
+  purchaseInvoiceId Int?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+
+  // Snapshot data for reporting
+  invoiceNo         String
+  invoiceDate       DateTime
+  supplierId        Int
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  rate              Float
+  aQty              Int
+  totalAmount       Float
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([batchId])
+  @@index([purchaseInvoiceId])
+  @@index([invoiceDate])
+  @@map("purchase_histories")
+}
+
+// ========== SALES MODULES ==========
+
+model SalesInvoice {
+  id             Int                   @id @default(autoincrement())
+  invoiceNo      String?
+  invoiceDate    DateTime
+  areaId         Int
+  area           Area                  @relation(fields: [areaId], references: [id])
+  customerId     Int
+  customer       Customer              @relation(fields: [customerId], references: [id])
+  vanId          Int
+  van            Van                   @relation(fields: [vanId], references: [id])
+  salesmanId     Int
+  salesman       Salesman              @relation(fields: [salesmanId], references: [id])
+  address        String
+  gstDetails     String?               @default("Against GST")
+  remarks        String?
+
+  // Financial summary
+  grossAmount    Float
+  boxUnit        Float?                @default(0)
+  cessInsurance  Float?                @default(0)
+  scheme1        Float?                @default(0)
+  discountPercent Float?                @default(0)
+  tax            Float?                 @default(0)
+  amountAdd      Float?                 @default(0)
+  creditAmount   Float?                 @default(0)
+  finalAmount    Float
+
+  // Status and ownership
+  status         String?                @default("Pending") // Pending, Paid, Cancelled, Delivered
+  userId         Int?                   // from session, optional
+  user           User?                  @relation(fields: [userId], references: [id])
+
+  // Relations
+  items          SalesInvoiceItem[]
+  histories      SalesHistory[]
+
+  // Soft delete
+  deleted        Boolean                @default(false)
+
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@index([areaId])
+  @@index([vanId])
+  @@index([salesmanId])
+  @@index([invoiceNo])
+  @@index([invoiceDate])
+  @@index([deleted])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceItem {
+  id               Int    @id @default(autoincrement())
+  salesInvoiceId   Int
+  salesInvoice     SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+
+  productId        Int
+  product          Product @relation(fields: [productId], references: [id])
+
+  batchId          Int?   // mandatory in controller validation
+  batch            Batch? @relation(fields: [batchId], references: [id])
+
+  // Pricing & quantity
+  rate             Float
+  aQty             Int
+  mQty             Int?    // auto‑calculated, stored for reference
+  totalAmount      Float
+
+  // Taxes & schemes
+  taxRate          Float
+  taxAmount        Float
+  sch1Percent      Float?  @default(0)
+  sch1Amount       Float?  @default(0)
+  sch2Percent      Float?  @default(0)
+  sch2Amount       Float?  @default(0)
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([salesInvoiceId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("sales_invoice_items")
+}
+
+// Audit log – every sale creates one entry per product
+model SalesHistory {
+  id                Int    @id @default(autoincrement())
+  productId         Int
+  product           Product @relation(fields: [productId], references: [id])
+
+  batchId           Int?
+  batch             Batch?  @relation(fields: [batchId], references: [id])
+
+  salesInvoiceId    Int?
+  salesInvoice      SalesInvoice? @relation(fields: [salesInvoiceId], references: [id])
+
+  // Snapshot data for reporting
+  invoiceNo         String
+  invoiceDate       DateTime
+  customerId        Int
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  areaId            Int
+  area              Area? @relation(fields: [areaId], references: [id])
+  vanId             Int
+  van               Van? @relation(fields: [vanId], references: [id])
+  salesmanId        Int
+  salesman          Salesman? @relation(fields: [salesmanId], references: [id])
+  rate              Float
+  aQty              Int
+  totalAmount       Float
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([batchId])
+  @@index([salesInvoiceId])
+  @@index([invoiceDate])
+  @@map("sales_histories")
 }

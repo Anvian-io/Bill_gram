@@ -1,19 +1,32 @@
 import express from "express";
 import cors from "cors";
 import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
-import productGroupRoutes from "./route/productGroupRoutes.js";
-import authRoutes from "./route/auth.js";
-import unitRoutes from "./route/unitRoutes.js";
-import productCompanyRoutes from "./route/productCompanyRoutes.js";
-import salesmanRoutes from "./route/salesmanRoutes.js";
-import customerRoutes from "./route/customerRoutes.js";
-import areaRoutes from "./route/areaRoutes.js";
-import vanRoutes from "./route/vanRoutes.js";
-import accountRoutes from "./route/accountRoutes.js";
+import productGroupRoutes from "./controllers/Product_Group/productGroupRoutes.js";
+import authRoutes from "./controllers/Auth/auth.js";
+import unitRoutes from "./controllers/Unit/unitRoutes.js";
+import productCompanyRoutes from "./controllers/Product_Company/productCompanyRoutes.js";
+import salesmanRoutes from "./controllers/Salesman/salesmanRoutes.js";
+import customerRoutes from "./controllers/Customer/customerRoutes.js";
+import areaRoutes from "./controllers/Area/areaRoutes.js";
+import vanRoutes from "./controllers/Van/vanRoutes.js";
+import accountRoutes from "./controllers/Account/accountRoutes.js";
+import productRoutes from "./controllers/Product/productRoutes.js";
+import imageRoutes from "./controllers/Image/imageRoutes.js";
+import purchaseRoute from "./controllers/Purchase/purchaseRoutes.js";
+import supplierRoutes from "./controllers/Supplier/supplierRoutes.js";
+import salesRoutes from "./controllers/Sales/salesRoutes.js";
+
+import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
+import { createServer } from "http";
+import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
 
 const app = express();
 const PORT = 3001;
 
+// Create HTTP server for WebSocket
+const server = createServer(app);
+
+// Middleware
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -44,6 +57,12 @@ const startServer = async () => {
     app.use("/api/areas", areaRoutes);
     app.use("/api/vans", vanRoutes);
     app.use("/api/accounts", accountRoutes);
+    app.use("/api/products", productRoutes);
+    app.use("/api/images", imageRoutes);
+    app.use("/api/notifications", notificationRoutes); // Add this
+    app.use("/api/purchases", purchaseRoute); // Add this
+    app.use("/api/suppliers", supplierRoutes);
+    app.use("/api/sales", salesRoutes);
 
     // Health check
     app.get("/api/health", (req, res) => {
@@ -55,9 +74,13 @@ const startServer = async () => {
       });
     });
 
+    // Setup WebSocket server
+    notificationController.setupWebSocketServer(server);
+
     // Start server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✅ Backend server running on http://localhost:${PORT}`);
+      console.log(`✅ WebSocket server running on ws://localhost:${PORT}/ws`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
