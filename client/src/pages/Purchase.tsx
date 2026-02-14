@@ -117,13 +117,14 @@ export default function Purchase() {
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filters state – invoiceNo removed
+  // Filters state – added toDate
   const [filters, setFilters] = useState<PurchaseFilters>({
     search: "",
     supplierId: "all",
     minAmount: "",
     maxAmount: "",
     fromDate: undefined,
+    toDate: undefined,
     status: "all",
     page: 1,
     limit: 10,
@@ -141,6 +142,7 @@ export default function Purchase() {
   const [minAmountInput, setMinAmountInput] = useState("");
   const [maxAmountInput, setMaxAmountInput] = useState("");
   const [fromDateInput, setFromDateInput] = useState("");
+  const [toDateInput, setToDateInput] = useState("");
 
   // Hooks
   const { suppliers } = useActiveLists();
@@ -173,6 +175,8 @@ export default function Purchase() {
     setMaxAmountInput(value);
     debouncedSetMaxAmount(value);
   };
+
+  // From Date
   const handleFromDateInputChange = (value: string) => {
     setFromDateInput(value);
     const parsed = parseDateFromString(value);
@@ -185,6 +189,21 @@ export default function Purchase() {
   const handleFromDateSelect = (date: Date | undefined) => {
     setFilters((prev) => ({ ...prev, fromDate: date }));
     setFromDateInput(date ? formatDateToDisplay(date) : "");
+  };
+
+  // To Date
+  const handleToDateInputChange = (value: string) => {
+    setToDateInput(value);
+    const parsed = parseDateFromString(value);
+    if (parsed) {
+      setFilters((prev) => ({ ...prev, toDate: parsed }));
+    } else if (value === "") {
+      setFilters((prev) => ({ ...prev, toDate: undefined }));
+    }
+  };
+  const handleToDateSelect = (date: Date | undefined) => {
+    setFilters((prev) => ({ ...prev, toDate: date }));
+    setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
   // Generic filter change
@@ -200,6 +219,7 @@ export default function Purchase() {
       minAmount: "",
       maxAmount: "",
       fromDate: undefined,
+      toDate: undefined,
       status: "all",
       page: 1,
       limit: itemsPerPage,
@@ -209,6 +229,7 @@ export default function Purchase() {
     setMinAmountInput("");
     setMaxAmountInput("");
     setFromDateInput("");
+    setToDateInput("");
   };
 
   // Clear a single filter
@@ -218,7 +239,7 @@ export default function Purchase() {
       [filterName]:
         filterName === "supplierId" || filterName === "status"
           ? "all"
-          : filterName === "fromDate"
+          : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : filterName === "showDeleted"
               ? false
@@ -233,10 +254,13 @@ export default function Purchase() {
         setMinAmountInput("");
         break;
       case "maxAmount":
-        setMaxAmountInput(""); // fixed
+        setMaxAmountInput("");
         break;
       case "fromDate":
         setFromDateInput("");
+        break;
+      case "toDate":
+        setToDateInput("");
         break;
     }
   };
@@ -256,6 +280,7 @@ export default function Purchase() {
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         fromDate: filters.fromDate,
+        toDate: filters.toDate,
         status: filters.status !== "all" ? filters.status : undefined,
         showDeleted: filters.showDeleted,
       };
@@ -289,7 +314,7 @@ export default function Purchase() {
   }, [filters, itemsPerPage]);
 
   // --------------------------------------------------------------------
-  // CRUD Handlers
+  // CRUD Handlers (unchanged) ...
   // --------------------------------------------------------------------
   const handleAddPurchase = () => {
     setEditingPurchase(null);
@@ -364,12 +389,15 @@ export default function Purchase() {
       ([key, value]) =>
         key !== "search" &&
         key !== "fromDate" &&
+        key !== "toDate" &&
         value &&
         value !== "all" &&
         value !== "" &&
         !(value instanceof Date) &&
         !(key === "showDeleted" && !value),
-    ).length + (filters.fromDate ? 1 : 0);
+    ).length +
+    (filters.fromDate ? 1 : 0) +
+    (filters.toDate ? 1 : 0);
 
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
@@ -407,7 +435,7 @@ export default function Purchase() {
         variants={containerVariants}
       >
         <div className="max-w-8xl mx-auto">
-          {/* Header Section */}
+          {/* Header Section (unchanged) ... */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"
             variants={headerVariants}
@@ -694,10 +722,10 @@ export default function Purchase() {
                             </Select>
                           </div>
 
-                          {/* Invoice Date (fromDate) */}
+                          {/* Invoice Date Range */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">
-                              Invoice Date
+                              Invoice Date From
                             </Label>
                             <div className="flex gap-2">
                               <div className="relative flex-1">
@@ -744,6 +772,56 @@ export default function Purchase() {
                               )}
                             </div>
                           </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Invoice Date To
+                            </Label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  value={toDateInput}
+                                  onChange={(e) =>
+                                    handleToDateInputChange(e.target.value)
+                                  }
+                                  placeholder="dd/mm/yyyy or select"
+                                  className="pr-10"
+                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                    >
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="end"
+                                  >
+                                    <CalendarComponent
+                                      mode="single"
+                                      selected={filters.toDate}
+                                      onSelect={handleToDateSelect}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                              {toDateInput && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => clearFilter("toDate")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -784,7 +862,7 @@ export default function Purchase() {
             </div>
           </motion.div>
 
-          {/* Purchases Table */}
+          {/* Purchases Table (unchanged) */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
@@ -880,7 +958,7 @@ export default function Purchase() {
                               animate="visible"
                               whileHover="hover"
                               variants={rowVariants}
-                              className="group border-1"
+                              className="group border"
                               layout
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
@@ -1088,7 +1166,7 @@ export default function Purchase() {
         onNext={handleDeletePurchase}
         variant="destructive"
         showCancel={true}
-        className="sm:max-w-[425px]"
+        className="sm:max-w-106.25"
       />
     </>
   );

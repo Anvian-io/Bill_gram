@@ -238,6 +238,8 @@ export const getAllPurchases = asyncHandler(async (req, res) => {
     supplierId,
     fromDate,
     toDate,
+    minAmount,
+    maxAmount,
     status,
     showDeleted = "false",
     sortBy = "createdAt",
@@ -268,11 +270,35 @@ export const getAllPurchases = asyncHandler(async (req, res) => {
     andConditions.push({ supplierId: parseInt(supplierId) });
   }
 
+  // Date range filter
   if (fromDate || toDate) {
     const dateFilter = {};
-    if (fromDate) dateFilter.gte = new Date(fromDate);
-    if (toDate) dateFilter.lte = new Date(toDate);
+
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0); // Start of day
+      dateFilter.gte = start.toISOString();
+    }
+
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999); // End of day
+      dateFilter.lte = end.toISOString();
+    }
+
     andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  // Amount range filter (on finalAmount)
+  if (minAmount || maxAmount) {
+    const amountFilter = {};
+    if (minAmount) {
+      amountFilter.gte = parseFloat(minAmount);
+    }
+    if (maxAmount) {
+      amountFilter.lte = parseFloat(maxAmount);
+    }
+    andConditions.push({ finalAmount: amountFilter });
   }
 
   if (status) {
