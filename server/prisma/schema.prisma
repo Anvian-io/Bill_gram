@@ -14,18 +14,28 @@ datasource db {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  username     String         @unique
-  email        String         @unique
-  password     String
-  shop_name    String?
-  phone        String?
-  products     Product[]
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
-  Notification Notification[]
+  id              Int              @id @default(autoincrement())
+  username        String           @unique
+  email           String           @unique
+  password        String
+  shop_name       String?
+  phone           String?
+
+  // ✅ New Fields
+  notification    Boolean          @default(true)
+  sound           Boolean          @default(true)
+  company_logo    String?          // store logo URL or file path
+  upi_id          String?
+  company_name    String?
+  address         String?
+
+  products        Product[]
+  Notification    Notification[]
   purchaseInvoices PurchaseInvoice[]
-  salesInvoices SalesInvoice[]
+  salesInvoices    SalesInvoice[]
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
 
   @@map("users")
 }

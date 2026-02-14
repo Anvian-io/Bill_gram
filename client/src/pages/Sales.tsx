@@ -266,7 +266,53 @@ export default function Sales() {
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchSales = async () => {
+      setIsLoading(true);
+      try {
+        const apiFilters: SalesFilters = {
+          ...filters,
+          areaId: filters.areaId === "all" ? undefined : filters.areaId,
+          customerId:
+            filters.customerId === "all" ? undefined : filters.customerId,
+          vanId: filters.vanId === "all" ? undefined : filters.vanId,
+          salesmanId:
+            filters.salesmanId === "all" ? undefined : filters.salesmanId,
+          status: filters.status === "all" ? undefined : filters.status,
+          minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
+          maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+        };
+        const response = await salesService.getSales(
+          currentPage,
+          itemsPerPage,
+          apiFilters,
+        );
+
+        if (!mounted) return; // Ignore if component unmounted or effect re-ran
+
+        setSales(response.sales);
+        setTotalItems(response.pagination.total);
+        setTotalPages(response.pagination.totalPages);
+      } catch (error) {
+        if (!mounted) return;
+        console.error("Error fetching sales:", error);
+        toast.error("Failed to fetch sales");
+        setSales([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     fetchSales();
+
+    return () => {
+      mounted = false; // Cleanup: mark as unmounted
+    };
   }, [currentPage, itemsPerPage, filters]);
 
   // Format date for display

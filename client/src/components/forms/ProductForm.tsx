@@ -633,7 +633,7 @@ export default function ProductFormModal({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Column 1: Basic Information */}
               <div className="space-y-4">
-                <div className="rounded-lg border p-4">
+                <div className="rounded-lg border p-4 bg-card">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <Hash className="h-4 w-4" />
                     Basic Information
@@ -931,7 +931,7 @@ export default function ProductFormModal({
                 </div>
 
                 {/* Packaging & Insurance Tax */}
-                <div className="rounded-lg border p-4">
+                <div className="rounded-lg border p-4 bg-card">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <Box className="h-4 w-4" />
                     Settings
@@ -1027,7 +1027,7 @@ export default function ProductFormModal({
               </div>
 
               {/* Column 2: Additional Information */}
-              <div className="space-y-4">
+              <div className="space-y-4 bg-card">
                 <div className="rounded-lg border p-4">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <Tag className="h-4 w-4" />
@@ -1521,7 +1521,7 @@ export default function ProductFormModal({
               </div>
 
               {/* Column 3: GST Details */}
-              <div className="space-y-4">
+              <div className="space-y-4 bg-card">
                 <div className="rounded-lg border p-4">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -1749,7 +1749,7 @@ export default function ProductFormModal({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="mb-4 border rounded-lg overflow-hidden"
+                    className="mb-4 border rounded-lg overflow-hidden bg-card"
                   >
                     <div className="bg-muted/50 px-4 py-3 border-b">
                       <div className="flex items-center justify-between">

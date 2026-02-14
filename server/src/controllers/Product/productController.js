@@ -8,7 +8,7 @@ import {
 import path from "path";
 import fs from "fs";
 import { getDatabasePath } from "../../db/database.js";
-
+import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
 /**
  * Get products directory path (kept for potential future use)
  */
@@ -25,29 +25,6 @@ function getProductsImageDirectory() {
   return imagesDir;
 }
 
-/**
- * Helper function to extract filename from URL
- */
-function extractFilename(url) {
-  if (!url) return null;
-
-  // Extract filename from URL (e.g., /api/images/filename.jpg -> filename.jpg)
-  // or just return the filename if it's already just a filename
-  if (url.includes("/")) {
-    return url.split("/").pop();
-  }
-  return url;
-}
-
-/**
- * Helper function to convert filename to public URL
- */
-function getImageUrl(filename) {
-  if (!filename) return null;
-  // Return public API URL path
-  // return `/api/images/${filename}`;
-  return `${filename}`;
-}
 
 /**
  * Create Product

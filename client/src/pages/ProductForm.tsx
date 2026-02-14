@@ -404,8 +404,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
               {isSubmitting
                 ? "Saving..."
                 : isEdit
-                ? "Update Product"
-                : "Create Product"}
+                  ? "Update Product"
+                  : "Create Product"}
             </Button>
           </motion.div>
         </motion.div>
@@ -1355,7 +1355,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                         handleBatchChange(
                                           index,
                                           "bNo",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                       placeholder="Enter batch number"
@@ -1372,7 +1372,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                         handleBatchChange(
                                           index,
                                           "barcode",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                       placeholder="Enter barcode"
@@ -1394,7 +1394,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                         handleBatchChange(
                                           index,
                                           "mfgDate",
-                                          e.target.value || null
+                                          e.target.value || null,
                                         )
                                       }
                                       className="h-8 text-sm"
@@ -1411,7 +1411,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                         handleBatchChange(
                                           index,
                                           "expDate",
-                                          e.target.value || null
+                                          e.target.value || null,
                                         )
                                       }
                                       className="h-8 text-sm"
@@ -1437,7 +1437,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           handleBatchChange(
                                             index,
                                             "pRate",
-                                            parseFloat(e.target.value) || 0
+                                            parseFloat(e.target.value) || 0,
                                           )
                                         }
                                         className="h-8 text-sm pl-6"
@@ -1460,7 +1460,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           handleBatchChange(
                                             index,
                                             "sRate",
-                                            parseFloat(e.target.value) || 0
+                                            parseFloat(e.target.value) || 0,
                                           )
                                         }
                                         className="h-8 text-sm pl-6"
@@ -1482,7 +1482,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                         handleBatchChange(
                                           index,
                                           "openingStock",
-                                          parseInt(e.target.value) || 0
+                                          parseInt(e.target.value) || 0,
                                         )
                                       }
                                       className="h-8 text-sm"
@@ -1504,7 +1504,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           handleBatchChange(
                                             index,
                                             "mrp",
-                                            parseFloat(e.target.value) || 0
+                                            parseFloat(e.target.value) || 0,
                                           )
                                         }
                                         className="h-8 text-sm pl-6"

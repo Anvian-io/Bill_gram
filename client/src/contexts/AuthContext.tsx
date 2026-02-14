@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const response = await authAPI.checkAuth();
+      localStorage.setItem("user", JSON.stringify(response.data.data.user));
       setUser(response.data.data.user);
     } catch (error) {
       localStorage.removeItem("token");
@@ -64,6 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authAPI.login({ email, password });
       const { token, user } = response.data.data;
       // console.log(response,"foewihf")
+      localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
       setUser(user);
       return { success: true };

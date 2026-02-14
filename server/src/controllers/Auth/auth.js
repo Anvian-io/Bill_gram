@@ -14,4 +14,10 @@ router.post("/login", authController.login);
 // Check authentication route
 router.get("/check", authController.check);
 
+router.patch(
+  "/profile",
+  authController.updateProfile,
+);  // <-- new route
+
+
 export default router;
