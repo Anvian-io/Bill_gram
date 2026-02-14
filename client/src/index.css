@@ -136,9 +136,9 @@
   --toast-info-border: #bfdbfe;
   --toast-info-icon: #3b82f6;
   
-  --toast-default-bg: #f9fafb;
-  --toast-default-text: #374151;
-  --toast-default-border: #e5e7eb;
+  --toast-default-bg: #70a3f3;
+  --toast-default-text: #000000;
+  --toast-default-border: rgb(255, 255, 255);
   --toast-default-icon: #6b7280;
   
   /* Light theme Gray scale */
@@ -281,9 +281,9 @@
   --toast-info-border: #1e40af;
   --toast-info-icon: #60a5fa;
   
-  --toast-default-bg: #1f2937;
-  --toast-default-text: #d1d5db;
-  --toast-default-border: #374151;
+  --toast-default-bg: #4e80ee;
+  --toast-default-text: #ffffff;
+  --toast-default-border: #6b6b6b;
   --toast-default-icon: #9ca3af;
   
   /* Dark theme Gray scale */
