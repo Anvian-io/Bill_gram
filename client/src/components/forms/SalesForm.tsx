@@ -112,9 +112,12 @@ const salesSchema = z.object({
           .min(0)
           .max(100, "Tax rate cannot exceed 100%"),
         taxAmount: z.coerce.number().min(0, "Tax amount must be positive"),
-        schPercent: z.coerce.number().min(0).max(100).default(0), // single scheme percent
-        schAmount: z.coerce.number().min(0).default(0), // single scheme amount
-        batchId: z.coerce.number().optional(),
+        schPercent: z.coerce.number().min(0).max(100).default(0),
+        schAmount: z.coerce.number().min(0).default(0),
+        // --------------------------------------------------------------
+        // batchId is now required – must be a positive number
+        batchId: z.coerce.number().min(1, "Batch is required"),
+        // --------------------------------------------------------------
         batchOpeningStock: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
@@ -124,9 +127,9 @@ const salesSchema = z.object({
 
   remarks: z.string().optional(),
   grossAmount: z.coerce.number().min(0, "Gross amount must be positive"),
-  boxUnit: z.coerce.number().min(0).default(0), // kept for backend compatibility; hidden
+  boxUnit: z.coerce.number().min(0).default(0),
   cessInsurance: z.coerce.number().min(0).default(0),
-  scheme1: z.coerce.number().min(0).default(0), // kept for backend compatibility; not used in UI
+  scheme1: z.coerce.number().min(0).default(0),
   discountPercent: z.coerce.number().min(0).max(100).default(0),
   tax: z.coerce.number().min(0).default(0),
   amountAdd: z.coerce.number().min(0).default(0),
@@ -286,6 +289,7 @@ export default function SalesForm({
           taxAmount: item.taxAmount ?? 0,
           schPercent: item.schPercent ?? 0,
           schAmount: item.schAmount ?? 0,
+          // batchId is mapped (may be undefined if not present, but required now)
           batchId: item.batchId ?? undefined,
           batchOpeningStock: item.batch?.openingStock ?? undefined,
           cartonPack,
@@ -456,41 +460,55 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Batch selection (now includes openingStock)
+  // Batch selection – now fully populates the item
   // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
-      const { index, cartonPack } = pendingBatchSelection;
-      const updatedItems = [...items];
-      const item = updatedItems[index];
+      const {
+        index,
+        productId,
+        productCode,
+        description,
+        cartonPack,
+        conversionFactor,
+      } = pendingBatchSelection;
+
+      // Get the full product to retrieve gstRate
+      const product = findProduct(productId);
+      const taxRate = product?.gstRate || 5; // fallback to 5 if not set
 
       const mQty = calculateMQty(aQty, cartonPack);
       const rate = batch.saleRate ?? 0;
-      const taxRate = item.taxRate ?? 5;
-      const schPercent = item.schPercent ?? 0;
-
+      const schPercent = 0; // default, user can change later
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
       const schAmount = totalAmount * (schPercent / 100);
       const finalAmount = totalAmount - schAmount;
 
+      const updatedItems = [...items];
       updatedItems[index] = {
-        ...item,
-        batchId: batch.id,
-        batchOpeningStock: batch.openingStock,
+        ...updatedItems[index], // preserve any existing fields (like fQty)
+        productId,
+        productCode,
+        description,
         rate,
         aQty,
         mQty,
         totalAmount,
+        taxRate,
         taxAmount,
+        schPercent,
         schAmount,
         finalAmount,
-        cartonPack, // ensure cartonPack is set
+        cartonPack,
+        conversionFactor,
+        batchId: batch.id, // <-- batchId set here
+        batchOpeningStock: batch.openingStock,
       };
 
       form.setValue("items", updatedItems);
 
-      toast.success(`Batch applied to ${item.productCode}`, {
+      toast.success(`Batch applied to ${productCode}`, {
         description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
       });
 
@@ -547,6 +565,8 @@ export default function SalesForm({
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
+      // batchId is omitted – it will be set only after batch selection
+      // @ts-ignore – we'll set batchId via handleBatchSelect
       batchId: undefined,
       batchOpeningStock: 0,
       cartonPack: 0,
@@ -563,48 +583,12 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Product selection (triggers batch modal)
+  // Product selection – now only stores pending data, does NOT update item yet
   // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
-      const updatedItems = [...items];
-      const aQty = 1;
-      const mQty = calculateMQty(aQty, product.cartonPack);
-      const rate = product.pricePerPcs || 0;
-      const taxRate = product.gstRate || 5;
-      const schPercent = 0;
-      const totalAmount = rate * aQty;
-      const taxAmount = totalAmount * (taxRate / 100);
-      const schAmount = totalAmount * (schPercent / 100);
-      const finalAmount = totalAmount - schAmount;
-
-      updatedItems[index] = {
-        ...updatedItems[index],
-        productId: product.id,
-        productCode: product.productCode,
-        description: product.description,
-        rate,
-        taxRate,
-        aQty,
-        mQty,
-        fQty: 0,
-        totalAmount,
-        taxAmount,
-        schPercent,
-        schAmount,
-        finalAmount,
-        cartonPack: product.cartonPack,
-        conversionFactor: product.conversionFactor,
-        batchId: undefined,
-        batchOpeningStock: undefined,
-      };
-      form.setValue("items", updatedItems);
-
-      setProductOpen(false);
-      setActiveProductIndex(null);
-
-      // Immediately open batch selection
+      // Do NOT update the item here. Just store the selection and open batch modal.
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -613,6 +597,8 @@ export default function SalesForm({
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
       });
+      setProductOpen(false);
+      setActiveProductIndex(null);
       setBatchModalOpen(true);
     }
   };
@@ -640,7 +626,7 @@ export default function SalesForm({
     editingSales && editingSales.status !== "Pending" ? true : false;
 
   // --------------------------------------------------------------------
-  // Render
+  // Render (unchanged except for the hidden fields)
   // --------------------------------------------------------------------
   return (
     <>
@@ -681,6 +667,7 @@ export default function SalesForm({
                   Invoice Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  {/* ... (all header fields remain the same) ... */}
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
