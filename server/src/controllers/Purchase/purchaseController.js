@@ -206,9 +206,11 @@ export const createPurchase = asyncHandler(async (req, res) => {
       return invoice;
     });
 
+    const paddedId = result.id.toString().padStart(4, "0");
+
     const updated = await prisma.purchaseInvoice.update({
       where: { id: result.id },
-      data: { invoiceNo: `INV-${result.id}` }, // e.g. "INV-1"
+      data: { invoiceNo: `INV-${paddedId}` }, // e.g. "INV-1"
     });
 
     return sendResponse(

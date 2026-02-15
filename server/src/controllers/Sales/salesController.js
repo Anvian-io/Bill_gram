@@ -22,7 +22,15 @@ const updateBatchStock = async (prisma, batchId, deltaQty) => {
 /**
  * Helper: Create sales history entries for an invoice
  */
-const createSalesHistory = async (prisma, invoice, items, customerId, areaId, vanId, salesmanId) => {
+const createSalesHistory = async (
+  prisma,
+  invoice,
+  items,
+  customerId,
+  areaId,
+  vanId,
+  salesmanId,
+) => {
   const historyData = items.map((item) => ({
     productId: item.productId,
     batchId: item.batchId,
@@ -266,15 +274,25 @@ export const createSale = asyncHandler(async (req, res) => {
       }
 
       // 3. Create sales history entries
-      await createSalesHistory(tx, invoice, items, customerId,areaId,vanId,salesmanId);
+      await createSalesHistory(
+        tx,
+        invoice,
+        items,
+        customerId,
+        areaId,
+        vanId,
+        salesmanId,
+      );
 
       return invoice;
     });
 
     // Optional: update invoiceNo with prefix (like purchase controller does)
+    const paddedId = result.id.toString().padStart(4, "0");
+
     const updated = await prisma.salesInvoice.update({
       where: { id: result.id },
-      data: { invoiceNo: `SINV-${result.id}` }, // or any format you prefer
+      data: { invoiceNo: `SINV-${paddedId}` },
     });
 
     return sendResponse(
@@ -336,30 +354,30 @@ export const getAllSales = asyncHandler(async (req, res) => {
   }
 
   if (invoiceNo) {
-    andConditions.push({ invoiceNo: { contains: invoiceNo  } });
+    andConditions.push({ invoiceNo: { contains: invoiceNo } });
   }
 
   if (customerId) {
-    andConditions.push({ customerId: parseInt(customerId ) });
+    andConditions.push({ customerId: parseInt(customerId) });
   }
   if (areaId) {
-    andConditions.push({ areaId: parseInt(areaId ) });
+    andConditions.push({ areaId: parseInt(areaId) });
   }
   if (vanId) {
-    andConditions.push({ vanId: parseInt(vanId ) });
+    andConditions.push({ vanId: parseInt(vanId) });
   }
   if (salesmanId) {
-    andConditions.push({ salesmanId: parseInt(salesmanId ) });
+    andConditions.push({ salesmanId: parseInt(salesmanId) });
   }
 
   // Date range filter (invoiceDate)
   if (fromDate || toDate) {
     const dateFilter = {};
     if (fromDate) {
-      dateFilter.gte = new Date(fromDate );
+      dateFilter.gte = new Date(fromDate);
     }
     if (toDate) {
-      dateFilter.lte = new Date(toDate );
+      dateFilter.lte = new Date(toDate);
     }
     andConditions.push({ invoiceDate: dateFilter });
   }
@@ -368,10 +386,10 @@ export const getAllSales = asyncHandler(async (req, res) => {
   if (minAmount || maxAmount) {
     const amountFilter = {};
     if (minAmount) {
-      amountFilter.gte = parseFloat(minAmount );
+      amountFilter.gte = parseFloat(minAmount);
     }
     if (maxAmount) {
-      amountFilter.lte = parseFloat(maxAmount );
+      amountFilter.lte = parseFloat(maxAmount);
     }
     andConditions.push({ finalAmount: amountFilter });
   }
@@ -384,13 +402,13 @@ export const getAllSales = asyncHandler(async (req, res) => {
   if (search) {
     andConditions.push({
       OR: [
-        { invoiceNo: { contains: search  } },
-        { customer: { companyName: { contains: search  } } },
-        { customer: { personName: { contains: search  } } },
-        { remarks: { contains: search  } },
-        { area: { name: { contains: search  } } },
-        { van: { name: { contains: search  } } },
-        { salesman: { name: { contains: search  } } },
+        { invoiceNo: { contains: search } },
+        { customer: { companyName: { contains: search } } },
+        { customer: { personName: { contains: search } } },
+        { remarks: { contains: search } },
+        { area: { name: { contains: search } } },
+        { van: { name: { contains: search } } },
+        { salesman: { name: { contains: search } } },
       ],
     });
   }
@@ -407,7 +425,7 @@ export const getAllSales = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy ) ? sortBy : "createdAt"]:
+    [validSortFields.includes(sortBy) ? sortBy : "createdAt"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -587,10 +605,10 @@ export const updateSale = asyncHandler(async (req, res) => {
   // These fields are mandatory in the schema. If they are provided in the request,
   // they must be non‑null. If not provided, the existing value will be kept.
   const requiredFields = [
-    { name: 'areaId', value: areaId },
-    { name: 'vanId', value: vanId },
-    { name: 'salesmanId', value: salesmanId },
-    { name: 'address', value: address },
+    { name: "areaId", value: areaId },
+    { name: "vanId", value: vanId },
+    { name: "salesmanId", value: salesmanId },
+    { name: "address", value: address },
   ];
   for (const field of requiredFields) {
     if (field.value === null) {
@@ -842,9 +860,7 @@ export const updateSale = asyncHandler(async (req, res) => {
           customerId || existingInvoice.customerId,
           areaId !== undefined ? areaId : existingInvoice.areaId,
           vanId !== undefined ? vanId : existingInvoice.vanId,
-          salesmanId !== undefined
-            ? salesmanId
-            : existingInvoice.salesmanId,
+          salesmanId !== undefined ? salesmanId : existingInvoice.salesmanId,
         );
       }
 
