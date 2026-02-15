@@ -84,7 +84,7 @@ interface ProductWithFactors {
 }
 
 // ----------------------------------------------------------------------
-// Schema Validation
+// Updated Schema – single scheme, fQty, finalAmount
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -104,16 +104,16 @@ const salesSchema = z.object({
         rate: z.coerce.number().min(0, "Rate must be positive"),
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
+        fQty: z.coerce.number().min(0).default(0), // free quantity
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
+        finalAmount: z.coerce.number().min(0, "Final amount must be positive"), // per‑item final
         taxRate: z.coerce
           .number()
           .min(0)
           .max(100, "Tax rate cannot exceed 100%"),
         taxAmount: z.coerce.number().min(0, "Tax amount must be positive"),
-        sch1Percent: z.coerce.number().min(0).max(100).default(0),
-        sch1Amount: z.coerce.number().min(0).default(0),
-        sch2Percent: z.coerce.number().min(0).max(100).default(0),
-        sch2Amount: z.coerce.number().min(0).default(0),
+        schPercent: z.coerce.number().min(0).max(100).default(0), // single scheme percent
+        schAmount: z.coerce.number().min(0).default(0), // single scheme amount
         batchId: z.coerce.number().optional(),
         batchOpeningStock: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
@@ -124,9 +124,9 @@ const salesSchema = z.object({
 
   remarks: z.string().optional(),
   grossAmount: z.coerce.number().min(0, "Gross amount must be positive"),
-  boxUnit: z.coerce.number().min(0).default(0),
+  boxUnit: z.coerce.number().min(0).default(0), // kept for backend compatibility; hidden
   cessInsurance: z.coerce.number().min(0).default(0),
-  scheme1: z.coerce.number().min(0).default(0),
+  scheme1: z.coerce.number().min(0).default(0), // kept for backend compatibility; not used in UI
   discountPercent: z.coerce.number().min(0).max(100).default(0),
   tax: z.coerce.number().min(0).default(0),
   amountAdd: z.coerce.number().min(0).default(0),
@@ -188,7 +188,7 @@ export default function SalesForm({
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
-  console.log(editingSales);
+
   // State for batch selection modal
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingBatchSelection, setPendingBatchSelection] = useState<{
@@ -212,33 +212,41 @@ export default function SalesForm({
   const items = form.watch("items");
   const customerId = form.watch("customerId");
 
+  // Helper to find product by id
+  const findProduct = (productId: number) => {
+    return products.find((p) => p.id === productId) as
+      | ProductWithFactors
+      | undefined;
+  };
+
   // --------------------------------------------------------------------
-  // Calculations (with safe number handling)
+  // Calculations – new logic with per‑item finalAmount
   // --------------------------------------------------------------------
   useEffect(() => {
     const calculateTotals = () => {
-      const grossAmount = items.reduce((sum, item) => {
-        return sum + (Number(item.totalAmount) || 0);
-      }, 0);
-      const tax = items.reduce((sum, item) => {
-        return sum + (Number(item.taxAmount) || 0);
-      }, 0);
+      // Sum of item final amounts (rate * aQty - schAmount)
+      const sumItemFinal = items.reduce(
+        (sum, item) => sum + (item.finalAmount || 0),
+        0,
+      );
+      // Sum of item tax amounts
+      const tax = items.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
+      // Gross (taxable) = sum of (totalAmount - taxAmount)
+      const grossAmount = items.reduce(
+        (sum, item) => sum + ((item.totalAmount || 0) - (item.taxAmount || 0)),
+        0,
+      );
 
-      const boxUnit = Number(form.getValues("boxUnit")) || 0;
       const cessInsurance = Number(form.getValues("cessInsurance")) || 0;
-      const scheme1 = Number(form.getValues("scheme1")) || 0;
       const discountPercent = Number(form.getValues("discountPercent")) || 0;
       const amountAdd = Number(form.getValues("amountAdd")) || 0;
       const creditAmount = Number(form.getValues("creditAmount")) || 0;
 
       const discountAmount = grossAmount * (discountPercent / 100);
       const finalAmount =
-        grossAmount +
-        tax +
-        boxUnit +
+        sumItemFinal +
         cessInsurance +
         amountAdd -
-        scheme1 -
         discountAmount -
         creditAmount;
 
@@ -253,11 +261,38 @@ export default function SalesForm({
     calculateTotals();
   }, [items, form]);
 
-  // Reset form when editingSales changes
+  // Reset form when editingSales changes (map old sch fields to new single sch)
   useEffect(() => {
-    console.log("Editing sales changed:", editingSales);
     if (editingSales) {
-      console.log(editingSales);
+      const mappedItems = (editingSales.items ?? []).map((item: any) => {
+        // Try to get cartonPack from product if missing
+        let cartonPack = item.cartonPack ?? 0;
+        if (!cartonPack && item.productId) {
+          const product = findProduct(item.productId);
+          cartonPack = product?.cartonPack ?? 0;
+        }
+        return {
+          productId: item.productId ?? 0,
+          productCode: item.product?.productCode ?? "",
+          description: item.product?.description ?? "",
+          rate: item.rate ?? 0,
+          aQty: item.aQty ?? 0,
+          mQty: item.mQty ?? 0,
+          fQty: item.fQty ?? 0,
+          totalAmount: item.totalAmount ?? 0,
+          finalAmount:
+            item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
+          taxRate: item.taxRate ?? 5,
+          taxAmount: item.taxAmount ?? 0,
+          schPercent: item.schPercent ?? 0,
+          schAmount: item.schAmount ?? 0,
+          batchId: item.batchId ?? undefined,
+          batchOpeningStock: item.batch?.openingStock ?? undefined,
+          cartonPack,
+          conversionFactor: item.conversionFactor ?? 1,
+        };
+      });
+
       form.reset({
         invoiceDate:
           editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
@@ -267,26 +302,7 @@ export default function SalesForm({
         salesmanId: editingSales.salesman?.id ?? 0,
         address: editingSales.address ?? "",
         gstDetails: editingSales.gstDetails ?? "Against GST",
-        items: (editingSales.items ?? []).map((item: any) => ({
-          productId: item.productId ?? 0,
-          productCode: item.product?.productCode ?? "",
-          description: item.product?.description ?? "",
-          rate: item.rate ?? 0,
-          aQty: item.aQty ?? 0,
-          mQty: item.mQty ?? 0,
-          totalAmount: item.totalAmount ?? 0,
-          taxRate: item.taxRate ?? 5,
-          taxAmount: item.taxAmount ?? 0,
-          sch1Percent: item.sch1Percent ?? 0,
-          sch1Amount: item.sch1Amount ?? 0,
-          sch2Percent: item.sch2Percent ?? 0,
-          sch2Amount: item.sch2Amount ?? 0,
-          batchId: item.batchId ?? undefined,
-          // Extract opening stock from the nested batch object
-          batchOpeningStock: item.batch?.openingStock ?? undefined,
-          cartonPack: item.cartonPack ?? 0,
-          conversionFactor: item.conversionFactor ?? 1,
-        })),
+        items: mappedItems,
         remarks: editingSales.remarks ?? "",
         grossAmount: editingSales.grossAmount ?? 0,
         boxUnit: editingSales.boxUnit ?? 0,
@@ -340,12 +356,6 @@ export default function SalesForm({
     return salesman ? `${salesman.name}` : "Select salesman";
   };
 
-  const findProduct = (productId: number) => {
-    return products.find((p) => p.id === productId) as
-      | ProductWithFactors
-      | undefined;
-  };
-
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
@@ -353,16 +363,21 @@ export default function SalesForm({
       : "Select product";
   };
 
-  const calculateMQty = (
-    aQty: number,
-    product?: ProductWithFactors,
-  ): number => {
-    if (!product) return 0;
-    return aQty * (product.cartonPack || 0) * (product.conversionFactor || 0);
+  // mQty = aQty / cartonPack
+  const calculateMQty = (aQty: number, cartonPack: number = 1): number => {
+    if (!cartonPack) return 0;
+    return aQty / cartonPack;
   };
 
+  // Total cartons = sum of (aQty / cartonPack) for all items
+  const totalCartons = items.reduce(
+    (sum, item) => sum + (item.cartonPack ? item.aQty / item.cartonPack : 0),
+    0,
+  );
+  const totalAQty = items.reduce((sum, item) => sum + (item.aQty || 0), 0);
+
   // --------------------------------------------------------------------
-  // Item handlers (with stock validation)
+  // Item handlers
   // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
@@ -391,29 +406,51 @@ export default function SalesForm({
 
     updatedItems[index] = { ...item, [field]: numValue };
 
-    if (field === "rate" || field === "aQty" || field === "taxRate") {
+    // Recalculate if rate, aQty, taxRate, or schPercent changes
+    if (["rate", "aQty", "taxRate", "schPercent"].includes(field)) {
       const rate = field === "rate" ? numValue : item.rate;
       const aQty = field === "aQty" ? numValue : item.aQty;
       const taxRate = field === "taxRate" ? numValue : item.taxRate;
+      const schPercent = field === "schPercent" ? numValue : item.schPercent;
 
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
+      const schAmount = totalAmount * (schPercent / 100);
+      const finalAmount = totalAmount - schAmount;
+
+      // Validate scheme cannot exceed totalAmount
+      if (schAmount > totalAmount) {
+        toast.error("Scheme amount cannot exceed total amount for this item");
+        return;
+      }
 
       updatedItems[index].totalAmount = parseFloat(totalAmount.toFixed(2));
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
-    } else if (field === "totalAmount") {
-      const taxAmount = numValue * (item.taxRate / 100);
-      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
-    }
+      updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
+      updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
 
-    if (field === "aQty") {
-      const product = findProduct(item.productId);
-      if (product) {
-        updatedItems[index].mQty = calculateMQty(numValue, product);
-        updatedItems[index].cartonPack = product.cartonPack;
-        updatedItems[index].conversionFactor = product.conversionFactor;
+      // Recalculate mQty when aQty changes – use product's cartonPack if available
+      if (field === "aQty") {
+        const product = findProduct(item.productId);
+        if (product) {
+          updatedItems[index].mQty = calculateMQty(aQty, product.cartonPack);
+          // Also ensure cartonPack is set to the product's value
+          updatedItems[index].cartonPack = product.cartonPack;
+        }
       }
     }
+
+    // Handle direct totalAmount change (if user edits totalAmount directly)
+    if (field === "totalAmount") {
+      const taxAmount = numValue * (item.taxRate / 100);
+      const schAmount = numValue * (item.schPercent / 100);
+      const finalAmount = numValue - schAmount;
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+      updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
+      updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
+    }
+
+    // fQty changes don't affect financials
 
     form.setValue("items", updatedItems);
   };
@@ -421,27 +458,40 @@ export default function SalesForm({
   // --------------------------------------------------------------------
   // Batch selection (now includes openingStock)
   // --------------------------------------------------------------------
-  const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
+  const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
-      const { index } = pendingBatchSelection;
+      const { index, cartonPack } = pendingBatchSelection;
       const updatedItems = [...items];
       const item = updatedItems[index];
+
+      const mQty = calculateMQty(aQty, cartonPack);
+      const rate = batch.saleRate ?? 0;
+      const taxRate = item.taxRate ?? 5;
+      const schPercent = item.schPercent ?? 0;
+
+      const totalAmount = rate * aQty;
+      const taxAmount = totalAmount * (taxRate / 100);
+      const schAmount = totalAmount * (schPercent / 100);
+      const finalAmount = totalAmount - schAmount;
 
       updatedItems[index] = {
         ...item,
         batchId: batch.id,
-        batchOpeningStock: batch.openingStock, // store opening stock
-        rate: batch.saleRate ?? 0,
+        batchOpeningStock: batch.openingStock,
+        rate,
         aQty,
         mQty,
-        totalAmount: (batch.saleRate ?? 0) * aQty,
-        taxAmount: (batch.saleRate ?? 0) * aQty * ((item.taxRate ?? 5) / 100),
+        totalAmount,
+        taxAmount,
+        schAmount,
+        finalAmount,
+        cartonPack, // ensure cartonPack is set
       };
 
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.saleRate} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
+        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
       });
 
       setPendingBatchSelection(null);
@@ -490,16 +540,17 @@ export default function SalesForm({
       rate: 0,
       aQty: 0,
       mQty: 0,
+      fQty: 0,
       totalAmount: 0,
+      finalAmount: 0,
       taxRate: 5,
       taxAmount: 0,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
+      schPercent: 0,
+      schAmount: 0,
+      batchId: undefined,
+      batchOpeningStock: 0,
       cartonPack: 0,
       conversionFactor: 0,
-      batchOpeningStock: 0,
     };
     form.setValue("items", [...items, newItem]);
   };
@@ -519,20 +570,30 @@ export default function SalesForm({
     if (product) {
       const updatedItems = [...items];
       const aQty = 1;
-      const mQty = calculateMQty(aQty, product);
+      const mQty = calculateMQty(aQty, product.cartonPack);
+      const rate = product.pricePerPcs || 0;
+      const taxRate = product.gstRate || 5;
+      const schPercent = 0;
+      const totalAmount = rate * aQty;
+      const taxAmount = totalAmount * (taxRate / 100);
+      const schAmount = totalAmount * (schPercent / 100);
+      const finalAmount = totalAmount - schAmount;
 
       updatedItems[index] = {
         ...updatedItems[index],
         productId: product.id,
         productCode: product.productCode,
         description: product.description,
-        rate: product.pricePerPcs || 0,
-        taxRate: product.gstRate || 5,
+        rate,
+        taxRate,
         aQty,
         mQty,
-        totalAmount: (product.pricePerPcs || 0) * aQty,
-        taxAmount:
-          (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
+        fQty: 0,
+        totalAmount,
+        taxAmount,
+        schPercent,
+        schAmount,
+        finalAmount,
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
         batchId: undefined,
@@ -557,33 +618,13 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Scheme handlers
-  // --------------------------------------------------------------------
-  const handleSchemeChange = (
-    index: number,
-    schemeType: "sch1Percent" | "sch2Percent",
-    value: number,
-  ) => {
-    const updatedItems = [...items];
-    const item = updatedItems[index];
-    const numValue = Number(value) || 0;
-
-    updatedItems[index] = {
-      ...item,
-      [schemeType]: numValue,
-      [schemeType === "sch1Percent" ? "sch1Amount" : "sch2Amount"]:
-        item.totalAmount * (numValue / 100),
-    };
-
-    form.setValue("items", updatedItems);
-  };
-
-  // --------------------------------------------------------------------
   // Form submission
   // --------------------------------------------------------------------
   const onSubmit = async (data: SalesFormData) => {
+    // Override boxUnit with 0 – it is not used in calculations anymore
+    const payload = { ...data, boxUnit: 0 };
     try {
-      await onSave(data, editingSales?.id);
+      await onSave(payload, editingSales?.id);
     } catch (error) {
       console.error("Error in form submission:", error);
       toast.error("Failed to save sales. Please try again.");
@@ -633,7 +674,7 @@ export default function SalesForm({
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
-              {/* Header Section */}
+              {/* Header Section – unchanged */}
               <div className="rounded-lg border p-4 bg-card">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -1034,7 +1075,7 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Products Table Section */}
+              {/* Products Table Section – updated with new columns */}
               <div className="border-t pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
@@ -1069,20 +1110,18 @@ export default function SalesForm({
                         </TableHead>
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">A. Qty</TableHead>
+                        <TableHead className="font-semibold">Fr</TableHead>
                         <TableHead className="font-semibold">
                           M. Qty *
                         </TableHead>
                         <TableHead className="font-semibold">Amount</TableHead>
-                        <TableHead className="font-semibold">Sch1%</TableHead>
-                        <TableHead className="font-semibold">
-                          Sch1 amt
-                        </TableHead>
-                        <TableHead className="font-semibold">Sch2%</TableHead>
-                        <TableHead className="font-semibold">
-                          Sch2 amt
-                        </TableHead>
+                        <TableHead className="font-semibold">Sch%</TableHead>
+                        <TableHead className="font-semibold">Sch amt</TableHead>
                         <TableHead className="font-semibold">Tax (%)</TableHead>
                         <TableHead className="font-semibold">Tax Amt</TableHead>
+                        <TableHead className="font-semibold">
+                          Final Amt
+                        </TableHead>
                         <TableHead className="font-semibold w-20">
                           Actions
                         </TableHead>
@@ -1204,7 +1243,7 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "rate",
-                                        e.target.value,
+                                        parseFloat(e.target.value) || 0,
                                       )
                                     }
                                     className="w-24 pl-7"
@@ -1224,7 +1263,7 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "aQty",
-                                        e.target.value,
+                                        parseFloat(e.target.value) || 0,
                                       )
                                     }
                                     className="w-20"
@@ -1233,13 +1272,33 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* M. Qty (read-only) */}
+                              {/* Fr (Free Qty) */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
                                     type="number"
                                     step="1"
-                                    value={item.mQty ?? 0}
+                                    value={item.fQty ?? 0}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "fQty",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20"
+                                    disabled={isSubmitting || isReadOnly}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* M. Qty - DISABLED */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.mQty.toFixed(2) ?? 0}
                                     readOnly
                                     disabled
                                     className="w-20 bg-muted cursor-not-allowed"
@@ -1247,7 +1306,7 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* Amount */}
+                              {/* Amount (inclusive) */}
                               <TableCell>
                                 <div className="relative">
                                   <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -1259,7 +1318,7 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "totalAmount",
-                                        e.target.value,
+                                        parseFloat(e.target.value) || 0,
                                       )
                                     }
                                     className="w-24 pl-7"
@@ -1268,18 +1327,18 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* Sch1% */}
+                              {/* Sch% */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={item.sch1Percent ?? 0}
+                                    value={item.schPercent ?? 0}
                                     onChange={(e) =>
-                                      handleSchemeChange(
+                                      handleItemChange(
                                         index,
-                                        "sch1Percent",
-                                        Number(e.target.value),
+                                        "schPercent",
+                                        parseFloat(e.target.value) || 0,
                                       )
                                     }
                                     className="w-20 pl-6"
@@ -1289,38 +1348,10 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* Sch1 Amount */}
+                              {/* Sch Amount */}
                               <TableCell>
                                 <div className="font-medium text-sm">
-                                  ₹{(item.sch1Amount ?? 0).toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Sch2% */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.sch2Percent ?? 0}
-                                    onChange={(e) =>
-                                      handleSchemeChange(
-                                        index,
-                                        "sch2Percent",
-                                        Number(e.target.value),
-                                      )
-                                    }
-                                    className="w-20 pl-6"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch2 Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{(item.sch2Amount ?? 0).toFixed(2)}
+                                  ₹{(item.schAmount ?? 0).toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1335,7 +1366,7 @@ export default function SalesForm({
                                       handleItemChange(
                                         index,
                                         "taxRate",
-                                        e.target.value,
+                                        parseFloat(e.target.value) || 0,
                                       )
                                     }
                                     className="w-20 pl-6"
@@ -1349,6 +1380,13 @@ export default function SalesForm({
                               <TableCell>
                                 <div className="font-medium text-sm">
                                   ₹{(item.taxAmount ?? 0).toFixed(2)}
+                                </div>
+                              </TableCell>
+
+                              {/* Final Amount (item) */}
+                              <TableCell>
+                                <div className="font-bold text-sm text-green-700">
+                                  ₹{(item.finalAmount ?? 0).toFixed(2)}
                                 </div>
                               </TableCell>
 
@@ -1391,16 +1429,16 @@ export default function SalesForm({
                     </TableBody>
                   </Table>
                   <div className="p-2 text-xs text-muted-foreground border-t">
-                    * M Qty is automatically calculated as A Qty × Carton Pack ×
-                    Conversion Factor and cannot be edited.
+                    * M Qty = A Qty / Carton Pack (auto‑calculated, cannot be
+                    edited).
                   </div>
                 </div>
               </div>
 
-              {/* Summary Section */}
+              {/* Summary Section – updated */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Remarks */}
+                  {/* Remarks - Left Side */}
                   <div className="lg:col-span-1">
                     <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
                       <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
@@ -1432,7 +1470,7 @@ export default function SalesForm({
                     </div>
                   </div>
 
-                  {/* Summary Grid */}
+                  {/* Summary - Right Side */}
                   <div className="lg:col-span-3">
                     <div className="bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm">
                       <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
@@ -1441,7 +1479,7 @@ export default function SalesForm({
                       </h4>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Gross Amount */}
+                        {/* Gross Amount (read‑only) */}
                         <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-1">
@@ -1472,35 +1510,26 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Box/Unit */}
+                        {/* Box/Unit Ratio (new) */}
                         <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-2">
-                              Box/Unit
+                              Box/Unit Ratio
                             </span>
                             <Package className="h-3 w-3 text-summary-icon-2" />
                           </div>
-                          <FormField
-                            control={form.control}
-                            name="boxUnit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-2" />
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      readOnly
-                                      disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium"
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              value={`${totalCartons.toFixed(2)} / ${totalAQty.toFixed(2)}`}
+                              readOnly
+                              disabled
+                              className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            (Total Cartons / Total A Qty)
+                          </p>
                         </div>
 
                         {/* CESS/INS */}
@@ -1523,40 +1552,8 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {/* Scheme 1 */}
-                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-summary-text-4">
-                              Scheme 1
-                            </span>
-                            <Gift className="h-3 w-3 text-summary-icon-4" />
-                          </div>
-                          <FormField
-                            control={form.control}
-                            name="scheme1"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      readOnly
-                                      disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1584,8 +1581,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
                                     />
                                   </div>
@@ -1595,7 +1591,7 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Tax */}
+                        {/* Tax Amount */}
                         <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-6">
@@ -1646,8 +1642,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
                                     />
                                   </div>
@@ -1677,8 +1672,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
                                     />
                                   </div>
@@ -1686,6 +1680,32 @@ export default function SalesForm({
                               </FormItem>
                             )}
                           />
+                        </div>
+
+                        {/* Total Scheme (read‑only) */}
+                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-summary-text-4">
+                              Total Scheme
+                            </span>
+                            <Gift className="h-3 w-3 text-summary-icon-4" />
+                          </div>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={items
+                                .reduce(
+                                  (sum, item) => sum + (item.schAmount || 0),
+                                  0,
+                                )
+                                .toFixed(2)}
+                              readOnly
+                              disabled
+                              className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
+                            />
+                          </div>
                         </div>
 
                         {/* Final Amount */}
@@ -1736,6 +1756,23 @@ export default function SalesForm({
                 </div>
               </div>
 
+              {/* Hidden boxUnit field – required for backend compatibility */}
+              <FormField
+                control={form.control}
+                name="boxUnit"
+                render={({ field }) => (
+                  <input type="hidden" {...field} value={0} />
+                )}
+              />
+              {/* Hidden scheme1 field – kept for backend compatibility */}
+              <FormField
+                control={form.control}
+                name="scheme1"
+                render={({ field }) => (
+                  <input type="hidden" {...field} value={0} />
+                )}
+              />
+
               <DialogFooter className="pt-4">
                 <Button
                   type="button"
@@ -1760,7 +1797,7 @@ export default function SalesForm({
         </DialogContent>
       </Dialog>
 
-      {/* Batch Selection Modal (Sales version) */}
+      {/* Batch Selection Modal */}
       {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}

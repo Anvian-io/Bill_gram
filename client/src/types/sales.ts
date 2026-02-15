@@ -52,29 +52,29 @@ export interface SalesFormData {
   // invoiceNo removed – backend generates it
   gstDetails: string;
   items: Array<{
-    batchOpeningStock: number | undefined;
     productId: number;
     productCode: string;
     description: string;
     rate: number;
     aQty: number;
     mQty: number;
+    fQty: number; // free quantity
     totalAmount: number;
+    finalAmount: number; // per‑item final (rate * aQty - schAmount)
     taxRate: number;
     taxAmount: number;
-    sch1Percent: number;
-    sch1Amount: number;
-    sch2Percent: number;
-    sch2Amount: number;
+    schPercent: number; // single scheme percent
+    schAmount: number; // single scheme amount
     batchId?: number;
+    batchOpeningStock?: number;
     cartonPack?: number;
     conversionFactor?: number;
   }>;
   remarks: string;
   grossAmount: number;
-  boxUnit: number;
+  boxUnit: number; // kept for backend compatibility; set to 0
   cessInsurance: number;
-  scheme1: number;
+  scheme1: number; // kept for backend compatibility; set to 0
   discountPercent: number;
   tax: number;
   amountAdd: number;
@@ -91,13 +91,13 @@ export interface SalesItem {
   rate: number;
   aQty: number;
   mQty: number;
+  fQty: number;
   totalAmount: number;
+  finalAmount: number;
   taxRate: number;
   taxAmount: number;
-  sch1Percent: number;
-  sch1Amount: number;
-  sch2Percent: number;
-  sch2Amount: number;
+  schPercent: number;
+  schAmount: number;
   batchId?: number;
   cartonPack?: number;
   conversionFactor?: number;

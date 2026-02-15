@@ -315,7 +315,7 @@ export default function PurchaseForm({
     0,
   );
   const totalAQty = items.reduce((sum, item) => sum + item.aQty, 0);
-  const boxUnitRatio = totalAQty > 0 ? totalCartons / totalAQty : 0;
+  // const boxUnitRatio = totalAQty > 0 ? totalCartons / totalAQty : 0;
 
   // --------------------------------------------------------------------
   // Item handlers

@@ -189,9 +189,9 @@ export const createPurchase = asyncHandler(async (req, res) => {
             // sch1Amount: item.sch1Amount || 0,
             // sch2Percent: item.sch2Percent || 0,
             // sch2Amount: item.sch2Amount || 0,
-            fQty: item.fQty,
-            schPercent: item.schPercent,
-            schAmount: item.schAmount,
+            fQty: item.fQty || 0,
+            schPercent: item.schPercent || 0,
+            schAmount: item.schAmount || 0,
             finalAmount: item.finalAmount,
           },
         });
@@ -643,10 +643,10 @@ export const updatePurchase = asyncHandler(async (req, res) => {
               // sch1Amount: item.sch1Amount || 0,
               // sch2Percent: item.sch2Percent || 0,
               // sch2Amount: item.sch2Amount || 0,
-              fQty: item.fQty,
-              schPercent: item.schPercent,
-              schAmount: item.schAmount,
-              finalAmount: item.finalAmount,
+              fQty: item.fQty || 0,
+              schPercent: item.schPercent || 0,
+              schAmount: item.schAmount || 0,
+              finalAmount: item.finalAmount || 0,
             },
           });
           await updateBatchStock(tx, item.batchId, item.aQty);
