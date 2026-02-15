@@ -43,13 +43,13 @@ export interface PurchaseItem {
   rate: number;
   aQty: number;
   mQty: number;
+  fQty: number; // added
   totalAmount: number;
   taxRate: number;
   taxAmount: number;
-  sch1Percent: number;
-  sch1Amount: number;
-  sch2Percent: number;
-  sch2Amount: number;
+  schPercent: number; // replaces sch1Percent/sch2Percent
+  schAmount: number; // replaces sch1Amount/sch2Amount
+  finalAmount: number;
   batchId?: number;
   cartonPack?: number;
   conversionFactor?: number;
@@ -113,6 +113,10 @@ export type PurchaseFormData = {
   supplierId: number;
   gstDetails: string; // invoiceNo removed – auto-generated
   items: Array<{
+    schAmount: number;
+    schPercent: any;
+    fQty: string | number | readonly string[] | undefined;
+    finalAmount: number;
     productId: number;
     productCode: string;
     description: string;
@@ -135,7 +139,6 @@ export type PurchaseFormData = {
   grossAmount: number;
   boxUnit: number;
   cessInsurance: number;
-  scheme1: number;
   discountPercent: number;
   tax: number;
   amountAdd: number;

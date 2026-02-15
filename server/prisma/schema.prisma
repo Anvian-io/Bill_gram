@@ -410,10 +410,14 @@ model PurchaseInvoiceItem {
   // Taxes & schemes
   taxRate            Float
   taxAmount          Float
-  sch1Percent        Float?  @default(0)
-  sch1Amount         Float?  @default(0)
-  sch2Percent        Float?  @default(0)
-  sch2Amount         Float?  @default(0)
+  // sch1Percent        Float?  @default(0)
+  // sch1Amount         Float?  @default(0)
+  // sch2Percent        Float?  @default(0)
+  // sch2Amount         Float?  @default(0)
+  fQty          Int?    @default(0)      // free quantity
+  schPercent    Float?  @default(0)      // single scheme percent
+  schAmount     Float?  @default(0)      // single scheme amount
+  finalAmount   Float?                   // item final amount (rate * aQty - schAmount)
 
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
