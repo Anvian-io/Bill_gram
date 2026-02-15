@@ -38,7 +38,7 @@ interface SidebarItem {
 
 export default function MasterInventory() {
   const [activeSection, setActiveSection] = useState<string>("product-group");
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
   const sidebarItems: SidebarItem[] = [
