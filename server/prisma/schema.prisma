@@ -404,7 +404,7 @@ model PurchaseInvoiceItem {
   // Pricing & quantity
   rate               Float
   aQty               Int
-  mQty               Int?    // auto‑calculated, stored for reference
+  mQty               Float?    // auto‑calculated, stored for reference
   totalAmount        Float
 
   // Taxes & schemes
@@ -526,7 +526,7 @@ model SalesInvoiceItem {
   // Pricing & quantity
   rate             Float
   aQty             Int
-  mQty             Int?    // auto‑calculated, stored for reference
+  mQty             Float?    // auto‑calculated, stored for reference
   totalAmount      Float
 
   // Taxes & schemes
