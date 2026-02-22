@@ -5,6 +5,8 @@ import type {
   PaginatedResponse,
   ApiResponse,
   PurchaseFilters,
+  PurchaseReportFilters,
+  PurchaseReportItem,
 } from "@/types/purchase";
 
 export const purchaseService = {
@@ -77,5 +79,35 @@ export const purchaseService = {
         "/purchases/active",
       );
     return response.data.data.purchases || [];
+  },
+
+  // ========== NEW: Purchase Report ==========
+  async getPurchaseReport(
+    filters?: PurchaseReportFilters,
+  ): Promise<PurchaseReportItem[]> {
+    const params = new URLSearchParams();
+
+    if (filters) {
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.supplierId) {
+        params.append("supplierId", filters.supplierId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+    }
+
+    const response = await apiClient.get<
+      ApiResponse<{ report: PurchaseReportItem[] }>
+    >(`/purchases/report?${params.toString()}`);
+    return response.data.data.report;
   },
 };

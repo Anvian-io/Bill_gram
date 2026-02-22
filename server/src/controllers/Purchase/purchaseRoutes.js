@@ -12,6 +12,8 @@ router.get("/", purchaseController.getAllPurchases);
 // Get active purchases (for dropdowns)
 router.get("/active", purchaseController.getActivePurchases);
 
+router.get("/report", purchaseController.getPurchaseReport);
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 

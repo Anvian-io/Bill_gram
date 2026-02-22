@@ -779,6 +779,127 @@ export const getActivePurchases = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// 7. GET PURCHASE REPORT (with product group filter and custom total)
+// --------------------------------------------------------------------
+export const getPurchaseReport = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = '',
+    supplierId,
+    productGroupId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) {
+    andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  }
+
+  if (supplierId) {
+    andConditions.push({ supplierId: parseInt(supplierId) });
+  }
+
+  // Date range filter (both optional)
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  // If productGroupId is provided, restrict invoices to those having at least one item from that group
+  if (productGroupId) {
+    andConditions.push({
+      items: {
+        some: {
+          product: {
+            productGroupId: parseInt(productGroupId),
+          },
+        },
+      },
+    });
+  }
+
+  const where = { AND: andConditions };
+
+  // Include supplier details
+  const include = {
+    supplier: {
+      select: {
+        id: true,
+        name: true,
+        phoneNo: true,
+        email: true,
+        address: true,
+      },
+    },
+  };
+
+  // If productGroupId is provided, also include filtered items to compute custom total
+  if (productGroupId) {
+    include.items = {
+      where: {
+        product: {
+          productGroupId: parseInt(productGroupId),
+        },
+      },
+      select: {
+        finalAmount: true,
+      },
+    };
+  }
+
+  // Fetch invoices
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    include,
+    orderBy: { invoiceDate: 'desc' },
+  });
+
+  // Map to response format
+  const reportData = invoices.map((invoice) => {
+    let totalAmount = invoice.finalAmount; // default to invoice finalAmount
+
+    if (productGroupId && invoice.items) {
+      // Sum finalAmount of filtered items (items belonging to the product group)
+      totalAmount = invoice.items.reduce(
+        (sum, item) => sum + (item.finalAmount || 0),
+        0
+      );
+    }
+
+    return {
+      id: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate,
+      supplier: invoice.supplier,
+      totalAmount,
+    };
+  });
+
+  return sendResponse(
+    res,
+    true,
+    { report: reportData },
+    'Purchase report generated successfully',
+    statusType.OK
+  );
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
 // --------------------------------------------------------------------
 export const purchaseController = {
@@ -788,4 +909,5 @@ export const purchaseController = {
   updatePurchase,
   deletePurchase,
   getActivePurchases,
+  getPurchaseReport,
 };

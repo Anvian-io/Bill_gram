@@ -145,3 +145,27 @@ export type PurchaseFormData = {
   creditAmount: number;
   finalAmount: number;
 };
+
+// ========== NEW: Purchase Report Types ==========
+export interface PurchaseReportItem {
+  id: number;
+  invoiceNo: string;
+  invoiceDate: string;        // ISO string
+  supplier: {
+    id: number;
+    name: string;
+    phoneNo?: string;
+    email?: string;
+    address?: string;
+  };
+  totalAmount: number;        // Sum of filtered items (or invoice finalAmount)
+}
+
+// Optional: if you want a dedicated type for report filters
+export interface PurchaseReportFilters {
+  fromDate?: Date;
+  toDate?: Date;
+  invoiceNo?: string;
+  supplierId?: number | undefined;
+  productGroupId?: number | undefined;
+}
