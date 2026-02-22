@@ -68,7 +68,14 @@ import {
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "./BatchSelectionModal";
 import { useActiveLists } from "@/hooks/useActiveLists";
-
+import { gst_details } from "@/store/dropdown_data/gst_details";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 // ----------------------------------------------------------------------
 // Types & Interfaces
 // ----------------------------------------------------------------------
@@ -158,7 +165,7 @@ const defaultValues: SalesFormData = {
   vanId: 0,
   salesmanId: 0,
   address: "",
-  gstDetails: "Against GST",
+  gstDetails: "With GST",
   items: [],
   remarks: "",
   grossAmount: 0,
@@ -1030,13 +1037,24 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm">GST Details</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., Against GST"
-                            {...field}
-                            disabled={isSubmitting || isReadOnly}
-                          />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={isSubmitting || isReadOnly}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select GST type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {gst_details.map((gst) => (
+                              <SelectItem key={gst.id} value={gst.type}>
+                                {gst.type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
