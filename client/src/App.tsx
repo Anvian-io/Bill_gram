@@ -19,7 +19,8 @@ import {
   MasterInventory,
   Purchase,
   Sales,
-  Profile
+  Profile,
+  Report
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -150,6 +151,20 @@ function App() {
                       setIsExpanded={setIsExpanded}
                     >
                       <Profile />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" />} />
+              <Route
+                path="/reports"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Report />
                     </Navbar>
                   </PrivateRoute>
                 }

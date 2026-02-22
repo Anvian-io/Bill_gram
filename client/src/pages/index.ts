@@ -7,6 +7,7 @@ import MasterInventory from "./MasterInventory";
 import Purchase from "./Purchase";
 import Sales from "./Sales";
 import Profile from "./Profile";
+import Report from "./Report";
 
 export {
   Dashboard,
@@ -18,4 +19,5 @@ export {
   Purchase,
   Sales,
   Profile,
+  Report
 };
