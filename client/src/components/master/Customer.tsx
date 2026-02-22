@@ -242,7 +242,7 @@ export default function CustomerComponent() {
     } catch (error: any) {
       console.error("Error fetching customers:", error);
       toast.error("Failed to fetch customers", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setCustomers([]);
       setTotalItems(0);
@@ -348,7 +348,7 @@ export default function CustomerComponent() {
       fetchCustomers(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save customer", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -376,7 +376,7 @@ export default function CustomerComponent() {
         fetchCustomers(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete customer", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setCustomerToDelete(null);
@@ -869,22 +869,21 @@ export default function CustomerComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} customers
-                {filters.status !== "all" ||
-                filters.companyName ||
-                filters.personName ||
-                filters.phoneNo ||
-                filters.city ||
-                filters.customerType ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} customers
+              {filters.status !== "all" ||
+              filters.companyName ||
+              filters.personName ||
+              filters.phoneNo ||
+              filters.city ||
+              filters.customerType ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

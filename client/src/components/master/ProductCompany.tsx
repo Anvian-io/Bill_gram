@@ -219,7 +219,7 @@ export default function ProductCompanyComponent() {
     } catch (error: any) {
       console.error("Error fetching product companies:", error);
       toast.error("Failed to fetch product companies", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setCompanies([]);
       setTotalItems(0);
@@ -321,7 +321,7 @@ export default function ProductCompanyComponent() {
       fetchCompanies(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save company", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -354,7 +354,7 @@ export default function ProductCompanyComponent() {
         fetchCompanies(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete company", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setCompanyToDelete(null);

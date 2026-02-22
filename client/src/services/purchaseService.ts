@@ -8,6 +8,7 @@ import type {
   PurchaseReportFilters,
   PurchaseReportItem,
 } from "@/types/purchase";
+import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
 export const purchaseService = {
   // Get all purchases with pagination & filters
@@ -16,98 +17,139 @@ export const purchaseService = {
     limit: number = 10,
     filters?: PurchaseFilters,
   ): Promise<PaginatedResponse<Purchase>> {
-    const params = new URLSearchParams();
-    params.append("page", page.toString());
-    params.append("limit", limit.toString());
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
 
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== "" && value !== "all") {
-          if (key === "fromDate" || key === "toDate") {
-            // send as ISO string
-            params.append(key, new Date(value as string).toISOString());
-          } else if (key === "showDeleted") {
-            params.append(key, value ? "true" : "false");
-          } else {
-            params.append(key, value.toString());
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== "" && value !== "all") {
+            if (key === "fromDate" || key === "toDate") {
+              // send as ISO string
+              params.append(key, new Date(value as string).toISOString());
+            } else if (key === "showDeleted") {
+              params.append(key, value ? "true" : "false");
+            } else {
+              params.append(key, value.toString());
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    const response = await apiClient.get<
-      ApiResponse<PaginatedResponse<Purchase>>
-    >(`/purchases?${params.toString()}`);
-    return response.data.data;
+      const response = await apiClient.get<
+        ApiResponse<PaginatedResponse<Purchase>>
+      >(`/purchases?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchases:", message);
+      throw new Error(message);
+    }
   },
 
   // Get single purchase by ID
   async getPurchase(id: number): Promise<Purchase> {
-    const response = await apiClient.get<ApiResponse<{ purchase: Purchase }>>(
-      `/purchases/${id}`,
-    );
-    return response.data.data.purchase;
+    try {
+      const response = await apiClient.get<ApiResponse<{ purchase: Purchase }>>(
+        `/purchases/${id}`,
+      );
+      return response.data.data.purchase;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase:", message);
+      throw new Error(message);
+    }
   },
 
   // Create new purchase invoice
   async createPurchase(data: PurchaseFormData): Promise<Purchase> {
-    const response = await apiClient.post<ApiResponse<{ purchase: Purchase }>>(
-      "/purchases",
-      data,
-    );
-    return response.data.data.purchase;
+    try {
+      const response = await apiClient.post<
+        ApiResponse<{ purchase: Purchase }>
+      >("/purchases", data);
+      return response.data.data.purchase;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error creating purchase:", message);
+      throw new Error(message);
+    }
   },
 
   // Update purchase invoice
   async updatePurchase(id: number, data: PurchaseFormData): Promise<Purchase> {
-    const response = await apiClient.put<ApiResponse<{ purchase: Purchase }>>(
-      `/purchases/${id}`,
-      data,
-    );
-    return response.data.data.purchase;
+    try {
+      const response = await apiClient.put<ApiResponse<{ purchase: Purchase }>>(
+        `/purchases/${id}`,
+        data,
+      );
+      return response.data.data.purchase;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error updating purchase:", message);
+      throw new Error(message);
+    }
   },
 
   // Delete purchase (soft delete)
   async deletePurchase(id: number): Promise<void> {
-    await apiClient.delete<ApiResponse<void>>(`/purchases/${id}`);
+    try {
+      await apiClient.delete<ApiResponse<void>>(`/purchases/${id}`);
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error deleting purchase:", message);
+      throw new Error(message);
+    }
   },
 
   // Get active purchases (for dropdowns)
   async getActivePurchases(): Promise<Purchase[]> {
-    const response =
-      await apiClient.get<ApiResponse<{ purchases: Purchase[] }>>(
-        "/purchases/active",
-      );
-    return response.data.data.purchases || [];
+    try {
+      const response =
+        await apiClient.get<ApiResponse<{ purchases: Purchase[] }>>(
+          "/purchases/active",
+        );
+      return response.data.data.purchases || [];
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching active purchases:", message);
+      throw new Error(message);
+    }
   },
 
   // ========== NEW: Purchase Report ==========
   async getPurchaseReport(
     filters?: PurchaseReportFilters,
   ): Promise<PurchaseReportItem[]> {
-    const params = new URLSearchParams();
+    try {
+      const params = new URLSearchParams();
 
-    if (filters) {
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
+      if (filters) {
+        if (filters.fromDate) {
+          params.append("fromDate", filters.fromDate.toISOString());
+        }
+        if (filters.toDate) {
+          params.append("toDate", filters.toDate.toISOString());
+        }
+        if (filters.invoiceNo) {
+          params.append("invoiceNo", filters.invoiceNo);
+        }
+        if (filters.supplierId) {
+          params.append("supplierId", filters.supplierId.toString());
+        }
+        if (filters.productGroupId) {
+          params.append("productGroupId", filters.productGroupId.toString());
+        }
       }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.supplierId) {
-        params.append("supplierId", filters.supplierId.toString());
-      }
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+
+      const response = await apiClient.get<
+        ApiResponse<{ report: PurchaseReportItem[] }>
+      >(`/purchases/report?${params.toString()}`);
+      return response.data.data.report;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase report:", message);
+      throw new Error(message);
     }
-
-    const response = await apiClient.get<
-      ApiResponse<{ report: PurchaseReportItem[] }>
-    >(`/purchases/report?${params.toString()}`);
-    return response.data.data.report;
   },
 };

@@ -1,7 +1,11 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
+import axios, {
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+} from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8001/api";
 
 class ApiClient {
   private client: AxiosInstance;
@@ -60,6 +64,7 @@ class ApiClient {
     data?: any,
     config?: AxiosRequestConfig,
   ): Promise<AxiosResponse<T>> {
+    console.log("PUT request to:", url, "with data:", data);
     return this.client.put<T>(url, data, config);
   }
 

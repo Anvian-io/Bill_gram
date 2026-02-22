@@ -497,7 +497,7 @@ export default function ProductFormModal({
         toast.success("Main image uploaded successfully");
       } catch (error: any) {
         toast.error("Failed to upload main image", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
         setMainImageFile(null);
       }
@@ -528,7 +528,7 @@ export default function ProductFormModal({
         toast.success(`${files.length} image(s) uploaded successfully`);
       } catch (error: any) {
         toast.error("Failed to upload images", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       }
     }
@@ -556,7 +556,7 @@ export default function ProductFormModal({
         toast.success("Image removed successfully");
       } catch (error: any) {
         toast.error("Failed to remove image", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       }
     }

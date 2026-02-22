@@ -219,7 +219,7 @@ export default function AreaComponent() {
     } catch (error: any) {
       console.error("Error fetching areas:", error);
       toast.error("Failed to fetch areas", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setAreas([]);
       setTotalItems(0);
@@ -320,7 +320,7 @@ export default function AreaComponent() {
       fetchAreas(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save area", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -348,7 +348,7 @@ export default function AreaComponent() {
         fetchAreas(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete area", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setAreaToDelete(null);
@@ -770,21 +770,20 @@ export default function AreaComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} areas
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.state ||
-                filters.region ||
-                filters.city ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} areas
+              {filters.status !== "all" ||
+              filters.name ||
+              filters.state ||
+              filters.region ||
+              filters.city ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

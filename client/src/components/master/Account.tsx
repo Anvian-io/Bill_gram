@@ -209,7 +209,7 @@ export default function AccountComponent() {
     } catch (error: any) {
       console.error("Error fetching accounts:", error);
       toast.error("Failed to fetch accounts", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setAccounts([]);
       setTotalItems(0);
@@ -305,7 +305,7 @@ export default function AccountComponent() {
       fetchAccounts(); // Refresh the list
     } catch (error: any) {
       toast.error("Failed to save account", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -333,7 +333,7 @@ export default function AccountComponent() {
         fetchAccounts(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete account", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setAccountToDelete(null);
@@ -718,20 +718,19 @@ export default function AccountComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} accounts
-                {filters.status !== "all" ||
-                filters.accountHolder ||
-                filters.bankName ||
-                filters.ifscCode ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} accounts
+              {filters.status !== "all" ||
+              filters.accountHolder ||
+              filters.bankName ||
+              filters.ifscCode ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>

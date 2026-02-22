@@ -181,7 +181,7 @@ export default function ProductGroup() {
     } catch (error: any) {
       console.error("Error fetching product groups:", error);
       toast.error("Failed to fetch product groups", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setProductGroups([]);
       setTotalItems(0);
@@ -282,7 +282,7 @@ export default function ProductGroup() {
       fetchProductGroups();
     } catch (error: any) {
       toast.error("Failed to save product group", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -310,7 +310,7 @@ export default function ProductGroup() {
         fetchProductGroups();
       } catch (error: any) {
         toast.error("Failed to delete product group", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setGroupToDelete(null);
