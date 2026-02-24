@@ -999,6 +999,354 @@ export const getActiveSales = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// 7. GET SALES REPORT (with filters)
+// --------------------------------------------------------------------
+export const getSalesReport = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = '',
+    customerId,
+    areaId,
+    vanId,
+    salesmanId,
+    productGroupId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) {
+    andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  }
+
+  if (customerId) {
+    andConditions.push({ customerId: parseInt(customerId) });
+  }
+  if (areaId) {
+    andConditions.push({ areaId: parseInt(areaId) });
+  }
+  if (vanId) {
+    andConditions.push({ vanId: parseInt(vanId) });
+  }
+  if (salesmanId) {
+    andConditions.push({ salesmanId: parseInt(salesmanId) });
+  }
+
+  // Date range filter (both optional)
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  // If productGroupId is provided, restrict invoices to those having at least one item from that group
+  if (productGroupId) {
+    andConditions.push({
+      items: {
+        some: {
+          product: {
+            productGroupId: parseInt(productGroupId),
+          },
+        },
+      },
+    });
+  }
+
+  const where = { AND: andConditions };
+
+  // Include customer details
+  const include = {
+    customer: {
+      select: {
+        id: true,
+        companyName: true,
+        personName: true,
+        phoneNo: true,
+        email: true,
+        address: true,
+      },
+    },
+  };
+
+  // If productGroupId is provided, also include filtered items to compute custom total
+  if (productGroupId) {
+    include.items = {
+      where: {
+        product: {
+          productGroupId: parseInt(productGroupId),
+        },
+      },
+      select: {
+        finalAmount: true,
+      },
+    };
+  }
+
+  // Fetch invoices
+  const invoices = await prisma.salesInvoice.findMany({
+    where,
+    include,
+    orderBy: { invoiceDate: 'desc' },
+  });
+
+  // Map to response format
+  const reportData = invoices.map((invoice) => {
+    let totalAmount = invoice.finalAmount; // default to invoice finalAmount
+
+    if (productGroupId && invoice.items) {
+      // Sum finalAmount of filtered items (items belonging to the product group)
+      totalAmount = invoice.items.reduce(
+        (sum, item) => sum + (item.finalAmount || 0),
+        0
+      );
+    }
+
+    return {
+      id: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate,
+      customer: invoice.customer,
+      totalAmount,
+    };
+  });
+
+  return sendResponse(
+    res,
+    true,
+    { report: reportData },
+    'Sales report generated successfully',
+    statusType.OK
+  );
+});
+
+// --------------------------------------------------------------------
+// 8. GET AREA-WISE SALES REPORT (grouped by area with invoice details)
+// --------------------------------------------------------------------
+export const getAreaWiseSalesReport = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = '',
+    customerId,
+    vanId,
+    salesmanId,
+    productGroupId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Build WHERE clause for invoices
+  const invoiceWhere = { deleted: false };
+
+  if (invoiceNo) {
+    invoiceWhere.invoiceNo = { contains: invoiceNo };
+  }
+  if (customerId) {
+    invoiceWhere.customerId = parseInt(customerId);
+  }
+  if (vanId) {
+    invoiceWhere.vanId = parseInt(vanId);
+  }
+  if (salesmanId) {
+    invoiceWhere.salesmanId = parseInt(salesmanId);
+  }
+  if (fromDate || toDate) {
+    invoiceWhere.invoiceDate = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      invoiceWhere.invoiceDate.gte = start;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      invoiceWhere.invoiceDate.lte = end;
+    }
+  }
+
+  if (productGroupId) {
+    invoiceWhere.items = {
+      some: {
+        product: {
+          productGroupId: parseInt(productGroupId),
+        },
+      },
+    };
+  }
+
+  // Fetch invoices with area and customer details
+  const invoices = await prisma.salesInvoice.findMany({
+    where: invoiceWhere,
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      areaId: true,
+      area: { select: { id: true, name: true } },
+      customer: { select: { companyName: true, personName: true } },
+    },
+  });
+
+  // Group by area
+  const areaMap = new Map();
+  invoices.forEach((invoice) => {
+    if (!invoice.areaId) return;
+    const areaId = invoice.areaId;
+    const areaName = invoice.area?.name || `Area ${areaId}`;
+    if (!areaMap.has(areaId)) {
+      areaMap.set(areaId, {
+        areaId,
+        areaName,
+        totalAmount: 0,
+        invoices: [],
+      });
+    }
+    const group = areaMap.get(areaId);
+    group.totalAmount += invoice.finalAmount || 0;
+    group.invoices.push({
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate,
+      totalAmount: invoice.finalAmount || 0,
+      customerName: invoice.customer?.companyName || invoice.customer?.personName || '',
+    });
+  });
+
+  // Convert to array and sort by area name
+  const reportData = Array.from(areaMap.values()).sort((a, b) =>
+    a.areaName.localeCompare(b.areaName)
+  );
+
+  return sendResponse(
+    res,
+    true,
+    { report: reportData },
+    'Area-wise sales report generated successfully',
+    statusType.OK
+  );
+});
+
+// --------------------------------------------------------------------
+// 9. GET SALESMAN-WISE SALES REPORT (grouped by salesman with invoice details)
+// --------------------------------------------------------------------
+export const getSalesmanWiseSalesReport = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = '',
+    customerId,
+    areaId,
+    vanId,
+    productGroupId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Build WHERE clause for invoices
+  const invoiceWhere = { deleted: false };
+
+  if (invoiceNo) {
+    invoiceWhere.invoiceNo = { contains: invoiceNo };
+  }
+  if (customerId) {
+    invoiceWhere.customerId = parseInt(customerId);
+  }
+  if (areaId) {
+    invoiceWhere.areaId = parseInt(areaId);
+  }
+  if (vanId) {
+    invoiceWhere.vanId = parseInt(vanId);
+  }
+  if (fromDate || toDate) {
+    invoiceWhere.invoiceDate = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      invoiceWhere.invoiceDate.gte = start;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      invoiceWhere.invoiceDate.lte = end;
+    }
+  }
+
+  if (productGroupId) {
+    invoiceWhere.items = {
+      some: {
+        product: {
+          productGroupId: parseInt(productGroupId),
+        },
+      },
+    };
+  }
+
+  // Fetch invoices with salesman and customer details
+  const invoices = await prisma.salesInvoice.findMany({
+    where: invoiceWhere,
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      salesmanId: true,
+      salesman: { select: { id: true, name: true } },
+      customer: { select: { companyName: true, personName: true } },
+    },
+  });
+
+  // Group by salesman
+  const salesmanMap = new Map();
+  invoices.forEach((invoice) => {
+    if (!invoice.salesmanId) return;
+    const salesmanId = invoice.salesmanId;
+    const salesmanName = invoice.salesman?.name || `Salesman ${salesmanId}`;
+    if (!salesmanMap.has(salesmanId)) {
+      salesmanMap.set(salesmanId, {
+        salesmanId,
+        salesmanName,
+        totalAmount: 0,
+        invoices: [],
+      });
+    }
+    const group = salesmanMap.get(salesmanId);
+    group.totalAmount += invoice.finalAmount || 0;
+    group.invoices.push({
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate,
+      totalAmount: invoice.finalAmount || 0,
+      customerName: invoice.customer?.companyName || invoice.customer?.personName || '',
+    });
+  });
+
+  // Convert to array and sort by salesman name
+  const reportData = Array.from(salesmanMap.values()).sort((a, b) =>
+    a.salesmanName.localeCompare(b.salesmanName)
+  );
+
+  return sendResponse(
+    res,
+    true,
+    { report: reportData },
+    'Salesman-wise sales report generated successfully',
+    statusType.OK
+  );
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object
 // --------------------------------------------------------------------
 export const salesController = {
@@ -1008,4 +1356,7 @@ export const salesController = {
   updateSale,
   deleteSale,
   getActiveSales,
+  getSalesReport,
+  getAreaWiseSalesReport,
+  getSalesmanWiseSalesReport,
 };

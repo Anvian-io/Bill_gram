@@ -7,6 +7,12 @@ import type {
   SalesFilters,
 } from "@/types/sales";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
+import type {
+  SalesReportItem,
+  SalesReportFilters,
+  AreaWiseReportItem,
+  SalesmanWiseReportItem,
+} from "@/types/sales-report";
 
 export const salesService = {
   async getSales(
@@ -104,6 +110,131 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching active sales:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get sales report with filters
+  async getSalesReport(
+    filters: SalesReportFilters,
+  ): Promise<SalesReportItem[]> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<{ report: SalesReportItem[] }>
+      >(`/sales/report?${params.toString()}`);
+      return response.data.data.report || [];
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales report:", message);
+      throw new Error(message);
+    }
+  },
+  // Get area-wise sales report
+  async getAreaWiseReport(
+    filters: SalesReportFilters,
+  ): Promise<AreaWiseReportItem[]> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<{ report: AreaWiseReportItem[] }>
+      >(`/sales/report/area-wise?${params.toString()}`);
+      return response.data.data.report || [];
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching area-wise sales report:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get salesman-wise sales report
+  async getSalesmanWiseReport(
+    filters: SalesReportFilters,
+  ): Promise<SalesmanWiseReportItem[]> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<{ report: SalesmanWiseReportItem[] }>
+      >(`/sales/report/salesman-wise?${params.toString()}`);
+      return response.data.data.report || [];
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching salesman-wise sales report:", message);
       throw new Error(message);
     }
   },

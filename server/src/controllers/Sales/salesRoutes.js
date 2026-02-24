@@ -12,6 +12,12 @@ router.get("/", salesController.getAllSales);
 // Get active sales (for dropdowns)
 router.get("/active", salesController.getActiveSales);
 
+router.get("/report", salesController.getSalesReport);
+
+router.get("/report/area-wise", salesController.getAreaWiseSalesReport);
+
+router.get("/report/salesman-wise", salesController.getSalesmanWiseSalesReport);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 
