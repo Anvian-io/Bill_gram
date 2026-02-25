@@ -415,6 +415,7 @@ model PurchaseInvoiceItem {
   // sch2Percent        Float?  @default(0)
   // sch2Amount         Float?  @default(0)
   fQty          Int?    @default(0)      // free quantity
+  DQty          Int?    @default(0)      //damaged quantity
   schPercent    Float?  @default(0)      // single scheme percent
   schAmount     Float?  @default(0)      // single scheme amount
   finalAmount   Float?                   // item final amount (rate * aQty - schAmount)
@@ -538,6 +539,7 @@ model SalesInvoiceItem {
   // sch2Amount       Float?  @default(0)
 
   fQty          Int?    @default(0)      // free quantity
+  DQty          Int?    @default(0)      //damaged quantity
   schPercent    Float?  @default(0)      // single scheme percent
   schAmount     Float?  @default(0)      // single scheme amount
   finalAmount   Float?                   // item final amount (rate * aQty - schAmount)
