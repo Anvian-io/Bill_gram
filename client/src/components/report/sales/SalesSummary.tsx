@@ -236,13 +236,14 @@ export default function SalesSummary() {
       };
       const data = await salesService.getSalesReport(apiFilters);
       setReportData(data);
+      setIsLoading(false);
       setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching sales report:", error);
       toast.error("Failed to fetch sales report");
       setReportData([]);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
