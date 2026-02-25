@@ -59,6 +59,7 @@ export interface SalesFormData {
     aQty: number;
     mQty: number;
     fQty: number; // free quantity
+    DQty: number; // free quantity
     totalAmount: number;
     finalAmount: number; // per‑item final (rate * aQty - schAmount)
     taxRate: number;
@@ -92,6 +93,7 @@ export interface SalesItem {
   aQty: number;
   mQty: number;
   fQty: number;
+  DQty: number;
   totalAmount: number;
   finalAmount: number;
   taxRate: number;

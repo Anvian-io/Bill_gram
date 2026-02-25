@@ -44,6 +44,7 @@ export interface PurchaseItem {
   aQty: number;
   mQty: number;
   fQty: number; // added
+  DQty: number; // added
   totalAmount: number;
   taxRate: number;
   taxAmount: number;
@@ -116,6 +117,7 @@ export type PurchaseFormData = {
     schAmount: number;
     schPercent: any;
     fQty: string | number | readonly string[] | undefined;
+    DQty: string | number | readonly string[] | undefined;
     finalAmount: number;
     productId: number;
     productCode: string;

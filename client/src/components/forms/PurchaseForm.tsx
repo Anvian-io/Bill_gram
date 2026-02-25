@@ -101,6 +101,7 @@ const purchaseSchema = z.object({
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
         fQty: z.coerce.number().min(0).default(0), // free quantity
+        DQty: z.coerce.number().min(0).default(0), // free quantity
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
         finalAmount: z.coerce.number().min(0, "Final amount must be positive"), // per‑item final
         taxRate: z.coerce
@@ -256,6 +257,7 @@ export default function PurchaseForm({
           aQty: item.aQty,
           mQty: item.mQty ?? 0,
           fQty: item.fQty ?? 0,
+          DQty: item.DQty ?? 0,
           totalAmount: item.totalAmount,
           finalAmount:
             item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
@@ -372,7 +374,7 @@ export default function PurchaseForm({
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
     }
 
-    // fQty changes don't affect financials
+    // fQty and DQty changes don't affect financials
 
     form.setValue("items", updatedItems);
   };
@@ -462,6 +464,7 @@ export default function PurchaseForm({
       aQty: 0,
       mQty: 0,
       fQty: 0,
+      DQty: 0,
       totalAmount: 0,
       finalAmount: 0,
       taxRate: 5,
@@ -515,6 +518,7 @@ export default function PurchaseForm({
         aQty,
         mQty,
         fQty: 0,
+        DQty: 0,
         totalAmount,
         taxAmount,
         schPercent,
@@ -801,6 +805,7 @@ export default function PurchaseForm({
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">A. Qty</TableHead>
                         <TableHead className="font-semibold">Fr</TableHead>
+                        <TableHead className="font-semibold">Dm</TableHead>
                         <TableHead className="font-semibold">
                           M. Qty *
                         </TableHead>
@@ -973,6 +978,26 @@ export default function PurchaseForm({
                                       handleItemChange(
                                         index,
                                         "fQty",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20"
+                                    disabled={isSubmitting || isReadOnly}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* Dm (Damaged Qty) */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.DQty}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "DQty",
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
