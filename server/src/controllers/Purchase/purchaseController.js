@@ -1138,7 +1138,7 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) =>
   const {
     fromDate,
     toDate,
-    invoiceNo = '',
+    invoiceNo = "",
     supplierId,
     productGroupId,
   } = req.query;
@@ -1198,12 +1198,12 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) =>
   const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
     where,
     select: { supplier: { select: { address: true } } },
-    distinct: ['supplierId'],
+    distinct: ["supplierId"],
   });
   const areas = [
     ...new Set(
       suppliersWithAddress
-        .map((s) => s.supplier?.address?.split(',').pop()?.trim())
+        .map((s) => s.supplier?.address?.split(",").pop()?.trim())
         .filter((city) => city && city.length > 0),
     ),
   ];
@@ -1327,23 +1327,27 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) =>
   // 12. Render HTML using EJS
   // const ejs = require('ejs');
   // const path = require('path');
-  const templateName = 'purchaseSummaryReport.ejs'; // store this
+  const templateName = "purchaseSummaryReport.ejs"; // store this
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
 
-  const templatePath = path.join(__dirname, "../../views/purchase", templateName);
-  
+  const templatePath = path.join(
+    __dirname,
+    "../../views/purchase",
+    templateName,
+  );
+
   // Helper function for date formatting (to match the preview modal)
   const formatDate = (dateStr) => {
-    if (!dateStr) return '';
+    if (!dateStr) return "";
     try {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
       });
     } catch {
-      return '';
+      return "";
     }
   };
 
@@ -1355,21 +1359,21 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) =>
   // 13. Generate PDF with Puppeteer
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  await page.setContent(html, { waitUntil: "networkidle0" });
 
   // Footer template for page numbers and shop name (exactly like the modal)
   const footerTemplate = `
     <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; margin-top: 5px;">
-      <span>${user?.shop_name || 'Your Shop'}</span>
+      <span>${user?.shop_name || "Your Shop"}</span>
       <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
     </div>
   `;
-  const headerTemplate = '<div></div>'; // empty header
+  const headerTemplate = "<div></div>"; // empty header
 
   const pdfBuffer = await page.pdf({
-    format: 'A4',
+    format: "A4",
     printBackground: true,
-    margin: { top: '1.5cm', bottom: '1.5cm', left: '1cm', right: '1cm' },
+    margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
     displayHeaderFooter: true,
     headerTemplate,
     footerTemplate,
@@ -1388,9 +1392,13 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) =>
   });
 
   // 15. Send PDF as response
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename="purchase-summary-report.pdf"');
-  res.send(pdfBuffer);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="purchase-summary-report.pdf"',
+  );
+  res.setHeader("Content-Length", pdfBuffer.length); // Add content length
+  return res.end(pdfBuffer, "binary"); // Use res.end with binary encoding instead of res.send
 });
 // --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)

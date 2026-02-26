@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Purchase Summary Report</title>
   <style>
+    /* GLOBAL RESET & BASE */
     body {
       font-family: Arial, sans-serif;
       margin: 30px;
@@ -32,31 +33,48 @@
     .details span.label {
       font-weight: 600;
     }
+
+    /* TABLE STYLES – borders removed from cells, only header & total row get black borders */
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
       margin-top: 20px;
+      /* no outer border */
     }
-    th {
-      background: #f2f2f2;
-      font-weight: 600;
-      padding: 8px 5px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-    td {
-      padding: 6px 5px;
-      border: 1px solid #ccc;
+
+    th, td {
+      /* NO BORDERS on individual cells */
+      border: none;
+      padding: 8px 5px;          /* keep original padding */
       text-align: left;
     }
+
+    /* Header styling: dark background + black top/bottom borders */
+    thead th {
+      background: #f2f2f2;
+      font-weight: 600;
+      text-align: center;
+      border-top: 2px solid #000;      /* black top border */
+      border-bottom: 2px solid #000;   /* black bottom border */
+    }
+
+    /* Align right for numeric cells (preserve original classes) */
     td.right {
       text-align: right;
     }
-    tbody tr:last-child td {
-      font-weight: bold;
-      background: #f9f9f9;
+
+    /* Totals row (last row) – black top & bottom borders, bold background from inline style */
+    tr.total-row td {
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
     }
+
+    /* keep the rest of the layout */
+    tbody tr:last-child td {
+      /* background is handled inline, we keep the existing background */
+    }
+
     .footer {
       margin-top: 20px;
       font-size: 12px;
@@ -66,7 +84,7 @@
     .page-break {
       page-break-before: always;
     }
-    /* Ensure table header repeats on every page */
+    /* Ensure table header repeats on every printed page */
     thead {
       display: table-header-group;
     }
@@ -122,9 +140,9 @@
           <td class="right">₹<%= product.finalAmount.toFixed(2) %></td>
         </tr>
       <% }) %>
-      <!-- Totals row -->
+      <!-- Totals row with class="total-row" for specific border styling -->
       <% if (totals) { %>
-        <tr style="font-weight: bold; background: #f0f0f0;">
+        <tr class="total-row" style="font-weight: bold; background: #f0f0f0;">
           <td colspan="4">Total <%= products.length %> products</td>
           <td class="right"><%= totals.totalMqty %></td>
           <td class="right"><%= totals.totalUnit %></td>
@@ -139,11 +157,9 @@
     </tbody>
   </table>
 
-  <!-- This footer will be replaced by Puppeteer's header/footer templates, 
-       but we keep a static version as fallback -->
+  <!-- Static footer (Puppeteer may replace page numbers) -->
   <div class="footer">
     <span><%= user.shop_name || 'Your Shop' %></span>
-    <!-- Page numbers will be injected by Puppeteer, so we leave this placeholder -->
     <span class="pageNumbers"></span>
   </div>
 </body>
