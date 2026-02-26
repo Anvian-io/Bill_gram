@@ -43,6 +43,7 @@ export interface PurchaseItem {
   rate: number;
   aQty: number;
   mQty: number;
+  unit: number;
   fQty: number; // added
   DQty: number; // added
   totalAmount: number;
@@ -125,6 +126,7 @@ export type PurchaseFormData = {
     rate: number;
     aQty: number;
     mQty: number;
+    unit: number;
     totalAmount: number;
     taxRate: number;
     taxAmount: number;
@@ -152,7 +154,7 @@ export type PurchaseFormData = {
 export interface PurchaseReportItem {
   id: number;
   invoiceNo: string;
-  invoiceDate: string;        // ISO string
+  invoiceDate: string; // ISO string
   supplier: {
     id: number;
     name: string;
@@ -160,7 +162,7 @@ export interface PurchaseReportItem {
     email?: string;
     address?: string;
   };
-  totalAmount: number;        // Sum of filtered items (or invoice finalAmount)
+  totalAmount: number; // Sum of filtered items (or invoice finalAmount)
 }
 
 // Optional: if you want a dedicated type for report filters
@@ -170,4 +172,52 @@ export interface PurchaseReportFilters {
   invoiceNo?: string;
   supplierId?: number | undefined;
   productGroupId?: number | undefined;
+}
+
+// Add/update these interfaces
+
+export interface PurchaseSummaryProduct {
+  productCode: string;
+  description: string;
+  totalUnit: number;
+  purchaseRate: number; // average rate
+  mrp: number; // average MRP
+  totalUnitsPurchased: number; // sum of aQty
+  totalMqty: number; // sum of mQty (boxes)
+  fQty: number; // free quantity
+  dQty: number; // damaged quantity
+  finalAmount: number; // sum of item finalAmount
+}
+
+export interface PurchaseSummaryReportData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    supplierId: number | null;
+    productGroupId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {          // <-- NEW: actual min/max invoice dates from the data
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  products: PurchaseSummaryProduct[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }

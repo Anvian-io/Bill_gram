@@ -129,6 +129,14 @@ export const login = asyncHandler(async (req, res) => {
     expiresIn: "24h",
   });
 
+  // Set cookie
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // HTTPS only in production
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
   // Remove password from response
   const { password: _, ...userWithoutPassword } = user;
 
@@ -225,6 +233,11 @@ export const check = asyncHandler(async (req, res) => {
 
 // Optional: Logout (client-side token removal)
 export const logout = asyncHandler(async (req, res) => {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
   return sendResponse(
     res,
     true,

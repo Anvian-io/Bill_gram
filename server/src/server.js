@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { initializeDatabase, getDatabaseLocation } from "./db/database.js";
 import productGroupRoutes from "./controllers/Product_Group/productGroupRoutes.js";
 import authRoutes from "./controllers/Auth/auth.js";
@@ -15,7 +16,7 @@ import imageRoutes from "./controllers/Image/imageRoutes.js";
 import purchaseRoute from "./controllers/Purchase/purchaseRoutes.js";
 import supplierRoutes from "./controllers/Supplier/supplierRoutes.js";
 import salesRoutes from "./controllers/Sales/salesRoutes.js";
-
+import { verifyUser } from "./middleware/verifyToken.js";
 import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
 import { createServer } from "http";
 import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
@@ -34,6 +35,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(cookieParser());
 
 // Initialize database and then start server
 const startServer = async () => {
@@ -49,6 +51,7 @@ const startServer = async () => {
 
     // Routes
     app.use("/api/auth", authRoutes);
+    app.use(verifyUser);
     app.use("/api/product-groups", productGroupRoutes);
     app.use("/api/units", unitRoutes);
     app.use("/api/product-companies", productCompanyRoutes);

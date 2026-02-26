@@ -182,6 +182,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
             rate: item.rate,
             aQty: item.aQty,
             mQty: item.mQty || 0,
+            unit: item.unit || 0,
             totalAmount: item.totalAmount,
             taxRate: item.taxRate,
             taxAmount: item.taxAmount,
@@ -639,6 +640,7 @@ export const updatePurchase = asyncHandler(async (req, res) => {
               rate: item.rate,
               aQty: item.aQty,
               mQty: item.mQty || 0,
+              unit: item.unit || 0,
               totalAmount: item.totalAmount,
               taxRate: item.taxRate,
               taxAmount: item.taxAmount,
@@ -902,6 +904,210 @@ export const getPurchaseReport = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// 8. GET PURCHASE SUMMARY REPORT FOR PDF (with product grouping and pagination)
+// --------------------------------------------------------------------
+
+export const getPurchaseSummaryReport_pdf_data = asyncHandler(
+  async (req, res) => {
+    const {
+      fromDate,
+      toDate,
+      invoiceNo = "",
+      supplierId,
+      productGroupId,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
+
+    const { page: validatedPage, limit: validatedLimit } = validatePagination(
+      page,
+      limit,
+    );
+    const skip = (validatedPage - 1) * validatedLimit;
+
+    // 1. Build WHERE clause for invoices (same as getPurchaseReport)
+    const andConditions = [{ deleted: false }];
+
+    if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+    if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
+    if (fromDate || toDate) {
+      const dateFilter = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.gte = start.toISOString();
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end.toISOString();
+      }
+      andConditions.push({ invoiceDate: dateFilter });
+    }
+    if (productGroupId) {
+      andConditions.push({
+        items: {
+          some: { product: { productGroupId: parseInt(productGroupId) } },
+        },
+      });
+    }
+    const where = { AND: andConditions };
+
+    // 2. Get actual min and max invoice dates from the filtered invoices
+    const dateRange = await prisma.purchaseInvoice.aggregate({
+      where,
+      _min: { invoiceDate: true },
+      _max: { invoiceDate: true },
+    });
+
+    // 3. Get user shop_name
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { shop_name: true },
+    });
+
+    // 4. Invoice number range
+    const invoiceRange = await prisma.purchaseInvoice.aggregate({
+      where,
+      _min: { invoiceNo: true },
+      _max: { invoiceNo: true },
+    });
+
+    // 5. Distinct areas from supplier addresses (naive extraction)
+    const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
+      where,
+      select: { supplier: { select: { address: true } } },
+      distinct: ["supplierId"],
+    });
+    const areas = [
+      ...new Set(
+        suppliersWithAddress
+          .map((s) => s.supplier?.address?.split(",").pop()?.trim())
+          .filter((city) => city && city.length > 0),
+      ),
+    ];
+
+    // 6. Fetch all items with product (including unit) and batch
+    const items = await prisma.purchaseInvoiceItem.findMany({
+      where: { purchaseInvoice: where },
+      include: {
+        product: {
+          select: {
+            id: true,
+            productCode: true,
+            description: true,
+            unit: { select: { name: true } }, // get unit name
+          },
+        },
+        batch: { select: { mrp: true } },
+      },
+    });
+
+    // 7. Aggregate by productId
+    const productMap = new Map();
+
+    for (const item of items) {
+      const pid = item.productId;
+      if (!productMap.has(pid)) {
+        productMap.set(pid, {
+          productCode: item.product.productCode,
+          description: item.product.description,
+          unitName: item.product.unit?.name || null,
+          totalRate: 0,
+          rateCount: 0,
+          totalMrp: 0,
+          mrpCount: 0,
+          totalUnits: 0,
+          totalMqty: 0,
+          totalUnit:0,
+          totalFQty: 0,
+          totalDQty: 0,
+          totalFinalAmount: 0,
+        });
+      }
+      const agg = productMap.get(pid);
+      agg.totalRate += item.rate;
+      agg.rateCount += 1;
+      if (item.batch?.mrp) {
+        agg.totalMrp += item.batch.mrp;
+        agg.mrpCount += 1;
+      }
+      agg.totalUnits += item.aQty;
+      agg.totalMqty += item.mQty || 0;
+      agg.totalUnit += item.unit || 0;
+      agg.totalFQty += item.fQty || 0;
+      agg.totalDQty += item.DQty || 0;
+      agg.totalFinalAmount += item.finalAmount || 0;
+    }
+
+    // Convert map to array and compute averages
+    let products = Array.from(productMap, ([, data]) => ({
+      productCode: data.productCode,
+      description: data.description,
+      totalUnit: data.totalUnit,
+      purchaseRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
+      mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
+      totalUnitsPurchased: data.totalUnits,
+      totalMqty: data.totalMqty,
+      fQty: data.totalFQty,
+      dQty: data.totalDQty,
+      finalAmount: data.totalFinalAmount,
+    }));
+
+    // Sort by productCode
+    products.sort((a, b) => a.productCode.localeCompare(b.productCode));
+
+    // Paginate
+    const totalProducts = products.length;
+    const totalPages = Math.ceil(totalProducts / validatedLimit);
+    const paginatedProducts = products.slice(skip, skip + validatedLimit);
+
+    // Build response
+    const filters = {
+      fromDate: fromDate || null,
+      toDate: toDate || null,
+      invoiceNo: invoiceNo || null,
+      supplierId: supplierId ? parseInt(supplierId) : null,
+      productGroupId: productGroupId ? parseInt(productGroupId) : null,
+      page: validatedPage,
+      limit: validatedLimit,
+    };
+
+    return sendResponse(
+      res,
+      true,
+      {
+        filters,
+        dateRange: {
+          from: dateRange._min?.invoiceDate || null,
+          to: dateRange._max?.invoiceDate || null,
+        },
+        user: { shop_name: user?.shop_name || null },
+        invoiceRange: {
+          start: invoiceRange._min?.invoiceNo || null,
+          end: invoiceRange._max?.invoiceNo || null,
+        },
+        areas,
+        products: paginatedProducts,
+        pagination: {
+          total: totalProducts,
+          totalPages,
+          currentPage: validatedPage,
+          limit: validatedLimit,
+          hasNextPage: validatedPage < totalPages,
+          hasPrevPage: validatedPage > 1,
+        },
+      },
+      "Purchase summary report data retrieved successfully",
+      statusType.OK,
+    );
+  },
+);
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
 // --------------------------------------------------------------------
 export const purchaseController = {
@@ -912,4 +1118,5 @@ export const purchaseController = {
   deletePurchase,
   getActivePurchases,
   getPurchaseReport,
+  getPurchaseSummaryReport_pdf_data, // new function
 };

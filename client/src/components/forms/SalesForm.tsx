@@ -76,6 +76,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+
 // ----------------------------------------------------------------------
 // Types & Interfaces
 // ----------------------------------------------------------------------
@@ -91,7 +92,7 @@ interface ProductWithFactors {
 }
 
 // ----------------------------------------------------------------------
-// Updated Schema – single scheme, fQty, finalAmount
+// Updated Schema – added "unit"
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -111,6 +112,7 @@ const salesSchema = z.object({
         rate: z.coerce.number().min(0, "Rate must be positive"),
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
+        unit: z.coerce.number().min(0, "Unit must be positive").default(0), // NEW
         fQty: z.coerce.number().min(0).default(0), // free quantity
         DQty: z.coerce.number().min(0).default(0), // damaged quantity
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
@@ -122,10 +124,7 @@ const salesSchema = z.object({
         taxAmount: z.coerce.number().min(0, "Tax amount must be positive"),
         schPercent: z.coerce.number().min(0).max(100).default(0),
         schAmount: z.coerce.number().min(0).default(0),
-        // --------------------------------------------------------------
-        // batchId is now required – must be a positive number
         batchId: z.coerce.number().min(1, "Batch is required"),
-        // --------------------------------------------------------------
         batchOpeningStock: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
@@ -157,7 +156,7 @@ interface SalesFormModalProps {
 }
 
 // ----------------------------------------------------------------------
-// Initial Values
+// Initial Values – added unit
 // ----------------------------------------------------------------------
 const defaultValues: SalesFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
@@ -289,6 +288,7 @@ export default function SalesForm({
           rate: item.rate ?? 0,
           aQty: item.aQty ?? 0,
           mQty: item.mQty ?? 0,
+          unit: item.unit ?? 0, // NEW – map existing unit or default 0
           fQty: item.fQty ?? 0,
           DQty: item.DQty ?? 0,
           totalAmount: item.totalAmount ?? 0,
@@ -298,7 +298,6 @@ export default function SalesForm({
           taxAmount: item.taxAmount ?? 0,
           schPercent: item.schPercent ?? 0,
           schAmount: item.schAmount ?? 0,
-          // batchId is mapped (may be undefined if not present, but required now)
           batchId: item.batchId ?? undefined,
           batchOpeningStock: item.batch?.openingStock ?? undefined,
           cartonPack,
@@ -376,18 +375,22 @@ export default function SalesForm({
       : "Select product";
   };
 
-  // mQty = aQty / cartonPack
+  // mQty = floor(aQty / cartonPack)
   const calculateMQty = (aQty: number, cartonPack: number = 1): number => {
     if (!cartonPack) return 0;
-    return aQty / cartonPack;
+    return Math.floor(aQty / cartonPack);
   };
 
-  // Total cartons = sum of (aQty / cartonPack) for all items
-  const totalCartons = items.reduce(
-    (sum, item) => sum + (item.cartonPack ? item.aQty / item.cartonPack : 0),
-    0,
-  );
+  // unit = aQty % cartonPack (remainder)
+  const calculateUnit = (aQty: number, cartonPack: number = 1): number => {
+    if (!cartonPack) return 0;
+    return aQty % cartonPack;
+  };
+
+  // Totals
+  const totalCartons = items.reduce((sum, item) => sum + item.mQty, 0);
   const totalAQty = items.reduce((sum, item) => sum + (item.aQty || 0), 0);
+  const totalUnits = items.reduce((sum, item) => sum + (item.unit || 0), 0); // NEW
 
   // --------------------------------------------------------------------
   // Item handlers
@@ -442,12 +445,14 @@ export default function SalesForm({
       updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
 
-      // Recalculate mQty when aQty changes – use product's cartonPack if available
+      // Recalculate mQty and unit when aQty changes – use product's cartonPack if available
       if (field === "aQty") {
         const product = findProduct(item.productId);
         if (product) {
-          updatedItems[index].mQty = calculateMQty(aQty, product.cartonPack);
-          // Also ensure cartonPack is set to the product's value
+          const mQty = calculateMQty(aQty, product.cartonPack);
+          const unit = calculateUnit(aQty, product.cartonPack);
+          updatedItems[index].mQty = mQty;
+          updatedItems[index].unit = unit;
           updatedItems[index].cartonPack = product.cartonPack;
         }
       }
@@ -469,7 +474,7 @@ export default function SalesForm({
   };
 
   // --------------------------------------------------------------------
-  // Batch selection – now fully populates the item
+  // Batch selection – now sets unit
   // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
@@ -487,6 +492,7 @@ export default function SalesForm({
       const taxRate = product?.gstRate || 5; // fallback to 5 if not set
 
       const mQty = calculateMQty(aQty, cartonPack);
+      const unit = calculateUnit(aQty, cartonPack); // NEW
       const rate = batch.saleRate ?? 0;
       const schPercent = 0; // default, user can change later
       const totalAmount = rate * aQty;
@@ -503,6 +509,7 @@ export default function SalesForm({
         rate,
         aQty,
         mQty,
+        unit, // NEW
         totalAmount,
         taxRate,
         taxAmount,
@@ -511,14 +518,14 @@ export default function SalesForm({
         finalAmount,
         cartonPack,
         conversionFactor,
-        batchId: batch.id, // <-- batchId set here
+        batchId: batch.id,
         batchOpeningStock: batch.openingStock,
       };
 
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${productCode}`, {
-        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
+        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit} | Stock: ${batch.openingStock}`,
       });
 
       setPendingBatchSelection(null);
@@ -567,6 +574,7 @@ export default function SalesForm({
       rate: 0,
       aQty: 0,
       mQty: 0,
+      unit: 0, // NEW
       fQty: 0,
       DQty: 0,
       totalAmount: 0,
@@ -575,8 +583,7 @@ export default function SalesForm({
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
-      // batchId is omitted – it will be set only after batch selection
-      // @ts-ignore – we'll set batchId via handleBatchSelect
+      // @ts-ignore – batchId will be set later
       batchId: undefined,
       batchOpeningStock: 0,
       cartonPack: 0,
@@ -636,7 +643,7 @@ export default function SalesForm({
     editingSales && editingSales.status !== "Pending" ? true : false;
 
   // --------------------------------------------------------------------
-  // Render (unchanged except for the hidden fields)
+  // Render – added Unit column and updated summary
   // --------------------------------------------------------------------
   return (
     <>
@@ -677,7 +684,6 @@ export default function SalesForm({
                   Invoice Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {/* ... (all header fields remain the same) ... */}
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
@@ -1083,7 +1089,7 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Products Table Section – updated with new columns */}
+              {/* Products Table Section – added Unit column */}
               <div className="border-t pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
@@ -1123,6 +1129,8 @@ export default function SalesForm({
                         <TableHead className="font-semibold">
                           M. Qty *
                         </TableHead>
+                        <TableHead className="font-semibold">Unit *</TableHead>{" "}
+                        {/* NEW column */}
                         <TableHead className="font-semibold">Amount</TableHead>
                         <TableHead className="font-semibold">Sch%</TableHead>
                         <TableHead className="font-semibold">Sch amt</TableHead>
@@ -1141,7 +1149,7 @@ export default function SalesForm({
                         {items.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={13}
+                              colSpan={14} // increased colSpan for new column
                               className="text-center py-8 text-muted-foreground"
                             >
                               No products added.{" "}
@@ -1327,7 +1335,21 @@ export default function SalesForm({
                                   <Input
                                     type="number"
                                     step="1"
-                                    value={item.mQty.toFixed(2) ?? 0}
+                                    value={item.mQty.toFixed(0) ?? 0}
+                                    readOnly
+                                    disabled
+                                    className="w-20 bg-muted cursor-not-allowed"
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* Unit - DISABLED (NEW) */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.unit.toFixed(0) ?? 0}
                                     readOnly
                                     disabled
                                     className="w-20 bg-muted cursor-not-allowed"
@@ -1357,7 +1379,7 @@ export default function SalesForm({
                               </TableCell>
 
                               {/* Sch% */}
-                              <TableCell>
+                              <TableCell className="max-w-16">
                                 <div className="relative">
                                   <Input
                                     type="number"
@@ -1370,7 +1392,7 @@ export default function SalesForm({
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    className="w-20 pl-6"
+                                    className="w-14 pl-6"
                                     disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -1385,7 +1407,7 @@ export default function SalesForm({
                               </TableCell>
 
                               {/* Tax Rate */}
-                              <TableCell>
+                              <TableCell className="max-w-16">
                                 <div className="relative">
                                   <Input
                                     type="number"
@@ -1398,7 +1420,7 @@ export default function SalesForm({
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    className="w-20 pl-6"
+                                    className="w-14 pl-6"
                                     disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -1458,13 +1480,13 @@ export default function SalesForm({
                     </TableBody>
                   </Table>
                   <div className="p-2 text-xs text-muted-foreground border-t">
-                    * M Qty = A Qty / Carton Pack (auto‑calculated, cannot be
-                    edited).
+                    * M Qty = floor(A Qty / Carton Pack), Unit = A Qty % Carton
+                    Pack (both auto‑calculated, cannot be edited).
                   </div>
                 </div>
               </div>
 
-              {/* Summary Section – updated */}
+              {/* Summary Section – Box/Unit Ratio now shows total units */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
@@ -1539,7 +1561,7 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Box/Unit Ratio (new) */}
+                        {/* Box/Unit Ratio – now displays total units */}
                         <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-2">
@@ -1550,14 +1572,14 @@ export default function SalesForm({
                           <div className="relative">
                             <Input
                               type="text"
-                              value={`${totalCartons.toFixed(2)} / ${totalAQty.toFixed(2)}`}
+                              value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`} // Show total units
                               readOnly
                               disabled
                               className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
                             />
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-1">
-                            (Total Cartons / Total A Qty)
+                            Total units (remainder)
                           </p>
                         </div>
 

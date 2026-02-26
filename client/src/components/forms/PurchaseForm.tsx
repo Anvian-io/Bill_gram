@@ -68,7 +68,13 @@ import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { gst_details } from "@/store/dropdown_data/gst_details";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 // ----------------------------------------------------------------------
 // Types & Interfaces
 // ----------------------------------------------------------------------
@@ -100,6 +106,7 @@ const purchaseSchema = z.object({
         rate: z.coerce.number().min(0, "Rate must be positive"),
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
+        unit: z.coerce.number().min(0, "Unit must be positive").default(0),
         fQty: z.coerce.number().min(0).default(0), // free quantity
         DQty: z.coerce.number().min(0).default(0), // free quantity
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
@@ -256,6 +263,7 @@ export default function PurchaseForm({
           rate: item.rate,
           aQty: item.aQty,
           mQty: item.mQty ?? 0,
+          unit: item.unit ?? 0,
           fQty: item.fQty ?? 0,
           DQty: item.DQty ?? 0,
           totalAmount: item.totalAmount,
@@ -306,19 +314,22 @@ export default function PurchaseForm({
       : "Select product";
   };
 
-  // mQty = aQty / cartonPack
+  // mQty = floor(aQty / cartonPack)
   const calculateMQty = (aQty: number, cartonPack: number = 1): number => {
     if (!cartonPack) return 0;
-    return aQty / cartonPack;
+    return Math.floor(aQty / cartonPack);
   };
 
-  // Total cartons = sum of (aQty / cartonPack) for all items
-  const totalCartons = items.reduce(
-    (sum, item) => sum + item.mQty,
-    0,
-  );
+  // unit = aQty % cartonPack (remainder)
+  const calculateUnit = (aQty: number, cartonPack: number = 1): number => {
+    if (!cartonPack) return 0;
+    return aQty % cartonPack;
+  };
+
+  // Totals
+  const totalCartons = items.reduce((sum, item) => sum + item.mQty, 0);
   const totalAQty = items.reduce((sum, item) => sum + item.aQty, 0);
-  // const boxUnitRatio = totalAQty > 0 ? totalCartons / totalAQty : 0;
+  const totalUnits = items.reduce((sum, item) => sum + (item.unit || 0), 0);
 
   // --------------------------------------------------------------------
   // Item handlers
@@ -357,10 +368,12 @@ export default function PurchaseForm({
       updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
 
-      // Recalculate mQty when aQty changes (needs cartonPack from product)
+      // Recalculate mQty and unit when aQty changes (needs cartonPack from product)
       if (field === "aQty" && product) {
         const mQty = calculateMQty(aQty, product.cartonPack);
+        const unit = calculateUnit(aQty, product.cartonPack);
         updatedItems[index].mQty = parseFloat(mQty.toFixed(2));
+        updatedItems[index].unit = parseFloat(unit.toFixed(2));
       }
     }
 
@@ -390,6 +403,7 @@ export default function PurchaseForm({
       const product = findProduct(item.productId);
 
       const mQty = calculateMQty(aQty, cartonPack);
+      const unit = calculateUnit(aQty, cartonPack);
       const rate = batch.purchaseRate;
       const taxRate = item.taxRate;
       const schPercent = item.schPercent;
@@ -405,6 +419,7 @@ export default function PurchaseForm({
         rate: rate,
         aQty: aQty,
         mQty: mQty,
+        unit: unit,
         totalAmount: totalAmount,
         taxAmount: taxAmount,
         schAmount: schAmount,
@@ -414,7 +429,7 @@ export default function PurchaseForm({
       form.setValue("items", updatedItems);
 
       toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty}`,
+        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit}`,
       });
 
       setPendingBatchSelection(null);
@@ -463,6 +478,7 @@ export default function PurchaseForm({
       rate: 0,
       aQty: 0,
       mQty: 0,
+      unit: 0,
       fQty: 0,
       DQty: 0,
       totalAmount: 0,
@@ -499,6 +515,7 @@ export default function PurchaseForm({
       const updatedItems = [...items];
       const aQty = 1;
       const mQty = calculateMQty(aQty, product.cartonPack);
+      const unit = calculateUnit(aQty, product.cartonPack);
       const rate = product.pricePerPcs || 0;
       const taxRate = product.gstRate || 5;
       const schPercent = 0;
@@ -517,6 +534,7 @@ export default function PurchaseForm({
         taxRate,
         aQty,
         mQty,
+        unit,
         fQty: 0,
         DQty: 0,
         totalAmount,
@@ -809,6 +827,8 @@ export default function PurchaseForm({
                         <TableHead className="font-semibold">
                           M. Qty *
                         </TableHead>
+                        <TableHead className="font-semibold">Unit</TableHead>{" "}
+                        {/* New column */}
                         <TableHead className="font-semibold">Amount</TableHead>
                         <TableHead className="font-semibold">Sch%</TableHead>
                         <TableHead className="font-semibold">Sch amt</TableHead>
@@ -827,7 +847,7 @@ export default function PurchaseForm({
                         {items.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={13}
+                              colSpan={14} // Increased colSpan for new column
                               className="text-center py-8 text-muted-foreground"
                             >
                               No products added.{" "}
@@ -847,7 +867,7 @@ export default function PurchaseForm({
                               <TableCell>{index + 1}</TableCell>
 
                               {/* Product Selection */}
-                              <TableCell>
+                              <TableCell className="">
                                 {isReadOnly ? (
                                   <div className="py-2 px-3 text-sm">
                                     {item.productCode} – {item.description}
@@ -1021,6 +1041,20 @@ export default function PurchaseForm({
                                 </div>
                               </TableCell>
 
+                              {/* Unit - DISABLED (new) */}
+                              <TableCell>
+                                <div className="relative">
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={item.unit}
+                                    readOnly
+                                    disabled
+                                    className="w-20 bg-muted cursor-not-allowed"
+                                  />
+                                </div>
+                              </TableCell>
+
                               {/* Amount (inclusive) */}
                               <TableCell>
                                 <div className="relative">
@@ -1043,8 +1077,8 @@ export default function PurchaseForm({
                               </TableCell>
 
                               {/* Sch% */}
-                              <TableCell>
-                                <div className="relative">
+                              <TableCell className="max-w-16">
+                                <div className="relative ">
                                   <Input
                                     type="number"
                                     step="0.01"
@@ -1056,7 +1090,7 @@ export default function PurchaseForm({
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    className="w-20 pl-6"
+                                    className="w-14 pl-5"
                                     disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -1071,7 +1105,7 @@ export default function PurchaseForm({
                               </TableCell>
 
                               {/* Tax Rate */}
-                              <TableCell>
+                              <TableCell className="max-w-16">
                                 <div className="relative">
                                   <Input
                                     type="number"
@@ -1084,7 +1118,7 @@ export default function PurchaseForm({
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    className="w-20 pl-6"
+                                    className="w-14 pl-6"
                                     disabled={isSubmitting || isReadOnly}
                                   />
                                   <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -1144,13 +1178,13 @@ export default function PurchaseForm({
                     </TableBody>
                   </Table>
                   <div className="p-2 text-xs text-muted-foreground border-t">
-                    * M Qty = A Qty / Carton Pack (auto‑calculated, cannot be
-                    edited).
+                    * M Qty = floor(A Qty / Carton Pack), Unit = A Qty % Carton
+                    Pack (both auto‑calculated, cannot be edited).
                   </div>
                 </div>
               </div>
 
-              {/* Summary Section – Box/Unit replaced with ratio, scheme1 removed */}
+              {/* Summary Section – Box/Unit Ratio now shows total units */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
@@ -1225,7 +1259,7 @@ export default function PurchaseForm({
                           />
                         </div>
 
-                        {/* Box/Unit – now a read‑only ratio */}
+                        {/* Box/Unit Ratio – now displays total units */}
                         <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-2">
@@ -1236,14 +1270,14 @@ export default function PurchaseForm({
                           <div className="relative">
                             <Input
                               type="text"
-                              value={`${totalCartons.toFixed(2)} / ${totalAQty.toFixed(2)}`}
+                              value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`} // Show total units
                               readOnly
                               disabled
                               className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
                             />
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-1">
-                            (Total Cartons / Total A Qty)
+                            Total units (remainder)
                           </p>
                         </div>
 

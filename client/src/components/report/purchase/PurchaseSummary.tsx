@@ -61,7 +61,9 @@ import {
 import type {
   PurchaseReportItem,
   PurchaseReportFilters,
+  PurchaseSummaryReportData,
 } from "@/types/purchase";
+import PurchaseSummaryPreviewModal from "./PurchaseSummaryPreviewModal";
 
 // ----------------------------------------------------------------------
 // Date Utilities (same as Purchase component)
@@ -101,6 +103,12 @@ export default function PurchaseSummary() {
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [summaryData, setSummaryData] =
+    useState<PurchaseSummaryReportData | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [summaryLimit] = useState(10); // can be same as itemsPerPage or independent
 
   // Filters state
   const [filters, setFilters] = useState<PurchaseReportFilters>({
@@ -301,6 +309,41 @@ export default function PurchaseSummary() {
     }
   };
 
+  // Function to fetch summary data
+  const fetchSummary = async (page: number = 1) => {
+    setSummaryLoading(true);
+    try {
+      const data = await purchaseService.getPurchaseSummaryReportPDFData(
+        {
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          invoiceNo: filters.invoiceNo || undefined,
+          supplierId: filters.supplierId,
+          productGroupId: filters.productGroupId,
+        },
+        page,
+        summaryLimit,
+      );
+      setSummaryData(data);
+      setSummaryPage(data.pagination.currentPage);
+    } catch (error) {
+      toast.error("Failed to load summary");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Handler for Show button
+  const handleShowSummary = async () => {
+    await fetchSummary(1);
+    setIsPreviewOpen(true);
+  };
+
+  // Handler for modal page change
+  const handleSummaryPageChange = (newPage: number) => {
+    fetchSummary(newPage);
+  };
+
   // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
@@ -342,26 +385,13 @@ export default function PurchaseSummary() {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={handleExportPDF}
-                  disabled={isLoading || reportData.length === 0}
+                  onClick={handleShowSummary}
+                  disabled={
+                    isLoading || reportData.length === 0 || summaryLoading
+                  }
                 >
                   <FileText className="h-4 w-4" />
-                  PDF
-                </Button>
-              </motion.div>
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleExportExcel}
-                  disabled={isLoading || reportData.length === 0}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Excel
+                  {summaryLoading ? "Loading..." : "Show"}
                 </Button>
               </motion.div>
               <motion.div
@@ -889,6 +919,13 @@ export default function PurchaseSummary() {
           </motion.div>
         )}
       </div>
+      <PurchaseSummaryPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={summaryData}
+        onPageChange={handleSummaryPageChange}
+        currentPage={summaryPage}
+      />
     </motion.div>
   );
 }

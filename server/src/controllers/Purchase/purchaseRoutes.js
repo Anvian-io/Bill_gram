@@ -14,6 +14,11 @@ router.get("/active", purchaseController.getActivePurchases);
 
 router.get("/report", purchaseController.getPurchaseReport);
 
+router.get(
+  "/summary-pdf-data",
+  purchaseController.getPurchaseSummaryReport_pdf_data,
+);
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 

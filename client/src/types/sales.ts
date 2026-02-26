@@ -58,6 +58,7 @@ export interface SalesFormData {
     rate: number;
     aQty: number;
     mQty: number;
+    unit: number;
     fQty: number; // free quantity
     DQty: number; // free quantity
     totalAmount: number;
@@ -92,6 +93,7 @@ export interface SalesItem {
   rate: number;
   aQty: number;
   mQty: number;
+  unit: number;
   fQty: number;
   DQty: number;
   totalAmount: number;

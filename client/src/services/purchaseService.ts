@@ -7,6 +7,7 @@ import type {
   PurchaseFilters,
   PurchaseReportFilters,
   PurchaseReportItem,
+  PurchaseSummaryReportData,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -149,6 +150,38 @@ export const purchaseService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching purchase report:", message);
+      throw new Error(message);
+    }
+  },
+  async getPurchaseSummaryReportPDFData(
+    filters?: PurchaseReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PurchaseSummaryReportData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.productGroupId)
+          params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<PurchaseSummaryReportData>
+      >(`/purchases/summary-pdf-data?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase summary:", message);
       throw new Error(message);
     }
   },
