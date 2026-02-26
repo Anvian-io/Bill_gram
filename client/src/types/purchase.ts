@@ -232,3 +232,50 @@ export interface PurchaseSummaryReportData {
     finalAmount: number;
   };
 }
+
+// ========== Purchase Register Types ==========
+export interface PurchaseRegisterInvoice {
+  invoiceNo: string;
+  invoiceDate: string; // ISO string
+  supplierName: string;
+  amount: number;
+  cash: string; // always empty string
+  cheque: string; // always empty string
+  balance: number; // same as amount
+}
+
+export interface PurchaseRegisterData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    supplierId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  invoices: PurchaseRegisterInvoice[];
+  totals: {
+    totalAmount: number;
+    totalInvoices: number;
+  };
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}

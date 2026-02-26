@@ -18,6 +18,7 @@ router.get(
   "/summary-pdf-data",
   purchaseController.getPurchaseSummaryReport_pdf_data,
 );
+router.get("/register-pdf-data", purchaseController.getPurchaseRegisterPDFData);
 
 // New route for PDF download
 router.get(
@@ -29,7 +30,6 @@ router.get(
   "/purchase-summary-report/excel",
   purchaseController.downloadPurchaseSummaryReportExcel,
 );
-
 
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);

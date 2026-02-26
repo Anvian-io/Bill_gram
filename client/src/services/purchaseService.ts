@@ -8,6 +8,7 @@ import type {
   PurchaseReportFilters,
   PurchaseReportItem,
   PurchaseSummaryReportData,
+  PurchaseRegisterData,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -240,6 +241,90 @@ export const purchaseService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading purchase summary Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // ========== Purchase Register ==========
+  async getPurchaseRegisterPDFData(
+    filters?: PurchaseReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PurchaseRegisterData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+      }
+
+      const response = await apiClient.get<ApiResponse<PurchaseRegisterData>>(
+        `/purchases/register-pdf-data?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase register data:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseRegisterPDF(
+    filters?: PurchaseReportFilters,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+      }
+      const response = await apiClient.get(
+        `/purchases/purchase-register-report/pdf?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase register PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseRegisterExcel(
+    filters?: PurchaseReportFilters,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+      }
+      const response = await apiClient.get(
+        `/purchases/purchase-register-report/excel?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase register Excel:", message);
       throw new Error(message);
     }
   },

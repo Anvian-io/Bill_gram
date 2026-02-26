@@ -1772,6 +1772,163 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
     res.end();
   },
 );
+
+// --------------------------------------------------------------------
+// 9. GET PURCHASE REGISTER PDF DATA
+// --------------------------------------------------------------------
+export const getPurchaseRegisterPDFData = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    supplierId,
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // 1. Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+
+  // 2. Get actual min and max invoice dates
+  const dateRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas (from supplier addresses)
+  const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
+    where,
+    select: { supplier: { select: { address: true } } },
+    distinct: ["supplierId"],
+  });
+  const areas = [
+    ...new Set(
+      suppliersWithAddress
+        .map((s) => s.supplier?.address?.split(",").pop()?.trim())
+        .filter((city) => city && city.length > 0),
+    ),
+  ];
+
+  // 6. Get paginated invoices with supplier name
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    skip,
+    take: validatedLimit,
+    orderBy: { invoiceDate: "desc" },
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      supplier: {
+        select: { name: true },
+      },
+    },
+  });
+
+  // 7. Compute total finalAmount for all filtered invoices (overall total)
+  const totalAggregate = await prisma.purchaseInvoice.aggregate({
+    where,
+    _sum: { finalAmount: true },
+    _count: true,
+  });
+  const overallTotalAmount = totalAggregate._sum.finalAmount || 0;
+  const totalInvoices = totalAggregate._count;
+
+  // 8. Format response data
+  const formattedInvoices = invoices.map((inv) => ({
+    invoiceNo: inv.invoiceNo,
+    invoiceDate: inv.invoiceDate,
+    supplierName: inv.supplier.name,
+    amount: inv.finalAmount,
+    cash: "", // always empty
+    cheque: "", // always empty
+    balance: inv.finalAmount, // same as amount
+  }));
+
+  const totalPages = Math.ceil(totalInvoices / validatedLimit);
+
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        supplierId: supplierId ? parseInt(supplierId) : null,
+        page: validatedPage,
+        limit: validatedLimit,
+      },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      user: { shop_name: user?.shop_name || null },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      invoices: formattedInvoices,
+      totals: {
+        totalAmount: overallTotalAmount,
+        totalInvoices,
+      },
+      pagination: {
+        total: totalInvoices,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Purchase register data retrieved successfully",
+    statusType.OK,
+  );
+});
 // --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
 // --------------------------------------------------------------------
@@ -1786,4 +1943,5 @@ export const purchaseController = {
   getPurchaseSummaryReport_pdf_data, // new function
   downloadPurchaseSummaryReportPDF,
   downloadPurchaseSummaryReportExcel,
+  getPurchaseRegisterPDFData,
 };
