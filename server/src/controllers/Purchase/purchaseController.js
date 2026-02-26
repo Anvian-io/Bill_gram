@@ -928,7 +928,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
     );
     const skip = (validatedPage - 1) * validatedLimit;
 
-    // 1. Build WHERE clause for invoices (same as getPurchaseReport)
+    // 1. Build WHERE clause for invoices
     const andConditions = [{ deleted: false }];
 
     if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
@@ -956,7 +956,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
     }
     const where = { AND: andConditions };
 
-    // 2. Get actual min and max invoice dates from the filtered invoices
+    // 2. Get actual min and max invoice dates
     const dateRange = await prisma.purchaseInvoice.aggregate({
       where,
       _min: { invoiceDate: true },
@@ -976,7 +976,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
       _max: { invoiceNo: true },
     });
 
-    // 5. Distinct areas from supplier addresses (naive extraction)
+    // 5. Distinct areas
     const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
       where,
       select: { supplier: { select: { address: true } } },
@@ -990,7 +990,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
       ),
     ];
 
-    // 6. Fetch all items with product (including unit) and batch
+    // 6. Fetch all items with product and batch
     const items = await prisma.purchaseInvoiceItem.findMany({
       where: { purchaseInvoice: where },
       include: {
@@ -999,7 +999,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
             id: true,
             productCode: true,
             description: true,
-            unit: { select: { name: true } }, // get unit name
+            unit: { select: { name: true } },
           },
         },
         batch: { select: { mrp: true } },
@@ -1022,7 +1022,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
           mrpCount: 0,
           totalUnits: 0,
           totalMqty: 0,
-          totalUnit:0,
+          totalUnit: 0,
           totalFQty: 0,
           totalDQty: 0,
           totalFinalAmount: 0,
@@ -1043,8 +1043,8 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
       agg.totalFinalAmount += item.finalAmount || 0;
     }
 
-    // Convert map to array and compute averages
-    let products = Array.from(productMap, ([, data]) => ({
+    // 8. Convert map to array (all products)
+    let allProducts = Array.from(productMap, ([, data]) => ({
       productCode: data.productCode,
       description: data.description,
       totalUnit: data.totalUnit,
@@ -1057,30 +1057,49 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
       finalAmount: data.totalFinalAmount,
     }));
 
-    // Sort by productCode
-    products.sort((a, b) => a.productCode.localeCompare(b.productCode));
+    // 9. Compute totals for all products
+    const totals = allProducts.reduce(
+      (acc, product) => {
+        acc.totalMqty += product.totalMqty;
+        acc.totalUnit += product.totalUnit;
+        acc.totalUnitsPurchased += product.totalUnitsPurchased;
+        acc.fQty += product.fQty;
+        acc.rep += 0; // REP is always 0 in current data model
+        acc.dQty += product.dQty;
+        acc.finalAmount += product.finalAmount;
+        return acc;
+      },
+      {
+        totalMqty: 0,
+        totalUnit: 0,
+        totalUnitsPurchased: 0,
+        fQty: 0,
+        rep: 0,
+        dQty: 0,
+        finalAmount: 0,
+      },
+    );
 
-    // Paginate
-    const totalProducts = products.length;
+    // 10. Sort and paginate
+    allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
+    const totalProducts = allProducts.length;
     const totalPages = Math.ceil(totalProducts / validatedLimit);
-    const paginatedProducts = products.slice(skip, skip + validatedLimit);
+    const paginatedProducts = allProducts.slice(skip, skip + validatedLimit);
 
-    // Build response
-    const filters = {
-      fromDate: fromDate || null,
-      toDate: toDate || null,
-      invoiceNo: invoiceNo || null,
-      supplierId: supplierId ? parseInt(supplierId) : null,
-      productGroupId: productGroupId ? parseInt(productGroupId) : null,
-      page: validatedPage,
-      limit: validatedLimit,
-    };
-
+    // 11. Build response
     return sendResponse(
       res,
       true,
       {
-        filters,
+        filters: {
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          invoiceNo: invoiceNo || null,
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          productGroupId: productGroupId ? parseInt(productGroupId) : null,
+          page: validatedPage,
+          limit: validatedLimit,
+        },
         dateRange: {
           from: dateRange._min?.invoiceDate || null,
           to: dateRange._max?.invoiceDate || null,
@@ -1092,6 +1111,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
         },
         areas,
         products: paginatedProducts,
+        totals, // <-- new totals field
         pagination: {
           total: totalProducts,
           totalPages,

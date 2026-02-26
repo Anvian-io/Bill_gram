@@ -199,7 +199,8 @@ export interface PurchaseSummaryReportData {
     page: number;
     limit: number;
   };
-  dateRange: {          // <-- NEW: actual min/max invoice dates from the data
+  dateRange: {
+    // <-- NEW: actual min/max invoice dates from the data
     from: string | null;
     to: string | null;
   };
@@ -219,5 +220,15 @@ export interface PurchaseSummaryReportData {
     limit: number;
     hasNextPage: boolean;
     hasPrevPage: boolean;
+  };
+  totals: {
+    // new field
+    totalMqty: number;
+    totalUnit: number;
+    totalUnitsPurchased: number;
+    fQty: number;
+    rep: number;
+    dQty: number;
+    finalAmount: number;
   };
 }

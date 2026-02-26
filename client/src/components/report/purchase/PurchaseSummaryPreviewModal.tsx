@@ -14,10 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
-import { Download, X } from "lucide-react";
+import { Download } from "lucide-react";
 import { motion } from "framer-motion";
 import type { PurchaseSummaryReportData } from "@/types/purchase";
 
@@ -42,7 +41,8 @@ export default function PurchaseSummaryPreviewModal({
 }: PurchaseSummaryPreviewModalProps) {
   if (!data) return null;
 
-  const { user, dateRange, invoiceRange, areas, products, pagination } = data;
+  const { user, dateRange, invoiceRange, areas, products, pagination, totals } =
+    data;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -57,42 +57,12 @@ export default function PurchaseSummaryPreviewModal({
     if (onGeneratePDF) onGeneratePDF();
   };
 
-  // Compute totals for numeric columns
-  const totals = React.useMemo(() => {
-    if (!products.length) return null;
-    return products.reduce(
-      (acc, product) => {
-        acc.totalMqty += product.totalMqty || 0;
-        acc.totalUnit += product.totalUnit || 0;
-        acc.totalUnitsPurchased += product.totalUnitsPurchased || 0;
-        acc.fQty += product.fQty || 0;
-        acc.rep += (product as any).rep || 0; // fallback if rep exists, else 0
-        acc.dQty += product.dQty || 0;
-        acc.finalAmount += product.finalAmount || 0;
-        return acc;
-      },
-      {
-        totalMqty: 0,
-        totalUnit: 0,
-        totalUnitsPurchased: 0,
-        fQty: 0,
-        rep: 0,
-        dQty: 0,
-        finalAmount: 0,
-      },
-    );
-  }, [products]);
-
-  // Footer content
-  const footerLeft = user.shop_name || "Your Shop";
-  const footerRight =
-    pagination.totalPages === 1
-      ? `Total: ${pagination.total} products`
-      : `${currentPage} of ${pagination.totalPages}`;
+  // Determine if we are on the last page
+  const isLastPage = currentPage === pagination.totalPages;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[90vw] max-h-[95vh] p-0 flex flex-col">
+      <DialogContent className="min-w-[65vw] max-h-[95vh] p-0 flex flex-col">
         <DialogHeader className="relative p-6 pb-2 flex items-center justify-center">
           <DialogTitle className="text-2xl font-bold">
             Purchase Summary
@@ -122,8 +92,9 @@ export default function PurchaseSummaryPreviewModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="px-6 pb-6 flex-1 max-h-[calc(90vh-140px)]">
-          {/* Header Info */}
+        {/* Main content area */}
+        <div className="flex flex-col flex-1 overflow-hidden px-6">
+          {/* Header Info (static) */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -157,15 +128,10 @@ export default function PurchaseSummaryPreviewModal({
             </div>
           </motion.div>
 
-          {/* Product Table */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-md border overflow-hidden"
-          >
+          {/* Table container with scrollable body */}
+          <div className="flex-1 overflow-auto rounded-md border max-h-88 mb-2">
             <Table>
-              <TableHeader className="bg-secondary/50">
+              <TableHeader className="bg-secondary/50 sticky top-0 z-10">
                 <TableRow>
                   <TableHead className="w-12 text-center">Sr.</TableHead>
                   <TableHead>P.Code</TableHead>
@@ -204,9 +170,12 @@ export default function PurchaseSummaryPreviewModal({
                           <TableCell className="font-mono">
                             {product.productCode}
                           </TableCell>
-                          <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-xs">
-                            <div className="text-sm text-muted-foreground h-6 overflow-y-auto prose prose-sm text-wrap w-100">
-                              {product.description || "No description"}
+                          <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-[160px]">
+                            <div className="text-sm text-muted-foreground h-6 overflow-y-auto prose prose-sm text-wrap w-[155px]">
+                              {product.description
+                                ? product.description.slice(0, 20) +
+                                  (product.description.length > 20 ? "…" : "")
+                                : "No description"}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -237,11 +206,11 @@ export default function PurchaseSummaryPreviewModal({
                         </TableRow>
                       );
                     })}
-                    {/* Total Row */}
-                    {totals && (
+                    {/* Total Row – only on the last page */}
+                    {isLastPage && totals && (
                       <TableRow className="font-bold border-t-2 bg-secondary/10">
                         <TableCell className="text-center">
-                          Total {products.length}
+                          Total {pagination.total} products
                         </TableCell>
                         <TableCell></TableCell>
                         <TableCell></TableCell>
@@ -274,15 +243,25 @@ export default function PurchaseSummaryPreviewModal({
                 )}
               </TableBody>
             </Table>
-          </motion.div>
+          </div>
 
-          {/* Pagination (if multiple pages) */}
+          {/* Footer (shop name + page info) – shown on all pages except the last one */}
+          {pagination.totalPages > 1 && !isLastPage && (
+            <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
+              <span>{user.shop_name || "Your Shop"}</span>
+              <span>
+                Page {currentPage} of {pagination.totalPages}
+              </span>
+            </div>
+          )}
+
+          {/* Pagination – only if more than one page */}
           {pagination.totalPages > 1 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mt-4"
+              className=""
             >
               <CustomPagination
                 currentPage={currentPage}
@@ -291,12 +270,6 @@ export default function PurchaseSummaryPreviewModal({
               />
             </motion.div>
           )}
-        </ScrollArea>
-
-        {/* Footer */}
-        <div className="border-t p-4 flex justify-between items-center text-sm text-muted-foreground bg-secondary/10">
-          <span>{footerLeft}</span>
-          <span>{footerRight}</span>
         </div>
       </DialogContent>
     </Dialog>
