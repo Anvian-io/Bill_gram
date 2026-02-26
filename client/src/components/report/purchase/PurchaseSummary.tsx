@@ -925,6 +925,7 @@ export default function PurchaseSummary() {
         data={summaryData}
         onPageChange={handleSummaryPageChange}
         currentPage={summaryPage}
+        filters={filters} // pass filters for internal download
       />
     </motion.div>
   );

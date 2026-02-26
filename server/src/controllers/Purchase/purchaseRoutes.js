@@ -19,6 +19,12 @@ router.get(
   purchaseController.getPurchaseSummaryReport_pdf_data,
 );
 
+// New route for PDF download
+router.get(
+  "/purchase-summary-report/pdf",
+  purchaseController.downloadPurchaseSummaryReportPDF,
+);
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 

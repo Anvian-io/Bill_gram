@@ -33,7 +33,7 @@ model User {
   Notification    Notification[]
   purchaseInvoices PurchaseInvoice[]
   salesInvoices    SalesInvoice[]
-
+  PurchaseReportHistory    PurchaseReportHistory[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
 
@@ -589,4 +589,16 @@ model SalesHistory {
   @@index([salesInvoiceId])
   @@index([invoiceDate])
   @@map("sales_histories")
+}
+
+model PurchaseReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  template  String   // name of the EJS template file used (e.g., 'purchaseSummaryReport.ejs')
+  data      String   // stores the complete report data used for generation
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("purchase_report_histories")
 }

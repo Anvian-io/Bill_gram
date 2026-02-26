@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Purchase Summary Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      color: #000;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      margin: 0;
+    }
+    .info-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 5px;
+      font-size: 14px;
+    }
+    .details {
+      font-size: 13px;
+      margin: 15px 0;
+    }
+    .details span.label {
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    th {
+      background: #f2f2f2;
+      font-weight: 600;
+      padding: 8px 5px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    td {
+      padding: 6px 5px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    td.right {
+      text-align: right;
+    }
+    tbody tr:last-child td {
+      font-weight: bold;
+      background: #f9f9f9;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    /* Ensure table header repeats on every page */
+    thead {
+      display: table-header-group;
+    }
+    tfoot {
+      display: table-footer-group;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Purchase Summary</h1>
+    <div class="info-row">
+      <span>Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %></span>
+    </div>
+  </div>
+
+  <div class="details">
+    <div><span class="label">INVOICE :</span> <%= invoiceRange.start || '—' %> to <%= invoiceRange.end || '—' %></div>
+    <div><span class="label">AREA :</span> <%= areas.length ? areas.join(', ') : 'All' %></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sr.</th>
+        <th>P.Code</th>
+        <th>Description</th>
+        <th>MRP</th>
+        <th>BOX</th>
+        <th>UNIT</th>
+        <th>QTY</th>
+        <th>FR</th>
+        <th>REP</th>
+        <th>DMG</th>
+        <th>RATE</th>
+        <th>AMT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% products.forEach((product, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= product.productCode %></td>
+          <td><%= product.description ? (product.description.length > 20 ? product.description.substring(0,20)+'…' : product.description) : 'No description' %></td>
+          <td class="right"><%= product.mrp.toFixed(2) %></td>
+          <td class="right"><%= product.totalMqty %></td>
+          <td class="right"><%= product.totalUnit %></td>
+          <td class="right"><%= product.totalUnitsPurchased %></td>
+          <td class="right"><%= product.fQty %></td>
+          <td class="right">0</td>
+          <td class="right"><%= product.dQty %></td>
+          <td class="right"><%= product.purchaseRate.toFixed(2) %></td>
+          <td class="right">₹<%= product.finalAmount.toFixed(2) %></td>
+        </tr>
+      <% }) %>
+      <!-- Totals row -->
+      <% if (totals) { %>
+        <tr style="font-weight: bold; background: #f0f0f0;">
+          <td colspan="4">Total <%= products.length %> products</td>
+          <td class="right"><%= totals.totalMqty %></td>
+          <td class="right"><%= totals.totalUnit %></td>
+          <td class="right"><%= totals.totalUnitsPurchased %></td>
+          <td class="right"><%= totals.fQty %></td>
+          <td class="right"><%= totals.rep %></td>
+          <td class="right"><%= totals.dQty %></td>
+          <td></td>
+          <td class="right">₹<%= totals.finalAmount.toFixed(2) %></td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <!-- This footer will be replaced by Puppeteer's header/footer templates, 
+       but we keep a static version as fallback -->
+  <div class="footer">
+    <span><%= user.shop_name || 'Your Shop' %></span>
+    <!-- Page numbers will be injected by Puppeteer, so we leave this placeholder -->
+    <span class="pageNumbers"></span>
+  </div>
+</body>
+</html>

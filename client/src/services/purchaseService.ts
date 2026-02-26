@@ -185,4 +185,34 @@ export const purchaseService = {
       throw new Error(message);
     }
   },
+
+  // NEW: Download Purchase Summary PDF
+  async downloadPurchaseSummaryPDF(
+    filters?: PurchaseReportFilters,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.productGroupId)
+          params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/purchases/purchase-summary-report/pdf?${params.toString()}`,
+        { responseType: "blob" }, // important for binary data
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase summary PDF:", message);
+      throw new Error(message);
+    }
+  },
 };

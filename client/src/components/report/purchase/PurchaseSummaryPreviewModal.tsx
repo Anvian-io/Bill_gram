@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,12 @@ import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { motion } from "framer-motion";
-import type { PurchaseSummaryReportData } from "@/types/purchase";
+import type {
+  PurchaseSummaryReportData,
+  PurchaseReportFilters,
+} from "@/types/purchase";
+import { purchaseService } from "@/services/purchaseService";
+import { toast } from "sonner";
 
 interface PurchaseSummaryPreviewModalProps {
   isOpen: boolean;
@@ -27,7 +32,8 @@ interface PurchaseSummaryPreviewModalProps {
   onPageChange: (page: number) => void;
   currentPage: number;
   isGeneratingPDF?: boolean;
-  onGeneratePDF?: () => void;
+  onGeneratePDF?: () => void; // optional external handler
+  filters?: PurchaseReportFilters; // needed for internal PDF download
 }
 
 export default function PurchaseSummaryPreviewModal({
@@ -38,7 +44,10 @@ export default function PurchaseSummaryPreviewModal({
   currentPage,
   isGeneratingPDF = false,
   onGeneratePDF,
+  filters,
 }: PurchaseSummaryPreviewModalProps) {
+  const [internalGenerating, setInternalGenerating] = useState(false);
+
   if (!data) return null;
 
   const { user, dateRange, invoiceRange, areas, products, pagination, totals } =
@@ -53,8 +62,38 @@ export default function PurchaseSummaryPreviewModal({
     }
   };
 
-  const handlePDFClick = () => {
-    if (onGeneratePDF) onGeneratePDF();
+  const handlePDFClick = async () => {
+    // If external handler is provided, use it
+    if (onGeneratePDF) {
+      onGeneratePDF();
+      return;
+    }
+
+    // Otherwise use internal download with filters
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate PDF.");
+      return;
+    }
+
+    setInternalGenerating(true);
+    try {
+      const blob = await purchaseService.downloadPurchaseSummaryPDF(filters);
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `purchase-summary-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download PDF");
+      console.error(error);
+    } finally {
+      setInternalGenerating(false);
+    }
   };
 
   // Determine if we are on the last page
@@ -73,10 +112,10 @@ export default function PurchaseSummaryPreviewModal({
               variant="outline"
               size="sm"
               onClick={handlePDFClick}
-              disabled={isGeneratingPDF}
+              disabled={isGeneratingPDF || internalGenerating}
             >
               <Download className="h-4 w-4 mr-2" />
-              {isGeneratingPDF ? "Generating..." : "PDF"}
+              {isGeneratingPDF || internalGenerating ? "Generating..." : "PDF"}
             </Button>
           </div>
           <div className="absolute right-32 flex items-center gap-2 mr-8">
@@ -84,15 +123,17 @@ export default function PurchaseSummaryPreviewModal({
               variant="outline"
               size="sm"
               onClick={handlePDFClick}
-              disabled={isGeneratingPDF}
+              disabled={isGeneratingPDF || internalGenerating}
             >
               <Download className="h-4 w-4 mr-2" />
-              {isGeneratingPDF ? "Generating..." : "Excel"}
+              {isGeneratingPDF || internalGenerating
+                ? "Generating..."
+                : "Excel"}
             </Button>
           </div>
         </DialogHeader>
 
-        {/* Main content area */}
+        {/* Main content area (unchanged) */}
         <div className="flex flex-col flex-1 overflow-hidden px-6">
           {/* Header Info (static) */}
           <motion.div
@@ -128,7 +169,7 @@ export default function PurchaseSummaryPreviewModal({
             </div>
           </motion.div>
 
-          {/* Table container with scrollable body */}
+          {/* Table container (unchanged) */}
           <div className="flex-1 overflow-auto rounded-md border max-h-88 mb-2">
             <Table>
               <TableHeader className="bg-secondary/50 sticky top-0 z-10">
@@ -245,7 +286,7 @@ export default function PurchaseSummaryPreviewModal({
             </Table>
           </div>
 
-          {/* Footer (shop name + page info) – shown on all pages except the last one */}
+          {/* Footer (unchanged) */}
           {pagination.totalPages > 1 && !isLastPage && (
             <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
               <span>{user.shop_name || "Your Shop"}</span>
@@ -255,7 +296,7 @@ export default function PurchaseSummaryPreviewModal({
             </div>
           )}
 
-          {/* Pagination – only if more than one page */}
+          {/* Pagination (unchanged) */}
           {pagination.totalPages > 1 && (
             <motion.div
               initial={{ opacity: 0 }}
