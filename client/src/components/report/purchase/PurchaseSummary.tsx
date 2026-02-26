@@ -102,7 +102,7 @@ export default function PurchaseSummary() {
   const [isLoading, setIsLoading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [summaryData, setSummaryData] =
     useState<PurchaseSummaryReportData | null>(null);
