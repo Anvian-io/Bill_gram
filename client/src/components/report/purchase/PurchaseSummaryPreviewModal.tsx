@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type {
   PurchaseSummaryReportData,
@@ -31,9 +31,9 @@ interface PurchaseSummaryPreviewModalProps {
   data: PurchaseSummaryReportData | null;
   onPageChange: (page: number) => void;
   currentPage: number;
-  isGeneratingPDF?: boolean;
+  isGeneratingPDF?: boolean; // external prop if parent handles PDF generation
   onGeneratePDF?: () => void; // optional external handler
-  filters?: PurchaseReportFilters; // needed for internal PDF download
+  filters?: PurchaseReportFilters; // needed for internal downloads
 }
 
 export default function PurchaseSummaryPreviewModal({
@@ -46,7 +46,8 @@ export default function PurchaseSummaryPreviewModal({
   onGeneratePDF,
   filters,
 }: PurchaseSummaryPreviewModalProps) {
-  const [internalGenerating, setInternalGenerating] = useState(false);
+  const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
+  const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
 
   if (!data) return null;
 
@@ -75,10 +76,9 @@ export default function PurchaseSummaryPreviewModal({
       return;
     }
 
-    setInternalGenerating(true);
+    setInternalGeneratingPDF(true);
     try {
       const blob = await purchaseService.downloadPurchaseSummaryPDF(filters);
-      // Create a download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -92,7 +92,33 @@ export default function PurchaseSummaryPreviewModal({
       toast.error("Failed to download PDF");
       console.error(error);
     } finally {
-      setInternalGenerating(false);
+      setInternalGeneratingPDF(false);
+    }
+  };
+
+  const handleExcelClick = async () => {
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate Excel.");
+      return;
+    }
+
+    setInternalGeneratingExcel(true);
+    try {
+      const blob = await purchaseService.downloadPurchaseSummaryExcel(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `purchase-summary-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download Excel");
+      console.error(error);
+    } finally {
+      setInternalGeneratingExcel(false);
     }
   };
 
@@ -107,28 +133,45 @@ export default function PurchaseSummaryPreviewModal({
             Purchase Summary
           </DialogTitle>
 
+          {/* PDF button */}
           <div className="absolute right-6 flex items-center gap-2 mr-8">
             <Button
               variant="outline"
               size="sm"
               onClick={handlePDFClick}
-              disabled={isGeneratingPDF || internalGenerating}
+              disabled={
+                isGeneratingPDF ||
+                internalGeneratingPDF ||
+                internalGeneratingExcel
+              }
             >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingPDF || internalGenerating ? "Generating..." : "PDF"}
+              {internalGeneratingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {internalGeneratingPDF ? "Generating..." : "PDF"}
             </Button>
           </div>
+
+          {/* Excel button */}
           <div className="absolute right-32 flex items-center gap-2 mr-8">
             <Button
               variant="outline"
               size="sm"
-              onClick={handlePDFClick}
-              disabled={isGeneratingPDF || internalGenerating}
+              onClick={handleExcelClick}
+              disabled={
+                internalGeneratingExcel ||
+                internalGeneratingPDF ||
+                isGeneratingPDF
+              }
             >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingPDF || internalGenerating
-                ? "Generating..."
-                : "Excel"}
+              {internalGeneratingExcel ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {internalGeneratingExcel ? "Generating..." : "Excel"}
             </Button>
           </div>
         </DialogHeader>

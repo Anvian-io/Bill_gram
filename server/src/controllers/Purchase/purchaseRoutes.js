@@ -25,6 +25,12 @@ router.get(
   purchaseController.downloadPurchaseSummaryReportPDF,
 );
 
+router.get(
+  "/purchase-summary-report/excel",
+  purchaseController.downloadPurchaseSummaryReportExcel,
+);
+
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 
