@@ -1,22 +1,31 @@
 import React, { useState, useRef, useEffect } from "react";
 import PurchaseSummary from "./PurchaseSummary";
 import PurchaseRegister from "./PurchaseRegister";
+import PurchaseHistory from "./PurchaseHistory";
 
 export default function Purchase() {
-  const [activeTab, setActiveTab] = useState<"summary" | "register">("summary");
+  const [activeTab, setActiveTab] = useState<
+    "summary" | "register" | "history"
+  >("summary");
 
   // Refs for measuring tab positions
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const summaryTabRef = useRef<HTMLButtonElement>(null);
   const registerTabRef = useRef<HTMLButtonElement>(null);
+  const historyTabRef = useRef<HTMLButtonElement>(null); // New ref
 
   // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
   // Update indicator position based on active tab
   const updateIndicator = () => {
-    const activeRef = activeTab === "summary" ? summaryTabRef : registerTabRef;
-    if (activeRef.current && tabsContainerRef.current) {
+    // Determine which ref is active
+    let activeRef;
+    if (activeTab === "summary") activeRef = summaryTabRef;
+    else if (activeTab === "register") activeRef = registerTabRef;
+    else activeRef = historyTabRef;
+
+    if (activeRef?.current && tabsContainerRef.current) {
       const containerRect = tabsContainerRef.current.getBoundingClientRect();
       const activeRect = activeRef.current.getBoundingClientRect();
 
@@ -86,11 +95,30 @@ export default function Purchase() {
             >
               Purchase Register
             </button>
+
+            {/* History Tab (new) */}
+            <button
+              ref={historyTabRef}
+              onClick={() => setActiveTab("history")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none
+                ${
+                  activeTab === "history"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              Purchase History
+            </button>
           </div>
 
           {/* Tab content */}
           <div>
-            {activeTab === "summary" ? <PurchaseSummary /> : <PurchaseRegister />}
+            {activeTab === "summary" && <PurchaseSummary />}
+            {activeTab === "register" && <PurchaseRegister />}
+            {activeTab === "history" && <PurchaseHistory />}
           </div>
         </div>
       </div>

@@ -9,6 +9,8 @@ import type {
   PurchaseReportItem,
   PurchaseSummaryReportData,
   PurchaseRegisterData,
+  PurchaseReportHistoryFilters,
+  PaginatedHistoryResponse,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -328,4 +330,57 @@ export const purchaseService = {
       throw new Error(message);
     }
   },
+
+  // ========== Purchase Report History ==========
+async getPurchaseReportHistory(
+  filters?: PurchaseReportHistoryFilters
+): Promise<PaginatedHistoryResponse> {
+  try {
+    const params = new URLSearchParams();
+    if (filters) {
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      if (filters.search) params.append('search', filters.search);
+      if (filters.fileName) params.append('fileName', filters.fileName);
+      if (filters.type) params.append('type', filters.type);
+      if (filters.sortBy) params.append('sortBy', filters.sortBy);
+      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+    }
+
+    const response = await apiClient.get<ApiResponse<PaginatedHistoryResponse>>(
+      `/purchases/history/all?${params.toString()}`
+    );
+    return response.data.data;
+  } catch (error) {
+    const message = getApiErrorMessage(error);
+    console.error('Error fetching purchase report history:', message);
+    throw new Error(message);
+  }
+},
+
+async downloadPurchaseReportHistoryPDF(id: number): Promise<Blob> {
+  try {
+    const response = await apiClient.get(`/purchases/history/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  } catch (error) {
+    const message = getApiErrorMessage(error);
+    console.error('Error downloading history PDF:', message);
+    throw new Error(message);
+  }
+},
+
+async downloadPurchaseReportHistoryExcel(id: number): Promise<Blob> {
+  try {
+    const response = await apiClient.get(`/purchases/history/${id}/excel`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  } catch (error) {
+    const message = getApiErrorMessage(error);
+    console.error('Error downloading history Excel:', message);
+    throw new Error(message);
+  }
+},
 };

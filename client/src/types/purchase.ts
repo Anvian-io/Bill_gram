@@ -279,3 +279,41 @@ export interface PurchaseRegisterData {
     hasPrevPage: boolean;
   };
 }
+
+// ========== Purchase Report History Types ==========
+export interface PurchaseReportHistory {
+  id: number;
+  userId: number;
+  type: 'pdf' | 'excel';
+  template: string;
+  fileName: string | null;
+  data: string; // JSON string of the report data
+  createdAt: string;
+  user?: {
+    id: number;
+    username: string;
+    shop_name: string | null;
+  };
+}
+
+export interface PurchaseReportHistoryFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  fileName?: string;
+  type?: 'pdf' | 'excel' | '';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedHistoryResponse {
+  histories: PurchaseReportHistory[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}

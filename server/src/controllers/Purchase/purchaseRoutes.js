@@ -31,6 +31,11 @@ router.get(
   purchaseController.downloadPurchaseSummaryReportExcel,
 );
 
+// New history routes
+router.get("/history/all", purchaseController.getAllPurchaseReportHistory);
+router.get("/history/:id/pdf", purchaseController.downloadPurchaseReportHistoryPDF);
+router.get("/history/:id/excel", purchaseController.downloadPurchaseReportHistoryExcel);
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 
