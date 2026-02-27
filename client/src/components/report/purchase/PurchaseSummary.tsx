@@ -235,13 +235,13 @@ export default function PurchaseSummary() {
       const data = await purchaseService.getPurchaseReport(apiFilters);
       setReportData(data);
       setCurrentPage(1); // reset to first page on new data
-      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching purchase report:", error);
       toast.error("Failed to fetch purchase report");
       setReportData([]);
     } finally {
-      // setIsLoading(false);
+      setIsLoading(false);
+      console.log(isLoading,"fewoifhioew")
     }
   };
 
