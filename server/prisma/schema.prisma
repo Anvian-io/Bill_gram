@@ -597,6 +597,7 @@ model PurchaseReportHistory {
   user      User     @relation(fields: [userId], references: [id])
   type      String   // 'pdf' or 'excel'
   template  String   // name of the EJS template file used (e.g., 'purchaseSummaryReport.ejs')
+  fileName  String?  // stored filename, e.g. 'purchase-summary-2025-01-01-2025-01-31.pdf'
   data      String   // stores the complete report data used for generation
   createdAt DateTime @default(now()) @map("created_at")
 

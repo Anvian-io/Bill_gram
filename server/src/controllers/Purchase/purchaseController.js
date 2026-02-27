@@ -11,7 +11,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import ExcelJS from "exceljs";
-
+import { formatDateForFilename } from "../../helper/commonHelper.js";
 /**
  * Helper: Update batch stock
  * @param {PrismaClient} prisma
@@ -795,7 +795,7 @@ export const getPurchaseReport = asyncHandler(async (req, res) => {
   const {
     fromDate,
     toDate,
-    invoiceNo = '',
+    invoiceNo = "",
     supplierId,
     productGroupId,
   } = req.query;
@@ -876,7 +876,7 @@ export const getPurchaseReport = asyncHandler(async (req, res) => {
   const invoices = await prisma.purchaseInvoice.findMany({
     where,
     include,
-    orderBy: { invoiceDate: 'desc' },
+    orderBy: { invoiceDate: "desc" },
   });
 
   // Map to response format
@@ -887,7 +887,7 @@ export const getPurchaseReport = asyncHandler(async (req, res) => {
       // Sum finalAmount of filtered items (items belonging to the product group)
       totalAmount = invoice.items.reduce(
         (sum, item) => sum + (item.finalAmount || 0),
-        0
+        0,
       );
     }
 
@@ -904,8 +904,8 @@ export const getPurchaseReport = asyncHandler(async (req, res) => {
     res,
     true,
     { report: reportData },
-    'Purchase report generated successfully',
-    statusType.OK
+    "Purchase report generated successfully",
+    statusType.OK,
   );
 });
 
@@ -1136,272 +1136,283 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
 // --------------------------------------------------------------------
 // DOWNLOAD PURCHASE SUMMARY REPORT AS PDF (with history save)
 // --------------------------------------------------------------------
-export const downloadPurchaseSummaryReportPDF = asyncHandler(async (req, res) => {
-  const {
-    fromDate,
-    toDate,
-    invoiceNo = "",
-    supplierId,
-    productGroupId,
-  } = req.query;
+export const downloadPurchaseSummaryReportPDF = asyncHandler(
+  async (req, res) => {
+    const {
+      fromDate,
+      toDate,
+      invoiceNo = "",
+      supplierId,
+      productGroupId,
+    } = req.query;
 
-  const prisma = getPrismaOrFail(res);
-  if (!prisma) return;
-  // console.log("hfoiwehofihoi")
-  // 1. Build WHERE clause for invoices (same as preview, but no pagination)
-  const andConditions = [{ deleted: false }];
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
+    // console.log("hfoiwehofihoi")
+    // 1. Build WHERE clause for invoices (same as preview, but no pagination)
+    const andConditions = [{ deleted: false }];
 
-  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
-  if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
-  if (fromDate || toDate) {
-    const dateFilter = {};
-    if (fromDate) {
-      const start = new Date(fromDate);
-      start.setHours(0, 0, 0, 0);
-      dateFilter.gte = start.toISOString();
+    if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+    if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
+    if (fromDate || toDate) {
+      const dateFilter = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.gte = start.toISOString();
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end.toISOString();
+      }
+      andConditions.push({ invoiceDate: dateFilter });
     }
-    if (toDate) {
-      const end = new Date(toDate);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end.toISOString();
+    if (productGroupId) {
+      andConditions.push({
+        items: {
+          some: { product: { productGroupId: parseInt(productGroupId) } },
+        },
+      });
     }
-    andConditions.push({ invoiceDate: dateFilter });
-  }
-  if (productGroupId) {
-    andConditions.push({
-      items: {
-        some: { product: { productGroupId: parseInt(productGroupId) } },
+    const where = { AND: andConditions };
+
+    // 2. Get date ranges
+    const dateRange = await prisma.purchaseInvoice.aggregate({
+      where,
+      _min: { invoiceDate: true },
+      _max: { invoiceDate: true },
+    });
+
+    // 3. Get user shop_name
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { shop_name: true },
+    });
+
+    // 4. Invoice number range
+    const invoiceRange = await prisma.purchaseInvoice.aggregate({
+      where,
+      _min: { invoiceNo: true },
+      _max: { invoiceNo: true },
+    });
+
+    // 5. Distinct areas
+    const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
+      where,
+      select: { supplier: { select: { address: true } } },
+      distinct: ["supplierId"],
+    });
+    const areas = [
+      ...new Set(
+        suppliersWithAddress
+          .map((s) => s.supplier?.address?.split(",").pop()?.trim())
+          .filter((city) => city && city.length > 0),
+      ),
+    ];
+
+    // 6. Fetch all items with product and batch (no pagination)
+    const items = await prisma.purchaseInvoiceItem.findMany({
+      where: { purchaseInvoice: where },
+      include: {
+        product: {
+          select: {
+            id: true,
+            productCode: true,
+            description: true,
+            unit: { select: { name: true } },
+          },
+        },
+        batch: { select: { mrp: true } },
       },
     });
-  }
-  const where = { AND: andConditions };
 
-  // 2. Get date ranges
-  const dateRange = await prisma.purchaseInvoice.aggregate({
-    where,
-    _min: { invoiceDate: true },
-    _max: { invoiceDate: true },
-  });
+    // 7. Aggregate by productId
+    const productMap = new Map();
 
-  // 3. Get user shop_name
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { shop_name: true },
-  });
+    for (const item of items) {
+      const pid = item.productId;
+      if (!productMap.has(pid)) {
+        productMap.set(pid, {
+          productCode: item.product.productCode,
+          description: item.product.description,
+          unitName: item.product.unit?.name || null,
+          totalRate: 0,
+          rateCount: 0,
+          totalMrp: 0,
+          mrpCount: 0,
+          totalUnits: 0,
+          totalMqty: 0,
+          totalUnit: 0,
+          totalFQty: 0,
+          totalDQty: 0,
+          totalFinalAmount: 0,
+        });
+      }
+      const agg = productMap.get(pid);
+      agg.totalRate += item.rate;
+      agg.rateCount += 1;
+      if (item.batch?.mrp) {
+        agg.totalMrp += item.batch.mrp;
+        agg.mrpCount += 1;
+      }
+      agg.totalUnits += item.aQty;
+      agg.totalMqty += item.mQty || 0;
+      agg.totalUnit += item.unit || 0;
+      agg.totalFQty += item.fQty || 0;
+      agg.totalDQty += item.DQty || 0;
+      agg.totalFinalAmount += item.finalAmount || 0;
+    }
 
-  // 4. Invoice number range
-  const invoiceRange = await prisma.purchaseInvoice.aggregate({
-    where,
-    _min: { invoiceNo: true },
-    _max: { invoiceNo: true },
-  });
+    // 8. Convert map to array (all products)
+    let allProducts = Array.from(productMap, ([, data]) => ({
+      productCode: data.productCode,
+      description: data.description,
+      totalUnit: data.totalUnit,
+      purchaseRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
+      mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
+      totalUnitsPurchased: data.totalUnits,
+      totalMqty: data.totalMqty,
+      fQty: data.totalFQty,
+      dQty: data.totalDQty,
+      finalAmount: data.totalFinalAmount,
+    }));
 
-  // 5. Distinct areas
-  const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
-    where,
-    select: { supplier: { select: { address: true } } },
-    distinct: ["supplierId"],
-  });
-  const areas = [
-    ...new Set(
-      suppliersWithAddress
-        .map((s) => s.supplier?.address?.split(",").pop()?.trim())
-        .filter((city) => city && city.length > 0),
-    ),
-  ];
+    // 9. Sort by product code
+    allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
 
-  // 6. Fetch all items with product and batch (no pagination)
-  const items = await prisma.purchaseInvoiceItem.findMany({
-    where: { purchaseInvoice: where },
-    include: {
-      product: {
-        select: {
-          id: true,
-          productCode: true,
-          description: true,
-          unit: { select: { name: true } },
-        },
+    // 10. Compute totals for all products
+    const totals = allProducts.reduce(
+      (acc, product) => {
+        acc.totalMqty += product.totalMqty;
+        acc.totalUnit += product.totalUnit;
+        acc.totalUnitsPurchased += product.totalUnitsPurchased;
+        acc.fQty += product.fQty;
+        acc.rep += 0; // REP is always 0
+        acc.dQty += product.dQty;
+        acc.finalAmount += product.finalAmount;
+        return acc;
       },
-      batch: { select: { mrp: true } },
-    },
-  });
-
-  // 7. Aggregate by productId
-  const productMap = new Map();
-
-  for (const item of items) {
-    const pid = item.productId;
-    if (!productMap.has(pid)) {
-      productMap.set(pid, {
-        productCode: item.product.productCode,
-        description: item.product.description,
-        unitName: item.product.unit?.name || null,
-        totalRate: 0,
-        rateCount: 0,
-        totalMrp: 0,
-        mrpCount: 0,
-        totalUnits: 0,
+      {
         totalMqty: 0,
         totalUnit: 0,
-        totalFQty: 0,
-        totalDQty: 0,
-        totalFinalAmount: 0,
-      });
-    }
-    const agg = productMap.get(pid);
-    agg.totalRate += item.rate;
-    agg.rateCount += 1;
-    if (item.batch?.mrp) {
-      agg.totalMrp += item.batch.mrp;
-      agg.mrpCount += 1;
-    }
-    agg.totalUnits += item.aQty;
-    agg.totalMqty += item.mQty || 0;
-    agg.totalUnit += item.unit || 0;
-    agg.totalFQty += item.fQty || 0;
-    agg.totalDQty += item.DQty || 0;
-    agg.totalFinalAmount += item.finalAmount || 0;
-  }
+        totalUnitsPurchased: 0,
+        fQty: 0,
+        rep: 0,
+        dQty: 0,
+        finalAmount: 0,
+      },
+    );
 
-  // 8. Convert map to array (all products)
-  let allProducts = Array.from(productMap, ([, data]) => ({
-    productCode: data.productCode,
-    description: data.description,
-    totalUnit: data.totalUnit,
-    purchaseRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
-    mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
-    totalUnitsPurchased: data.totalUnits,
-    totalMqty: data.totalMqty,
-    fQty: data.totalFQty,
-    dQty: data.totalDQty,
-    finalAmount: data.totalFinalAmount,
-  }));
+    // 11. Prepare data object for template and history
+    const reportData = {
+      user: { shop_name: user?.shop_name || null },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      products: allProducts,
+      totals,
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        supplierId: supplierId ? parseInt(supplierId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+      },
+    };
 
-  // 9. Sort by product code
-  allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
+    // 12. Render HTML using EJS
+    // const ejs = require('ejs');
+    // const path = require('path');
+    const templateName = "purchaseSummaryReport.ejs"; // store this
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
 
-  // 10. Compute totals for all products
-  const totals = allProducts.reduce(
-    (acc, product) => {
-      acc.totalMqty += product.totalMqty;
-      acc.totalUnit += product.totalUnit;
-      acc.totalUnitsPurchased += product.totalUnitsPurchased;
-      acc.fQty += product.fQty;
-      acc.rep += 0; // REP is always 0
-      acc.dQty += product.dQty;
-      acc.finalAmount += product.finalAmount;
-      return acc;
-    },
-    {
-      totalMqty: 0,
-      totalUnit: 0,
-      totalUnitsPurchased: 0,
-      fQty: 0,
-      rep: 0,
-      dQty: 0,
-      finalAmount: 0,
-    },
-  );
+    const templatePath = path.join(
+      __dirname,
+      "../../views/purchase",
+      templateName,
+    );
 
-  // 11. Prepare data object for template and history
-  const reportData = {
-    user: { shop_name: user?.shop_name || null },
-    dateRange: {
-      from: dateRange._min?.invoiceDate || null,
-      to: dateRange._max?.invoiceDate || null,
-    },
-    invoiceRange: {
-      start: invoiceRange._min?.invoiceNo || null,
-      end: invoiceRange._max?.invoiceNo || null,
-    },
-    areas,
-    products: allProducts,
-    totals,
-    filters: {
-      fromDate: fromDate || null,
-      toDate: toDate || null,
-      invoiceNo: invoiceNo || null,
-      supplierId: supplierId ? parseInt(supplierId) : null,
-      productGroupId: productGroupId ? parseInt(productGroupId) : null,
-    },
-  };
+    // Helper function for date formatting (to match the preview modal)
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return "";
+      }
+    };
 
-  // 12. Render HTML using EJS
-  // const ejs = require('ejs');
-  // const path = require('path');
-  const templateName = "purchaseSummaryReport.ejs"; // store this
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
+    const html = await ejs.renderFile(templatePath, {
+      ...reportData,
+      formatDate,
+    });
 
-  const templatePath = path.join(
-    __dirname,
-    "../../views/purchase",
-    templateName,
-  );
+    // 13. Generate PDF with Puppeteer
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
-  // Helper function for date formatting (to match the preview modal)
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return "";
-    }
-  };
-
-  const html = await ejs.renderFile(templatePath, {
-    ...reportData,
-    formatDate,
-  });
-
-  // 13. Generate PDF with Puppeteer
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
-
-  // Footer template for page numbers and shop name (exactly like the modal)
-  const footerTemplate = `
+    // Footer template for page numbers and shop name (exactly like the modal)
+    const footerTemplate = `
     <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; margin-top: 5px;">
       <span>${user?.shop_name || "Your Shop"}</span>
       <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
     </div>
   `;
-  const headerTemplate = "<div></div>"; // empty header
+    const headerTemplate = "<div></div>"; // empty header
 
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
-    displayHeaderFooter: true,
-    headerTemplate,
-    footerTemplate,
-  });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
+      displayHeaderFooter: true,
+      headerTemplate,
+      footerTemplate,
+    });
 
-  await browser.close();
+    await browser.close();
+ 
+    const fromStr = formatDateForFilename(reportData.dateRange.from);
+    const toStr = formatDateForFilename(reportData.dateRange.to);
+    const pdfFileName = `purchase-summary-${fromStr}_to_${toStr}.pdf`;
+    console.log(pdfFileName,"fioewhiofh")
+    // 14. Save report history with template name
+    await prisma.purchaseReportHistory.create({
+      data: {
+        userId: req.user.id,
+        type: "pdf",
+        template: templateName,
+        fileName: pdfFileName, // <-- new field
+        data: JSON.stringify(reportData), // Prisma automatically converts to JSON
+      },
+    });
 
-  // 14. Save report history with template name
-  await prisma.purchaseReportHistory.create({
-    data: {
-      userId: req.user.id,
-      type: "pdf",
-      template: templateName,
-      data: JSON.stringify(reportData), // Prisma automatically converts to JSON
-    },
-  });
+    // 15. Send PDF as response
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
-  // 15. Send PDF as response
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    'attachment; filename="purchase-summary-report.pdf"',
-  );
-  res.setHeader("Content-Length", pdfBuffer.length); // Add content length
-  return res.end(pdfBuffer, "binary"); // Use res.end with binary encoding instead of res.send
-});
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${pdfFileName}"`,
+    );
+    res.setHeader("Content-Length", pdfBuffer.length); // Add content length
+    return res.end(pdfBuffer, "binary"); // Use res.end with binary encoding instead of res.send
+  },
+);
 
 export const downloadPurchaseSummaryReportExcel = asyncHandler(
   async (req, res) => {
@@ -1748,15 +1759,24 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
       column.width = Math.min(maxLength + 2, 20); // cap at 30
     });
 
+    const fromStr = formatDateForFilename(reportData.dateRange.from);
+    const toStr = formatDateForFilename(reportData.dateRange.to);
+    const excelFileName = `purchase-summary-${fromStr}_to_${toStr}.xlsx`;
+
     // ----- Save history -----
     await prisma.purchaseReportHistory.create({
       data: {
         userId: req.user.id,
         type: "excel",
         template: "purchaseSummaryReport.xlsx", // or just a descriptive string
+        fileName: excelFileName, // <-- new field
         data: JSON.stringify(reportData),
       },
     });
+
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
     // ----- Send Excel file -----
     res.setHeader(
@@ -1765,7 +1785,7 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
     );
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="purchase-summary-report.xlsx"',
+      `attachment; filename="${excelFileName}"`,
     );
 
     await workbook.xlsx.write(res);

@@ -82,7 +82,13 @@ export default function PurchaseSummaryPreviewModal({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `purchase-summary-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `purchase-summary-${fromDate}_to_${toDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -108,7 +114,13 @@ export default function PurchaseSummaryPreviewModal({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `purchase-summary-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `purchase-summary-${fromDate}_to_${toDate}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
