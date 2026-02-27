@@ -150,7 +150,7 @@ export default function Report() {
               >
                 <div className="flex-shrink-0">{item.icon}</div>
 
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                   {!isCollapsed && (
                     <motion.div
                       initial={{ opacity: 0, width: 0 }}
@@ -182,7 +182,7 @@ export default function Report() {
 
       {/* Main Content Area - Fixed layout with internal scrolling */}
       <div className="flex-1 overflow-hidden h-full flex flex-col">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={activeSection}
             variants={contentVariants}
@@ -191,7 +191,6 @@ export default function Report() {
             exit="hidden"
             className="flex-1 flex flex-col min-h-0"
           >
-
             {/* Content - Scrollable area */}
             <div className="flex-1 overflow-y-auto min-h-0 bg-background">
               {activeItem?.component}

@@ -825,7 +825,7 @@ export default function AreaComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"

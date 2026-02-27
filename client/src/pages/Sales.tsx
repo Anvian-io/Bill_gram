@@ -1287,7 +1287,7 @@ export default function Sales() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <AnimatePresence mode="wait">
+                      <AnimatePresence>
                         {isLoading ? (
                           <motion.tr
                             key="loading"

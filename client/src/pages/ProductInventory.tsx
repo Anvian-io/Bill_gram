@@ -1248,7 +1248,7 @@ export default function ProductInventory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <AnimatePresence mode="wait">
+                      <AnimatePresence>
                         {isLoading ? (
                           <motion.tr
                             key="loading"

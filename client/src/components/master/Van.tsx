@@ -811,22 +811,21 @@ export default function VanComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} vans
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.vehicleNo ||
-                filters.model ||
-                filters.area ||
-                filters.city ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} vans
+              {filters.status !== "all" ||
+              filters.name ||
+              filters.vehicleNo ||
+              filters.model ||
+              filters.area ||
+              filters.city ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -871,7 +870,7 @@ export default function VanComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"

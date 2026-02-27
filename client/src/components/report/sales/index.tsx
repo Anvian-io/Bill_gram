@@ -3,10 +3,11 @@ import SalesSummary from "./SalesSummary";
 import SalesRegister from "./SalesRegister";
 import AreaWise from "./AreaWise";
 import SalesmanWise from "./SalesmanWise";
+import SalesHistory from "./salesHistory";
 
 export default function Sales() {
   const [activeTab, setActiveTab] = useState<
-    "summary" | "register" | "areaWise" | "salesmanWise"
+    "summary" | "register" | "areaWise" | "salesmanWise" | "salesHistory"
   >("summary");
 
   // Refs for measuring tab positions
@@ -15,6 +16,7 @@ export default function Sales() {
   const registerTabRef = useRef<HTMLButtonElement>(null);
   const areaWiseTabRef = useRef<HTMLButtonElement>(null);
   const salesmanWiseTabRef = useRef<HTMLButtonElement>(null);
+  const salesHistoryTabRef = useRef<HTMLButtonElement>(null);
 
   // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -30,6 +32,8 @@ export default function Sales() {
         return areaWiseTabRef;
       case "salesmanWise":
         return salesmanWiseTabRef;
+      case "salesHistory":
+        return salesHistoryTabRef;
       default:
         return summaryTabRef;
     }
@@ -141,6 +145,23 @@ export default function Sales() {
             >
               Salesman Wise
             </button>
+
+            {/* Sales History Tab */}
+            <button
+              ref={salesHistoryTabRef}
+              onClick={() => setActiveTab("salesHistory")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none
+                ${
+                  activeTab === "salesHistory"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              Sales History
+            </button>
           </div>
 
           {/* Tab content */}
@@ -149,6 +170,7 @@ export default function Sales() {
             {activeTab === "register" && <SalesRegister />}
             {activeTab === "areaWise" && <AreaWise />}
             {activeTab === "salesmanWise" && <SalesmanWise />}
+            {activeTab === "salesHistory" && <SalesHistory />}
           </div>
         </div>
       </div>

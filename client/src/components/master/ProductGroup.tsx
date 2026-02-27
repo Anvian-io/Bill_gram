@@ -677,7 +677,7 @@ export default function ProductGroup() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"

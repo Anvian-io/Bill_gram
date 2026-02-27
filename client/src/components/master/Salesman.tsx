@@ -784,7 +784,7 @@ export default function SalesmanComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"

@@ -241,7 +241,7 @@ export default function PurchaseSummary() {
       setReportData([]);
     } finally {
       setIsLoading(false);
-      console.log(isLoading,"fewoifhioew")
+      console.log(isLoading, "fewoifhioew");
     }
   };
 
@@ -811,7 +811,7 @@ export default function PurchaseSummary() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"

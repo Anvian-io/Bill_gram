@@ -745,20 +745,19 @@ export default function ProductCompanyComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} companies
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.contactPerson ||
-                filters.email ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} companies
+              {filters.status !== "all" ||
+              filters.name ||
+              filters.contactPerson ||
+              filters.email ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -801,7 +800,7 @@ export default function ProductCompanyComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
