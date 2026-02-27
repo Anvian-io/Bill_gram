@@ -8,10 +8,10 @@ import {
 
 // Create Salesman
 export const createSalesman = asyncHandler(async (req, res) => {
-  const { name, phoneNo, email, area, status = true } = req.body;
+  const { name, phoneNo, email, areaId, status = true } = req.body;
 
   // Validate required fields
-  if (!name || !phoneNo || !area) {
+  if (!name || !phoneNo || !areaId) {
     return sendResponse(
       res,
       false,
@@ -48,7 +48,7 @@ export const createSalesman = asyncHandler(async (req, res) => {
       name,
       phoneNo,
       email: email || "",
-      area,
+      areaId: parseInt(areaId),
       status,
     },
     select: {
@@ -56,7 +56,7 @@ export const createSalesman = asyncHandler(async (req, res) => {
       name: true,
       phoneNo: true,
       email: true,
-      area: true,
+      areaId: true,
       status: true,
       createdAt: true,
     },
@@ -81,7 +81,7 @@ export const getSalesmen = asyncHandler(async (req, res) => {
     limit = 10,
     search = "",
     name = "",
-    area = "",
+    areaId,
     status,
     showDeleted = "false",
     sortBy = "createdAt",
@@ -125,15 +125,13 @@ export const getSalesmen = asyncHandler(async (req, res) => {
   }
 
   // Area filter
-  if (area) {
+  if (areaId) {
     andConditions.push({
-      area: {
-        contains: area,
-      },
+      areaId: parseInt(areaId),
     });
   }
 
-  // Search in name + phoneNo + area + email
+  // Search in name + phoneNo + email
   if (search) {
     andConditions.push({
       OR: [
@@ -144,11 +142,6 @@ export const getSalesmen = asyncHandler(async (req, res) => {
         },
         {
           phoneNo: {
-            contains: search,
-          },
-        },
-        {
-          area: {
             contains: search,
           },
         },
@@ -166,7 +159,7 @@ export const getSalesmen = asyncHandler(async (req, res) => {
   /* ---------------------------
      SORTING
   ----------------------------*/
-  const validSortFields = ["name", "phoneNo", "area", "createdAt"];
+  const validSortFields = ["name", "phoneNo", "areaId", "createdAt"];
   const validSortOrder = ["asc", "desc"];
 
   const orderBy = {
@@ -190,7 +183,7 @@ export const getSalesmen = asyncHandler(async (req, res) => {
         name: true,
         phoneNo: true,
         email: true,
-        area: true,
+        areaId: true,
         status: true,
         deleted: true,
         createdAt: true,
@@ -237,7 +230,7 @@ export const getSalesmanById = asyncHandler(async (req, res) => {
       name: true,
       phoneNo: true,
       email: true,
-      area: true,
+      areaId: true,
       status: true,
       createdAt: true,
     },
@@ -265,7 +258,7 @@ export const getSalesmanById = asyncHandler(async (req, res) => {
 // Update Salesman
 export const updateSalesman = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, phoneNo, email, area, status } = req.body;
+  const { name, phoneNo, email, areaId, status } = req.body;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -320,7 +313,7 @@ export const updateSalesman = asyncHandler(async (req, res) => {
       name: name || existingSalesman.name,
       phoneNo: phoneNo || existingSalesman.phoneNo,
       email: email !== undefined ? email : existingSalesman.email,
-      area: area || existingSalesman.area,
+      areaId: areaId !== undefined ? parseInt(areaId) : existingSalesman.areaId,
       status: status !== undefined ? status : existingSalesman.status,
     },
     select: {
@@ -328,7 +321,7 @@ export const updateSalesman = asyncHandler(async (req, res) => {
       name: true,
       phoneNo: true,
       email: true,
-      area: true,
+      areaId: true,
       status: true,
       createdAt: true,
     },
@@ -423,7 +416,7 @@ export const getActiveSalesmen = asyncHandler(async (req, res) => {
       id: true,
       name: true,
       phoneNo: true,
-      area: true,
+      areaId: true,
     },
     orderBy: {
       name: "asc",

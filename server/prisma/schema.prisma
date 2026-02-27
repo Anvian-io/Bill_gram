@@ -205,7 +205,8 @@ model Salesman {
   name      String
   phoneNo   String
   email     String?
-  area      String
+  areaId    Int?      @map("area_id")
+  area      Area?     @relation(fields: [areaId], references: [id])
   status    Boolean   @default(true)
   deleted   Boolean   @default(false)
   createdAt DateTime  @default(now()) @map("created_at")
@@ -216,6 +217,7 @@ model Salesman {
 
   @@unique([phoneNo])
   @@map("salesmen")
+  @@index([areaId])   // 👈 add index
 }
 
 model Customer {
@@ -226,6 +228,8 @@ model Customer {
   email        String?
   customerType String?  @map("customer_type")
   city         String?
+  areaId       Int?     @map("area_id")
+  area         Area?    @relation(fields: [areaId], references: [id])
   address      String
   pincode      String?
   status       Boolean  @default(true)
@@ -240,6 +244,7 @@ model Customer {
   @@index([companyName])
   @@index([personName])
   @@map("customers")
+  @@index([areaId])   // 👈 add index for performance
 }
 
 model Area {
@@ -257,6 +262,8 @@ model Area {
 
   saleHistories     SalesHistory[]
   salesInvoices     SalesInvoice[]
+  customers   Customer[]
+  salesmen    Salesman[]
 
   @@unique([name])
   @@index([state])

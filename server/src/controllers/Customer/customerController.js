@@ -15,6 +15,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
     email,
     customerType,
     city,
+    areaId,
     address,
     pincode,
     status = true,
@@ -61,6 +62,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
       email: email || "",
       customerType: customerType || null,
       city: city || null,
+      areaId: areaId ? parseInt(areaId) : null,
       address,
       pincode: pincode || null,
       status,
@@ -73,6 +75,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
       status: true,
@@ -103,6 +106,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
     personName = "",
     phoneNo = "",
     city = "",
+    areaId,
     customerType,
     status,
     showDeleted = "false",
@@ -173,6 +177,13 @@ export const getCustomers = asyncHandler(async (req, res) => {
     });
   }
 
+  // Area filter
+  if (areaId) {
+    andConditions.push({
+      areaId: parseInt(areaId),
+    });
+  }
+
   // Customer Type filter
   if (customerType) {
     andConditions.push({
@@ -225,6 +236,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
     "personName",
     "phoneNo",
     "city",
+    "areaId",
     "createdAt",
     "updatedAt",
   ];
@@ -254,6 +266,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
         email: true,
         customerType: true,
         city: true,
+        areaId: true,
         address: true,
         pincode: true,
         status: true,
@@ -306,6 +319,7 @@ export const getCustomerById = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
       status: true,
@@ -343,6 +357,7 @@ export const updateCustomer = asyncHandler(async (req, res) => {
     email,
     customerType,
     city,
+    areaId,
     address,
     pincode,
     status,
@@ -407,6 +422,12 @@ export const updateCustomer = asyncHandler(async (req, res) => {
           ? customerType
           : existingCustomer.customerType,
       city: city !== undefined ? city : existingCustomer.city,
+      areaId:
+        areaId !== undefined
+          ? areaId
+            ? parseInt(areaId)
+            : null
+          : existingCustomer.areaId,
       address: address || existingCustomer.address,
       pincode: pincode !== undefined ? pincode : existingCustomer.pincode,
       status: status !== undefined ? status : existingCustomer.status,
@@ -419,6 +440,7 @@ export const updateCustomer = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
       status: true,
@@ -516,6 +538,7 @@ export const getActiveCustomers = asyncHandler(async (req, res) => {
       companyName: true,
       personName: true,
       phoneNo: true,
+      areaId: true,
     },
     orderBy: {
       companyName: "asc",
