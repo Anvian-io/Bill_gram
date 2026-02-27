@@ -58,10 +58,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import type { SalesReportItem, SalesReportFilters } from "@/types/sales-report";
+import type {
+  SalesReportItem,
+  SalesReportFilters,
+  SalesSummaryReportData,
+} from "@/types/sales-report";
+import SalesSummaryPreviewModal from "./SalesSummaryPreviewModal";
 
 // ----------------------------------------------------------------------
-// Date Utilities (same as Purchase component)
+// Date Utilities
 // ----------------------------------------------------------------------
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
@@ -100,7 +105,14 @@ export default function SalesSummary() {
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState<SalesSummaryReportData | null>(
+    null,
+  );
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [summaryLimit] = useState(10);
 
   // Filters state
   const [filters, setFilters] = useState<SalesReportFilters>({
@@ -123,7 +135,7 @@ export default function SalesSummary() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Hooks – assuming useActiveLists returns all required lists
+  // Hooks
   const { customers, areas, vans, salesmen, groups } = useActiveLists();
 
   // --------------------------------------------------------------------
@@ -243,7 +255,6 @@ export default function SalesSummary() {
       setReportData([]);
     } finally {
       setIsLoading(false);
-      console.log(isLoading,"Fiewohfioew")
     }
   };
 
@@ -252,14 +263,14 @@ export default function SalesSummary() {
   }, [filters]);
 
   // --------------------------------------------------------------------
-  // Export placeholders
+  // Export placeholders (replaced by modal functionality)
   // --------------------------------------------------------------------
   const handleExportPDF = () => {
-    toast.info("PDF export coming soon");
+    toast.info("Use the Show button to preview and download PDF");
   };
 
   const handleExportExcel = () => {
-    toast.info("Excel export coming soon");
+    toast.info("Use the Show button to preview and download Excel");
   };
 
   // --------------------------------------------------------------------
@@ -311,6 +322,44 @@ export default function SalesSummary() {
     }
   };
 
+  // Function to fetch summary data
+  const fetchSummary = async (page: number = 1) => {
+    setSummaryLoading(true);
+    try {
+      const data = await salesService.getSalesSummaryReportPDFData(
+        {
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          invoiceNo: filters.invoiceNo || undefined,
+          customerId: filters.customerId,
+          areaId: filters.areaId,
+          vanId: filters.vanId,
+          salesmanId: filters.salesmanId,
+          productGroupId: filters.productGroupId,
+        },
+        page,
+        summaryLimit,
+      );
+      setSummaryData(data);
+      setSummaryPage(data.pagination.currentPage);
+    } catch (error) {
+      toast.error("Failed to load summary");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Handler for Show button
+  const handleShowSummary = async () => {
+    await fetchSummary(1);
+    setIsPreviewOpen(true);
+  };
+
+  // Handler for modal page change
+  const handleSummaryPageChange = (newPage: number) => {
+    fetchSummary(newPage);
+  };
+
   // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
@@ -342,7 +391,7 @@ export default function SalesSummary() {
               </motion.p>
             </div>
 
-            {/* Export Buttons */}
+            {/* Action Buttons */}
             <motion.div className="flex items-center gap-3">
               <motion.div
                 variants={buttonVariants}
@@ -352,26 +401,13 @@ export default function SalesSummary() {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={handleExportPDF}
-                  disabled={isLoading || reportData.length === 0}
+                  onClick={handleShowSummary}
+                  disabled={
+                    isLoading || reportData.length === 0 || summaryLoading
+                  }
                 >
                   <FileText className="h-4 w-4" />
-                  PDF
-                </Button>
-              </motion.div>
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleExportExcel}
-                  disabled={isLoading || reportData.length === 0}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Excel
+                  {summaryLoading ? "Loading..." : "Show"}
                 </Button>
               </motion.div>
               <motion.div
@@ -1012,7 +1048,7 @@ export default function SalesSummary() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence mode="wait">
                       {isLoading ? (
                         <motion.tr
                           key="loading"
@@ -1122,6 +1158,16 @@ export default function SalesSummary() {
           </motion.div>
         )}
       </div>
+
+      {/* Sales Summary Preview Modal */}
+      <SalesSummaryPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={summaryData}
+        onPageChange={handleSummaryPageChange}
+        currentPage={summaryPage}
+        filters={filters}
+      />
     </motion.div>
   );
 }

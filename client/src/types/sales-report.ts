@@ -54,3 +54,118 @@ export interface SalesmanWiseInvoiceDetail {
   totalAmount: number;
   customerName: string;
 }
+
+// NEW: Sales Summary Report Data (for modal preview)
+export interface SalesSummaryProduct {
+  productCode: string;
+  description: string;
+  totalUnit: number;
+  saleRate: number;
+  mrp: number;
+  totalUnitsSold: number;
+  totalMqty: number;
+  fQty: number;
+  dQty: number;
+  finalAmount: number;
+}
+
+export interface SalesSummaryTotals {
+  totalMqty: number;
+  totalUnit: number;
+  totalUnitsSold: number;
+  fQty: number;
+  rep: number;
+  dQty: number;
+  finalAmount: number;
+}
+
+export interface SalesSummaryPagination {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface SalesSummaryReportData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    customerId: number | null;
+    areaId: number | null;
+    vanId: number | null;
+    salesmanId: number | null;
+    productGroupId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  products: SalesSummaryProduct[];
+  totals: SalesSummaryTotals;
+  pagination: SalesSummaryPagination;
+}
+
+// NEW: Sales Register Report Data (for modal preview)
+export interface SalesRegisterInvoice {
+  invoiceNo: string;
+  invoiceDate: string;
+  customerName: string;
+  amount: number;
+  cash: string; // empty for now
+  cheque: string; // empty for now
+  balance: number; // same as amount
+}
+
+export interface SalesRegisterPagination {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface SalesRegisterReportData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    customerId: number | null;
+    areaId: number | null;
+    vanId: number | null;
+    salesmanId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  invoices: SalesRegisterInvoice[];
+  totals: {
+    totalAmount: number;
+    totalInvoices: number;
+  };
+  pagination: SalesRegisterPagination;
+}

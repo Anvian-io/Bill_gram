@@ -18,6 +18,10 @@ router.get("/report/area-wise", salesController.getAreaWiseSalesReport);
 
 router.get("/report/salesman-wise", salesController.getSalesmanWiseSalesReport);
 
+router.get("/summary-pdf-data", salesController.getSalesSummaryReportPDFData);
+
+router.get("/register-pdf-data", salesController.getSalesRegisterPDFData);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 

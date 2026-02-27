@@ -12,6 +12,8 @@ import type {
   SalesReportFilters,
   AreaWiseReportItem,
   SalesmanWiseReportItem,
+  SalesSummaryReportData,
+  SalesRegisterReportData, // NEW
 } from "@/types/sales-report";
 
 export const salesService = {
@@ -65,7 +67,6 @@ export const salesService = {
 
   async createSale(data: SalesFormData): Promise<Sales> {
     try {
-      // invoiceNo is removed – backend will generate
       const response = await apiClient.post<ApiResponse<{ sales: Sales }>>(
         "/sales",
         data,
@@ -156,6 +157,7 @@ export const salesService = {
       throw new Error(message);
     }
   },
+
   // Get area-wise sales report
   async getAreaWiseReport(
     filters: SalesReportFilters,
@@ -235,6 +237,185 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching salesman-wise sales report:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Get sales summary report PDF data (for modal preview)
+  async getSalesSummaryReportPDFData(
+    filters: SalesReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<SalesSummaryReportData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<ApiResponse<SalesSummaryReportData>>(
+        `/sales/summary-pdf-data?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales summary report data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download sales summary PDF
+  async downloadSalesSummaryPDF(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/sales-summary-report/pdf?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales summary PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download sales summary Excel
+  async downloadSalesSummaryExcel(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/sales-summary-report/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales summary Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Get sales register PDF data (for modal preview)
+  async getSalesRegisterPDFData(
+    filters: SalesReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<SalesRegisterReportData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<SalesRegisterReportData>
+      >(`/sales/register-pdf-data?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales register data:", message);
       throw new Error(message);
     }
   },

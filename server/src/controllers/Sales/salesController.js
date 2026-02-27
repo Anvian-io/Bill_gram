@@ -1351,6 +1351,406 @@ export const getSalesmanWiseSalesReport = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// 10. GET SALES SUMMARY REPORT PDF DATA (equivalent to getPurchaseSummaryReport_pdf_data)
+// --------------------------------------------------------------------
+export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    customerId,
+    areaId,
+    vanId,
+    salesmanId,
+    productGroupId,
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // 1. Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  if (areaId) andConditions.push({ areaId: parseInt(areaId) });
+  if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+  if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
+  
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+  
+  if (productGroupId) {
+    andConditions.push({
+      items: {
+        some: { product: { productGroupId: parseInt(productGroupId) } },
+      },
+    });
+  }
+  
+  const where = { AND: andConditions };
+
+  // 2. Get actual min and max invoice dates
+  const dateRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas
+  const invoicesWithArea = await prisma.salesInvoice.findMany({
+    where,
+    select: { area: { select: { name: true } } },
+    distinct: ["areaId"],
+  });
+  const areas = [
+    ...new Set(
+      invoicesWithArea
+        .map((inv) => inv.area?.name)
+        .filter((name) => name && name.length > 0),
+    ),
+  ];
+
+  // 6. Fetch all items with product and batch
+  const items = await prisma.salesInvoiceItem.findMany({
+    where: { salesInvoice: where },
+    include: {
+      product: {
+        select: {
+          id: true,
+          productCode: true,
+          description: true,
+          unit: { select: { name: true } },
+        },
+      },
+      batch: { select: { mrp: true } },
+    },
+  });
+
+  // 7. Aggregate by productId
+  const productMap = new Map();
+
+  for (const item of items) {
+    const pid = item.productId;
+    if (!productMap.has(pid)) {
+      productMap.set(pid, {
+        productCode: item.product.productCode,
+        description: item.product.description,
+        unitName: item.product.unit?.name || null,
+        totalRate: 0,
+        rateCount: 0,
+        totalMrp: 0,
+        mrpCount: 0,
+        totalUnits: 0,
+        totalMqty: 0,
+        totalUnit: 0,
+        totalFQty: 0,
+        totalDQty: 0,
+        totalFinalAmount: 0,
+      });
+    }
+    const agg = productMap.get(pid);
+    agg.totalRate += item.rate;
+    agg.rateCount += 1;
+    if (item.batch?.mrp) {
+      agg.totalMrp += item.batch.mrp;
+      agg.mrpCount += 1;
+    }
+    agg.totalUnits += item.aQty;
+    agg.totalMqty += item.mQty || 0;
+    agg.totalUnit += item.unit || 0;
+    agg.totalFQty += item.fQty || 0;
+    agg.totalDQty += item.DQty || 0;
+    agg.totalFinalAmount += item.finalAmount || 0;
+  }
+
+  // 8. Convert map to array (all products)
+  let allProducts = Array.from(productMap, ([, data]) => ({
+    productCode: data.productCode,
+    description: data.description,
+    totalUnit: data.totalUnit,
+    saleRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
+    mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
+    totalUnitsSold: data.totalUnits,
+    totalMqty: data.totalMqty,
+    fQty: data.totalFQty,
+    dQty: data.totalDQty,
+    finalAmount: data.totalFinalAmount,
+  }));
+
+  // 9. Compute totals for all products
+  const totals = allProducts.reduce(
+    (acc, product) => {
+      acc.totalMqty += product.totalMqty;
+      acc.totalUnit += product.totalUnit;
+      acc.totalUnitsSold += product.totalUnitsSold;
+      acc.fQty += product.fQty;
+      acc.rep += 0; // REP is always 0 in current data model
+      acc.dQty += product.dQty;
+      acc.finalAmount += product.finalAmount;
+      return acc;
+    },
+    {
+      totalMqty: 0,
+      totalUnit: 0,
+      totalUnitsSold: 0,
+      fQty: 0,
+      rep: 0,
+      dQty: 0,
+      finalAmount: 0,
+    },
+  );
+
+  // 10. Sort and paginate
+  allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
+  const totalProducts = allProducts.length;
+  const totalPages = Math.ceil(totalProducts / validatedLimit);
+  const paginatedProducts = allProducts.slice(skip, skip + validatedLimit);
+
+  // 11. Build response
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        areaId: areaId ? parseInt(areaId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+        page: validatedPage,
+        limit: validatedLimit,
+      },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      user: { shop_name: user?.shop_name || null },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      products: paginatedProducts,
+      totals,
+      pagination: {
+        total: totalProducts,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Sales summary report data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// 13. GET SALES REGISTER PDF DATA (equivalent to getPurchaseRegisterPDFData)
+// --------------------------------------------------------------------
+export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    customerId,
+    areaId,
+    vanId,
+    salesmanId,
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // 1. Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  if (areaId) andConditions.push({ areaId: parseInt(areaId) });
+  if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+  if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
+  
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+
+  // 2. Get actual min and max invoice dates
+  const dateRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas
+  const invoicesWithArea = await prisma.salesInvoice.findMany({
+    where,
+    select: { area: { select: { name: true } } },
+    distinct: ["areaId"],
+  });
+  const areas = [
+    ...new Set(
+      invoicesWithArea
+        .map((inv) => inv.area?.name)
+        .filter((name) => name && name.length > 0),
+    ),
+  ];
+
+  // 6. Get paginated invoices with customer name
+  const invoices = await prisma.salesInvoice.findMany({
+    where,
+    skip,
+    take: validatedLimit,
+    orderBy: { invoiceDate: "desc" },
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      customer: {
+        select: { companyName: true, personName: true },
+      },
+    },
+  });
+
+  // 7. Compute total finalAmount for all filtered invoices (overall total)
+  const totalAggregate = await prisma.salesInvoice.aggregate({
+    where,
+    _sum: { finalAmount: true },
+    _count: true,
+  });
+  const overallTotalAmount = totalAggregate._sum.finalAmount || 0;
+  const totalInvoices = totalAggregate._count;
+
+  // 8. Format response data
+  const formattedInvoices = invoices.map((inv) => ({
+    invoiceNo: inv.invoiceNo,
+    invoiceDate: inv.invoiceDate,
+    customerName: inv.customer?.companyName || inv.customer?.personName || "",
+    amount: inv.finalAmount,
+    cash: "", // always empty
+    cheque: "", // always empty
+    balance: inv.finalAmount, // same as amount
+  }));
+
+  const totalPages = Math.ceil(totalInvoices / validatedLimit);
+
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        areaId: areaId ? parseInt(areaId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        page: validatedPage,
+        limit: validatedLimit,
+      },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      user: { shop_name: user?.shop_name || null },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      invoices: formattedInvoices,
+      totals: {
+        totalAmount: overallTotalAmount,
+        totalInvoices,
+      },
+      pagination: {
+        total: totalInvoices,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Sales register data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object
 // --------------------------------------------------------------------
 export const salesController = {
@@ -1363,4 +1763,8 @@ export const salesController = {
   getSalesReport,
   getAreaWiseSalesReport,
   getSalesmanWiseSalesReport,
+
+  // New report APIs
+  getSalesSummaryReportPDFData,
+  getSalesRegisterPDFData,
 };
