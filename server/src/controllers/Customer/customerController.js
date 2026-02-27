@@ -539,6 +539,7 @@ export const getActiveCustomers = asyncHandler(async (req, res) => {
       personName: true,
       phoneNo: true,
       areaId: true,
+      address:true,
     },
     orderBy: {
       companyName: "asc",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -54,6 +54,7 @@ import {
   Shield,
   Tag,
   MapPin,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -78,7 +79,7 @@ import {
 } from "../ui/select";
 
 // ----------------------------------------------------------------------
-// Types & Interfaces
+// Types & Interfaces (Local to component for clarity)
 // ----------------------------------------------------------------------
 interface ProductWithFactors {
   id: number;
@@ -91,8 +92,25 @@ interface ProductWithFactors {
   productBrand: string;
 }
 
+interface Customer {
+  id: number;
+  companyName: string;
+  personName: string;
+  phoneNo: string;
+  email: string;
+  customerType: string | null;
+  city: string | null;
+  areaId: number | null;
+  address: string;
+  pincode: string | null;
+  status: boolean;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ----------------------------------------------------------------------
-// Updated Schema – added "unit"
+// Updated Schema – added "phoneNo" for UI state only
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -102,6 +120,7 @@ const salesSchema = z.object({
   salesmanId: z.coerce.number().min(1, "Salesman is required"),
   address: z.string().min(1, "Address is required"),
   gstDetails: z.string().optional(),
+  phoneNo: z.string().optional(), // UI Only field
 
   items: z
     .array(
@@ -112,11 +131,11 @@ const salesSchema = z.object({
         rate: z.coerce.number().min(0, "Rate must be positive"),
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
-        unit: z.coerce.number().min(0, "Unit must be positive").default(0), // NEW
-        fQty: z.coerce.number().min(0).default(0), // free quantity
-        DQty: z.coerce.number().min(0).default(0), // damaged quantity
+        unit: z.coerce.number().min(0, "Unit must be positive").default(0),
+        fQty: z.coerce.number().min(0).default(0),
+        DQty: z.coerce.number().min(0).default(0),
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
-        finalAmount: z.coerce.number().min(0, "Final amount must be positive"), // per‑item final
+        finalAmount: z.coerce.number().min(0, "Final amount must be positive"),
         taxRate: z.coerce
           .number()
           .min(0)
@@ -156,7 +175,7 @@ interface SalesFormModalProps {
 }
 
 // ----------------------------------------------------------------------
-// Initial Values – added unit
+// Initial Values
 // ----------------------------------------------------------------------
 const defaultValues: SalesFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
@@ -166,6 +185,7 @@ const defaultValues: SalesFormData = {
   salesmanId: 0,
   address: "",
   gstDetails: "With GST",
+  phoneNo: "",
   items: [],
   remarks: "",
   grossAmount: 0,
@@ -192,6 +212,7 @@ export default function SalesForm({
   // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
@@ -218,30 +239,109 @@ export default function SalesForm({
     defaultValues,
   });
 
-  // Watch items for UI updates
+  // Watch values for filtering logic
   const items = form.watch("items");
   const customerId = form.watch("customerId");
+  const areaId = form.watch("areaId");
 
-  // Helper to find product by id
+  // Filtered Lists based on Area
+  const filteredCustomers = useMemo(() => {
+    if (!areaId) return customers;
+    return customers.filter((c: Customer) => c.areaId === areaId);
+  }, [customers, areaId]);
+
+  const filteredSalesmen = useMemo(() => {
+    if (!areaId) return salesmen;
+    return salesmen.filter((s: any) => s.areaId === areaId);
+  }, [salesmen, areaId]);
+
+  // Helper to find entities
   const findProduct = (productId: number) => {
     return products.find((p) => p.id === productId) as
       | ProductWithFactors
       | undefined;
   };
 
+  const findCustomer = (id: number) =>
+    customers.find((c: Customer) => c.id === id);
+  const findArea = (id: number) => areas.find((a) => a.id === id);
+
   // --------------------------------------------------------------------
-  // Calculations – new logic with per‑item finalAmount
+  // Logic: Handle Phone Number Selection
+  // --------------------------------------------------------------------
+  const handlePhoneSelect = (customerId: number) => {
+    const customer = findCustomer(customerId);
+    console.log(customer, "fewoihfioweh");
+    if (customer) {
+      // Update all related fields including address
+      form.setValue("phoneNo", customer.phoneNo);
+      form.setValue("customerId", customer.id);
+      form.setValue("areaId", customer.areaId || 0);
+      form.setValue("address", customer.address || ""); // ADDRESS AUTO-FILL
+
+      // Reset salesman if current one doesn't belong to new area
+      const currentSalesman = form.getValues("salesmanId");
+      const isSalesmanValid = salesmen.find(
+        (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
+      );
+      if (!isSalesmanValid) {
+        form.setValue("salesmanId", 0);
+      }
+
+      setPhoneOpen(false);
+      toast.success(`Customer ${customer.personName} selected`);
+    }
+  };
+
+  // --------------------------------------------------------------------
+  // Logic: Handle Area Selection
+  // --------------------------------------------------------------------
+  const handleAreaSelect = (selectedAreaId: number) => {
+    form.setValue("areaId", selectedAreaId);
+
+    // Reset dependent fields
+    form.setValue("customerId", 0);
+    form.setValue("salesmanId", 0);
+    form.setValue("phoneNo", "");
+    form.setValue("address", ""); // Clear address when area changes
+
+    setAreaOpen(false);
+  };
+
+  // --------------------------------------------------------------------
+  // Logic: Handle Customer Selection
+  // --------------------------------------------------------------------
+  const handleCustomerSelect = (selectedCustomerId: number) => {
+    const customer = findCustomer(selectedCustomerId);
+    console.log(customer,"fewoihfioweh")
+    if (customer) {
+      form.setValue("customerId", customer.id);
+      form.setValue("areaId", customer.areaId || 0);
+      form.setValue("address", customer.address || ""); // ADDRESS AUTO-FILL
+      form.setValue("phoneNo", customer.phoneNo || "");
+
+      // Reset salesman if invalid for this area
+      const currentSalesman = form.getValues("salesmanId");
+      const isSalesmanValid = salesmen.find(
+        (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
+      );
+      if (!isSalesmanValid) {
+        form.setValue("salesmanId", 0);
+      }
+    }
+    setCustomerOpen(false);
+  };
+
+  // --------------------------------------------------------------------
+  // Calculations
   // --------------------------------------------------------------------
   useEffect(() => {
     const calculateTotals = () => {
-      // Sum of item final amounts (rate * aQty - schAmount)
       const sumItemFinal = items.reduce(
         (sum, item) => sum + (item.finalAmount || 0),
         0,
       );
-      // Sum of item tax amounts
       const tax = items.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
-      // Gross (taxable) = sum of (totalAmount - taxAmount)
       const grossAmount = items.reduce(
         (sum, item) => sum + ((item.totalAmount || 0) - (item.taxAmount || 0)),
         0,
@@ -271,11 +371,10 @@ export default function SalesForm({
     calculateTotals();
   }, [items, form]);
 
-  // Reset form when editingSales changes (map old sch fields to new single sch)
+  // Reset form when editingSales changes
   useEffect(() => {
     if (editingSales) {
       const mappedItems = (editingSales.items ?? []).map((item: any) => {
-        // Try to get cartonPack from product if missing
         let cartonPack = item.cartonPack ?? 0;
         if (!cartonPack && item.productId) {
           const product = findProduct(item.productId);
@@ -288,7 +387,7 @@ export default function SalesForm({
           rate: item.rate ?? 0,
           aQty: item.aQty ?? 0,
           mQty: item.mQty ?? 0,
-          unit: item.unit ?? 0, // NEW – map existing unit or default 0
+          unit: item.unit ?? 0,
           fQty: item.fQty ?? 0,
           DQty: item.DQty ?? 0,
           totalAmount: item.totalAmount ?? 0,
@@ -310,6 +409,7 @@ export default function SalesForm({
           editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
         areaId: editingSales.area?.id ?? 0,
         customerId: editingSales.customer?.id ?? 0,
+        phoneNo: editingSales.customer?.phoneNo ?? "",
         vanId: editingSales.van?.id ?? 0,
         salesmanId: editingSales.salesman?.id ?? 0,
         address: editingSales.address ?? "",
@@ -331,16 +431,6 @@ export default function SalesForm({
     }
   }, [editingSales, form]);
 
-  // Update address when customer changes
-  useEffect(() => {
-    if (customerId) {
-      const customer = customers.find((c) => c.id === customerId);
-      if (customer) {
-        form.setValue("address", customer.address || "");
-      }
-    }
-  }, [customerId, form, customers]);
-
   // --------------------------------------------------------------------
   // Helper functions
   // --------------------------------------------------------------------
@@ -352,7 +442,7 @@ export default function SalesForm({
   };
 
   const findCustomerName = (customerId: number) => {
-    const customer = customers.find((c) => c.id === customerId);
+    const customer = findCustomer(customerId);
     return customer
       ? `${customer.companyName || customer.personName}`
       : "Select customer";
@@ -375,22 +465,19 @@ export default function SalesForm({
       : "Select product";
   };
 
-  // mQty = floor(aQty / cartonPack)
   const calculateMQty = (aQty: number, cartonPack: number = 1): number => {
     if (!cartonPack) return 0;
     return Math.floor(aQty / cartonPack);
   };
 
-  // unit = aQty % cartonPack (remainder)
   const calculateUnit = (aQty: number, cartonPack: number = 1): number => {
     if (!cartonPack) return 0;
     return aQty % cartonPack;
   };
 
-  // Totals
   const totalCartons = items.reduce((sum, item) => sum + item.mQty, 0);
   const totalAQty = items.reduce((sum, item) => sum + (item.aQty || 0), 0);
-  const totalUnits = items.reduce((sum, item) => sum + (item.unit || 0), 0); // NEW
+  const totalUnits = items.reduce((sum, item) => sum + (item.unit || 0), 0);
 
   // --------------------------------------------------------------------
   // Item handlers
@@ -404,7 +491,6 @@ export default function SalesForm({
     const item = updatedItems[index];
     const numValue = value === "" ? 0 : Number(value) || 0;
 
-    // Special validation for aQty: cannot exceed batch opening stock
     if (field === "aQty" && item.batchId && item.batchOpeningStock) {
       if (numValue > item.batchOpeningStock) {
         toast.error(
@@ -413,7 +499,6 @@ export default function SalesForm({
             description: `Maximum A Qty allowed is ${item.batchOpeningStock}`,
           },
         );
-        // Clamp to max stock
         updatedItems[index] = { ...item, aQty: item.batchOpeningStock };
         form.setValue("items", updatedItems);
         return;
@@ -422,7 +507,6 @@ export default function SalesForm({
 
     updatedItems[index] = { ...item, [field]: numValue };
 
-    // Recalculate if rate, aQty, taxRate, or schPercent changes
     if (["rate", "aQty", "taxRate", "schPercent"].includes(field)) {
       const rate = field === "rate" ? numValue : item.rate;
       const aQty = field === "aQty" ? numValue : item.aQty;
@@ -434,7 +518,6 @@ export default function SalesForm({
       const schAmount = totalAmount * (schPercent / 100);
       const finalAmount = totalAmount - schAmount;
 
-      // Validate scheme cannot exceed totalAmount
       if (schAmount > totalAmount) {
         toast.error("Scheme amount cannot exceed total amount for this item");
         return;
@@ -445,7 +528,6 @@ export default function SalesForm({
       updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
 
-      // Recalculate mQty and unit when aQty changes – use product's cartonPack if available
       if (field === "aQty") {
         const product = findProduct(item.productId);
         if (product) {
@@ -458,7 +540,6 @@ export default function SalesForm({
       }
     }
 
-    // Handle direct totalAmount change (if user edits totalAmount directly)
     if (field === "totalAmount") {
       const taxAmount = numValue * (item.taxRate / 100);
       const schAmount = numValue * (item.schPercent / 100);
@@ -468,13 +549,11 @@ export default function SalesForm({
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
     }
 
-    // fQty changes don't affect financials
-
     form.setValue("items", updatedItems);
   };
 
   // --------------------------------------------------------------------
-  // Batch selection – now sets unit
+  // Batch selection
   // --------------------------------------------------------------------
   const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
@@ -487,14 +566,13 @@ export default function SalesForm({
         conversionFactor,
       } = pendingBatchSelection;
 
-      // Get the full product to retrieve gstRate
       const product = findProduct(productId);
-      const taxRate = product?.gstRate || 5; // fallback to 5 if not set
+      const taxRate = product?.gstRate || 5;
 
       const mQty = calculateMQty(aQty, cartonPack);
-      const unit = calculateUnit(aQty, cartonPack); // NEW
+      const unit = calculateUnit(aQty, cartonPack);
       const rate = batch.saleRate ?? 0;
-      const schPercent = 0; // default, user can change later
+      const schPercent = 0;
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
       const schAmount = totalAmount * (schPercent / 100);
@@ -502,14 +580,14 @@ export default function SalesForm({
 
       const updatedItems = [...items];
       updatedItems[index] = {
-        ...updatedItems[index], // preserve any existing fields (like fQty)
+        ...updatedItems[index],
         productId,
         productCode,
         description,
         rate,
         aQty,
         mQty,
-        unit, // NEW
+        unit,
         totalAmount,
         taxRate,
         taxAmount,
@@ -574,7 +652,7 @@ export default function SalesForm({
       rate: 0,
       aQty: 0,
       mQty: 0,
-      unit: 0, // NEW
+      unit: 0,
       fQty: 0,
       DQty: 0,
       totalAmount: 0,
@@ -583,8 +661,7 @@ export default function SalesForm({
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
-      // @ts-ignore – batchId will be set later
-      batchId: undefined,
+      batchId: undefined as any,
       batchOpeningStock: 0,
       cartonPack: 0,
       conversionFactor: 0,
@@ -599,13 +676,9 @@ export default function SalesForm({
     }
   };
 
-  // --------------------------------------------------------------------
-  // Product selection – now only stores pending data, does NOT update item yet
-  // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
-      // Do NOT update the item here. Just store the selection and open batch modal.
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -624,10 +697,12 @@ export default function SalesForm({
   // Form submission
   // --------------------------------------------------------------------
   const onSubmit = async (data: SalesFormData) => {
-    // Override boxUnit with 0 – it is not used in calculations anymore
-    const payload = { ...data, boxUnit: 0 };
+    // Destructure to remove phoneNo before sending to backend
+    const { phoneNo, ...payloadData } = data;
+    const payload = { ...payloadData, boxUnit: 0 };
+
     try {
-      await onSave(payload, editingSales?.id);
+      await onSave(payload as SalesFormData, editingSales?.id);
     } catch (error) {
       console.error("Error in form submission:", error);
       toast.error("Failed to save sales. Please try again.");
@@ -643,7 +718,7 @@ export default function SalesForm({
     editingSales && editingSales.status !== "Pending" ? true : false;
 
   // --------------------------------------------------------------------
-  // Render – added Unit column and updated summary
+  // Render
   // --------------------------------------------------------------------
   return (
     <>
@@ -677,13 +752,91 @@ export default function SalesForm({
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
-              {/* Header Section – unchanged */}
+              {/* Header Section */}
               <div className="rounded-lg border p-4 bg-card">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Invoice Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  {/* Phone Number Search */}
+                  <FormField
+                    control={form.control}
+                    name="phoneNo"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm">
+                          Search by Phone
+                        </FormLabel>
+                        <Popover open={phoneOpen} onOpenChange={setPhoneOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={phoneOpen}
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                                disabled={isSubmitting || isReadOnly}
+                              >
+                                {field.value
+                                  ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
+                                  : "Search phone number..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search phone numbers..." />
+                              <CommandList>
+                                <CommandEmpty>No customer found.</CommandEmpty>
+                                <CommandGroup>
+                                  {customers.map((customer: Customer) => (
+                                    <CommandItem
+                                      key={customer.id}
+                                      value={`${customer.phoneNo} ${customer.personName}`}
+                                      onSelect={() => {
+                                        if (!isReadOnly) {
+                                          handlePhoneSelect(customer.id);
+                                        }
+                                      }}
+                                    >
+                                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {customer.phoneNo}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {customer.personName}{" "}
+                                          {customer.companyName
+                                            ? `(${customer.companyName})`
+                                            : ""}
+                                        </span>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          customer.id ===
+                                            form.getValues("customerId")
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
@@ -749,8 +902,7 @@ export default function SalesForm({
                                       value={`${area.id} ${area.name} ${area.city || ""}`}
                                       onSelect={() => {
                                         if (!isReadOnly) {
-                                          field.onChange(area.id);
-                                          setAreaOpen(false);
+                                          handleAreaSelect(area.id);
                                         }
                                       }}
                                     >
@@ -785,7 +937,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Customer */}
+                  {/* Customer (Filtered by Area) */}
                   <FormField
                     control={form.control}
                     name="customerId"
@@ -806,7 +958,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || isReadOnly}
+                                disabled={isSubmitting || isReadOnly || !areaId}
                               >
                                 {field.value
                                   ? findCustomerName(field.value)
@@ -819,40 +971,46 @@ export default function SalesForm({
                             <Command>
                               <CommandInput placeholder="Search customers..." />
                               <CommandList>
-                                <CommandEmpty>No customer found.</CommandEmpty>
+                                <CommandEmpty>
+                                  {areaId
+                                    ? "No customer found in this area."
+                                    : "Please select an area first."}
+                                </CommandEmpty>
                                 <CommandGroup>
-                                  {customers.map((customer) => (
-                                    <CommandItem
-                                      key={customer.id}
-                                      value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          field.onChange(customer.id);
-                                          setCustomerOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {customer.companyName ||
-                                            customer.personName}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {customer.phoneNo &&
-                                            `${customer.phoneNo} • `}
-                                          {customer.city || customer.address}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          customer.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
+                                  {filteredCustomers.map(
+                                    (customer: Customer) => (
+                                      <CommandItem
+                                        key={customer.id}
+                                        value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
+                                        onSelect={() => {
+                                          if (!isReadOnly) {
+                                            handleCustomerSelect(customer.id);
+                                            setCustomerOpen(false);
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">
+                                            {customer.companyName ||
+                                              customer.personName}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {customer.phoneNo &&
+                                              `${customer.phoneNo} • `}
+                                            {customer.city || customer.address}
+                                          </span>
+                                        </div>
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            customer.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ),
+                                  )}
                                 </CommandGroup>
                               </CommandList>
                             </Command>
@@ -863,7 +1021,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Address */}
+                  {/* Address - Now properly auto-filled */}
                   <FormField
                     control={form.control}
                     name="address"
@@ -960,7 +1118,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Salesman */}
+                  {/* Salesman (Filtered by Area) */}
                   <FormField
                     control={form.control}
                     name="salesmanId"
@@ -981,7 +1139,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || isReadOnly}
+                                disabled={isSubmitting || isReadOnly || !areaId}
                               >
                                 {field.value
                                   ? findSalesmanName(field.value)
@@ -994,9 +1152,13 @@ export default function SalesForm({
                             <Command>
                               <CommandInput placeholder="Search salesmen..." />
                               <CommandList>
-                                <CommandEmpty>No salesman found.</CommandEmpty>
+                                <CommandEmpty>
+                                  {areaId
+                                    ? "No salesman found in this area."
+                                    : "Please select an area first."}
+                                </CommandEmpty>
                                 <CommandGroup>
-                                  {salesmen.map((salesman) => (
+                                  {filteredSalesmen.map((salesman: any) => (
                                     <CommandItem
                                       key={salesman.id}
                                       value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
@@ -1089,7 +1251,7 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Products Table Section – added Unit column */}
+              {/* Products Table Section */}
               <div className="border-t pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
@@ -1129,8 +1291,7 @@ export default function SalesForm({
                         <TableHead className="font-semibold">
                           M. Qty *
                         </TableHead>
-                        <TableHead className="font-semibold">Unit *</TableHead>{" "}
-                        {/* NEW column */}
+                        <TableHead className="font-semibold">Unit *</TableHead>
                         <TableHead className="font-semibold">Amount</TableHead>
                         <TableHead className="font-semibold">Sch%</TableHead>
                         <TableHead className="font-semibold">Sch amt</TableHead>
@@ -1149,7 +1310,7 @@ export default function SalesForm({
                         {items.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={14} // increased colSpan for new column
+                              colSpan={15}
                               className="text-center py-8 text-muted-foreground"
                             >
                               No products added.{" "}
@@ -1343,7 +1504,7 @@ export default function SalesForm({
                                 </div>
                               </TableCell>
 
-                              {/* Unit - DISABLED (NEW) */}
+                              {/* Unit - DISABLED */}
                               <TableCell>
                                 <div className="relative">
                                   <Input
@@ -1486,7 +1647,7 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Summary Section – Box/Unit Ratio now shows total units */}
+              {/* Summary Section */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Remarks - Left Side */}
@@ -1561,7 +1722,7 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Box/Unit Ratio – now displays total units */}
+                        {/* Box/Unit Ratio */}
                         <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-2">
@@ -1572,7 +1733,7 @@ export default function SalesForm({
                           <div className="relative">
                             <Input
                               type="text"
-                              value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`} // Show total units
+                              value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`}
                               readOnly
                               disabled
                               className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
@@ -1807,7 +1968,7 @@ export default function SalesForm({
                 </div>
               </div>
 
-              {/* Hidden boxUnit field – required for backend compatibility */}
+              {/* Hidden fields */}
               <FormField
                 control={form.control}
                 name="boxUnit"
@@ -1815,7 +1976,6 @@ export default function SalesForm({
                   <input type="hidden" {...field} value={0} />
                 )}
               />
-              {/* Hidden scheme1 field – kept for backend compatibility */}
               <FormField
                 control={form.control}
                 name="scheme1"

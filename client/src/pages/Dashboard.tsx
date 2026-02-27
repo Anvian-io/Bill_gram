@@ -40,6 +40,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import AppInitializer from "@/components/AppInitializer";
 
 // Extend the Window interface to include electronAPI
 declare global {
@@ -166,6 +167,7 @@ export default function Dashboard() {
   return (
     <div className="w-full space-y-6 p-2">
       {/* Header */}
+      <AppInitializer/>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
@@ -198,7 +200,6 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
-
       {backupStatus && (
         <div
           className={`p-4 rounded-lg ${
@@ -210,7 +211,6 @@ export default function Dashboard() {
           <p className="text-sm font-medium">{backupStatus}</p>
         </div>
       )}
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -297,7 +297,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales vs Purchases Chart */}
@@ -411,7 +410,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }

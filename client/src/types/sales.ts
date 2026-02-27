@@ -24,7 +24,7 @@ export interface SalesFilters {
   areaId?: string | number;
   vanId?: string | number;
   salesmanId?: string | number;
-  fromDate?: Date; // replaced single invoiceDate
+  fromDate?: Date;
   toDate?: Date;
   minAmount?: number | string;
   maxAmount?: number | string;
@@ -49,8 +49,8 @@ export interface SalesFormData {
   vanId: number;
   salesmanId: number;
   address: string;
-  // invoiceNo removed – backend generates it
   gstDetails: string;
+  phoneNo?: string; // ADDED: UI-only field for phone search
   items: Array<{
     productId: number;
     productCode: string;
@@ -59,14 +59,14 @@ export interface SalesFormData {
     aQty: number;
     mQty: number;
     unit: number;
-    fQty: number; // free quantity
-    DQty: number; // free quantity
+    fQty: number;
+    DQty: number;
     totalAmount: number;
-    finalAmount: number; // per‑item final (rate * aQty - schAmount)
+    finalAmount: number;
     taxRate: number;
     taxAmount: number;
-    schPercent: number; // single scheme percent
-    schAmount: number; // single scheme amount
+    schPercent: number;
+    schAmount: number;
     batchId?: number;
     batchOpeningStock?: number;
     cartonPack?: number;
@@ -74,9 +74,9 @@ export interface SalesFormData {
   }>;
   remarks: string;
   grossAmount: number;
-  boxUnit: number; // kept for backend compatibility; set to 0
+  boxUnit: number;
   cessInsurance: number;
-  scheme1: number; // kept for backend compatibility; set to 0
+  scheme1: number;
   discountPercent: number;
   tax: number;
   amountAdd: number;
