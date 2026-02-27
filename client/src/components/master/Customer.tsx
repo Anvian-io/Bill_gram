@@ -24,6 +24,8 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +56,21 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { customerService } from "@/services/customerService";
 import { type Customer, type CustomerFilters } from "@/types/customer";
 import { useDebounce } from "@/utils/debounce";
+import { useActiveLists } from "@/hooks/useActiveLists";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 // Define the API response structure
 interface CustomersResponse {
@@ -76,6 +93,9 @@ export default function CustomerComponent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Get areas from hook
+  const { areas } = useActiveLists();
+
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -93,10 +113,14 @@ export default function CustomerComponent() {
     personName: "",
     phoneNo: "",
     city: "",
+    areaId: "all",
     customerType: "",
     status: "all",
     showDeleted: false,
   });
+
+  // State for Command dropdowns
+  const [areaOpen, setAreaOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -207,6 +231,9 @@ export default function CustomerComponent() {
       if (filters.city) {
         params.city = filters.city;
       }
+      if (filters.areaId && filters.areaId !== "all") {
+        params.areaId = parseInt(filters.areaId);
+      }
       if (filters.customerType) {
         params.customerType = filters.customerType;
       }
@@ -278,6 +305,7 @@ export default function CustomerComponent() {
       personName: "",
       phoneNo: "",
       city: "",
+      areaId: "all",
       customerType: "",
       status: "all",
       showDeleted: false,
@@ -299,7 +327,9 @@ export default function CustomerComponent() {
           ? "all"
           : filterName === "showDeleted"
             ? false
-            : "",
+            : filterName === "areaId"
+              ? "all"
+              : "",
     }));
 
     // Also clear the corresponding input state
@@ -467,6 +497,13 @@ export default function CustomerComponent() {
     return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
   };
 
+  // Get area name helper
+  const getAreaName = (id: string) => {
+    if (id === "all") return "All Areas";
+    const area = areas.find((a) => a.id.toString() === id);
+    return area ? area.name : "Select Area";
+  };
+
   return (
     <motion.div
       className="min-h-screen bg-background p-3"
@@ -500,7 +537,6 @@ export default function CustomerComponent() {
                 className="pl-10 py-6 text-base"
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                // disabled={isLoading}
               />
               {searchInput && (
                 <Button
@@ -663,7 +699,6 @@ export default function CustomerComponent() {
                                 handlePersonNameChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {personNameInput && (
                               <Button
@@ -699,7 +734,6 @@ export default function CustomerComponent() {
                                 handlePhoneNoChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {phoneNoInput && (
                               <Button
@@ -730,7 +764,6 @@ export default function CustomerComponent() {
                               value={cityInput}
                               onChange={(e) => handleCityChange(e.target.value)}
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {cityInput && (
                               <Button
@@ -747,6 +780,76 @@ export default function CustomerComponent() {
                               </Button>
                             )}
                           </div>
+                        </div>
+
+                        {/* Area Filter - Command Dropdown */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Area</Label>
+                          <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={areaOpen}
+                                className="w-full justify-between"
+                                disabled={isLoading}
+                              >
+                                {getAreaName(filters.areaId as string)}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search area..." />
+                                <CommandList>
+                                  <CommandEmpty>No area found.</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="all"
+                                      onSelect={() => {
+                                        handleFilterChange("areaId", "all");
+                                        setAreaOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          filters.areaId === "all"
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      All Areas
+                                    </CommandItem>
+                                    {areas.map((area) => (
+                                      <CommandItem
+                                        key={area.id}
+                                        value={area.id.toString()}
+                                        onSelect={() => {
+                                          handleFilterChange(
+                                            "areaId",
+                                            area.id.toString(),
+                                          );
+                                          setAreaOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.areaId ===
+                                              area.id.toString()
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        {area.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
 
                         {/* Customer Type Filter */}
@@ -766,7 +869,6 @@ export default function CustomerComponent() {
                                 handleCustomerTypeChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {customerTypeInput && (
                               <Button
@@ -865,25 +967,19 @@ export default function CustomerComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {/* {isLoading ? (
-              "Loading..."
-            ) :  */}
-            (
-            <>
-              Showing {startIndex} to {endIndex} of {totalItems} customers
-              {filters.status !== "all" ||
-              filters.companyName ||
-              filters.personName ||
-              filters.phoneNo ||
-              filters.city ||
-              filters.customerType ||
-              filters.search ||
-              filters.showDeleted
-                ? " (filtered)"
-                : ""}
-              {filters.showDeleted && " (including deleted)"}
-            </>
-            ){/* } */}
+            Showing {startIndex} to {endIndex} of {totalItems} customers
+            {filters.status !== "all" ||
+            filters.companyName ||
+            filters.personName ||
+            filters.phoneNo ||
+            filters.city ||
+            filters.areaId !== "all" ||
+            filters.customerType ||
+            filters.search ||
+            filters.showDeleted
+              ? " (filtered)"
+              : ""}
+            {filters.showDeleted && " (including deleted)"}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -918,6 +1014,7 @@ export default function CustomerComponent() {
                         Contact Info
                       </TableHead>
                       <TableHead className="font-semibold">Type</TableHead>
+                      <TableHead className="font-semibold">Area</TableHead>
                       <TableHead className="font-semibold">Address</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
@@ -936,7 +1033,7 @@ export default function CustomerComponent() {
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <TableCell colSpan={7} className="text-center py-12">
+                          <TableCell colSpan={8} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -954,7 +1051,7 @@ export default function CustomerComponent() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1055,6 +1152,18 @@ export default function CustomerComponent() {
                                   )}
                                 >
                                   {customer.customerType || "Not Specified"}
+                                </Badge>
+                              </motion.div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <motion.div
+                                variants={badgeVariants}
+                                whileHover="hover"
+                              >
+                                <Badge variant="outline" className="gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {areas.find((a) => a.id === customer.areaId)
+                                    ?.name || "N/A"}
                                 </Badge>
                               </motion.div>
                             </TableCell>

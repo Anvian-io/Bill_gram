@@ -24,6 +24,8 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +56,21 @@ import {
 import { salesmanService } from "@/services/salesmanService";
 import { type Salesman, type SalesmanFilters } from "@/types/salesman";
 import { useDebounce } from "@/utils/debounce";
+import { useActiveLists } from "@/hooks/useActiveLists";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 // Define the API response structure
 interface SalesmenResponse {
@@ -76,6 +93,9 @@ export default function SalesmanComponent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Get areas from hook
+  const { areas } = useActiveLists();
+
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
   const [editingSalesman, setEditingSalesman] = useState<Salesman | null>(null);
@@ -90,10 +110,13 @@ export default function SalesmanComponent() {
   const [filters, setFilters] = useState<SalesmanFilters>({
     search: "",
     name: "",
-    area: "",
+    areaId: "all",
     status: "all",
     showDeleted: false,
   });
+
+  // State for Command dropdowns
+  const [areaOpen, setAreaOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -105,7 +128,6 @@ export default function SalesmanComponent() {
   // Local state for immediate input values (before debounce)
   const [searchInput, setSearchInput] = useState<string>("");
   const [nameInput, setNameInput] = useState<string>("");
-  const [areaInput, setAreaInput] = useState<string>("");
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -114,10 +136,6 @@ export default function SalesmanComponent() {
 
   const debouncedSetName = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, name: value }));
-  }, 300);
-
-  const debouncedSetArea = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, area: value }));
   }, 300);
 
   // Handle search input change with debounce
@@ -130,12 +148,6 @@ export default function SalesmanComponent() {
   const handleNameChange = (value: string) => {
     setNameInput(value);
     debouncedSetName(value);
-  };
-
-  // Handle area input change with debounce
-  const handleAreaChange = (value: string) => {
-    setAreaInput(value);
-    debouncedSetArea(value);
   };
 
   // Safely handle salesmen data
@@ -162,8 +174,8 @@ export default function SalesmanComponent() {
       if (filters.name) {
         params.name = filters.name;
       }
-      if (filters.area) {
-        params.area = filters.area;
+      if (filters.areaId && filters.areaId !== "all") {
+        params.areaId = parseInt(filters.areaId);
       }
       if (filters.status !== "all") {
         params.status = filters.status === "active";
@@ -230,13 +242,12 @@ export default function SalesmanComponent() {
     setFilters({
       search: "",
       name: "",
-      area: "",
+      areaId: "all",
       status: "all",
       showDeleted: false,
     });
     setSearchInput("");
     setNameInput("");
-    setAreaInput("");
   };
 
   // Clear specific filter
@@ -248,7 +259,9 @@ export default function SalesmanComponent() {
           ? "all"
           : filterName === "showDeleted"
             ? false
-            : "",
+            : filterName === "areaId"
+              ? "all"
+              : "",
     }));
 
     // Also clear the corresponding input state
@@ -258,9 +271,6 @@ export default function SalesmanComponent() {
         break;
       case "name":
         setNameInput("");
-        break;
-      case "area":
-        setAreaInput("");
         break;
     }
   };
@@ -345,7 +355,8 @@ export default function SalesmanComponent() {
   const activeFiltersCount = Object.entries(filters).filter(
     ([key, value]) =>
       key !== "search" &&
-      ((key === "showDeleted" && value) || (value && value !== "all")),
+      ((key === "showDeleted" && value) ||
+        (value && value !== "all" && value !== "")),
   ).length;
 
   // Format date for display
@@ -393,6 +404,13 @@ export default function SalesmanComponent() {
     return colors[id % colors.length];
   };
 
+  // Get area name helper
+  const getAreaName = (id: string) => {
+    if (id === "all") return "All Areas";
+    const area = areas.find((a) => a.id.toString() === id);
+    return area ? area.name : "Select Area";
+  };
+
   return (
     <motion.div
       className="min-h-screen bg-background p-3"
@@ -428,7 +446,6 @@ export default function SalesmanComponent() {
                 className="pl-10 py-6 text-base"
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                // disabled={isLoading}
               />
               {searchInput && (
                 <Button
@@ -550,7 +567,6 @@ export default function SalesmanComponent() {
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {nameInput && (
                               <Button
@@ -569,35 +585,74 @@ export default function SalesmanComponent() {
                           </div>
                         </div>
 
-                        {/* Area Filter */}
+                        {/* Area Filter - Command Dropdown */}
                         <div className="space-y-2">
-                          <Label htmlFor="area" className="text-sm font-medium">
-                            Area
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="area"
-                              placeholder="Enter area"
-                              value={areaInput}
-                              onChange={(e) => handleAreaChange(e.target.value)}
-                              className="flex-1"
-                              // disabled={isLoading}
-                            />
-                            {areaInput && (
+                          <Label className="text-sm font-medium">Area</Label>
+                          <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                            <PopoverTrigger asChild>
                               <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => {
-                                  setAreaInput("");
-                                  clearFilter("area");
-                                }}
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={areaOpen}
+                                className="w-full justify-between"
                                 disabled={isLoading}
                               >
-                                <X className="h-4 w-4" />
+                                {getAreaName(filters.areaId as string)}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
-                            )}
-                          </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search area..." />
+                                <CommandList>
+                                  <CommandEmpty>No area found.</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="all"
+                                      onSelect={() => {
+                                        handleFilterChange("areaId", "all");
+                                        setAreaOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          filters.areaId === "all"
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      All Areas
+                                    </CommandItem>
+                                    {areas.map((area) => (
+                                      <CommandItem
+                                        key={area.id}
+                                        value={area.id.toString()}
+                                        onSelect={() => {
+                                          handleFilterChange(
+                                            "areaId",
+                                            area.id.toString(),
+                                          );
+                                          setAreaOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.areaId ===
+                                              area.id.toString()
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        {area.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
 
                         {/* Status Filter */}
@@ -680,23 +735,15 @@ export default function SalesmanComponent() {
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            {/* {isLoading ? (
-              "Loading..."
-            ) :  */}
-            (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} salesmen
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.area ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            Showing {startIndex} to {endIndex} of {totalItems} salesmen
+            {filters.status !== "all" ||
+            filters.name ||
+            filters.areaId !== "all" ||
+            filters.search ||
+            filters.showDeleted
+              ? " (filtered)"
+              : ""}
+            {filters.showDeleted && " (including deleted)"}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -856,7 +903,8 @@ export default function SalesmanComponent() {
                               >
                                 <Badge variant="outline" className="gap-1">
                                   <MapPin className="h-3 w-3" />
-                                  {salesman.area}
+                                  {areas.find((a) => a.id === salesman.areaId)
+                                    ?.name || "N/A"}
                                 </Badge>
                               </motion.div>
                             </TableCell>

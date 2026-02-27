@@ -1016,7 +1016,7 @@ export default function SalesForm({
                                             `${salesman.phoneNo} • `}
                                           {salesman.email &&
                                             `${salesman.email} • `}
-                                          {salesman.area}
+                                          {salesman.areaId}
                                         </span>
                                       </div>
                                       <Check
