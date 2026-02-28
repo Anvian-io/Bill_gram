@@ -284,7 +284,7 @@ export interface PurchaseRegisterData {
 export interface PurchaseReportHistory {
   id: number;
   userId: number;
-  type: 'pdf' | 'excel';
+  type: "pdf" | "excel";
   template: string;
   fileName: string | null;
   data: string; // JSON string of the report data
@@ -301,9 +301,9 @@ export interface PurchaseReportHistoryFilters {
   limit?: number;
   search?: string;
   fileName?: string;
-  type?: 'pdf' | 'excel' | '';
+  type?: "pdf" | "excel" | "";
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedHistoryResponse {
@@ -316,4 +316,106 @@ export interface PaginatedHistoryResponse {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   };
+}
+
+// ========== Purchase GST Types ==========
+export interface PurchaseGSTItem {
+  itemId: number;
+  productId: number;
+  productCode: string | null;
+  description: string | null;
+  hsnSacCode: string | null;
+  gstRate: number;
+  cessRate: number;
+  quantity: number;
+  unit: number;
+  rate: number;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount: number;
+  totalGST: number;
+  schemeAmount: number;
+  schemePercent: number;
+  freeQuantity: number;
+  damagedQuantity: number;
+  finalAmount: number;
+}
+
+export interface PurchaseGSTInvoice {
+  purchaseId: number;
+  invoiceId: string;
+  customerName: string;
+  gstin: string;
+  invoiceDate: string;
+  refInvoiceId: string;
+  refDate: string | null;
+  grossAmount: number;
+  schemeAmount: number;
+  discountAmount: number;
+  damageAmount: number;
+  finalAmount: number;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount: number;
+  totalGSTAmount: number;
+  cess: number;
+  addAmount: number;
+  creditAmount: number;
+  boxUnit: number;
+  remarks: string;
+  status: string;
+  supplierDetails: {
+    id: number;
+    name: string;
+    phoneNo: string | null;
+    email: string | null;
+    address: string | null;
+  } | null;
+  userDetails: {
+    shopName: string | null;
+    companyName: string | null;
+  };
+  items: PurchaseGSTItem[];
+  itemCount: number;
+}
+
+export interface PurchaseGSTSummary {
+  totalRecords: number;
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalFinalAmount: number;
+}
+
+export interface PurchaseGSTResponse {
+  purchases: PurchaseGSTInvoice[];
+  summary: PurchaseGSTSummary;
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface PurchaseGSTFilters {
+  supplierId?: number;
+  fromDate?: Date;
+  toDate?: Date;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
 }

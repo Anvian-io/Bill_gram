@@ -11,6 +11,8 @@ import type {
   PurchaseRegisterData,
   PurchaseReportHistoryFilters,
   PaginatedHistoryResponse,
+  PurchaseGSTFilters,
+  PurchaseGSTResponse,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -332,55 +334,114 @@ export const purchaseService = {
   },
 
   // ========== Purchase Report History ==========
-async getPurchaseReportHistory(
-  filters?: PurchaseReportHistoryFilters
-): Promise<PaginatedHistoryResponse> {
-  try {
-    const params = new URLSearchParams();
-    if (filters) {
-      if (filters.page) params.append('page', filters.page.toString());
-      if (filters.limit) params.append('limit', filters.limit.toString());
-      if (filters.search) params.append('search', filters.search);
-      if (filters.fileName) params.append('fileName', filters.fileName);
-      if (filters.type) params.append('type', filters.type);
-      if (filters.sortBy) params.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+  async getPurchaseReportHistory(
+    filters?: PurchaseReportHistoryFilters,
+  ): Promise<PaginatedHistoryResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.page) params.append("page", filters.page.toString());
+        if (filters.limit) params.append("limit", filters.limit.toString());
+        if (filters.search) params.append("search", filters.search);
+        if (filters.fileName) params.append("fileName", filters.fileName);
+        if (filters.type) params.append("type", filters.type);
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<PaginatedHistoryResponse>
+      >(`/purchases/history/all?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase report history:", message);
+      throw new Error(message);
     }
+  },
 
-    const response = await apiClient.get<ApiResponse<PaginatedHistoryResponse>>(
-      `/purchases/history/all?${params.toString()}`
-    );
-    return response.data.data;
-  } catch (error) {
-    const message = getApiErrorMessage(error);
-    console.error('Error fetching purchase report history:', message);
-    throw new Error(message);
-  }
-},
+  async downloadPurchaseReportHistoryPDF(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/purchases/history/${id}/pdf`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading history PDF:", message);
+      throw new Error(message);
+    }
+  },
 
-async downloadPurchaseReportHistoryPDF(id: number): Promise<Blob> {
-  try {
-    const response = await apiClient.get(`/purchases/history/${id}/pdf`, {
-      responseType: 'blob',
-    });
-    return response.data;
-  } catch (error) {
-    const message = getApiErrorMessage(error);
-    console.error('Error downloading history PDF:', message);
-    throw new Error(message);
-  }
-},
+  async downloadPurchaseReportHistoryExcel(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/purchases/history/${id}/excel`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading history Excel:", message);
+      throw new Error(message);
+    }
+  },
 
-async downloadPurchaseReportHistoryExcel(id: number): Promise<Blob> {
-  try {
-    const response = await apiClient.get(`/purchases/history/${id}/excel`, {
-      responseType: 'blob',
-    });
-    return response.data;
-  } catch (error) {
-    const message = getApiErrorMessage(error);
-    console.error('Error downloading history Excel:', message);
-    throw new Error(message);
-  }
-},
+  // ========== Purchase GST Report ==========
+  async getPurchaseGST(
+    filters?: PurchaseGSTFilters,
+  ): Promise<PurchaseGSTResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters) {
+        if (filters.page) params.append("page", filters.page.toString());
+        if (filters.limit) params.append("limit", filters.limit.toString());
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<ApiResponse<PurchaseGSTResponse>>(
+        `/purchases/purchase-gst?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase GST data:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseGSTExcel(
+    filters?: Omit<PurchaseGSTFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(
+        `/purchases/purchase-gst/excel?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase GST Excel:", message);
+      throw new Error(message);
+    }
+  },
 };
