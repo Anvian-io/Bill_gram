@@ -99,9 +99,9 @@ const groupByMonth = (invoices, type = "purchase") => {
         finalAmount: item.finalAmount || 0,
       };
     });
-
+    // console.log("invoice.finalAmount ", invoice.finalAmount);
     const discountAmount =
-      (invoice.grossAmount * (invoice.discountPercent || 0)) / 100;
+      (invoice.finalAmount * (invoice.discountPercent || 0)) / 100;
     const grossAmount =
       invoice.grossAmount || invoiceTaxableValue + invoiceGSTAmount;
 

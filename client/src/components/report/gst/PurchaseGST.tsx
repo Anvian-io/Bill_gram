@@ -92,7 +92,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 // ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
-export default function PurchaseGST() {
+export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   // State
   const [reportData, setReportData] = useState<PurchaseGSTInvoice[]>([]);
   const [summaryData, setSummaryData] = useState<
@@ -680,7 +680,9 @@ export default function PurchaseGST() {
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
-              <div className="max-w-345 overflow-x-auto">
+              <div
+                className={`overflow-x-auto ${isCollapsed ? "max-w-345" : "max-w-290"} transition-normal`}
+              >
                 {/* ADDED min-w-[1400px] TO ENABLE HORIZONTAL SCROLLING */}
                 <Table className="">
                   <TableHeader>

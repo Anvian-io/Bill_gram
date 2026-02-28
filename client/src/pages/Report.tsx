@@ -44,7 +44,7 @@ export default function Report() {
       id: "gst",
       label: "GST",
       icon: <Calculator className="h-5 w-5" />,
-      component: <GST />,
+      component: <GST isCollapsed={isCollapsed} />,
       badge: 4,
       category: "gst",
     },

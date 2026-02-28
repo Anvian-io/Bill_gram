@@ -104,7 +104,7 @@ export const groupByMonth = (invoices, type = "sales") => {
     });
 
     const discountAmount =
-      (invoice.grossAmount * (invoice.discountPercent || 0)) / 100;
+      (invoice.finalAmount * (invoice.discountPercent || 0)) / 100;
     const grossAmount =
       invoice.grossAmount || invoiceTaxableValue + invoiceGSTAmount;
 

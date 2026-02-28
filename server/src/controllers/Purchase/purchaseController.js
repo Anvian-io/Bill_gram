@@ -2548,7 +2548,7 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
       grossAmount: invoice.grossAmount || totalTaxableValue + totalGSTAmount,
       schemeAmount: totalSchemeAmount || invoice.scheme1 || 0,
       discountAmount:
-        (invoice.grossAmount * (invoice.discountPercent || 0)) / 100,
+        (invoice.finalAmount * (invoice.discountPercent || 0)) / 100,
       damageAmount: totalDamageAmount,
       finalAmount: invoice.finalAmount,
       taxableValue: totalTaxableValue,

@@ -6,7 +6,7 @@ import B2C from "./B2C";
 import PurchaseMonthlyGST from "./PurchaseMonthlyGST";
 import SalesMonthlyGST from "./SalesMonthlyGST";
 
-export default function GST() {
+export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
   const [activeTab, setActiveTab] = useState<
     | "purchaseGst"
     | "salesGst"
@@ -192,7 +192,7 @@ export default function GST() {
 
           {/* Tab content */}
           <div>
-            {activeTab === "purchaseGst" && <PurchaseGST />}
+            {activeTab === "purchaseGst" && <PurchaseGST isCollapsed={isCollapsed} />}
             {activeTab === "salesGst" && <SalesGST />}
             {activeTab === "b2b" && <B2B />}
             {activeTab === "b2c" && <B2C />}
