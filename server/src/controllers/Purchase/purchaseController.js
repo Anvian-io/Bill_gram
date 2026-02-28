@@ -2353,6 +2353,429 @@ export const downloadPurchaseReportHistoryExcel = asyncHandler(
     res.end();
   },
 );
+
+// --------------------------------------------------------------------
+// GET PURCHASE WITH GST DETAILS (for GST reporting/returns)
+// --------------------------------------------------------------------
+export const getPurchaseWithGST = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    supplierId,
+    fromDate,
+    toDate,
+    sortBy = "invoiceDate",
+    sortOrder = "desc",
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // Build WHERE clause
+  const andConditions = [{ deleted: false }]; // always exclude deleted records
+
+  if (supplierId) {
+    andConditions.push({ supplierId: parseInt(supplierId) });
+  }
+
+  // Date range filter
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = andConditions.length ? { AND: andConditions } : {};
+
+  // Sorting
+  const validSortFields = [
+    "invoiceNo",
+    "invoiceDate",
+    "grossAmount",
+    "finalAmount",
+    "createdAt",
+    "updatedAt",
+  ];
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+      sortOrder === "asc" ? "asc" : "desc",
+  };
+
+  // Fetch invoices with items for GST calculation
+  const [invoices, total] = await Promise.all([
+    prisma.purchaseInvoice.findMany({
+      where,
+      skip,
+      take: validatedLimit,
+      orderBy,
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            phoneNo: true,
+            email: true,
+            address: true,
+            // GSTIN will be added here when supplier model is updated
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                productCode: true,
+                description: true,
+                hsnSacCode: true,
+                gstRate: true,
+                gstInclusive: true,
+                cessRate: true,
+              },
+            },
+            batch: {
+              select: {
+                id: true,
+                batchNo: true,
+                mrp: true,
+                basicPrice: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            shop_name: true,
+            company_name: true,
+            // GSTIN will be added here when user model is updated
+          },
+        },
+      },
+    }),
+    prisma.purchaseInvoice.count({ where }),
+  ]);
+
+  // Transform data to GST format (unchanged)
+  const gstPurchases = invoices.map((invoice) => {
+    let totalTaxableValue = 0;
+    let totalCGST = 0;
+    let totalSGST = 0;
+    let totalIGST = 0;
+    let totalCess = 0;
+    let totalGSTAmount = 0;
+    let totalSchemeAmount = 0;
+    let totalDiscountAmount = 0;
+    let totalDamageAmount = 0;
+
+    const itemDetails = invoice.items.map((item) => {
+      const taxableValue = item.rate * item.aQty;
+      const gstRate = item.product?.gstRate || 18;
+      const cessRate = item.product?.cessRate || 0;
+      const gstInclusive = item.product?.gstInclusive ?? true;
+
+      let itemTaxableValue = taxableValue;
+      let itemGSTAmount = item.taxAmount || (taxableValue * gstRate) / 100;
+      let itemCGST = 0;
+      let itemSGST = 0;
+      let itemIGST = 0;
+      let itemCess = (taxableValue * cessRate) / 100;
+
+      if (gstInclusive) {
+        itemTaxableValue = taxableValue - itemGSTAmount;
+      }
+
+      itemCGST = itemGSTAmount / 2;
+      itemSGST = itemGSTAmount / 2;
+
+      totalTaxableValue += itemTaxableValue;
+      totalCGST += itemCGST;
+      totalSGST += itemSGST;
+      totalCess += itemCess;
+      totalGSTAmount += itemGSTAmount;
+      totalSchemeAmount += item.schAmount || 0;
+      totalDiscountAmount +=
+        (item.rate * item.aQty * (invoice.discountPercent || 0)) / 100;
+      totalDamageAmount += (item.DQty || 0) * item.rate;
+
+      return {
+        itemId: item.id,
+        productId: item.productId,
+        productCode: item.product?.productCode,
+        description: item.product?.description,
+        hsnSacCode: item.product?.hsnSacCode,
+        gstRate: gstRate,
+        cessRate: cessRate,
+        quantity: item.aQty,
+        unit: item.unit,
+        rate: item.rate,
+        taxableValue: itemTaxableValue,
+        cgstAmount: itemCGST,
+        sgstAmount: itemSGST,
+        igstAmount: itemIGST,
+        cessAmount: itemCess,
+        totalGST: itemGSTAmount,
+        schemeAmount: item.schAmount || 0,
+        schemePercent: item.schPercent || 0,
+        freeQuantity: item.fQty || 0,
+        damagedQuantity: item.DQty || 0,
+        finalAmount: item.finalAmount || 0,
+      };
+    });
+
+    return {
+      purchaseId: invoice.id,
+      invoiceId: invoice.invoiceNo,
+      customerName: invoice.supplier?.name || "",
+      gstin: "",
+      invoiceDate: invoice.invoiceDate,
+      refInvoiceId: "",
+      refDate: null,
+      grossAmount: invoice.grossAmount || totalTaxableValue + totalGSTAmount,
+      schemeAmount: totalSchemeAmount || invoice.scheme1 || 0,
+      discountAmount:
+        (invoice.grossAmount * (invoice.discountPercent || 0)) / 100,
+      damageAmount: totalDamageAmount,
+      finalAmount: invoice.finalAmount,
+      taxableValue: totalTaxableValue,
+      cgstAmount: totalCGST,
+      sgstAmount: totalSGST,
+      igstAmount: totalIGST,
+      cessAmount: totalCess || invoice.cessInsurance || 0,
+      totalGSTAmount: totalGSTAmount,
+      cess: invoice.cessInsurance || 0,
+      addAmount: invoice.amountAdd || 0,
+      creditAmount: invoice.creditAmount || 0,
+      boxUnit: invoice.boxUnit || 0,
+      remarks: invoice.remarks || "",
+      status: invoice.status,
+      supplierDetails: invoice.supplier,
+      userDetails: {
+        shopName: invoice.user?.shop_name,
+        companyName: invoice.user?.company_name,
+      },
+      items: itemDetails,
+      itemCount: itemDetails.length,
+    };
+  });
+
+  const totalPages = Math.ceil(total / validatedLimit);
+
+  return sendResponse(
+    res,
+    true,
+    {
+      purchases: gstPurchases,
+      summary: {
+        totalRecords: total,
+        totalGrossAmount: gstPurchases.reduce(
+          (sum, p) => sum + p.grossAmount,
+          0,
+        ),
+        totalSchemeAmount: gstPurchases.reduce(
+          (sum, p) => sum + p.schemeAmount,
+          0,
+        ),
+        totalDiscountAmount: gstPurchases.reduce(
+          (sum, p) => sum + p.discountAmount,
+          0,
+        ),
+        totalDamageAmount: gstPurchases.reduce(
+          (sum, p) => sum + p.damageAmount,
+          0,
+        ),
+        totalTaxableValue: gstPurchases.reduce(
+          (sum, p) => sum + p.taxableValue,
+          0,
+        ),
+        totalCGST: gstPurchases.reduce((sum, p) => sum + p.cgstAmount, 0),
+        totalSGST: gstPurchases.reduce((sum, p) => sum + p.sgstAmount, 0),
+        totalIGST: gstPurchases.reduce((sum, p) => sum + p.igstAmount, 0),
+        totalCess: gstPurchases.reduce((sum, p) => sum + p.cessAmount, 0),
+        totalFinalAmount: gstPurchases.reduce(
+          (sum, p) => sum + p.finalAmount,
+          0,
+        ),
+      },
+      pagination: {
+        total,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Purchase GST data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// GET PURCHASE GST MONTHLY REPORT
+// --------------------------------------------------------------------
+export const getPurchaseGSTMonthly = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+  } = req.query;
+
+  // Validation
+  if (!fromDate || !toDate) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Both fromDate and toDate are required",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Build date filter
+  const startDate = new Date(fromDate);
+  startDate.setHours(0, 0, 0, 0);
+  
+  const endDate = new Date(toDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const where = {
+    deleted: false,
+    invoiceDate: {
+      gte: startDate.toISOString(),
+      lte: endDate.toISOString(),
+    },
+  };
+
+  // Fetch all invoices in date range with related data
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy: { invoiceDate: 'asc' },
+    include: {
+      supplier: {
+        select: {
+          id: true,
+          name: true,
+          phoneNo: true,
+          email: true,
+          address: true,
+        },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              productCode: true,
+              description: true,
+              hsnSacCode: true,
+              gstRate: true,
+              gstInclusive: true,
+              cessRate: true,
+              unit: { select: { name: true, symbol: true } },
+            },
+          },
+          batch: {
+            select: {
+              id: true,
+              batchNo: true,
+              mrp: true,
+              basicPrice: true,
+              purchaseRate: true,
+            },
+          },
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          shop_name: true,
+          company_name: true,
+        },
+      },
+    },
+  });
+
+  // Group by month
+  const monthlyData = groupByMonth(invoices, 'purchase');
+
+  // Calculate grand totals across all months
+  const grandTotals = monthlyData.reduce(
+    (acc, month) => {
+      acc.totalGrossAmount += month.totalGrossAmount;
+      acc.totalSchemeAmount += month.totalSchemeAmount;
+      acc.totalDiscountAmount += month.totalDiscountAmount;
+      acc.totalDamageAmount += month.totalDamageAmount;
+      acc.totalTaxableValue += month.totalTaxableValue;
+      acc.totalCGST += month.totalCGST;
+      acc.totalSGST += month.totalSGST;
+      acc.totalIGST += month.totalIGST;
+      acc.totalCess += month.totalCess;
+      acc.totalGSTAmount += month.totalGSTAmount;
+      acc.totalCessCharge += month.totalCessCharge;
+      acc.totalAddAmount += month.totalAddAmount;
+      acc.totalCreditAmount += month.totalCreditAmount;
+      acc.totalFinalAmount += month.totalFinalAmount;
+      acc.totalInvoices += month.invoiceCount;
+      return acc;
+    },
+    {
+      totalGrossAmount: 0,
+      totalSchemeAmount: 0,
+      totalDiscountAmount: 0,
+      totalDamageAmount: 0,
+      totalTaxableValue: 0,
+      totalCGST: 0,
+      totalSGST: 0,
+      totalIGST: 0,
+      totalCess: 0,
+      totalGSTAmount: 0,
+      totalCessCharge: 0,
+      totalAddAmount: 0,
+      totalCreditAmount: 0,
+      totalFinalAmount: 0,
+      totalInvoices: 0,
+    },
+  );
+
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate,
+        toDate,
+      },
+      period: {
+        from: startDate.toISOString(),
+        to: endDate.toISOString(),
+        totalMonths: monthlyData.length,
+      },
+      monthlyData,
+      grandTotals,
+    },
+    "Purchase GST monthly report retrieved successfully",
+    statusType.OK,
+  );
+});
+
+
 // --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
 // --------------------------------------------------------------------
@@ -2373,4 +2796,6 @@ export const purchaseController = {
   getAllPurchaseReportHistory,
   downloadPurchaseReportHistoryPDF,
   downloadPurchaseReportHistoryExcel,
+  getPurchaseWithGST,
+  getPurchaseGSTMonthly,
 };

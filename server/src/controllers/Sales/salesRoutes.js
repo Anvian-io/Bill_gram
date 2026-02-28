@@ -26,6 +26,10 @@ router.get("/area-pdf-data", salesController.getAreaWisePDFData);
 
 router.get("/salesman-pdf-data", salesController.getSalesmanWisePDFData);
 
+router.get("/sales-gst", salesController.getSalesWithGST);
+
+router.get("/sales-gst-montly", salesController.getSalesGSTMonthly);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 
