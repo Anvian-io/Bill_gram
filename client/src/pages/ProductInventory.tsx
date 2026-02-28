@@ -1221,7 +1221,7 @@ export default function ProductInventory() {
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="max-w-365 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">

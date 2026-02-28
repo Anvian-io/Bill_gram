@@ -680,7 +680,7 @@ export default function PurchaseGST() {
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
-              <div className="max-w-290 overflow-x-auto">
+              <div className="max-w-345 overflow-x-auto">
                 {/* ADDED min-w-[1400px] TO ENABLE HORIZONTAL SCROLLING */}
                 <Table className="">
                   <TableHeader>
