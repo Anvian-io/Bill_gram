@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -244,6 +244,21 @@ export default function SalesForm({
   const customerId = form.watch("customerId");
   const areaId = form.watch("areaId");
 
+  // Watch summary fields that affect final amount calculation
+  const cessInsurance = useWatch({
+    control: form.control,
+    name: "cessInsurance",
+  });
+  const discountPercent = useWatch({
+    control: form.control,
+    name: "discountPercent",
+  });
+  const amountAdd = useWatch({ control: form.control, name: "amountAdd" });
+  const creditAmount = useWatch({
+    control: form.control,
+    name: "creditAmount",
+  });
+
   // Filtered Lists based on Area
   const filteredCustomers = useMemo(() => {
     if (!areaId) return customers;
@@ -313,7 +328,7 @@ export default function SalesForm({
   // --------------------------------------------------------------------
   const handleCustomerSelect = (selectedCustomerId: number) => {
     const customer = findCustomer(selectedCustomerId);
-    console.log(customer,"fewoihfioweh")
+    console.log(customer, "fewoihfioweh");
     if (customer) {
       form.setValue("customerId", customer.id);
       form.setValue("areaId", customer.areaId || 0);
@@ -347,18 +362,20 @@ export default function SalesForm({
         0,
       );
 
-      const cessInsurance = Number(form.getValues("cessInsurance")) || 0;
-      const discountPercent = Number(form.getValues("discountPercent")) || 0;
-      const amountAdd = Number(form.getValues("amountAdd")) || 0;
-      const creditAmount = Number(form.getValues("creditAmount")) || 0;
+      const _cessInsurance = Number(cessInsurance) || 0;
+      const _discountPercent = Number(discountPercent) || 0;
+      const _amountAdd = Number(amountAdd) || 0;
+      const _creditAmount = Number(creditAmount) || 0;
 
-      const discountAmount = grossAmount * (discountPercent / 100);
+      const discountAmount =
+        (sumItemFinal + _cessInsurance + _amountAdd - _creditAmount) *
+        (_discountPercent / 100);
       const finalAmount =
         sumItemFinal +
-        cessInsurance +
-        amountAdd -
+        _cessInsurance +
+        _amountAdd -
         discountAmount -
-        creditAmount;
+        _creditAmount;
 
       form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
       form.setValue("tax", parseFloat(tax.toFixed(2)));
@@ -369,7 +386,7 @@ export default function SalesForm({
     };
 
     calculateTotals();
-  }, [items, form]);
+  }, [items, cessInsurance, discountPercent, amountAdd, creditAmount, form]);
 
   // Reset form when editingSales changes
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -207,6 +207,21 @@ export default function PurchaseForm({
   // Watch items for UI updates
   const items = form.watch("items");
 
+  // Watch summary fields that affect final amount calculation
+  const cessInsurance = useWatch({
+    control: form.control,
+    name: "cessInsurance",
+  });
+  const discountPercent = useWatch({
+    control: form.control,
+    name: "discountPercent",
+  });
+  const amountAdd = useWatch({ control: form.control, name: "amountAdd" });
+  const creditAmount = useWatch({
+    control: form.control,
+    name: "creditAmount",
+  });
+
   // --------------------------------------------------------------------
   // Calculations – new logic with per‑item finalAmount
   // --------------------------------------------------------------------
@@ -225,18 +240,20 @@ export default function PurchaseForm({
         0,
       );
 
-      const cessInsurance = form.getValues("cessInsurance") || 0;
-      const discountPercent = form.getValues("discountPercent") || 0;
-      const amountAdd = form.getValues("amountAdd") || 0;
-      const creditAmount = form.getValues("creditAmount") || 0;
+      const _cessInsurance = cessInsurance || 0;
+      const _discountPercent = discountPercent || 0;
+      const _amountAdd = amountAdd || 0;
+      const _creditAmount = creditAmount || 0;
 
-      const discountAmount = grossAmount * (discountPercent / 100);
+      const discountAmount =
+        (sumItemFinal + _cessInsurance + _amountAdd - _creditAmount) *
+        (_discountPercent / 100);
       const finalAmount =
         sumItemFinal +
-        cessInsurance +
-        amountAdd -
+        _cessInsurance +
+        _amountAdd -
         discountAmount -
-        creditAmount;
+        _creditAmount;
 
       form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
       form.setValue("tax", parseFloat(tax.toFixed(2)));
@@ -247,7 +264,7 @@ export default function PurchaseForm({
     };
 
     calculateTotals();
-  }, [items, form]);
+  }, [items, cessInsurance, discountPercent, amountAdd, creditAmount, form]);
 
   // Reset form when editingPurchase changes (map old sch fields to new single sch)
   useEffect(() => {
@@ -494,7 +511,7 @@ export default function PurchaseForm({
       sch1Percent: 0,
       sch1Amount: 0,
       sch2Percent: 0,
-      sch2Amount: 0
+      sch2Amount: 0,
     };
     form.setValue("items", [...items, newItem]);
   };
