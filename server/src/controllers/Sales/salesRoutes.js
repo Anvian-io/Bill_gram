@@ -22,6 +22,10 @@ router.get("/summary-pdf-data", salesController.getSalesSummaryReportPDFData);
 
 router.get("/register-pdf-data", salesController.getSalesRegisterPDFData);
 
+router.get("/area-pdf-data", salesController.getAreaWisePDFData);
+
+router.get("/salesman-pdf-data", salesController.getSalesmanWisePDFData);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 

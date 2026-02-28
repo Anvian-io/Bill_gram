@@ -55,6 +55,116 @@ export interface SalesmanWiseInvoiceDetail {
   customerName: string;
 }
 
+// NEW: Area Wise PDF Data types
+export interface AreaWisePDFDataItem {
+  areaId: number;
+  areaName: string;
+  totalDiscount: number;
+  totalSchemeAmount: number;
+  totalGST: number;
+  finalAmount: number;
+  invoiceCount: number;
+}
+
+export interface AreaWisePDFGrandTotals {
+  totalDiscount: number;
+  totalSchemeAmount: number;
+  totalGST: number;
+  finalAmount: number;
+  invoiceCount: number;
+}
+
+export interface AreaWisePDFData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    customerId: number | null;
+    vanId: number | null;
+    salesmanId: number | null;
+    productGroupId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  areaData: AreaWisePDFDataItem[];
+  grandTotals: AreaWisePDFGrandTotals;
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+// NEW: Salesman Wise PDF Data types
+export interface SalesmanWisePDFDataItem {
+  salesmanId: number;
+  salesmanName: string;
+  totalDiscount: number;
+  totalSchemeAmount: number;
+  totalGST: number;
+  finalAmount: number;
+  invoiceCount: number;
+}
+
+export interface SalesmanWisePDFGrandTotals {
+  totalDiscount: number;
+  totalSchemeAmount: number;
+  totalGST: number;
+  finalAmount: number;
+  invoiceCount: number;
+}
+
+export interface SalesmanWisePDFData {
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    invoiceNo: string | null;
+    customerId: number | null;
+    areaId: number | null;
+    vanId: number | null;
+    productGroupId: number | null;
+    page: number;
+    limit: number;
+  };
+  dateRange: {
+    from: string | null;
+    to: string | null;
+  };
+  user: {
+    shop_name: string | null;
+  };
+  invoiceRange: {
+    start: string | null;
+    end: string | null;
+  };
+  areas: string[];
+  salesmanData: SalesmanWisePDFDataItem[];
+  grandTotals: SalesmanWisePDFGrandTotals;
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 // NEW: Sales Summary Report Data (for modal preview)
 export interface SalesSummaryProduct {
   productCode: string;

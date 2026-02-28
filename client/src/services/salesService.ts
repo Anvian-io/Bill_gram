@@ -13,7 +13,9 @@ import type {
   AreaWiseReportItem,
   SalesmanWiseReportItem,
   SalesSummaryReportData,
-  SalesRegisterReportData, // NEW
+  SalesRegisterReportData,
+  AreaWisePDFData,
+  SalesmanWisePDFData,
 } from "@/types/sales-report";
 
 export const salesService = {
@@ -237,6 +239,94 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching salesman-wise sales report:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Get area-wise PDF data (for modal preview)
+  async getAreaWisePDFData(
+    filters: SalesReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<AreaWisePDFData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<ApiResponse<AreaWisePDFData>>(
+        `/sales/area-pdf-data?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching area-wise PDF data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Get salesman-wise PDF data (for modal preview)
+  async getSalesmanWisePDFData(
+    filters: SalesReportFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<SalesmanWisePDFData> {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get<ApiResponse<SalesmanWisePDFData>>(
+        `/sales/salesman-pdf-data?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching salesman-wise PDF data:", message);
       throw new Error(message);
     }
   },

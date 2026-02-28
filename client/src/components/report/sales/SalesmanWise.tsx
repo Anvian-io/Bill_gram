@@ -16,7 +16,6 @@ import {
   X,
   RefreshCw,
   FileText,
-  FileSpreadsheet,
   Calendar,
   ChevronsUpDown,
   Check,
@@ -63,7 +62,9 @@ import {
 import type {
   SalesReportFilters,
   SalesmanWiseReportItem,
+  SalesmanWisePDFData,
 } from "@/types/sales-report";
+import SalesmanWisePreviewModal from "./SalesmanWisePreviewModal";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -117,6 +118,13 @@ export default function SalesmanWise() {
   const [productGroupOpen, setProductGroupOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Modal state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [pdfData, setPdfData] = useState<SalesmanWisePDFData | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfPage, setPdfPage] = useState(1);
+  const [pdfLimit] = useState(10);
 
   // Filters state
   const [filters, setFilters] = useState<SalesReportFilters>({
@@ -280,10 +288,47 @@ export default function SalesmanWise() {
   }, [filters]);
 
   // --------------------------------------------------------------------
+  // PDF Data fetching
+  // --------------------------------------------------------------------
+  const fetchPDFData = async (page: number = 1) => {
+    setPdfLoading(true);
+    try {
+      const data = await salesService.getSalesmanWisePDFData(
+        {
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          invoiceNo: filters.invoiceNo || undefined,
+          customerId: filters.customerId,
+          areaId: filters.areaId,
+          vanId: filters.vanId,
+          productGroupId: filters.productGroupId,
+        },
+        page,
+        pdfLimit,
+      );
+      setPdfData(data);
+      setPdfPage(data.pagination.currentPage);
+    } catch (error) {
+      toast.error("Failed to load salesman-wise PDF data");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleShowPDF = async () => {
+    await fetchPDFData(1);
+    setIsPreviewOpen(true);
+  };
+
+  const handlePDFPageChange = (newPage: number) => {
+    fetchPDFData(newPage);
+  };
+
+  // --------------------------------------------------------------------
   // Export placeholders
   // --------------------------------------------------------------------
   const handleExportPDF = () => {
-    toast.info("PDF export coming soon");
+    toast.info("Use the Show button to preview and download PDF");
   };
 
   const handleExportExcel = () => {
@@ -356,7 +401,7 @@ export default function SalesmanWise() {
               </motion.p>
             </div>
 
-            {/* Export Buttons */}
+            {/* Action Buttons */}
             <motion.div className="flex items-center gap-3">
               <motion.div
                 variants={buttonVariants}
@@ -366,26 +411,11 @@ export default function SalesmanWise() {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={handleExportPDF}
-                  disabled={isLoading || reportData.length === 0}
+                  onClick={handleShowPDF}
+                  disabled={isLoading || reportData.length === 0 || pdfLoading}
                 >
                   <FileText className="h-4 w-4" />
-                  PDF
-                </Button>
-              </motion.div>
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleExportExcel}
-                  disabled={isLoading || reportData.length === 0}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Excel
+                  {pdfLoading ? "Loading..." : "Show"}
                 </Button>
               </motion.div>
               <motion.div
@@ -1179,6 +1209,16 @@ export default function SalesmanWise() {
           </motion.div>
         )}
       </div>
+
+      {/* Salesman Wise Preview Modal */}
+      <SalesmanWisePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={pdfData}
+        onPageChange={handlePDFPageChange}
+        currentPage={pdfPage}
+        filters={filters}
+      />
     </motion.div>
   );
 }

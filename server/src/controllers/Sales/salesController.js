@@ -1751,6 +1751,448 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// 11. GET AREA-WISE PDF DATA (aggregated by area with financial totals)
+// --------------------------------------------------------------------
+export const getAreaWisePDFData = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    customerId,
+    vanId,
+    salesmanId,
+    productGroupId,
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // 1. Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+  if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
+  
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+  
+  if (productGroupId) {
+    andConditions.push({
+      items: {
+        some: { product: { productGroupId: parseInt(productGroupId) } },
+      },
+    });
+  }
+  
+  const where = { AND: andConditions };
+
+  // 2. Get actual min and max invoice dates
+  const dateRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas for filter display
+  const invoicesWithArea = await prisma.salesInvoice.findMany({
+    where,
+    select: { area: { select: { name: true } } },
+    distinct: ["areaId"],
+  });
+  const areas = [
+    ...new Set(
+      invoicesWithArea
+        .map((inv) => inv.area?.name)
+        .filter((name) => name && name.length > 0),
+    ),
+  ];
+
+  // 6. Fetch all invoices with area details and items for aggregation
+  const invoices = await prisma.salesInvoice.findMany({
+    where,
+    select: {
+      id: true,
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      scheme1: true,
+      tax: true,
+      discountPercent: true,
+      areaId: true,
+      area: { select: { id: true, name: true } },
+      items: {
+        select: {
+          finalAmount: true,
+          schAmount: true,
+          taxAmount: true,
+          totalAmount: true,
+        },
+      },
+    },
+  });
+
+  // 7. Aggregate by area
+  const areaMap = new Map();
+
+  for (const invoice of invoices) {
+    if (!invoice.areaId) continue;
+    
+    const areaId = invoice.areaId;
+    const areaName = invoice.area?.name || `Area ${areaId}`;
+    
+    if (!areaMap.has(areaId)) {
+      areaMap.set(areaId, {
+        areaId,
+        areaName,
+        totalDiscount: 0, // Always 0 as per requirement
+        totalSchemeAmount: 0,
+        totalGST: 0,
+        finalAmount: 0,
+        invoiceCount: 0,
+      });
+    }
+    
+    const agg = areaMap.get(areaId);
+    
+    // Calculate scheme amount from items (sum of schAmount) or use invoice scheme1
+    const itemSchemeTotal = invoice.items.reduce((sum, item) => sum + (item.schAmount || 0), 0);
+    agg.totalSchemeAmount += itemSchemeTotal > 0 ? itemSchemeTotal : (invoice.scheme1 || 0);
+    
+    // Calculate GST from items taxAmount or invoice tax
+    const itemTaxTotal = invoice.items.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
+    agg.totalGST += itemTaxTotal > 0 ? itemTaxTotal : (invoice.tax || 0);
+    
+    agg.finalAmount += invoice.finalAmount || 0;
+    agg.invoiceCount += 1;
+  }
+
+  // 8. Convert map to array
+  let allAreas = Array.from(areaMap.values());
+
+  // 9. Compute grand totals
+  const grandTotals = allAreas.reduce(
+    (acc, area) => {
+      acc.totalDiscount += area.totalDiscount;
+      acc.totalSchemeAmount += area.totalSchemeAmount;
+      acc.totalGST += area.totalGST;
+      acc.finalAmount += area.finalAmount;
+      acc.invoiceCount += area.invoiceCount;
+      return acc;
+    },
+    {
+      totalDiscount: 0,
+      totalSchemeAmount: 0,
+      totalGST: 0,
+      finalAmount: 0,
+      invoiceCount: 0,
+    },
+  );
+
+  // 10. Sort by area name and paginate
+  allAreas.sort((a, b) => a.areaName.localeCompare(b.areaName));
+  const totalAreas = allAreas.length;
+  const totalPages = Math.ceil(totalAreas / validatedLimit);
+  const paginatedAreas = allAreas.slice(skip, skip + validatedLimit);
+
+  // 11. Build response
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+        page: validatedPage,
+        limit: validatedLimit,
+      },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      user: { shop_name: user?.shop_name || null },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      areaData: paginatedAreas,
+      grandTotals,
+      pagination: {
+        total: totalAreas,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Area-wise PDF data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// 12. GET SALESMAN-WISE PDF DATA (aggregated by salesman with financial totals)
+// --------------------------------------------------------------------
+export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    customerId,
+    areaId,
+    vanId,
+    productGroupId,
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // 1. Build WHERE clause for invoices
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  if (areaId) andConditions.push({ areaId: parseInt(areaId) });
+  if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+  
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+  
+  if (productGroupId) {
+    andConditions.push({
+      items: {
+        some: { product: { productGroupId: parseInt(productGroupId) } },
+      },
+    });
+  }
+  
+  const where = { AND: andConditions };
+
+  // 2. Get actual min and max invoice dates
+  const dateRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.salesInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas for filter display
+  const invoicesWithArea = await prisma.salesInvoice.findMany({
+    where,
+    select: { area: { select: { name: true } } },
+    distinct: ["areaId"],
+  });
+  const areas = [
+    ...new Set(
+      invoicesWithArea
+        .map((inv) => inv.area?.name)
+        .filter((name) => name && name.length > 0),
+    ),
+  ];
+
+  // 6. Fetch all invoices with salesman details and items for aggregation
+  const invoices = await prisma.salesInvoice.findMany({
+    where,
+    select: {
+      id: true,
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      scheme1: true,
+      tax: true,
+      discountPercent: true,
+      salesmanId: true,
+      salesman: { select: { id: true, name: true } },
+      items: {
+        select: {
+          finalAmount: true,
+          schAmount: true,
+          taxAmount: true,
+          totalAmount: true,
+        },
+      },
+    },
+  });
+
+  // 7. Aggregate by salesman
+  const salesmanMap = new Map();
+
+  for (const invoice of invoices) {
+    if (!invoice.salesmanId) continue;
+    
+    const salesmanId = invoice.salesmanId;
+    const salesmanName = invoice.salesman?.name || `Salesman ${salesmanId}`;
+    
+    if (!salesmanMap.has(salesmanId)) {
+      salesmanMap.set(salesmanId, {
+        salesmanId,
+        salesmanName,
+        totalDiscount: 0, // Always 0 as per requirement
+        totalSchemeAmount: 0,
+        totalGST: 0,
+        finalAmount: 0,
+        invoiceCount: 0,
+      });
+    }
+    
+    const agg = salesmanMap.get(salesmanId);
+    
+    // Calculate scheme amount from items (sum of schAmount) or use invoice scheme1
+    const itemSchemeTotal = invoice.items.reduce((sum, item) => sum + (item.schAmount || 0), 0);
+    agg.totalSchemeAmount += itemSchemeTotal > 0 ? itemSchemeTotal : (invoice.scheme1 || 0);
+    
+    // Calculate GST from items taxAmount or invoice tax
+    const itemTaxTotal = invoice.items.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
+    agg.totalGST += itemTaxTotal > 0 ? itemTaxTotal : (invoice.tax || 0);
+    
+    agg.finalAmount += invoice.finalAmount || 0;
+    agg.invoiceCount += 1;
+  }
+
+  // 8. Convert map to array
+  let allSalesmen = Array.from(salesmanMap.values());
+
+  // 9. Compute grand totals
+  const grandTotals = allSalesmen.reduce(
+    (acc, salesman) => {
+      acc.totalDiscount += salesman.totalDiscount;
+      acc.totalSchemeAmount += salesman.totalSchemeAmount;
+      acc.totalGST += salesman.totalGST;
+      acc.finalAmount += salesman.finalAmount;
+      acc.invoiceCount += salesman.invoiceCount;
+      return acc;
+    },
+    {
+      totalDiscount: 0,
+      totalSchemeAmount: 0,
+      totalGST: 0,
+      finalAmount: 0,
+      invoiceCount: 0,
+    },
+  );
+
+  // 10. Sort by salesman name and paginate
+  allSalesmen.sort((a, b) => a.salesmanName.localeCompare(b.salesmanName));
+  const totalSalesmen = allSalesmen.length;
+  const totalPages = Math.ceil(totalSalesmen / validatedLimit);
+  const paginatedSalesmen = allSalesmen.slice(skip, skip + validatedLimit);
+
+  // 11. Build response
+  return sendResponse(
+    res,
+    true,
+    {
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        areaId: areaId ? parseInt(areaId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+        page: validatedPage,
+        limit: validatedLimit,
+      },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      user: { shop_name: user?.shop_name || null },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      salesmanData: paginatedSalesmen,
+      grandTotals,
+      pagination: {
+        total: totalSalesmen,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Salesman-wise PDF data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object
 // --------------------------------------------------------------------
 export const salesController = {
@@ -1767,4 +2209,6 @@ export const salesController = {
   // New report APIs
   getSalesSummaryReportPDFData,
   getSalesRegisterPDFData,
+  getAreaWisePDFData,
+  getSalesmanWisePDFData,
 };
