@@ -16,6 +16,10 @@ import type {
   SalesRegisterReportData,
   AreaWisePDFData,
   SalesmanWisePDFData,
+  SalesGSTFilters,
+  SalesGSTResponse,
+  SalesMonthlyFilters,
+  SalesMonthlyGSTResponse,
 } from "@/types/sales-report";
 
 export const salesService = {
@@ -506,6 +510,134 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching sales register data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get sales GST data with filters (for GST reporting/returns)
+  async getSalesGST(filters: SalesGSTFilters): Promise<SalesGSTResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.page) {
+        params.append("page", filters.page.toString());
+      }
+      if (filters.limit) {
+        params.append("limit", filters.limit.toString());
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<ApiResponse<SalesGSTResponse>>(
+        `/sales/sales-gst?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales GST data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download sales GST Excel report
+  async downloadSalesGSTExcel(
+    filters: Omit<SalesGSTFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(
+        `/sales/gst/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales GST Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get sales GST monthly aggregated report
+  async getSalesGSTMonthly(
+    filters: SalesMonthlyFilters,
+  ): Promise<SalesMonthlyGSTResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (!filters.fromDate || !filters.toDate) {
+        throw new Error("Both fromDate and toDate are required");
+      }
+
+      params.append("fromDate", filters.fromDate.toISOString());
+      params.append("toDate", filters.toDate.toISOString());
+
+      const response = await apiClient.get<
+        ApiResponse<SalesMonthlyGSTResponse>
+      >(`/sales/sales-gst-montly?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales GST monthly data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download sales GST monthly Excel report
+  async downloadSalesGSTMonthlyExcel(
+    filters: SalesMonthlyFilters,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (!filters.fromDate || !filters.toDate) {
+        throw new Error("Both fromDate and toDate are required");
+      }
+
+      params.append("fromDate", filters.fromDate.toISOString());
+      params.append("toDate", filters.toDate.toISOString());
+
+      const response = await apiClient.get(
+        `/sales/gst-monthly/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales GST monthly Excel:", message);
       throw new Error(message);
     }
   },

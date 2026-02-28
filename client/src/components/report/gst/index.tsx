@@ -192,12 +192,16 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
 
           {/* Tab content */}
           <div>
-            {activeTab === "purchaseGst" && <PurchaseGST isCollapsed={isCollapsed} />}
-            {activeTab === "salesGst" && <SalesGST />}
+            {activeTab === "purchaseGst" && (
+              <PurchaseGST isCollapsed={isCollapsed} />
+            )}
+            {activeTab === "salesGst" && <SalesGST isCollapsed={isCollapsed} />}
             {activeTab === "b2b" && <B2B />}
             {activeTab === "b2c" && <B2C />}
-            {activeTab === "purchaseMonthlyGst" && <PurchaseMonthlyGST />}
-            {activeTab === "salesMonthlyGst" && <SalesMonthlyGST />}
+            {activeTab === "purchaseMonthlyGst" && (
+              <PurchaseMonthlyGST isCollapsed={isCollapsed} />
+            )}
+            {activeTab === "salesMonthlyGst" && <SalesMonthlyGST isCollapsed={isCollapsed} />}
           </div>
         </div>
       </div>

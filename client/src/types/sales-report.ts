@@ -279,3 +279,184 @@ export interface SalesRegisterReportData {
   };
   pagination: SalesRegisterPagination;
 }
+
+// For SalesGST (detailed invoice view)
+export interface SalesGSTItem {
+  itemId: number;
+  productId: number;
+  productCode?: string;
+  description?: string;
+  hsnSacCode?: string;
+  gstRate: number;
+  cessRate: number;
+  unitName?: string;
+  unitSymbol?: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  mrp?: number;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount: number;
+  totalGST: number;
+  schemeAmount: number;
+  schemePercent: number;
+  freeQuantity: number;
+  damagedQuantity: number;
+  finalAmount: number;
+}
+
+export interface SalesGSTInvoice {
+  saleId: number;
+  invoiceId: string;
+  customerName: string;
+  gstin: string;
+  invoiceDate: string;
+  refInvoiceId: string;
+  refDate: string | null;
+  grossAmount: number;
+  schemeAmount: number;
+  discountAmount: number;
+  damageAmount: number;
+  finalAmount: number;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount: number;
+  totalGSTAmount: number;
+  cess: number;
+  addAmount: number;
+  creditAmount: number;
+  boxUnit: number;
+  remarks: string;
+  status: string;
+  customerDetails?: {
+    id: number;
+    companyName?: string;
+    personName?: string;
+    phoneNo?: string;
+    email?: string;
+    address?: string;
+  };
+  areaDetails?: {
+    id: number;
+    name: string;
+  };
+  vanDetails?: {
+    id: number;
+    name: string;
+    vehicleNo?: string;
+  };
+  salesmanDetails?: {
+    id: number;
+    name: string;
+    phoneNo?: string;
+  };
+  userDetails?: {
+    shopName?: string;
+    companyName?: string;
+  };
+  items: SalesGSTItem[];
+  itemCount: number;
+}
+
+export interface SalesGSTSummary {
+  totalRecords: number;
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalFinalAmount: number;
+}
+
+export interface SalesGSTPagination {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface SalesGSTResponse {
+  sales: SalesGSTInvoice[];
+  summary: SalesGSTSummary;
+  pagination: SalesGSTPagination;
+}
+
+export interface SalesGSTFilters {
+  customerId?: number;
+  fromDate?: Date;
+  toDate?: Date;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+// For SalesMonthlyGST (aggregated monthly view)
+export interface SalesMonthlyData {
+  monthKey: string; // Format: "YYYY-MM"
+  invoiceCount: number;
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalGSTAmount: number;
+  totalCessCharge: number;
+  totalAddAmount: number;
+  totalCreditAmount: number;
+  totalFinalAmount: number;
+}
+
+export interface SalesMonthlyGrandTotals {
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalGSTAmount: number;
+  totalCessCharge: number;
+  totalAddAmount: number;
+  totalCreditAmount: number;
+  totalFinalAmount: number;
+  totalInvoices: number;
+}
+
+export interface SalesMonthlyPeriod {
+  from: string;
+  to: string;
+  totalMonths: number;
+}
+
+export interface SalesMonthlyGSTResponse {
+  filters: {
+    fromDate: string;
+    toDate: string;
+  };
+  period: SalesMonthlyPeriod;
+  monthlyData: SalesMonthlyData[];
+  grandTotals: SalesMonthlyGrandTotals;
+}
+
+export interface SalesMonthlyFilters {
+  fromDate?: Date;
+  toDate?: Date;
+}

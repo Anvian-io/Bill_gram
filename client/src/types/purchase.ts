@@ -419,3 +419,60 @@ export interface PurchaseGSTFilters {
   page?: number;
   limit?: number;
 }
+
+export interface PurchaseMonthlyData {
+  cessAmount: number;
+  monthKey: string; // Format: "YYYY-MM"
+  invoiceCount: number;
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalGSTAmount: number;
+  totalCessCharge: number;
+  totalAddAmount: number;
+  totalCreditAmount: number;
+  totalFinalAmount: number;
+}
+
+export interface PurchaseMonthlyGrandTotals {
+  totalGrossAmount: number;
+  totalSchemeAmount: number;
+  totalDiscountAmount: number;
+  totalDamageAmount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalCess: number;
+  totalGSTAmount: number;
+  totalCessCharge: number;
+  totalAddAmount: number;
+  totalCreditAmount: number;
+  totalFinalAmount: number;
+  totalInvoices: number;
+}
+
+export interface PurchaseMonthlyGSTResponse {
+  filters: {
+    fromDate: string;
+    toDate: string;
+  };
+  period: {
+    from: string;
+    to: string;
+    totalMonths: number;
+  };
+  monthlyData: PurchaseMonthlyData[];
+  grandTotals: PurchaseMonthlyGrandTotals;
+}
+
+export interface PurchaseMonthlyFilters {
+  fromDate?: Date;
+  toDate?: Date;
+}

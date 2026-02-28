@@ -13,6 +13,8 @@ import type {
   PaginatedHistoryResponse,
   PurchaseGSTFilters,
   PurchaseGSTResponse,
+  PurchaseMonthlyFilters,
+  PurchaseMonthlyGSTResponse,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -441,6 +443,55 @@ export const purchaseService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading purchase GST Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // ========== Purchase Monthly GST Report ==========
+  async getPurchaseGSTMonthly(
+    filters?: PurchaseMonthlyFilters,
+  ): Promise<PurchaseMonthlyGSTResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<PurchaseMonthlyGSTResponse>
+      >(`/purchases/purchase-gst-monthly?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching monthly GST data:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseGSTMonthlyExcel(
+    filters?: Omit<PurchaseMonthlyFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+      }
+
+      const response = await apiClient.get(
+        `/purchases/purchase-gst-monthly/excel?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading monthly GST Excel:", message);
       throw new Error(message);
     }
   },

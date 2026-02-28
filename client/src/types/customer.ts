@@ -1,5 +1,8 @@
 // src/types/customer.ts
 export interface Customer {
+  name: any;
+  name: ReactNode;
+  name: any;
   id: number;
   companyName: string;
   personName: string;

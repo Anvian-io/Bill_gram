@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------
 // HELPER: Group data by month
 // --------------------------------------------------------------------
-const groupByMonth = (invoices, type = "purchase") => {
+export const groupByMonth = (invoices, type = "purchase") => {
   const monthMap = new Map();
 
   invoices.forEach((invoice) => {
