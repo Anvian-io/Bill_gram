@@ -963,9 +963,9 @@ export default function SalesRegister() {
                       {isLoading ? (
                         <motion.tr
                           key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
+                          // initial={{ opacity: 0 }}
+                          // animate={{ opacity: 1 }}
+                          // exit={{ opacity: 0 }}
                         >
                           <TableCell colSpan={7} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">

@@ -1291,10 +1291,10 @@ export default function Sales() {
                         {isLoading ? (
                           <motion.tr
                             key="loading"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
+                            // initial={{ opacity: 0 }}
+                            // animate={{ opacity: 1 }}
+                            // exit={{ opacity: 0 }}
+                            // transition={{ duration: 0.3 }}
                           >
                             <TableCell
                               colSpan={15}

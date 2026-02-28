@@ -905,9 +905,9 @@ export default function Purchase() {
                         {isLoading ? (
                           <motion.tr
                             key="loading"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            // initial={{ opacity: 0 }}
+                            // animate={{ opacity: 1 }}
+                            // exit={{ opacity: 0 }}
                           >
                             <TableCell
                               colSpan={12}

@@ -680,8 +680,9 @@ export default function PurchaseGST() {
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="max-w-290 overflow-x-auto">
+                {/* ADDED min-w-[1400px] TO ENABLE HORIZONTAL SCROLLING */}
+                <Table className="">
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">
@@ -730,9 +731,9 @@ export default function PurchaseGST() {
                       {isLoading ? (
                         <motion.tr
                           key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
+                          // initial={{ opacity: 0 }}
+                          // animate={{ opacity: 1 }}
+                          // exit={{ opacity: 0 }}
                         >
                           <TableCell colSpan={14} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">

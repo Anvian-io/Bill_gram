@@ -69,10 +69,10 @@ export default function Report() {
     expanded: { width: 280, transition: { duration: 0.3 } },
   };
 
-  const contentVariants = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-  };
+  // const contentVariants = {
+    // hidden: { opacity: 0, x: 20 },
+    // visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  // };
 
   return (
     <div className="flex h-[calc(100vh-65px)] bg-background">
@@ -185,7 +185,7 @@ export default function Report() {
         <AnimatePresence>
           <motion.div
             key={activeSection}
-            variants={contentVariants}
+            // variants={contentVariants}
             initial="hidden"
             animate="visible"
             exit="hidden"
