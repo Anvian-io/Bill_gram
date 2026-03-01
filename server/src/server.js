@@ -18,6 +18,7 @@ import supplierRoutes from "./controllers/Supplier/supplierRoutes.js";
 import salesRoutes from "./controllers/Sales/salesRoutes.js";
 import { verifyUser } from "./middleware/verifyToken.js";
 import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
+import dashboardRoutes from "./controllers/Dashboard/dashboardRoutes.js";
 import { createServer } from "http";
 import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
 
@@ -66,6 +67,7 @@ const startServer = async () => {
     app.use("/api/purchases", purchaseRoute); // Add this
     app.use("/api/suppliers", supplierRoutes);
     app.use("/api/sales", salesRoutes);
+    app.use("/api/dashboard", dashboardRoutes);
 
     // Health check
     app.get("/api/health", (req, res) => {
