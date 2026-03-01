@@ -24,6 +24,7 @@ import {
   Restore_Backup
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
+import AppInitializer from "./components/AppInitializer";
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
+        <AppInitializer/>
         Loading...
       </div>
     );
