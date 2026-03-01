@@ -20,6 +20,8 @@ import type {
   SalesGSTResponse,
   SalesMonthlyFilters,
   SalesMonthlyGSTResponse,
+  PaginatedSalesHistoryResponse,
+  SalesReportHistoryFilters,
 } from "@/types/sales-report";
 
 export const salesService = {
@@ -884,6 +886,77 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading sales GST monthly Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get all sales report history with filters & pagination
+  async getSalesReportHistory(
+    filters: SalesReportHistoryFilters,
+  ): Promise<PaginatedSalesHistoryResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.page) {
+        params.append("page", filters.page.toString());
+      }
+      if (filters.limit) {
+        params.append("limit", filters.limit.toString());
+      }
+      if (filters.search) {
+        params.append("search", filters.search);
+      }
+      if (filters.fileName) {
+        params.append("fileName", filters.fileName);
+      }
+      if (filters.type) {
+        params.append("type", filters.type);
+      }
+      if (filters.tab) {
+        params.append("tab", filters.tab);
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<
+        ApiResponse<PaginatedSalesHistoryResponse>
+      >(`/sales/history/all?${params.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales report history:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download specific sales report history as PDF
+  async downloadSalesReportHistoryPDF(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/sales/history/${id}/pdf`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales report history PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download specific sales report history as Excel
+  async downloadSalesReportHistoryExcel(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/sales/history/${id}/excel`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales report history Excel:", message);
       throw new Error(message);
     }
   },

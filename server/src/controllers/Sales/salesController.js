@@ -4674,6 +4674,549 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
 );
 
 // --------------------------------------------------------------------
+// SALES REPORT HISTORY CONTROLLERS
+// --------------------------------------------------------------------
+
+export const getAllSalesReportHistory = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    fileName = "",
+    type, // "pdf" or "excel"
+    tab, // "summary", "register", "area-wise", "salesman-wise"
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  // Build WHERE clause
+  const andConditions = [];
+
+  // Filter by userId (optional - uncomment if you want only current user's history)
+  // andConditions.push({ userId: req.user.id });
+
+  if (fileName) {
+    andConditions.push({ fileName: { contains: fileName } });
+  }
+
+  if (type) {
+    andConditions.push({ type });
+  }
+
+  if (tab) {
+    andConditions.push({ tab });
+  }
+
+  // Global search: fileName, template
+  if (search) {
+    andConditions.push({
+      OR: [
+        { fileName: { contains: search } },
+        { template: { contains: search } },
+      ],
+    });
+  }
+
+  const where = andConditions.length ? { AND: andConditions } : {};
+
+  // Sorting
+  const validSortFields = ["fileName", "type", "tab", "createdAt"];
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "createdAt"]:
+      sortOrder === "asc" ? "asc" : "desc",
+  };
+
+  // Fetch records
+  const [histories, total] = await Promise.all([
+    prisma.salesReportHistory.findMany({
+      where,
+      skip,
+      take: validatedLimit,
+      orderBy,
+      include: {
+        user: { select: { id: true, username: true, shop_name: true } },
+      },
+    }),
+    prisma.salesReportHistory.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(total / validatedLimit);
+
+  return sendResponse(
+    res,
+    true,
+    {
+      histories,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Sales report history retrieved successfully",
+    statusType.OK,
+  );
+});
+
+export const downloadSalesReportHistoryPDF = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Fetch history record
+  const history = await prisma.salesReportHistory.findUnique({
+    where: { id: parseInt(id) },
+    include: { user: { select: { shop_name: true } } },
+  });
+
+  if (!history) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Report history not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  // Parse stored data
+  let reportData;
+  try {
+    reportData = JSON.parse(history.data);
+  } catch (error) {
+    console.error("Failed to parse report data:", error);
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid report data",
+      statusType.INTERNAL_SERVER_ERROR,
+    );
+  }
+
+  // Reuse the same template that was originally used
+  const templateName = history.template; // e.g. "salesSummaryReport.ejs", "salesRegisterReport.ejs", etc.
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const templatePath = path.join(
+    __dirname,
+    "../../views/sales",
+    templateName,
+  );
+
+  // Helper for date formatting (same as in original PDF function)
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  // Render HTML
+  const html = await ejs.renderFile(templatePath, {
+    ...reportData,
+    formatDate,
+  });
+
+  // Generate PDF
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const footerTemplate = `
+    <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; margin-top: 5px;">
+      <span>${reportData.user?.shop_name || "Your Shop"}</span>
+      <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+    </div>
+  `;
+  const headerTemplate = "<div></div>";
+
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
+    displayHeaderFooter: true,
+    headerTemplate,
+    footerTemplate,
+  });
+
+  await browser.close();
+
+  // Use stored filename or generate a new one
+  const pdfFileName = history.fileName || `report-${history.id}.pdf`;
+
+  // Send PDF
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${pdfFileName}"`);
+  res.setHeader("Content-Length", pdfBuffer.length);
+  return res.end(pdfBuffer, "binary");
+});
+
+export const downloadSalesReportHistoryExcel = asyncHandler(
+  async (req, res) => {
+    const { id } = req.params;
+
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
+
+    const history = await prisma.salesReportHistory.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!history) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Report history not found",
+        statusType.NOT_FOUND,
+      );
+    }
+
+    let reportData;
+    try {
+      reportData = JSON.parse(history.data);
+    } catch (error) {
+      console.error("Failed to parse report data:", error);
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Invalid report data",
+        statusType.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    
+    // Determine worksheet name based on tab type
+    let worksheetName = "Sales Report";
+    if (history.tab === "summary") worksheetName = "Sales Summary";
+    else if (history.tab === "register") worksheetName = "Sales Register";
+    else if (history.tab === "area-wise") worksheetName = "Area Wise";
+    else if (history.tab === "salesman-wise") worksheetName = "Salesman Wise";
+    
+    const worksheet = workbook.addWorksheet(worksheetName);
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return "";
+      }
+    };
+
+    // Title based on tab type
+    let title = "Sales Report";
+    if (history.tab === "summary") title = "Sales Summary Report";
+    else if (history.tab === "register") title = "Sales Register Report";
+    else if (history.tab === "area-wise") title = "Area-Wise Sales Report";
+    else if (history.tab === "salesman-wise") title = "Salesman-Wise Sales Report";
+
+    // Title
+    const titleColumns = history.tab === "register" ? "A1:G1" : "A1:L1";
+    worksheet.mergeCells(titleColumns);
+    const titleRow = worksheet.getRow(1);
+    titleRow.getCell(1).value = title;
+    titleRow.getCell(1).font = { size: 16, bold: true };
+    titleRow.getCell(1).alignment = { horizontal: "center" };
+
+    // Shop name & date range
+    const dateRangeColumns = history.tab === "register" ? "A2:G2" : "A2:L2";
+    worksheet.mergeCells(dateRangeColumns);
+    worksheet.getRow(2).getCell(1).value =
+      `Shop: ${reportData.user?.shop_name || "Your Shop"} | Date: ${formatDate(reportData.dateRange?.from)} to ${formatDate(reportData.dateRange?.to)}`;
+    worksheet.getRow(2).getCell(1).alignment = { horizontal: "center" };
+
+    // Filter details
+    worksheet.addRow([]);
+    
+    if (history.tab !== "area-wise" && history.tab !== "salesman-wise") {
+      worksheet.addRow([
+        `INVOICE: ${reportData.invoiceRange?.start || "—"} to ${reportData.invoiceRange?.end || "—"}`,
+      ]);
+    }
+    
+    if (history.tab !== "salesman-wise") {
+      worksheet.addRow([
+        `AREA: ${reportData.areas?.length ? reportData.areas.join(", ") : "All"}`,
+      ]);
+    }
+    
+    if (history.tab === "salesman-wise") {
+      worksheet.addRow([
+        `AREA: ${reportData.areas?.length ? reportData.areas.join(", ") : "All"}`,
+      ]);
+    }
+    
+    worksheet.addRow([]);
+
+    // Headers based on tab type
+    let headers = [];
+    if (history.tab === "summary") {
+      headers = ["Sr.", "P.Code", "Description", "MRP", "BOX", "UNIT", "QTY", "FR", "REP", "DMG", "RATE", "AMT"];
+    } else if (history.tab === "register") {
+      headers = ["Sr.", "Invoice No", "Date", "Customer Name", "Amount", "Cash", "Cheque", "Balance"];
+    } else if (history.tab === "area-wise" || history.tab === "salesman-wise") {
+      headers = ["Sr.", history.tab === "area-wise" ? "Area Name" : "Salesman Name", "Discount", "Scheme Amount", "GST", "Final Amount", "Invoice Count"];
+    }
+
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // Data rows based on tab type
+    if (history.tab === "summary" && reportData.products) {
+      reportData.products.forEach((product, index) => {
+        const row = worksheet.addRow([
+          index + 1,
+          product.productCode,
+          product.description || "No description",
+          (product.mrp || 0).toFixed(2),
+          product.totalMqty || 0,
+          product.totalUnit || 0,
+          product.totalUnitsSold || 0,
+          product.fQty || 0,
+          0, // REP
+          product.dQty || 0,
+          (product.saleRate || 0).toFixed(2),
+          (product.finalAmount || 0).toFixed(2),
+        ]);
+
+        [4, 5, 6, 7, 8, 9, 10, 11, 12].forEach((colIndex) => {
+          const cell = row.getCell(colIndex);
+          cell.alignment = { horizontal: "right" };
+          cell.numFmt = "#,##0.00";
+        });
+
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+      });
+
+      // Totals row for summary
+      if (reportData.totals) {
+        const totalRow = worksheet.addRow([
+          `Total ${reportData.products?.length || 0} products`,
+          "",
+          "",
+          "",
+          reportData.totals.totalMqty || 0,
+          reportData.totals.totalUnit || 0,
+          reportData.totals.totalUnitsSold || 0,
+          reportData.totals.fQty || 0,
+          reportData.totals.rep || 0,
+          reportData.totals.dQty || 0,
+          "",
+          (reportData.totals.finalAmount || 0).toFixed(2),
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          if ([5, 6, 7, 8, 9, 10, 12].includes(colNumber)) {
+            cell.alignment = { horizontal: "right" };
+            if (colNumber === 12) cell.numFmt = "#,##0.00";
+          } else {
+            cell.alignment = { horizontal: "left" };
+          }
+        });
+        worksheet.mergeCells(`A${totalRow.number}:D${totalRow.number}`);
+      }
+    } else if (history.tab === "register" && reportData.invoices) {
+      reportData.invoices.forEach((inv, index) => {
+        const row = worksheet.addRow([
+          index + 1,
+          inv.invoiceNo,
+          formatDate(inv.invoiceDate),
+          inv.customerName,
+          (inv.amount || 0).toFixed(2),
+          inv.cash || "",
+          inv.cheque || "",
+          (inv.balance || 0).toFixed(2),
+        ]);
+
+        [5, 8].forEach((colIndex) => {
+          const cell = row.getCell(colIndex);
+          cell.alignment = { horizontal: "right" };
+          cell.numFmt = "#,##0.00";
+        });
+
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+      });
+
+      // Totals row for register
+      if (reportData.totals) {
+        const totalRow = worksheet.addRow([
+          `Total ${reportData.invoices.length} invoices`,
+          "",
+          "",
+          "",
+          (reportData.totals.totalAmount || 0).toFixed(2),
+          "",
+          "",
+          (reportData.totals.totalAmount || 0).toFixed(2),
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          if ([5, 8].includes(colNumber)) {
+            cell.alignment = { horizontal: "right" };
+            cell.numFmt = "#,##0.00";
+          }
+        });
+        worksheet.mergeCells(`A${totalRow.number}:D${totalRow.number}`);
+      }
+    } else if ((history.tab === "area-wise" || history.tab === "salesman-wise") && reportData.areaData) {
+      const dataArray = history.tab === "area-wise" ? reportData.areaData : reportData.salesmanData;
+      const nameField = history.tab === "area-wise" ? "areaName" : "salesmanName";
+      
+      dataArray.forEach((item, index) => {
+        const row = worksheet.addRow([
+          index + 1,
+          item[nameField],
+          (item.totalDiscount || 0).toFixed(2),
+          (item.totalSchemeAmount || 0).toFixed(2),
+          (item.totalGST || 0).toFixed(2),
+          (item.finalAmount || 0).toFixed(2),
+          item.invoiceCount || 0,
+        ]);
+
+        [3, 4, 5, 6, 7].forEach((colIndex) => {
+          const cell = row.getCell(colIndex);
+          cell.alignment = { horizontal: "right" };
+          if (colIndex !== 7) cell.numFmt = "#,##0.00";
+        });
+
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+      });
+
+      // Grand Totals row
+      if (reportData.grandTotals) {
+        const totalRow = worksheet.addRow([
+          "Grand Total",
+          "",
+          (reportData.grandTotals.totalDiscount || 0).toFixed(2),
+          (reportData.grandTotals.totalSchemeAmount || 0).toFixed(2),
+          (reportData.grandTotals.totalGST || 0).toFixed(2),
+          (reportData.grandTotals.finalAmount || 0).toFixed(2),
+          reportData.grandTotals.invoiceCount || 0,
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          if ([3, 4, 5, 6, 7].includes(colNumber)) {
+            cell.alignment = { horizontal: "right" };
+            if (colNumber !== 7) cell.numFmt = "#,##0.00";
+          }
+        });
+        worksheet.mergeCells(`A${totalRow.number}:B${totalRow.number}`);
+      }
+    }
+
+    // Auto-fit columns
+    worksheet.columns.forEach((column) => {
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.value ? cell.value.toString() : "";
+        maxLength = Math.max(maxLength, cellValue.length);
+      });
+      column.width = Math.min(maxLength + 2, history.tab === "register" ? 30 : 20);
+    });
+
+    const excelFileName = history.fileName || `report-${history.id}.xlsx`;
+
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${excelFileName}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  },
+);
+
+// --------------------------------------------------------------------
 // GET SALES WITH GST DETAILS (for GST reporting/returns)
 // --------------------------------------------------------------------
 export const getSalesWithGST = asyncHandler(async (req, res) => {
@@ -5154,6 +5697,11 @@ export const salesController = {
   getSalesmanWisePDFData,
   downloadSalesmanWiseReportPDF,
   downloadSalesmanWiseReportExcel,
+
+  //history
+  getAllSalesReportHistory,
+  downloadSalesReportHistoryExcel,
+  downloadSalesReportHistoryPDF,
 
   getSalesWithGST,
   getSalesGSTMonthly,

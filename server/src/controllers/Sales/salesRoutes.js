@@ -61,6 +61,15 @@ router.get("/sales-gst", salesController.getSalesWithGST);
 
 router.get("/sales-gst-montly", salesController.getSalesGSTMonthly);
 
+// Get all sales report history with filters & pagination
+router.get("/history/all", salesController.getAllSalesReportHistory);
+
+// Download specific history record as PDF
+router.get("/history/:id/pdf", salesController.downloadSalesReportHistoryPDF);
+
+// Download specific history record as Excel
+router.get("/history/:id/excel", salesController.downloadSalesReportHistoryExcel);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 

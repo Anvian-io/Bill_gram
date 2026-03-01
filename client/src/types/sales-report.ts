@@ -460,3 +460,43 @@ export interface SalesMonthlyFilters {
   fromDate?: Date;
   toDate?: Date;
 }
+
+// ========== Sales Report History Types ==========
+export interface SalesReportHistory {
+  id: number;
+  userId: number;
+  type: "pdf" | "excel";
+  tab: "summary" | "register" | "area-wise" | "salesman-wise";
+  template: string;
+  fileName: string | null;
+  data: string; // JSON string of the report data
+  createdAt: string;
+  user?: {
+    id: number;
+    username: string;
+    shop_name: string | null;
+  };
+}
+
+export interface SalesReportHistoryFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  fileName?: string;
+  type?: "pdf" | "excel" | "";
+  tab?: "summary" | "register" | "area-wise" | "salesman-wise" | "";
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface PaginatedSalesHistoryResponse {
+  histories: SalesReportHistory[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
