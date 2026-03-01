@@ -25,6 +25,7 @@ import {
   HardDrive,
   LogOut,
   Upload,
+  Download,
   RefreshCw,
   ExternalLink,
   CheckCircle2,
@@ -135,6 +136,7 @@ const Restore_Backup: React.FC = () => {
 
   // Backup trigger
   const [backingUp, setBackingUp] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // History
   const [history, setHistory] = useState<BackupHistoryItem[]>([]);
@@ -277,6 +279,19 @@ const Restore_Backup: React.FC = () => {
       setHistoryPage(1);
     } finally {
       setBackingUp(false);
+    }
+  };
+
+  // Download backup zip
+  const handleDownloadBackup = async () => {
+    setDownloading(true);
+    try {
+      const fileName = await backupService.downloadBackupZip();
+      toast.success(`${fileName} downloaded successfully.`);
+    } catch (err: any) {
+      toast.error(err.message || "Download failed");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -528,6 +543,24 @@ const Restore_Backup: React.FC = () => {
                     <>
                       <Upload className="h-4 w-4" />
                       Backup Now
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2 w-full"
+                  onClick={handleDownloadBackup}
+                  disabled={downloading}
+                >
+                  {downloading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Preparing Download...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Download Backup (.zip)
                     </>
                   )}
                 </Button>

@@ -15,6 +15,7 @@ import {
   buildAuthenticatedClient,
   getGoogleUserEmail,
   uploadFileToDrive,
+  cleanupOldBackupsInDrive,
   checkInternetConnectivity,
 } from "../../utils/googleDriveService.js";
 import { getDatabasePath, closeDatabase, initializeDatabase } from "../../db/database.js";
@@ -135,6 +136,28 @@ export async function performBackup(prisma, userId, trigger = "manual") {
       fileName
     );
 
+    // Keep Drive usage minimal by retaining only the latest uploaded backup.
+    try {
+      const { deletedFileIds } = await cleanupOldBackupsInDrive(
+        oAuth2Client,
+        driveFileId
+      );
+      if (deletedFileIds.length > 0) {
+        await prisma.backupHistory.updateMany({
+          where: {
+            userId,
+            driveFileId: { in: deletedFileIds },
+          },
+          data: {
+            driveFileId: null,
+            driveLink: null,
+          },
+        });
+      }
+    } catch (cleanupError) {
+      console.warn("Backup succeeded, but old backup cleanup failed:", cleanupError);
+    }
+
     await prisma.backupHistory.create({
       data: {
         userId,
@@ -178,6 +201,49 @@ export const getGoogleAuthUrl = asyncHandler(async (req, res) => {
     return sendResponse(res, true, { url }, "Auth URL generated", statusType.OK);
   } catch (error) {
     return sendResponse(res, false, null, error.message, statusType.INTERNAL_SERVER_ERROR);
+  }
+});
+
+/**
+ * GET /api/backup/download
+ * Creates a zip of the current Shopkeeper data and returns it as a download.
+ */
+export const downloadBackupZip = asyncHandler(async (req, res) => {
+  let zipPath = null;
+  try {
+    const { zipPath: zp, fileName } = await zipShopkeeperFolder();
+    zipPath = zp;
+
+    res.download(zipPath, fileName, (err) => {
+      if (zipPath && fs.existsSync(zipPath)) {
+        fs.unlinkSync(zipPath);
+      }
+
+      if (err) {
+        console.error("Download backup error:", err);
+        if (!res.headersSent) {
+          sendResponse(
+            res,
+            false,
+            null,
+            "Failed to download backup",
+            statusType.INTERNAL_SERVER_ERROR
+          );
+        }
+      }
+    });
+  } catch (error) {
+    if (zipPath && fs.existsSync(zipPath)) {
+      fs.unlinkSync(zipPath);
+    }
+    console.error("Download backup error:", error);
+    return sendResponse(
+      res,
+      false,
+      null,
+      error.message || "Failed to create backup zip",
+      statusType.INTERNAL_SERVER_ERROR
+    );
   }
 });
 

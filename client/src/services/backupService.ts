@@ -88,6 +88,38 @@ export const backupService = {
   },
 
   /**
+   * Download a local zip backup from backend and trigger browser download.
+   */
+  async downloadBackupZip(): Promise<string> {
+    try {
+      const response = await apiClient.get<Blob>("/backup/download", {
+        responseType: "blob",
+      });
+
+      const disposition = response.headers["content-disposition"];
+      const fileNameMatch = disposition?.match(/filename="?([^"]+)"?/i);
+      const fileName =
+        fileNameMatch?.[1] ||
+        `shopkeeper-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+
+      return fileName;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      throw new Error(message);
+    }
+  },
+
+  /**
    * Get paginated backup history
    */
   async getHistory(page = 1, limit = 10): Promise<BackupHistoryResponse> {

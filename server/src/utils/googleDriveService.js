@@ -7,6 +7,7 @@ const GOOGLE_SCOPES = [
 ];
 
 const DRIVE_FOLDER_NAME = "Shopkeeper Backups";
+const BACKUP_FILE_PREFIX = "shopkeeper-backup-";
 
 /**
  * Create an OAuth2 client using env vars
@@ -127,6 +128,54 @@ export async function uploadFileToDrive(oAuth2Client, filePath, fileName) {
   const driveLink = uploadRes.data.webViewLink;
 
   return { driveFileId, driveLink, fileSizeKb };
+}
+
+/**
+ * Delete older backup files from Drive and keep only the most recent file.
+ * Returns { deletedFileIds, failedDeleteIds }.
+ */
+export async function cleanupOldBackupsInDrive(oAuth2Client, keepFileId) {
+  const drive = google.drive({ version: "v3", auth: oAuth2Client });
+  const folderId = await getOrCreateBackupFolder(drive);
+
+  const files = [];
+  let pageToken = undefined;
+
+  do {
+    const listRes = await drive.files.list({
+      q: `'${folderId}' in parents and trashed=false and name contains '${BACKUP_FILE_PREFIX}'`,
+      fields: "nextPageToken, files(id, name)",
+      spaces: "drive",
+      pageSize: 1000,
+      pageToken,
+    });
+
+    const batch = listRes.data.files || [];
+    files.push(...batch);
+    pageToken = listRes.data.nextPageToken || undefined;
+  } while (pageToken);
+
+  const filesToDelete = files.filter(
+    (file) => file.id && file.id !== keepFileId
+  );
+
+  const deletedFileIds = [];
+  const failedDeleteIds = [];
+
+  for (const file of filesToDelete) {
+    try {
+      await drive.files.delete({ fileId: file.id });
+      deletedFileIds.push(file.id);
+    } catch (error) {
+      console.warn(
+        `Failed to delete old backup from Drive (${file.name || file.id}):`,
+        error.message
+      );
+      failedDeleteIds.push(file.id);
+    }
+  }
+
+  return { deletedFileIds, failedDeleteIds };
 }
 
 /**

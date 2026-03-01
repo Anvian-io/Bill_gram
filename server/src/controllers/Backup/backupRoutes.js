@@ -8,6 +8,7 @@ import {
   triggerManualBackup,
   getBackupHistory,
   checkConnectivity,
+  downloadBackupZip,
   restoreFromUpload,
 } from "./backupController.js";
 import { verifyUser } from "../../middleware/verifyToken.js";
@@ -39,6 +40,7 @@ router.get("/auth-url", getGoogleAuthUrl);
 router.get("/drive-status", getGoogleDriveStatus);
 router.delete("/disconnect", disconnectGoogleDrive);
 router.post("/trigger", triggerManualBackup);
+router.get("/download", downloadBackupZip);
 router.get("/history", getBackupHistory);
 router.get("/connectivity", checkConnectivity);
 router.post("/restore", upload.single("file"), restoreFromUpload);
