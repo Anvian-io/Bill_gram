@@ -20,6 +20,10 @@ router.get("/report/salesman-wise", salesController.getSalesmanWiseSalesReport);
 
 router.get("/summary-pdf-data", salesController.getSalesSummaryReportPDFData);
 
+router.get("/sales-summary-report/pdf", salesController.downloadSalesSummaryReportPDF);
+
+router.get("/sales-summary-report/excel", salesController.downloadSalesSummaryReportExcel);
+
 router.get("/register-pdf-data", salesController.getSalesRegisterPDFData);
 
 router.get("/area-pdf-data", salesController.getAreaWisePDFData);

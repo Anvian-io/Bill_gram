@@ -6,6 +6,13 @@ import {
   validatePagination,
 } from "../../utils/index.js";
 import { groupByMonth } from "./salesHelper.js";
+import { formatDateForFilename } from "../../helper/commonHelper.js"; 
+import ejs from "ejs";
+import puppeteer from "puppeteer";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import ExcelJS from "exceljs";
 /**
  * Helper: Update batch stock (decrement for sales)
  * @param {PrismaClient} prisma
@@ -1584,6 +1591,693 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// DOWNLOAD SALES SUMMARY REPORT AS PDF (with history save)
+// --------------------------------------------------------------------
+export const downloadSalesSummaryReportPDF = asyncHandler(
+  async (req, res) => {
+    const {
+      fromDate,
+      toDate,
+      invoiceNo = "",
+      customerId,
+      areaId,
+      vanId,
+      salesmanId,
+      productGroupId,
+    } = req.query;
+
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
+
+    // 1. Build WHERE clause for invoices (same as preview, but no pagination)
+    const andConditions = [{ deleted: false }];
+
+    if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+    if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+    if (areaId) andConditions.push({ areaId: parseInt(areaId) });
+    if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+    if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
+    
+    if (fromDate || toDate) {
+      const dateFilter = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.gte = start.toISOString();
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end.toISOString();
+      }
+      andConditions.push({ invoiceDate: dateFilter });
+    }
+    
+    if (productGroupId) {
+      andConditions.push({
+        items: {
+          some: { product: { productGroupId: parseInt(productGroupId) } },
+        },
+      });
+    }
+    
+    const where = { AND: andConditions };
+
+    // 2. Get date ranges
+    const dateRange = await prisma.salesInvoice.aggregate({
+      where,
+      _min: { invoiceDate: true },
+      _max: { invoiceDate: true },
+    });
+
+    // 3. Get user shop_name
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { shop_name: true },
+    });
+
+    // 4. Invoice number range
+    const invoiceRange = await prisma.salesInvoice.aggregate({
+      where,
+      _min: { invoiceNo: true },
+      _max: { invoiceNo: true },
+    });
+
+    // 5. Distinct areas
+    const invoicesWithArea = await prisma.salesInvoice.findMany({
+      where,
+      select: { area: { select: { name: true } } },
+      distinct: ["areaId"],
+    });
+    const areas = [
+      ...new Set(
+        invoicesWithArea
+          .map((inv) => inv.area?.name)
+          .filter((name) => name && name.length > 0),
+      ),
+    ];
+
+    // 6. Fetch all items with product and batch (no pagination)
+    const items = await prisma.salesInvoiceItem.findMany({
+      where: { salesInvoice: where },
+      include: {
+        product: {
+          select: {
+            id: true,
+            productCode: true,
+            description: true,
+            unit: { select: { name: true } },
+          },
+        },
+        batch: { select: { mrp: true } },
+      },
+    });
+
+    // 7. Aggregate by productId
+    const productMap = new Map();
+
+    for (const item of items) {
+      const pid = item.productId;
+      if (!productMap.has(pid)) {
+        productMap.set(pid, {
+          productCode: item.product.productCode,
+          description: item.product.description,
+          unitName: item.product.unit?.name || null,
+          totalRate: 0,
+          rateCount: 0,
+          totalMrp: 0,
+          mrpCount: 0,
+          totalUnits: 0,
+          totalMqty: 0,
+          totalUnit: 0,
+          totalFQty: 0,
+          totalDQty: 0,
+          totalFinalAmount: 0,
+        });
+      }
+      const agg = productMap.get(pid);
+      agg.totalRate += item.rate;
+      agg.rateCount += 1;
+      if (item.batch?.mrp) {
+        agg.totalMrp += item.batch.mrp;
+        agg.mrpCount += 1;
+      }
+      agg.totalUnits += item.aQty;
+      agg.totalMqty += item.mQty || 0;
+      agg.totalUnit += item.unit || 0;
+      agg.totalFQty += item.fQty || 0;
+      agg.totalDQty += item.DQty || 0;
+      agg.totalFinalAmount += item.finalAmount || 0;
+    }
+
+    // 8. Convert map to array (all products)
+    let allProducts = Array.from(productMap, ([, data]) => ({
+      productCode: data.productCode,
+      description: data.description,
+      totalUnit: data.totalUnit,
+      saleRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
+      mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
+      totalUnitsSold: data.totalUnits,
+      totalMqty: data.totalMqty,
+      fQty: data.totalFQty,
+      dQty: data.totalDQty,
+      finalAmount: data.totalFinalAmount,
+    }));
+
+    // 9. Sort by product code
+    allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
+
+    // 10. Compute totals for all products
+    const totals = allProducts.reduce(
+      (acc, product) => {
+        acc.totalMqty += product.totalMqty;
+        acc.totalUnit += product.totalUnit;
+        acc.totalUnitsSold += product.totalUnitsSold;
+        acc.fQty += product.fQty;
+        acc.rep += 0; // REP is always 0
+        acc.dQty += product.dQty;
+        acc.finalAmount += product.finalAmount;
+        return acc;
+      },
+      {
+        totalMqty: 0,
+        totalUnit: 0,
+        totalUnitsSold: 0,
+        fQty: 0,
+        rep: 0,
+        dQty: 0,
+        finalAmount: 0,
+      },
+    );
+
+    // 11. Prepare data object for template and history
+    const reportData = {
+      user: { shop_name: user?.shop_name || null },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      products: allProducts,
+      totals,
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        areaId: areaId ? parseInt(areaId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+      },
+    };
+
+    // 12. Render HTML using EJS
+    const templateName = "salesSummaryReport.ejs";
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    const templatePath = path.join(
+      __dirname,
+      "../../views/sales",
+      templateName,
+    );
+
+    // Helper function for date formatting
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return "";
+      }
+    };
+
+    const html = await ejs.renderFile(templatePath, {
+      ...reportData,
+      formatDate,
+    });
+
+    // 13. Generate PDF with Puppeteer
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // Footer template for page numbers and shop name
+    const footerTemplate = `
+    <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; margin-top: 5px;">
+      <span>${user?.shop_name || "Your Shop"}</span>
+      <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+    </div>
+  `;
+    const headerTemplate = "<div></div>";
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
+      displayHeaderFooter: true,
+      headerTemplate,
+      footerTemplate,
+    });
+
+    await browser.close();
+ 
+    const fromStr = formatDateForFilename(reportData.dateRange.from);
+    const toStr = formatDateForFilename(reportData.dateRange.to);
+    const pdfFileName = `sales-summary-${fromStr}_to_${toStr}.pdf`;
+
+    // 14. Save report history with template name
+    await prisma.salesReportHistory.create({
+      data: {
+        userId: req.user.id,
+        type: "pdf",
+        template: templateName,
+        tab: "summary",
+        fileName: pdfFileName,
+        data: JSON.stringify(reportData),
+      },
+    });
+
+    // 15. Send PDF as response
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${pdfFileName}"`,
+    );
+    res.setHeader("Content-Length", pdfBuffer.length);
+    return res.end(pdfBuffer, "binary");
+  },
+);
+
+// --------------------------------------------------------------------
+// DOWNLOAD SALES SUMMARY REPORT AS EXCEL
+// --------------------------------------------------------------------
+export const downloadSalesSummaryReportExcel = asyncHandler(
+  async (req, res) => {
+    const {
+      fromDate,
+      toDate,
+      invoiceNo = "",
+      customerId,
+      areaId,
+      vanId,
+      salesmanId,
+      productGroupId,
+    } = req.query;
+
+    const prisma = getPrismaOrFail(res);
+    if (!prisma) return;
+
+    // ----- Reuse the same data aggregation logic as PDF -----
+    const andConditions = [{ deleted: false }];
+
+    if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+    if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+    if (areaId) andConditions.push({ areaId: parseInt(areaId) });
+    if (vanId) andConditions.push({ vanId: parseInt(vanId) });
+    if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
+    
+    if (fromDate || toDate) {
+      const dateFilter = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.gte = start.toISOString();
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end.toISOString();
+      }
+      andConditions.push({ invoiceDate: dateFilter });
+    }
+    
+    if (productGroupId) {
+      andConditions.push({
+        items: {
+          some: { product: { productGroupId: parseInt(productGroupId) } },
+        },
+      });
+    }
+    
+    const where = { AND: andConditions };
+
+    // 2. Get date ranges
+    const dateRange = await prisma.salesInvoice.aggregate({
+      where,
+      _min: { invoiceDate: true },
+      _max: { invoiceDate: true },
+    });
+
+    // 3. Get user shop_name
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { shop_name: true },
+    });
+
+    // 4. Invoice number range
+    const invoiceRange = await prisma.salesInvoice.aggregate({
+      where,
+      _min: { invoiceNo: true },
+      _max: { invoiceNo: true },
+    });
+
+    // 5. Distinct areas
+    const invoicesWithArea = await prisma.salesInvoice.findMany({
+      where,
+      select: { area: { select: { name: true } } },
+      distinct: ["areaId"],
+    });
+    const areas = [
+      ...new Set(
+        invoicesWithArea
+          .map((inv) => inv.area?.name)
+          .filter((name) => name && name.length > 0),
+      ),
+    ];
+
+    // 6. Fetch all items with product and batch
+    const items = await prisma.salesInvoiceItem.findMany({
+      where: { salesInvoice: where },
+      include: {
+        product: {
+          select: {
+            id: true,
+            productCode: true,
+            description: true,
+            unit: { select: { name: true } },
+          },
+        },
+        batch: { select: { mrp: true } },
+      },
+    });
+
+    // 7. Aggregate by productId
+    const productMap = new Map();
+    for (const item of items) {
+      const pid = item.productId;
+      if (!productMap.has(pid)) {
+        productMap.set(pid, {
+          productCode: item.product.productCode,
+          description: item.product.description,
+          unitName: item.product.unit?.name || null,
+          totalRate: 0,
+          rateCount: 0,
+          totalMrp: 0,
+          mrpCount: 0,
+          totalUnits: 0,
+          totalMqty: 0,
+          totalUnit: 0,
+          totalFQty: 0,
+          totalDQty: 0,
+          totalFinalAmount: 0,
+        });
+      }
+      const agg = productMap.get(pid);
+      agg.totalRate += item.rate;
+      agg.rateCount += 1;
+      if (item.batch?.mrp) {
+        agg.totalMrp += item.batch.mrp;
+        agg.mrpCount += 1;
+      }
+      agg.totalUnits += item.aQty;
+      agg.totalMqty += item.mQty || 0;
+      agg.totalUnit += item.unit || 0;
+      agg.totalFQty += item.fQty || 0;
+      agg.totalDQty += item.DQty || 0;
+      agg.totalFinalAmount += item.finalAmount || 0;
+    }
+
+    // 8. Convert map to array
+    let allProducts = Array.from(productMap, ([, data]) => ({
+      productCode: data.productCode,
+      description: data.description,
+      totalUnit: data.totalUnit,
+      saleRate: data.rateCount > 0 ? data.totalRate / data.rateCount : 0,
+      mrp: data.mrpCount > 0 ? data.totalMrp / data.mrpCount : 0,
+      totalUnitsSold: data.totalUnits,
+      totalMqty: data.totalMqty,
+      fQty: data.totalFQty,
+      dQty: data.totalDQty,
+      finalAmount: data.totalFinalAmount,
+    }));
+
+    // 9. Sort by product code
+    allProducts.sort((a, b) => a.productCode.localeCompare(b.productCode));
+
+    // 10. Compute totals
+    const totals = allProducts.reduce(
+      (acc, product) => {
+        acc.totalMqty += product.totalMqty;
+        acc.totalUnit += product.totalUnit;
+        acc.totalUnitsSold += product.totalUnitsSold;
+        acc.fQty += product.fQty;
+        acc.rep += 0;
+        acc.dQty += product.dQty;
+        acc.finalAmount += product.finalAmount;
+        return acc;
+      },
+      {
+        totalMqty: 0,
+        totalUnit: 0,
+        totalUnitsSold: 0,
+        fQty: 0,
+        rep: 0,
+        dQty: 0,
+        finalAmount: 0,
+      },
+    );
+
+    // 11. Prepare data object
+    const reportData = {
+      user: { shop_name: user?.shop_name || null },
+      dateRange: {
+        from: dateRange._min?.invoiceDate || null,
+        to: dateRange._max?.invoiceDate || null,
+      },
+      invoiceRange: {
+        start: invoiceRange._min?.invoiceNo || null,
+        end: invoiceRange._max?.invoiceNo || null,
+      },
+      areas,
+      products: allProducts,
+      totals,
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        areaId: areaId ? parseInt(areaId) : null,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        productGroupId: productGroupId ? parseInt(productGroupId) : null,
+      },
+    };
+    // ----- End of data aggregation -----
+
+    // ----- Generate Excel -----
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sales Summary");
+
+    // Helper to format dates
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return "";
+      }
+    };
+
+    // Title
+    worksheet.mergeCells("A1:L1");
+    const titleRow = worksheet.getRow(1);
+    titleRow.getCell(1).value = "Sales Summary Report";
+    titleRow.getCell(1).font = { size: 16, bold: true };
+    titleRow.getCell(1).alignment = { horizontal: "center" };
+
+    // Shop name & date range
+    worksheet.mergeCells("A2:L2");
+    worksheet.getRow(2).getCell(1).value =
+      `Shop: ${reportData.user.shop_name || "Your Shop"} | Date: ${formatDate(reportData.dateRange.from)} to ${formatDate(reportData.dateRange.to)}`;
+    worksheet.getRow(2).getCell(1).alignment = { horizontal: "center" };
+
+    // Filter details
+    worksheet.addRow([]);
+    worksheet.addRow([
+      `INVOICE: ${reportData.invoiceRange.start || "—"} to ${reportData.invoiceRange.end || "—"}`,
+    ]);
+    worksheet.addRow([
+      `AREA: ${reportData.areas.length ? reportData.areas.join(", ") : "All"}`,
+    ]);
+    worksheet.addRow([]);
+
+    // Table headers
+    const headers = [
+      "Sr.",
+      "P.Code",
+      "Description",
+      "MRP",
+      "BOX",
+      "UNIT",
+      "QTY",
+      "FR",
+      "REP",
+      "DMG",
+      "RATE",
+      "AMT",
+    ];
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // Data rows
+    reportData.products.forEach((product, index) => {
+      const row = worksheet.addRow([
+        index + 1,
+        product.productCode,
+        product.description ? product.description : "No description",
+        product.mrp.toFixed(2),
+        product.totalMqty,
+        product.totalUnit,
+        product.totalUnitsSold,
+        product.fQty,
+        0, // REP
+        product.dQty,
+        product.saleRate.toFixed(2),
+        product.finalAmount.toFixed(2),
+      ]);
+
+      // Align numeric columns right
+      [4, 5, 6, 7, 8, 9, 10, 11, 12].forEach((colIndex) => {
+        const cell = row.getCell(colIndex);
+        cell.alignment = { horizontal: "right" };
+        cell.numFmt = "#,##0.00";
+      });
+
+      // Add thin borders to all cells in this row
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    });
+
+    // Totals row
+    if (reportData.totals) {
+      const totalRow = worksheet.addRow([
+        `Total ${reportData.products.length} products`,
+        "",
+        "",
+        "",
+        reportData.totals.totalMqty,
+        reportData.totals.totalUnit,
+        reportData.totals.totalUnitsSold,
+        reportData.totals.fQty,
+        reportData.totals.rep,
+        reportData.totals.dQty,
+        "",
+        reportData.totals.finalAmount.toFixed(2),
+      ]);
+
+      totalRow.font = { bold: true };
+      totalRow.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        if ([5, 6, 7, 8, 9, 10, 12].includes(colNumber)) {
+          cell.alignment = { horizontal: "right" };
+          if (colNumber === 12) cell.numFmt = "#,##0.00";
+        } else {
+          cell.alignment = { horizontal: "left" };
+        }
+      });
+      // Merge first four cells for the label
+      worksheet.mergeCells(`A${totalRow.number}:D${totalRow.number}`);
+    }
+
+    // Auto-fit columns
+    worksheet.columns.forEach((column) => {
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.value ? cell.value.toString() : "";
+        maxLength = Math.max(maxLength, cellValue.length);
+      });
+      column.width = Math.min(maxLength + 2, 20);
+    });
+
+    const fromStr = formatDateForFilename(reportData.dateRange.from);
+    const toStr = formatDateForFilename(reportData.dateRange.to);
+    const excelFileName = `sales-summary-${fromStr}_to_${toStr}.xlsx`;
+
+    // ----- Save history -----
+    await prisma.salesReportHistory.create({
+      data: {
+        userId: req.user.id,
+        type: "excel",
+        tab: "summary",
+        template: "salesSummaryReport.xlsx",
+        fileName: excelFileName,
+        data: JSON.stringify(reportData),
+      },
+    });
+
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    // ----- Send Excel file -----
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${excelFileName}"`,
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  },
+);
+
+// --------------------------------------------------------------------
 // 13. GET SALES REGISTER PDF DATA (equivalent to getPurchaseRegisterPDFData)
 // --------------------------------------------------------------------
 export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
@@ -2660,6 +3354,8 @@ export const salesController = {
 
   // New report APIs
   getSalesSummaryReportPDFData,
+  downloadSalesSummaryReportExcel,
+  downloadSalesSummaryReportPDF,
   getSalesRegisterPDFData,
   getAreaWisePDFData,
   getSalesmanWisePDFData,

@@ -34,6 +34,7 @@ model User {
   purchaseInvoices PurchaseInvoice[]
   salesInvoices    SalesInvoice[]
   PurchaseReportHistory    PurchaseReportHistory[]
+  SalesReportHistory       SalesReportHistory[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
 
@@ -609,4 +610,18 @@ model PurchaseReportHistory {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("purchase_report_histories")
+}
+
+model SalesReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  tab       String   // 'summary', 'register', 'area-wise', 'salesman-wise', etc.
+  template  String   // name of the EJS template file used
+  fileName  String?  // stored filename
+  data      String   // stores the complete report data used for generation
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sales_report_histories")
 }
