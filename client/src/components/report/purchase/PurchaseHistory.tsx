@@ -17,6 +17,7 @@ import {
   RefreshCw,
   FileText,
   FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +55,9 @@ export default function PurchaseHistory() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Download tracking state
+  const [downloadingIds, setDownloadingIds] = useState<Set<number>>(new Set());
+
   // Filter states
   const [searchInput, setSearchInput] = useState("");
   const [fileNameInput, setFileNameInput] = useState("");
@@ -67,6 +71,19 @@ export default function PurchaseHistory() {
     sortBy: "createdAt",
     sortOrder: "desc",
   });
+
+  // Helper functions for download state
+  const startDownload = (id: number) => {
+    setDownloadingIds((prev) => new Set(prev).add(id));
+  };
+
+  const finishDownload = (id: number) => {
+    setDownloadingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
 
   // Debounced search
   const debouncedSearch = useDebounce((value: string) => {
@@ -152,8 +169,11 @@ export default function PurchaseHistory() {
     }
   };
 
-  // Download handlers
+  // Download handlers (with loading state)
   const handleDownloadPDF = async (id: number, fileName: string | null) => {
+    if (downloadingIds.has(id)) return;
+
+    startDownload(id);
     try {
       const blob = await purchaseService.downloadPurchaseReportHistoryPDF(id);
       const url = window.URL.createObjectURL(blob);
@@ -166,10 +186,15 @@ export default function PurchaseHistory() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       toast.error("Failed to download PDF");
+    } finally {
+      finishDownload(id);
     }
   };
 
   const handleDownloadExcel = async (id: number, fileName: string | null) => {
+    if (downloadingIds.has(id)) return;
+
+    startDownload(id);
     try {
       const blob = await purchaseService.downloadPurchaseReportHistoryExcel(id);
       const url = window.URL.createObjectURL(blob);
@@ -182,6 +207,8 @@ export default function PurchaseHistory() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       toast.error("Failed to download Excel");
+    } finally {
+      finishDownload(id);
     }
   };
 
@@ -189,7 +216,7 @@ export default function PurchaseHistory() {
     let count = 0;
     if (filters.search) count++;
     if (filters.fileName) count++;
-    if (filters.type) count++; // type is non-empty only when filtered
+    if (filters.type) count++;
     return count;
   }, [filters.search, filters.fileName, filters.type]);
 
@@ -455,12 +482,7 @@ export default function PurchaseHistory() {
                   <TableBody>
                     <AnimatePresence>
                       {isLoading ? (
-                        <motion.tr
-                          key="loading"
-                          // initial={{ opacity: 0 }}
-                          // animate={{ opacity: 1 }}
-                          // exit={{ opacity: 0 }}
-                        >
+                        <motion.tr key="loading">
                           <TableCell colSpan={5} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
@@ -499,74 +521,102 @@ export default function PurchaseHistory() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        histories.map((item, index) => (
-                          <motion.tr
-                            key={item.id}
-                            custom={index}
-                            initial="hidden"
-                            animate="visible"
-                            whileHover="hover"
-                            variants={{
-                              hidden: { opacity: 0, y: 20 },
-                              visible: { opacity: 1, y: 0 },
-                              hover: { backgroundColor: "rgba(0,0,0,0.02)" },
-                            }}
-                            className="group border"
-                            layout
-                          >
-                            <TableCell className="font-mono font-medium">
-                              {item.id}
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {item.fileName || "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  item.type === "pdf" ? "default" : "secondary"
-                                }
-                                className="uppercase"
-                              >
-                                {item.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{formatDate(item.createdAt)}</TableCell>
-                            <TableCell>
-                              <div className="flex justify-center gap-2">
-                                {item.type === "pdf" ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      handleDownloadPDF(item.id, item.fileName)
-                                    }
-                                    title="Download PDF"
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      handleDownloadExcel(
-                                        item.id,
-                                        item.fileName,
-                                      )
-                                    }
-                                    title="Download Excel"
-                                  >
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </motion.tr>
-                        ))
+                        histories.map((item, index) => {
+                          const isDownloading = downloadingIds.has(item.id);
+                          return (
+                            <motion.tr
+                              key={item.id}
+                              custom={index}
+                              initial="hidden"
+                              animate="visible"
+                              whileHover="hover"
+                              variants={{
+                                hidden: { opacity: 0, y: 20 },
+                                visible: { opacity: 1, y: 0 },
+                                hover: { backgroundColor: "rgba(0,0,0,0.02)" },
+                              }}
+                              className="group border"
+                              layout
+                            >
+                              <TableCell className="font-mono font-medium">
+                                {item.id}
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-medium">
+                                  {item.fileName || "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    item.type === "pdf"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="uppercase"
+                                >
+                                  {item.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {formatDate(item.createdAt)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-center gap-2">
+                                  {item.type === "pdf" ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() =>
+                                        handleDownloadPDF(
+                                          item.id,
+                                          item.fileName,
+                                        )
+                                      }
+                                      disabled={isDownloading}
+                                      title={
+                                        isDownloading
+                                          ? "Downloading..."
+                                          : "Download PDF"
+                                      }
+                                    >
+                                      {isDownloading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <FileText className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() =>
+                                        handleDownloadExcel(
+                                          item.id,
+                                          item.fileName,
+                                        )
+                                      }
+                                      disabled={isDownloading}
+                                      title={
+                                        isDownloading
+                                          ? "Downloading..."
+                                          : "Download Excel"
+                                      }
+                                    >
+                                      {isDownloading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <FileSpreadsheet className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          );
+                        })
                       )}
                     </AnimatePresence>
                   </TableBody>
