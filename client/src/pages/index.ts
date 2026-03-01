@@ -8,6 +8,7 @@ import Purchase from "./Purchase";
 import Sales from "./Sales";
 import Profile from "./Profile";
 import Report from "./Report";
+import Restore_Backup from "./Restore_Backup";
 
 export {
   Dashboard,
@@ -19,5 +20,6 @@ export {
   Purchase,
   Sales,
   Profile,
-  Report
+  Report,
+  Restore_Backup
 };
