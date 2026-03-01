@@ -22,6 +22,7 @@ import type {
   SalesmanWisePDFData,
   SalesReportFilters,
 } from "@/types/sales-report";
+import { salesService } from "@/services/salesService";
 import { toast } from "sonner";
 
 interface SalesmanWisePreviewModalProps {
@@ -42,6 +43,7 @@ export default function SalesmanWisePreviewModal({
   filters,
 }: SalesmanWisePreviewModalProps) {
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
+  const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
 
   if (!data) return null;
 
@@ -65,8 +67,67 @@ export default function SalesmanWisePreviewModal({
   };
 
   const handlePDFClick = async () => {
-    // TODO: Implement PDF download when backend endpoint is ready
-    toast.info("PDF download coming soon");
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate PDF.");
+      return;
+    }
+
+    setInternalGeneratingPDF(true);
+    try {
+      const blob = await salesService.downloadSalesmanWisePDF(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `salesman-wise-sales-${fromDate}_to_${toDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download PDF");
+      console.error(error);
+    } finally {
+      setInternalGeneratingPDF(false);
+    }
+  };
+
+  const handleExcelClick = async () => {
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate Excel.");
+      return;
+    }
+
+    setInternalGeneratingExcel(true);
+    try {
+      const blob = await salesService.downloadSalesmanWiseExcel(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `salesman-wise-sales-${fromDate}_to_${toDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download Excel");
+      console.error(error);
+    } finally {
+      setInternalGeneratingExcel(false);
+    }
   };
 
   const isLastPage = currentPage === pagination.totalPages;
@@ -85,7 +146,7 @@ export default function SalesmanWisePreviewModal({
               variant="outline"
               size="sm"
               onClick={handlePDFClick}
-              disabled={internalGeneratingPDF}
+              disabled={internalGeneratingPDF || internalGeneratingExcel}
             >
               {internalGeneratingPDF ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -93,6 +154,23 @@ export default function SalesmanWisePreviewModal({
                 <Download className="h-4 w-4 mr-2" />
               )}
               {internalGeneratingPDF ? "Generating..." : "PDF"}
+            </Button>
+          </div>
+
+          {/* Excel button */}
+          <div className="absolute right-32 flex items-center gap-2 mr-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelClick}
+              disabled={internalGeneratingExcel || internalGeneratingPDF}
+            >
+              {internalGeneratingExcel ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {internalGeneratingExcel ? "Generating..." : "Excel"}
             </Button>
           </div>
         </DialogHeader>

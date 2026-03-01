@@ -26,9 +26,36 @@ router.get("/sales-summary-report/excel", salesController.downloadSalesSummaryRe
 
 router.get("/register-pdf-data", salesController.getSalesRegisterPDFData);
 
+router.get(
+  "/sales-register-report/pdf",
+  salesController.downloadSalesRegisterReportPDF,
+);
+
+router.get(
+  "/sales-register-report/excel",
+  salesController.downloadSalesRegisterReportExcel,
+);
+
 router.get("/area-pdf-data", salesController.getAreaWisePDFData);
 
+router.get("/area-wise-report/pdf", salesController.downloadAreaWiseReportPDF);
+
+router.get(
+  "/area-wise-report/excel",
+  salesController.downloadAreaWiseReportExcel,
+);
+
 router.get("/salesman-pdf-data", salesController.getSalesmanWisePDFData);
+
+router.get(
+  "/salesman-wise-report/pdf",
+  salesController.downloadSalesmanWiseReportPDF,
+);
+
+router.get(
+  "/salesman-wise-report/excel",
+  salesController.downloadSalesmanWiseReportExcel,
+);
 
 router.get("/sales-gst", salesController.getSalesWithGST);
 

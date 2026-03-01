@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Salesman-Wise Sales Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      color: #000;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      margin: 0;
+    }
+    .info-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 5px;
+      font-size: 14px;
+    }
+    .details {
+      font-size: 13px;
+      margin: 15px 0;
+    }
+    .details span.label {
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    th, td {
+      border: none;
+      padding: 8px 5px;
+      text-align: left;
+    }
+    thead th {
+      background: #f2f2f2;
+      font-weight: 600;
+      text-align: center;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+    }
+    td.right {
+      text-align: right;
+    }
+    tr.total-row td {
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    thead {
+      display: table-header-group;
+    }
+    tfoot {
+      display: table-footer-group;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Salesman-Wise Sales Report</h1>
+    <div class="info-row">
+      <span>Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %></span>
+    </div>
+  </div>
+
+  <div class="details">
+    <div><span class="label">AREA :</span> <%= areas.length ? areas.join(', ') : 'All' %></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sr.</th>
+        <th>Salesman Name</th>
+        <th>Discount</th>
+        <th>Scheme Amount</th>
+        <th>GST</th>
+        <th>Final Amount</th>
+        <th>Invoice Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% salesmanData.forEach((salesman, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= salesman.salesmanName %></td>
+          <td class="right"><%= salesman.totalDiscount.toFixed(2) %></td>
+          <td class="right"><%= salesman.totalSchemeAmount.toFixed(2) %></td>
+          <td class="right"><%= salesman.totalGST.toFixed(2) %></td>
+          <td class="right">₹<%= salesman.finalAmount.toFixed(2) %></td>
+          <td class="right"><%= salesman.invoiceCount %></td>
+        </tr>
+      <% }) %>
+      <% if (grandTotals) { %>
+        <tr class="total-row" style="font-weight: bold; background: #f0f0f0;">
+          <td colspan="2">Grand Total</td>
+          <td class="right"><%= grandTotals.totalDiscount.toFixed(2) %></td>
+          <td class="right"><%= grandTotals.totalSchemeAmount.toFixed(2) %></td>
+          <td class="right"><%= grandTotals.totalGST.toFixed(2) %></td>
+          <td class="right">₹<%= grandTotals.finalAmount.toFixed(2) %></td>
+          <td class="right"><%= grandTotals.invoiceCount %></td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span><%= user.shop_name || 'Your Shop' %></span>
+    <span class="pageNumbers"></span>
+  </div>
+</body>
+</html>

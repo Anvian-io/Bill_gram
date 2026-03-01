@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
+import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type {
   SalesRegisterReportData,
   SalesReportFilters,
 } from "@/types/sales-report";
+import { salesService } from "@/services/salesService";
+import { toast } from "sonner";
 
 interface SalesRegisterPreviewModalProps {
   isOpen: boolean;
@@ -27,7 +31,7 @@ interface SalesRegisterPreviewModalProps {
   data: SalesRegisterReportData | null;
   onPageChange: (page: number) => void;
   currentPage: number;
-  filters?: SalesReportFilters;
+  filters?: SalesReportFilters; // Used for direct PDF/Excel download
 }
 
 export default function SalesRegisterPreviewModal({
@@ -36,7 +40,11 @@ export default function SalesRegisterPreviewModal({
   data,
   onPageChange,
   currentPage,
+  filters,
 }: SalesRegisterPreviewModalProps) {
+  const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
+  const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
+
   if (!data) return null;
 
   const { user, dateRange, invoiceRange, areas, invoices, pagination, totals } =
@@ -53,6 +61,70 @@ export default function SalesRegisterPreviewModal({
 
   const isLastPage = currentPage === pagination.totalPages;
 
+  const handlePDFClick = async () => {
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate PDF.");
+      return;
+    }
+
+    setInternalGeneratingPDF(true);
+    try {
+      const blob = await salesService.downloadSalesRegisterPDF(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `sales-register-${fromDate}_to_${toDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download PDF");
+      console.error(error);
+    } finally {
+      setInternalGeneratingPDF(false);
+    }
+  };
+
+  const handleExcelClick = async () => {
+    if (!filters) {
+      toast.error("Filters are missing. Cannot generate Excel.");
+      return;
+    }
+
+    setInternalGeneratingExcel(true);
+    try {
+      const blob = await salesService.downloadSalesRegisterExcel(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fromDate = dateRange?.from
+        ? format(new Date(dateRange.from), "yyyy-MM-dd")
+        : "";
+      const toDate = dateRange?.to
+        ? format(new Date(dateRange.to), "yyyy-MM-dd")
+        : "";
+      link.download = `sales-register-${fromDate}_to_${toDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download Excel");
+      console.error(error);
+    } finally {
+      setInternalGeneratingExcel(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="min-w-[65vw] max-h-[95vh] p-0 flex flex-col">
@@ -60,6 +132,40 @@ export default function SalesRegisterPreviewModal({
           <DialogTitle className="text-2xl font-bold">
             Sales Register
           </DialogTitle>
+
+          {/* PDF button */}
+          <div className="absolute right-6 flex items-center gap-2 mr-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePDFClick}
+              disabled={internalGeneratingPDF || internalGeneratingExcel}
+            >
+              {internalGeneratingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {internalGeneratingPDF ? "Generating..." : "PDF"}
+            </Button>
+          </div>
+
+          {/* Excel button */}
+          <div className="absolute right-32 flex items-center gap-2 mr-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelClick}
+              disabled={internalGeneratingExcel || internalGeneratingPDF}
+            >
+              {internalGeneratingExcel ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {internalGeneratingExcel ? "Generating..." : "Excel"}
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* Main content area */}

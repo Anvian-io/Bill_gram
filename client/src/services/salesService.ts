@@ -247,7 +247,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Get area-wise PDF data (for modal preview)
+  // Get area-wise PDF data (for modal preview)
   async getAreaWisePDFData(
     filters: SalesReportFilters,
     page: number = 1,
@@ -291,7 +291,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Get salesman-wise PDF data (for modal preview)
+  // Get salesman-wise PDF data (for modal preview)
   async getSalesmanWisePDFData(
     filters: SalesReportFilters,
     page: number = 1,
@@ -335,7 +335,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Get sales summary report PDF data (for modal preview)
+  // Get sales summary report PDF data (for modal preview)
   async getSalesSummaryReportPDFData(
     filters: SalesReportFilters,
     page: number = 1,
@@ -382,7 +382,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Download sales summary PDF
+  // Download sales summary PDF
   async downloadSalesSummaryPDF(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
@@ -426,7 +426,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Download sales summary Excel
+  // Download sales summary Excel
   async downloadSalesSummaryExcel(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
@@ -470,7 +470,7 @@ export const salesService = {
     }
   },
 
-  // NEW: Get sales register PDF data (for modal preview)
+  // Get sales register PDF data (for modal preview)
   async getSalesRegisterPDFData(
     filters: SalesReportFilters,
     page: number = 1,
@@ -510,6 +510,252 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching sales register data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download sales register PDF
+  async downloadSalesRegisterPDF(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/sales-register-report/pdf?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales register PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download sales register Excel
+  async downloadSalesRegisterExcel(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/sales-register-report/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales register Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download area-wise PDF
+  async downloadAreaWisePDF(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/area-wise-report/pdf?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading area-wise PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download area-wise Excel
+  async downloadAreaWiseExcel(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.salesmanId) {
+        params.append("salesmanId", filters.salesmanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/area-wise-report/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading area-wise Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download salesman-wise PDF
+  async downloadSalesmanWisePDF(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/salesman-wise-report/pdf?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading salesman-wise PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  // NEW: Download salesman-wise Excel
+  async downloadSalesmanWiseExcel(filters: SalesReportFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.invoiceNo) {
+        params.append("invoiceNo", filters.invoiceNo);
+      }
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.areaId) {
+        params.append("areaId", filters.areaId.toString());
+      }
+      if (filters.vanId) {
+        params.append("vanId", filters.vanId.toString());
+      }
+      if (filters.productGroupId) {
+        params.append("productGroupId", filters.productGroupId.toString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/salesman-wise-report/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading salesman-wise Excel:", message);
       throw new Error(message);
     }
   },
