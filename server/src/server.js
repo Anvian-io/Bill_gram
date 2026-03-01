@@ -19,6 +19,8 @@ import salesRoutes from "./controllers/Sales/salesRoutes.js";
 import { verifyUser } from "./middleware/verifyToken.js";
 import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
 import dashboardRoutes from "./controllers/Dashboard/dashboardRoutes.js";
+import backupRoutes from "./controllers/Backup/backupRoutes.js";
+import { initBackupScheduler } from "./controllers/Backup/backupScheduler.js";
 import { createServer } from "http";
 import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
 
@@ -52,7 +54,9 @@ const startServer = async () => {
 
     // Routes
     app.use("/api/auth", authRoutes);
+    // Public backup route (Google OAuth callback — no JWT needed)
     app.use(verifyUser);
+    app.use("/api/backup", backupRoutes);
     app.use("/api/product-groups", productGroupRoutes);
     app.use("/api/units", unitRoutes);
     app.use("/api/product-companies", productCompanyRoutes);
@@ -86,6 +90,8 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`✅ Backend server running on http://localhost:${PORT}`);
       console.log(`✅ WebSocket server running on ws://localhost:${PORT}/ws`);
+      // Initialize the daily backup scheduler after server is running
+      initBackupScheduler();
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
