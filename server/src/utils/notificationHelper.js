@@ -59,7 +59,7 @@ export const sendNotificationToAll = (notification) => {
  * @param {Object} res - Express response object (optional, for Prisma init)
  */
 export const createNotification = async (
-  { title, message, type = "info", userIds = [] },
+  { title, message, type = "info", userIds = [] ,section,page},
   res = null,
 ) => {
   try {
@@ -91,7 +91,8 @@ export const createNotification = async (
           title,
           message,
           type,
-        //   category,
+          section,
+          page,
           read: false,
         },
       });
@@ -104,7 +105,8 @@ export const createNotification = async (
       title,
       message,
       type,
-    //   category,
+      section,
+      page,
       read: false,
       createdAt: new Date().toISOString(),
     });

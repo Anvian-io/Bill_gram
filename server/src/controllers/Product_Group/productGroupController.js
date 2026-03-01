@@ -315,7 +315,8 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
     title: "Product Group Updated",
     message: `Product group "${updatedProductGroup.name}" has been updated by ${req.user?.username || 'Admin'}`,
     type: "info",
-    // category: "product_group"
+    section: "Product Group",
+    page: "Master"
   }, res);
 
   return sendResponse(
