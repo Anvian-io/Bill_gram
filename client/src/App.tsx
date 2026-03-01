@@ -21,7 +21,8 @@ import {
   Sales,
   Profile,
   Report,
-  Restore_Backup
+  Restore_Backup,
+  Notifications
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
 import AppInitializer from "./components/AppInitializer";
@@ -181,6 +182,19 @@ function App() {
                       setIsExpanded={setIsExpanded}
                     >
                       <Restore_Backup />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Notifications />
                     </Navbar>
                   </PrivateRoute>
                 }
