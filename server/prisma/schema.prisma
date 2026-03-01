@@ -35,6 +35,8 @@ model User {
   salesInvoices    SalesInvoice[]
   PurchaseReportHistory    PurchaseReportHistory[]
   SalesReportHistory       SalesReportHistory[]
+  googleDriveToken GoogleDriveToken?
+  backupHistories  BackupHistory[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
 
@@ -624,4 +626,40 @@ model SalesReportHistory {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("sales_report_histories")
+}
+
+// ========== BACKUP & RESTORE MODULES ==========
+
+model GoogleDriveToken {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String    @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  tokenExpiry  DateTime? @map("token_expiry")
+  email        String?   // Google account email connected
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("google_drive_tokens")
+}
+
+model BackupHistory {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   // 'success' | 'failed' | 'skipped'
+  trigger     String   // 'auto' | 'manual' | 'restore'
+  fileName    String?  @map("file_name")     // zip file name
+  driveFileId String?  @map("drive_file_id") // Google Drive file ID
+  driveLink   String?  @map("drive_link")    // viewable Drive link
+  errorMsg    String?  @map("error_msg")     // error detail if failed/skipped
+  fileSizeKb  Float?   @map("file_size_kb")  // size in KB
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([trigger])
+  @@index([createdAt])
+  @@map("backup_histories")
 }
