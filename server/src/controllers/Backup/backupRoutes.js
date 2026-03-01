@@ -10,6 +10,7 @@ import {
   checkConnectivity,
   restoreFromUpload,
 } from "./backupController.js";
+import { verifyUser } from "../../middleware/verifyToken.js";
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ const upload = multer({
 
 // ── Public route (no verifyUser — Google redirects here without app token) ──
 router.get("/oauth/callback", googleOAuthCallback);
-
+router.use(verifyUser);
 // ── Protected routes (all others require verifyUser via server.js middleware) ──
 router.get("/auth-url", getGoogleAuthUrl);
 router.get("/drive-status", getGoogleDriveStatus);

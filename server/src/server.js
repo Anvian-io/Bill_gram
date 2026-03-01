@@ -55,8 +55,8 @@ const startServer = async () => {
     // Routes
     app.use("/api/auth", authRoutes);
     // Public backup route (Google OAuth callback — no JWT needed)
-    app.use(verifyUser);
     app.use("/api/backup", backupRoutes);
+    app.use(verifyUser);
     app.use("/api/product-groups", productGroupRoutes);
     app.use("/api/units", unitRoutes);
     app.use("/api/product-companies", productCompanyRoutes);

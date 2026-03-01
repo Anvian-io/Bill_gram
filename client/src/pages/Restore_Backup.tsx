@@ -362,8 +362,8 @@ const Restore_Backup: React.FC = () => {
               isOnline === null
                 ? "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
                 : isOnline
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-                : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+                  : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
             }`}
           >
             {isOnline === null ? (
@@ -373,10 +373,18 @@ const Restore_Backup: React.FC = () => {
             ) : (
               <WifiOff className="h-4 w-4" />
             )}
-            {isOnline === null ? "Checking..." : isOnline ? "Online" : "Offline"}
+            {isOnline === null
+              ? "Checking..."
+              : isOnline
+                ? "Online"
+                : "Offline"}
             {connectivity && (
               <span className="text-xs opacity-60 ml-1">
-                • {new Date(connectivity.checkedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                •{" "}
+                {new Date(connectivity.checkedAt).toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
             )}
           </motion.div>
@@ -390,7 +398,7 @@ const Restore_Backup: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-lg h-full">
+            <Card className="border p-4 border-gray-200 dark:border-gray-800 shadow-lg h-full">
               <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <CloudCog className="h-5 w-5 text-primary" />
@@ -468,7 +476,7 @@ const Restore_Backup: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.15 }}
           >
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-lg h-full">
+            <Card className="border p-4 border-gray-200 dark:border-gray-800 shadow-lg h-full">
               <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <HardDrive className="h-5 w-5 text-primary" />
@@ -494,11 +502,16 @@ const Restore_Backup: React.FC = () => {
                 <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-xs text-muted-foreground space-y-1">
                   <div className="flex items-center gap-2">
                     <Clock className="h-3.5 w-3.5" />
-                    <span>Auto-backup runs daily at <strong>12:00 AM IST</strong></span>
+                    <span>
+                      Auto-backup runs daily at <strong>12:00 AM IST</strong>
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Database className="h-3.5 w-3.5" />
-                    <span>Backs up your entire <strong>Shopkeeper</strong> data folder</span>
+                    <span>
+                      Backs up your entire <strong>Shopkeeper</strong> data
+                      folder
+                    </span>
                   </div>
                 </div>
                 <Button
@@ -522,112 +535,6 @@ const Restore_Backup: React.FC = () => {
             </Card>
           </motion.div>
         </div>
-
-        {/* ── Restore Section ───────────────────────────────────────── */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <Card className="border border-gray-200 dark:border-gray-800 shadow-lg">
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <FileArchive className="h-5 w-5 text-primary" />
-                Restore Database
-              </CardTitle>
-              <CardDescription>
-                Upload a previously downloaded backup zip to restore your database
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {/* Drop Zone */}
-                <div
-                  className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${
-                    isDragOver
-                      ? "border-primary bg-primary/5 scale-[1.01]"
-                      : restoreFile
-                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
-                      : "border-gray-300 dark:border-gray-700 hover:border-primary/60 hover:bg-primary/5"
-                  }`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onDrop={handleFileDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".zip"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                  {restoreFile ? (
-                    <div className="space-y-2">
-                      <FileArchive className="h-10 w-10 text-emerald-500 mx-auto" />
-                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 break-all">
-                        {restoreFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatSize(restoreFile.size / 1024)}
-                      </p>
-                      <button
-                        className="text-xs text-red-500 hover:underline"
-                        onClick={(e) => { e.stopPropagation(); setRestoreFile(null); }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="h-10 w-10 text-gray-400 mx-auto" />
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Drag & drop your backup zip
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        or click to browse — accepts <strong>.zip</strong> only
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Restore Info + Button */}
-                <div className="space-y-4">
-                  <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-1">
-                    <p className="font-semibold flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      Important — Read before restoring
-                    </p>
-                    <ul className="list-disc ml-4 space-y-0.5">
-                      <li>This will <strong>replace</strong> your current database</li>
-                      <li>The action cannot be undone</li>
-                      <li>A restore log will be saved in Backup History</li>
-                      <li>Reload the app after restoring if needed</li>
-                    </ul>
-                  </div>
-
-                  <Button
-                    className="gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50"
-                    onClick={handleRestore}
-                    disabled={!restoreFile || restoring}
-                  >
-                    {restoring ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        Restoring...
-                      </>
-                    ) : (
-                      <>
-                        <Database className="h-4 w-4" />
-                        Restore Database
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
         {/* ── Backup History ─────────────────────────────────────────── */}
         <motion.div
@@ -656,7 +563,9 @@ const Restore_Backup: React.FC = () => {
                   onClick={() => loadHistory(historyPage)}
                   disabled={historyLoading}
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${historyLoading ? "animate-spin" : ""}`}
+                  />
                   Refresh
                 </Button>
               </div>
@@ -670,7 +579,9 @@ const Restore_Backup: React.FC = () => {
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                   <HardDrive className="h-10 w-10 opacity-30" />
                   <p className="text-sm">No backup history yet</p>
-                  <p className="text-xs">Run a manual backup or wait for the midnight auto-backup</p>
+                  <p className="text-xs">
+                    Run a manual backup or wait for the midnight auto-backup
+                  </p>
                 </div>
               ) : (
                 <>
@@ -678,12 +589,24 @@ const Restore_Backup: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-900/50">
-                          <TableHead className="text-xs font-semibold">Date & Time</TableHead>
-                          <TableHead className="text-xs font-semibold">Type</TableHead>
-                          <TableHead className="text-xs font-semibold">Status</TableHead>
-                          <TableHead className="text-xs font-semibold">File</TableHead>
-                          <TableHead className="text-xs font-semibold">Size</TableHead>
-                          <TableHead className="text-xs font-semibold">Drive</TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            Date & Time
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            Type
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            Status
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            File
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            Size
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold">
+                            Drive
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -702,13 +625,19 @@ const Restore_Backup: React.FC = () => {
                               <div className="space-y-0.5">
                                 <StatusBadge status={item.status} />
                                 {item.errorMsg && (
-                                  <p className="text-xs text-red-500 max-w-[180px] truncate" title={item.errorMsg}>
+                                  <p
+                                    className="text-xs text-red-500 max-w-[180px] truncate"
+                                    title={item.errorMsg}
+                                  >
                                     {item.errorMsg}
                                   </p>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={item.fileName}>
+                            <TableCell
+                              className="text-xs text-muted-foreground max-w-[180px] truncate"
+                              title={item.fileName}
+                            >
                               {item.fileName || "—"}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
@@ -725,7 +654,9 @@ const Restore_Backup: React.FC = () => {
                                   View <ExternalLink className="h-3 w-3" />
                                 </a>
                               ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
+                                <span className="text-xs text-muted-foreground">
+                                  —
+                                </span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -764,6 +695,121 @@ const Restore_Backup: React.FC = () => {
                   )}
                 </>
               )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ── Restore Section ───────────────────────────────────────── */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <Card className="border p-4 border-gray-200 dark:border-gray-800 shadow-lg">
+            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <FileArchive className="h-5 w-5 text-primary" />
+                Restore Database
+              </CardTitle>
+              <CardDescription>
+                Upload a previously downloaded backup zip to restore your
+                database
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                {/* Drop Zone */}
+                <div
+                  className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${
+                    isDragOver
+                      ? "border-primary bg-primary/5 scale-[1.01]"
+                      : restoreFile
+                        ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "border-gray-300 dark:border-gray-700 hover:border-primary/60 hover:bg-primary/5"
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleFileDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  {restoreFile ? (
+                    <div className="space-y-2">
+                      <FileArchive className="h-10 w-10 text-emerald-500 mx-auto" />
+                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 break-all">
+                        {restoreFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatSize(restoreFile.size / 1024)}
+                      </p>
+                      <button
+                        className="text-xs text-red-500 hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRestoreFile(null);
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="h-10 w-10 text-gray-400 mx-auto" />
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Drag & drop your backup zip
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        or click to browse — accepts <strong>.zip</strong> only
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Restore Info + Button */}
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                    <p className="font-semibold flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Important — Read before restoring
+                    </p>
+                    <ul className="list-disc ml-4 space-y-0.5">
+                      <li>
+                        This will <strong>replace</strong> your current database
+                      </li>
+                      <li>The action cannot be undone</li>
+                      <li>A restore log will be saved in Backup History</li>
+                      <li>Reload the app after restoring if needed</li>
+                    </ul>
+                  </div>
+
+                  <Button
+                    className="gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+                    onClick={handleRestore}
+                    disabled={!restoreFile || restoring}
+                  >
+                    {restoring ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Restoring...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-4 w-4" />
+                        Restore Database
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
