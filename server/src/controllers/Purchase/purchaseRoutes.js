@@ -31,6 +31,15 @@ router.get(
   purchaseController.downloadPurchaseSummaryReportExcel,
 );
 
+router.get(
+  "/purchase-register-report/pdf",
+  purchaseController.downloadPurchaseRegisterPDF
+);
+router.get(
+  "/purchase-register-report/excel",
+  purchaseController.downloadPurchaseRegisterExcel
+);
+
 // GET /api/purchase/gst - Get all purchases with GST details (paginated)
 router.get("/purchase-gst", purchaseController.getPurchaseWithGST);
 

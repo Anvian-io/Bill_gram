@@ -2776,6 +2776,472 @@ export const getPurchaseGSTMonthly = asyncHandler(async (req, res) => {
   );
 });
 
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE REGISTER AS PDF
+// --------------------------------------------------------------------
+export const downloadPurchaseRegisterPDF = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    supplierId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // 1. Build WHERE clause (same as preview, but no pagination)
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+
+  // 2. Get date ranges
+  const dateRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas (from supplier addresses)
+  const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
+    where,
+    select: { supplier: { select: { address: true } } },
+    distinct: ["supplierId"],
+  });
+  const areas = [
+    ...new Set(
+      suppliersWithAddress
+        .map((s) => s.supplier?.address?.split(",").pop()?.trim())
+        .filter((city) => city && city.length > 0),
+    ),
+  ];
+
+  // 6. Fetch ALL invoices with supplier name (no pagination)
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy: { invoiceDate: "desc" },
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      supplier: {
+        select: { name: true },
+      },
+    },
+  });
+
+  // 7. Compute total finalAmount and invoice count
+  const totalAmount = invoices.reduce((sum, inv) => sum + inv.finalAmount, 0);
+  const totalInvoices = invoices.length;
+
+  // 8. Format data for template
+  const formattedInvoices = invoices.map((inv) => ({
+    invoiceNo: inv.invoiceNo,
+    invoiceDate: inv.invoiceDate,
+    supplierName: inv.supplier.name,
+    amount: inv.finalAmount,
+    balance: inv.finalAmount,
+  }));
+
+  const reportData = {
+    user: { shop_name: user?.shop_name || null },
+    dateRange: {
+      from: dateRange._min?.invoiceDate || null,
+      to: dateRange._max?.invoiceDate || null,
+    },
+    invoiceRange: {
+      start: invoiceRange._min?.invoiceNo || null,
+      end: invoiceRange._max?.invoiceNo || null,
+    },
+    areas,
+    invoices: formattedInvoices,
+    totals: { totalAmount, totalInvoices },
+    filters: {
+      fromDate: fromDate || null,
+      toDate: toDate || null,
+      invoiceNo: invoiceNo || null,
+      supplierId: supplierId ? parseInt(supplierId) : null,
+    },
+  };
+
+  // 9. Render HTML using EJS
+  const templateName = "purchaseRegisterReport.ejs";
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const templatePath = path.join(__dirname, "../../views/purchase", templateName);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  const html = await ejs.renderFile(templatePath, {
+    ...reportData,
+    formatDate,
+  });
+
+  // 10. Generate PDF with Puppeteer
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const footerTemplate = `
+    <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; margin-top: 5px;">
+      <span>${user?.shop_name || "Your Shop"}</span>
+      <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+    </div>
+  `;
+  const headerTemplate = "<div></div>";
+
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "0.5cm", bottom: "0.5cm", left: "0.2cm", right: "0.2cm" },
+    displayHeaderFooter: true,
+    headerTemplate,
+    footerTemplate,
+  });
+
+  await browser.close();
+
+  // 11. Generate filename and save history
+  const fromStr = formatDateForFilename(reportData.dateRange.from);
+  const toStr = formatDateForFilename(reportData.dateRange.to);
+  const pdfFileName = `purchase-register-${fromStr}_to_${toStr}.pdf`;
+
+  await prisma.purchaseReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "pdf",
+      template: templateName,
+      fileName: pdfFileName,
+      data: JSON.stringify(reportData),
+    },
+  });
+
+  // 12. Send PDF
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${pdfFileName}"`);
+  res.setHeader("Content-Length", pdfBuffer.length);
+  return res.end(pdfBuffer, "binary");
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE REGISTER AS EXCEL
+// --------------------------------------------------------------------
+export const downloadPurchaseRegisterExcel = asyncHandler(async (req, res) => {
+  const {
+    fromDate,
+    toDate,
+    invoiceNo = "",
+    supplierId,
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // 1. Build WHERE clause (same as preview, but no pagination)
+  const andConditions = [{ deleted: false }];
+
+  if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
+  if (supplierId) andConditions.push({ supplierId: parseInt(supplierId) });
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+
+  // 2. Get date ranges
+  const dateRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceDate: true },
+    _max: { invoiceDate: true },
+  });
+
+  // 3. Get user shop_name
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { shop_name: true },
+  });
+
+  // 4. Invoice number range
+  const invoiceRange = await prisma.purchaseInvoice.aggregate({
+    where,
+    _min: { invoiceNo: true },
+    _max: { invoiceNo: true },
+  });
+
+  // 5. Distinct areas (from supplier addresses)
+  const suppliersWithAddress = await prisma.purchaseInvoice.findMany({
+    where,
+    select: { supplier: { select: { address: true } } },
+    distinct: ["supplierId"],
+  });
+  const areas = [
+    ...new Set(
+      suppliersWithAddress
+        .map((s) => s.supplier?.address?.split(",").pop()?.trim())
+        .filter((city) => city && city.length > 0),
+    ),
+  ];
+
+  // 6. Fetch ALL invoices with supplier name (no pagination)
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy: { invoiceDate: "desc" },
+    select: {
+      invoiceNo: true,
+      invoiceDate: true,
+      finalAmount: true,
+      supplier: {
+        select: { name: true },
+      },
+    },
+  });
+
+  // 7. Compute total finalAmount and invoice count
+  const totalAmount = invoices.reduce((sum, inv) => sum + inv.finalAmount, 0);
+  const totalInvoices = invoices.length;
+
+  // 8. Format data for template
+  const formattedInvoices = invoices.map((inv) => ({
+    invoiceNo: inv.invoiceNo,
+    invoiceDate: inv.invoiceDate,
+    supplierName: inv.supplier.name,
+    amount: inv.finalAmount,
+    balance: inv.finalAmount,
+  }));
+
+  const reportData = {
+    user: { shop_name: user?.shop_name || null },
+    dateRange: {
+      from: dateRange._min?.invoiceDate || null,
+      to: dateRange._max?.invoiceDate || null,
+    },
+    invoiceRange: {
+      start: invoiceRange._min?.invoiceNo || null,
+      end: invoiceRange._max?.invoiceNo || null,
+    },
+    areas,
+    invoices: formattedInvoices,
+    totals: { totalAmount, totalInvoices },
+    filters: {
+      fromDate: fromDate || null,
+      toDate: toDate || null,
+      invoiceNo: invoiceNo || null,
+      supplierId: supplierId ? parseInt(supplierId) : null,
+    },
+  };
+
+  // ----- Generate Excel -----
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Purchase Register");
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  // Title
+  worksheet.mergeCells("A1:G1");
+  const titleRow = worksheet.getRow(1);
+  titleRow.getCell(1).value = "Purchase Register";
+  titleRow.getCell(1).font = { size: 16, bold: true };
+  titleRow.getCell(1).alignment = { horizontal: "center" };
+
+  // Shop & date range
+  worksheet.mergeCells("A2:G2");
+  worksheet.getRow(2).getCell(1).value =
+    `Shop: ${reportData.user.shop_name || "Your Shop"} | Date: ${formatDate(reportData.dateRange.from)} to ${formatDate(reportData.dateRange.to)}`;
+  worksheet.getRow(2).getCell(1).alignment = { horizontal: "center" };
+
+  // Filter details
+  worksheet.addRow([]);
+  worksheet.addRow([
+    `INVOICE: ${reportData.invoiceRange.start || "—"} to ${reportData.invoiceRange.end || "—"}`,
+  ]);
+  worksheet.addRow([
+    `AREA: ${reportData.areas.length ? reportData.areas.join(", ") : "All"}`,
+  ]);
+  worksheet.addRow([]);
+
+  // Headers
+  const headers = ["Invoice No", "Date", "Supplier", "Amount (₹)", "Cash", "Cheque", "Balance"];
+  const headerRow = worksheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+    cell.alignment = { horizontal: "center" };
+  });
+
+  // Data rows
+  reportData.invoices.forEach((invoice) => {
+    const row = worksheet.addRow([
+      invoice.invoiceNo,
+      formatDate(invoice.invoiceDate),
+      invoice.supplierName,
+      invoice.amount,
+      "", // Cash
+      "", // Cheque
+      invoice.balance,
+    ]);
+
+    // Align numeric columns right
+    [4, 7].forEach((colIndex) => {
+      const cell = row.getCell(colIndex);
+      cell.alignment = { horizontal: "right" };
+      cell.numFmt = "#,##0.00";
+    });
+
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+  });
+
+  // Totals row
+  if (reportData.totals) {
+    const totalRow = worksheet.addRow([
+      `Total ${reportData.totals.totalInvoices} invoices`,
+      "",
+      "",
+      reportData.totals.totalAmount,
+      "",
+      "",
+      reportData.totals.totalAmount,
+    ]);
+
+    totalRow.font = { bold: true };
+    totalRow.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      if ([4, 7].includes(colNumber)) {
+        cell.alignment = { horizontal: "right" };
+        cell.numFmt = "#,##0.00";
+      } else {
+        cell.alignment = { horizontal: "left" };
+      }
+    });
+    // Merge first three cells for the label
+    worksheet.mergeCells(`A${totalRow.number}:C${totalRow.number}`);
+  }
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    let maxLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const cellValue = cell.value ? cell.value.toString() : "";
+      maxLength = Math.max(maxLength, cellValue.length);
+    });
+    column.width = Math.min(maxLength + 2, 20);
+  });
+
+  const fromStr = formatDateForFilename(reportData.dateRange.from);
+  const toStr = formatDateForFilename(reportData.dateRange.to);
+  const excelFileName = `purchase-register-${fromStr}_to_${toStr}.xlsx`;
+
+  // Save history
+  await prisma.purchaseReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      template: "purchaseRegisterReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify(reportData),
+    },
+  });
+
+  // Send Excel
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${excelFileName}"`);
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
 
 // --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
@@ -2783,6 +3249,8 @@ export const getPurchaseGSTMonthly = asyncHandler(async (req, res) => {
 export const purchaseController = {
   createPurchase,
   getAllPurchases,
+  downloadPurchaseRegisterPDF,   
+  downloadPurchaseRegisterExcel, 
   getPurchaseById,
   updatePurchase,
   deletePurchase,
