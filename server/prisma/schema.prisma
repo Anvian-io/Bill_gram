@@ -239,6 +239,7 @@ model Customer {
   deleted      Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  gstIN        String?
 
   saleHistories     SalesHistory[]
   salesInvoices     SalesInvoice[]
@@ -320,6 +321,7 @@ model Supplier {
   phoneNo     String
   email       String?
   address     String?
+  gstIN        String?
 
   status      Boolean  @default(true)
   deleted     Boolean  @default(false)
