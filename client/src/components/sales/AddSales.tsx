@@ -74,6 +74,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { salesService } from "@/services/salesService";
+import { CheckIsExpanded } from "@/utils/commonHelper";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -655,7 +656,13 @@ export default function AddSales() {
   // --------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-9xl mx-auto space-y-6">
+      <div
+        className={`mx-auto ${
+          CheckIsExpanded()
+            ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+            : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -1193,7 +1200,7 @@ export default function AddSales() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto border rounded-lg">
+                <div className="overflow-x-auto w-full border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
