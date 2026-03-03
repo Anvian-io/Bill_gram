@@ -71,6 +71,7 @@ import type {
   PurchaseFormData,
   PurchaseFilters,
 } from "@/types/purchase";
+import { CheckIsExpanded } from "@/utils/commonHelper";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -434,7 +435,13 @@ export default function Purchase() {
         animate="visible"
         variants={containerVariants}
       >
-        <div className="max-w-8xl mx-auto">
+        <div
+          className={`mx-auto ${
+            CheckIsExpanded()
+              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+              : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+          }`}
+        >
           {/* Header Section (unchanged) ... */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"

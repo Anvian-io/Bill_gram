@@ -66,6 +66,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { salesService } from "@/services/salesService";
+import { CheckIsExpanded } from "@/utils/commonHelper";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -545,7 +546,13 @@ export default function Sales() {
         animate="visible"
         variants={containerVariants}
       >
-        <div className="max-w-8xl mx-auto">
+        <div
+          className={`mx-auto ${
+            CheckIsExpanded()
+              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+              : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+          }`}
+        >
           {/* Header */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"

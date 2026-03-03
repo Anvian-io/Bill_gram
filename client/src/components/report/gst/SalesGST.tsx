@@ -303,7 +303,13 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
       animate="visible"
       variants={containerVariants}
     >
-      <div className="max-w-8xl mx-auto">
+      <div
+        className={`mx-auto ${
+          isCollapsed
+            ? "max-w-5xl lg:max-w-2xl xl:max-w-7xl 1xl:max-w-8xl 2xl:max-w-9xl"
+            : "max-w-9xl lg:max-w-xl xl:max-w-5xl 1xl:max-w-5xl 2xl:max-w-10xl"
+        }`}
+      >
         {/* Header Section */}
         <motion.div
           className="flex flex-col gap-6 mb-6 w-full"
@@ -680,9 +686,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
-              <div
-                className={`overflow-x-auto ${isCollapsed ? "max-w-345" : "max-w-290"} transition-normal`}
-              >
+              <div className={`overflow-x-auto w-full transition-normal`}>
                 <Table className="">
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
