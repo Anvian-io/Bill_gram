@@ -8,7 +8,7 @@ import {
 
 // Create Supplier
 export const createSupplier = asyncHandler(async (req, res) => {
-  const { name, phoneNo, email, address, status = true } = req.body;
+  const { name, phoneNo, email, address, gstIN, status = true } = req.body;
 
   // Validate required fields
   if (!name || !phoneNo) {
@@ -28,7 +28,6 @@ export const createSupplier = asyncHandler(async (req, res) => {
   const existingSupplier = await prisma.supplier.findFirst({
     where: {
       phoneNo,
-      // deleted: false,
     },
   });
 
@@ -42,6 +41,25 @@ export const createSupplier = asyncHandler(async (req, res) => {
     );
   }
 
+  // Check if GSTIN already exists (if provided)
+  if (gstIN) {
+    const existingGstin = await prisma.supplier.findFirst({
+      where: {
+        gstIN,
+      },
+    });
+
+    if (existingGstin) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Supplier with this GSTIN already exists`,
+        statusType.CONFLICT,
+      );
+    }
+  }
+
   // Create supplier
   const supplier = await prisma.supplier.create({
     data: {
@@ -49,6 +67,7 @@ export const createSupplier = asyncHandler(async (req, res) => {
       phoneNo,
       email: email || "",
       address: address || null,
+      gstIN: gstIN || null,
       status,
     },
     select: {
@@ -57,6 +76,7 @@ export const createSupplier = asyncHandler(async (req, res) => {
       phoneNo: true,
       email: true,
       address: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -85,6 +105,7 @@ export const getSuppliers = asyncHandler(async (req, res) => {
     phoneNo = "",
     email = "",
     address = "",
+    gstIN = "",
     status,
     showDeleted = "false",
     sortBy = "createdAt",
@@ -154,7 +175,16 @@ export const getSuppliers = asyncHandler(async (req, res) => {
     });
   }
 
-  // Search in name + phoneNo + email + address
+  // GSTIN filter
+  if (gstIN) {
+    andConditions.push({
+      gstIN: {
+        contains: gstIN,
+      },
+    });
+  }
+
+  // Search in name + phoneNo + email + address + gstIN
   if (search) {
     andConditions.push({
       OR: [
@@ -178,6 +208,11 @@ export const getSuppliers = asyncHandler(async (req, res) => {
             contains: search,
           },
         },
+        {
+          gstIN: {
+            contains: search,
+          },
+        },
       ],
     });
   }
@@ -191,6 +226,7 @@ export const getSuppliers = asyncHandler(async (req, res) => {
     "name",
     "phoneNo",
     "email",
+    "gstIN",
     "createdAt",
     "updatedAt",
   ];
@@ -218,6 +254,7 @@ export const getSuppliers = asyncHandler(async (req, res) => {
         phoneNo: true,
         email: true,
         address: true,
+        gstIN: true,
         status: true,
         deleted: true,
         createdAt: true,
@@ -266,6 +303,7 @@ export const getSupplierById = asyncHandler(async (req, res) => {
       phoneNo: true,
       email: true,
       address: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -294,7 +332,7 @@ export const getSupplierById = asyncHandler(async (req, res) => {
 // Update Supplier
 export const updateSupplier = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, phoneNo, email, address, status } = req.body;
+  const { name, phoneNo, email, address, gstIN, status } = req.body;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -340,6 +378,29 @@ export const updateSupplier = asyncHandler(async (req, res) => {
     }
   }
 
+  // Check if new GSTIN conflicts with other suppliers
+  if (gstIN && gstIN !== existingSupplier.gstIN) {
+    const gstinConflict = await prisma.supplier.findFirst({
+      where: {
+        gstIN,
+        deleted: false,
+        NOT: {
+          id: parseInt(id),
+        },
+      },
+    });
+
+    if (gstinConflict) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Supplier with this GSTIN already exists`,
+        statusType.CONFLICT,
+      );
+    }
+  }
+
   // Update supplier
   const updatedSupplier = await prisma.supplier.update({
     where: {
@@ -350,6 +411,7 @@ export const updateSupplier = asyncHandler(async (req, res) => {
       phoneNo: phoneNo || existingSupplier.phoneNo,
       email: email !== undefined ? email : existingSupplier.email,
       address: address !== undefined ? address : existingSupplier.address,
+      gstIN: gstIN !== undefined ? gstIN : existingSupplier.gstIN,
       status: status !== undefined ? status : existingSupplier.status,
     },
     select: {
@@ -358,6 +420,7 @@ export const updateSupplier = asyncHandler(async (req, res) => {
       phoneNo: true,
       email: true,
       address: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -401,24 +464,6 @@ export const deleteSupplier = asyncHandler(async (req, res) => {
     );
   }
 
-  // Check if supplier is being used in purchases (if you have this relation)
-  // Example check if you have a Purchase model:
-  // const purchaseUsingSupplier = await prisma.purchase.findFirst({
-  //   where: {
-  //     supplierId: parseInt(id),
-  //   },
-  // });
-  //
-  // if (purchaseUsingSupplier) {
-  //   return sendResponse(
-  //     res,
-  //     false,
-  //     null,
-  //     "Cannot delete supplier. It is being used in purchase records.",
-  //     statusType.BAD_REQUEST,
-  //   );
-  // }
-
   // Soft delete
   await prisma.supplier.update({
     where: {
@@ -453,6 +498,7 @@ export const getActiveSuppliers = asyncHandler(async (req, res) => {
       id: true,
       name: true,
       phoneNo: true,
+      gstIN: true,
     },
     orderBy: {
       name: "asc",
@@ -477,4 +523,3 @@ export const supplierController = {
   deleteSupplier,
   getActiveSuppliers,
 };
-
