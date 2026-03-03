@@ -148,6 +148,32 @@ interface PurchaseFormModalProps {
   isSubmitting?: boolean;
 }
 
+const emptyItem: PurchaseFormData["items"][0] = {
+  productId: 0,
+  productCode: "",
+  description: "",
+  rate: 0,
+  aQty: 0,
+  mQty: 0,
+  unit: 0,
+  fQty: 0,
+  DQty: 0,
+  totalAmount: 0,
+  finalAmount: 0,
+  taxRate: 5,
+  taxAmount: 0,
+  schPercent: 0,
+  schAmount: 0,
+  batchId: undefined,
+  cartonPack: 0,
+  conversionFactor: 0,
+  productBrand: "",
+  sch1Percent: 0,
+  sch1Amount: 0,
+  sch2Percent: 0,
+  sch2Amount: 0
+};
+
 // ----------------------------------------------------------------------
 // Initial Values
 // ----------------------------------------------------------------------
@@ -155,10 +181,10 @@ const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 0,
   gstDetails: "With GST",
-  items: [],
+  items: [{ ...emptyItem }], // one default row
   remarks: "",
   grossAmount: 0,
-  boxUnit: 0, // will be hidden
+  boxUnit: 0,
   cessInsurance: 0,
   discountPercent: 0,
   tax: 0,
