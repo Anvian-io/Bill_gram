@@ -49,6 +49,9 @@ import {
   Phone,
   ArrowLeft,
   Save,
+  Eye,
+  FilePlus,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,7 +75,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { salesService } from "@/services/salesService";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 
@@ -105,6 +108,12 @@ interface Customer {
   deleted: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface SalesResponse {
+  id: number;
+  invoiceNo: string;
+  [key: string]: any;
 }
 
 // ----------------------------------------------------------------------
@@ -174,7 +183,6 @@ const defaultValues: SalesFormData = {
   gstDetails: "With GST",
   phoneNo: "",
   items: [
-    // <-- one default row
     {
       productId: 0,
       productCode: "",
@@ -191,7 +199,7 @@ const defaultValues: SalesFormData = {
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
-      batchId: 0 as any, // will trigger validation until batch is selected
+      batchId: 0 as any,
       batchOpeningStock: 0,
       cartonPack: 0,
       conversionFactor: 0,
@@ -214,7 +222,18 @@ const defaultValues: SalesFormData = {
 // ----------------------------------------------------------------------
 export default function AddSales() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get id from query params
+  const saleId = searchParams.get("id");
+  const isNew = searchParams.has("new");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [generatedSaleId, setGeneratedSaleId] = useState<number | null>(null);
+  const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
+    null,
+  );
 
   // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
@@ -287,6 +306,86 @@ export default function AddSales() {
   const findCustomer = (id: number) =>
     customers.find((c: Customer) => c.id === id);
   const findArea = (id: number) => areas.find((a) => a.id === id);
+
+  // Load sale data if editing
+  useEffect(() => {
+    const loadSaleData = async () => {
+      if (saleId && !isNew) {
+        setIsLoading(true);
+        try {
+          const saleData = await salesService.getSale(Number(saleId));
+          if (saleData) {
+            populateFormWithSaleData(saleData);
+            setGeneratedSaleId(saleData.id);
+            setGeneratedInvoiceNo(saleData.invoiceNo);
+          }
+        } catch (error) {
+          console.error("Error loading sale:", error);
+          toast.error("Failed to load sale data");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadSaleData();
+  }, [saleId, isNew]);
+
+  // Populate form with existing sale data
+  const populateFormWithSaleData = (saleData: any) => {
+    const mappedItems = (saleData.items ?? []).map((item: any) => {
+      let cartonPack = item.cartonPack ?? 0;
+      if (!cartonPack && item.productId) {
+        const product = findProduct(item.productId);
+        cartonPack = product?.cartonPack ?? 0;
+      }
+      return {
+        productId: item.productId ?? 0,
+        productCode: item.product?.productCode ?? "",
+        description: item.product?.description ?? "",
+        rate: item.rate ?? 0,
+        aQty: item.aQty ?? 0,
+        mQty: item.mQty ?? 0,
+        unit: item.unit ?? 0,
+        fQty: item.fQty ?? 0,
+        DQty: item.DQty ?? 0,
+        totalAmount: item.totalAmount ?? 0,
+        finalAmount:
+          item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
+        taxRate: item.taxRate ?? 5,
+        taxAmount: item.taxAmount ?? 0,
+        schPercent: item.schPercent ?? 0,
+        schAmount: item.schAmount ?? 0,
+        batchId: item.batchId ?? undefined,
+        batchOpeningStock: item.batch?.openingStock ?? undefined,
+        cartonPack,
+        conversionFactor: item.conversionFactor ?? 1,
+      };
+    });
+
+    form.reset({
+      invoiceDate:
+        saleData.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
+      areaId: saleData.area?.id ?? 0,
+      customerId: saleData.customer?.id ?? 0,
+      phoneNo: saleData.customer?.phoneNo ?? "",
+      vanId: saleData.van?.id ?? 0,
+      salesmanId: saleData.salesman?.id ?? 0,
+      address: saleData.address ?? "",
+      gstDetails: saleData.gstDetails ?? "With GST",
+      items: mappedItems.length > 0 ? mappedItems : defaultValues.items,
+      remarks: saleData.remarks ?? "",
+      grossAmount: saleData.grossAmount ?? 0,
+      boxUnit: saleData.boxUnit ?? 0,
+      cessInsurance: saleData.cessInsurance ?? 0,
+      scheme1: saleData.scheme1 ?? 0,
+      discountPercent: saleData.discountPercent ?? 0,
+      tax: saleData.tax ?? 0,
+      amountAdd: saleData.amountAdd ?? 0,
+      creditAmount: saleData.creditAmount ?? 0,
+      finalAmount: saleData.finalAmount ?? 0,
+    });
+  };
 
   // --------------------------------------------------------------------
   // Logic: Handle Phone Number Selection
@@ -658,9 +757,26 @@ export default function AddSales() {
 
     setIsSubmitting(true);
     try {
-      await salesService.createSale(payload);
-      toast.success("Sales created successfully");
-      navigate("/sales");
+      let response: SalesResponse;
+
+      if (saleId && !isNew) {
+        // Update existing sale
+        response = await salesService.updateSale(Number(saleId), payload);
+        toast.success("Sales updated successfully");
+      } else {
+        // Create new sale
+        response = await salesService.createSale(payload);
+        toast.success("Sales created successfully");
+
+        // Set generated sale ID and update URL
+        if (response?.id) {
+          setGeneratedSaleId(response.id);
+          setGeneratedInvoiceNo(response.invoiceNo);
+
+          // Update URL with the new sale ID without navigation
+          setSearchParams({ id: response.id.toString() }, { replace: true });
+        }
+      }
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast.error(error.message || "Failed to save sales. Please try again.");
@@ -675,8 +791,47 @@ export default function AddSales() {
   };
 
   // --------------------------------------------------------------------
+  // Navigation handlers
+  // --------------------------------------------------------------------
+  const handleNewSales = () => {
+    // Reset form and navigate to ?new
+    form.reset(defaultValues);
+    setGeneratedSaleId(null);
+    setGeneratedInvoiceNo(null);
+    setSearchParams({ new: "true" }, { replace: true });
+  };
+
+  const handleBillPreview = () => {
+    const idToPreview = saleId || generatedSaleId;
+    if (idToPreview) {
+      // Open bill preview in new tab or navigate to preview route
+      window.open(`/sales/preview/${idToPreview}`, "_blank");
+      // Alternative: navigate(`/sales/preview/${idToPreview}`);
+    }
+  };
+
+  const handleBackToSales = () => {
+    navigate("/sales");
+  };
+
+  // Determine if bill preview should be visible
+  const canShowBillPreview = !!saleId || !!generatedSaleId;
+  const isEditMode = !!saleId && !isNew;
+
+  // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-2 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading sale data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-2">
       <div
@@ -687,37 +842,65 @@ export default function AddSales() {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            {/* <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("/sales")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button> */}
             <div>
-              <h1 className="text-3xl font-bold text-heading">Add New Sales</h1>
+              <h1 className="text-3xl font-bold text-heading">
+                {isEditMode ? "Edit Sales Invoice" : "Add New Sales"}
+              </h1>
               <p className="text-muted-foreground mt-1">
-                Create a new sales invoice
+                {isEditMode
+                  ? `Editing Invoice ${generatedInvoiceNo || ""}`
+                  : generatedInvoiceNo
+                    ? `Invoice ${generatedInvoiceNo} - Saved`
+                    : "Create a new sales invoice"}
               </p>
             </div>
           </div>
           <div className="flex gap-3">
+            {/* Bill Preview Button - Only visible after generation */}
+            {canShowBillPreview && (
+              <Button
+                variant="outline"
+                onClick={handleBillPreview}
+                className="gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Bill Preview
+              </Button>
+            )}
+
+            {/* New Sales Button - Visible after generation or in edit mode */}
+            {(canShowBillPreview || generatedSaleId) && (
+              <Button
+                variant="outline"
+                onClick={handleNewSales}
+                className="gap-2"
+              >
+                <FilePlus className="h-4 w-4" />
+                New Sales
+              </Button>
+            )}
+
             <Button
               variant="outline"
-              onClick={() => navigate("/sales")}
+              onClick={handleBackToSales}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
+
             <Button
               onClick={form.handleSubmit(onSubmit, onError)}
               disabled={isSubmitting}
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSubmitting ? "Saving..." : "Create Sales"}
+              {isSubmitting
+                ? "Saving..."
+                : isEditMode
+                  ? "Update Sales"
+                  : "Create Sales"}
             </Button>
           </div>
         </div>
@@ -733,6 +916,11 @@ export default function AddSales() {
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Invoice Details
+                  {generatedInvoiceNo && (
+                    <Badge variant="secondary" className="ml-2">
+                      {generatedInvoiceNo}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1923,17 +2111,35 @@ export default function AddSales() {
 
             {/* Submit Buttons */}
             <div className="flex justify-end gap-4 pt-4 border-t">
+              {/* Bill Preview Button - Also shown at bottom for convenience */}
+              {canShowBillPreview && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBillPreview}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Bill Preview
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/sales")}
+                onClick={handleBackToSales}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
+
               <Button type="submit" disabled={isSubmitting} className="gap-2">
                 <Save className="h-4 w-4" />
-                {isSubmitting ? "Saving..." : "Create Sales"}
+                {isSubmitting
+                  ? "Saving..."
+                  : isEditMode
+                    ? "Update Sales"
+                    : "Create Sales"}
               </Button>
             </div>
           </form>

@@ -46,16 +46,17 @@ import {
   Check,
   ArrowLeft,
   Save,
+  FilePlus,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { toast } from "sonner";
 import { imageService } from "@/services/imageService";
 import { productService } from "@/services/productService";
-import { type ProductFormData } from "@/types/product";
+import { type ProductFormData, type Product } from "@/types/product";
 import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
 import { cn } from "@/lib/utils";
 import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 
@@ -117,7 +118,7 @@ const productSchema = z.object({
         mfgDate: z.string().optional().nullable(),
         expDate: z.string().optional().nullable(),
         barcode: z.string().min(1, "Barcode is required"),
-        basicPrice: z.coerce.number().positive("Basic price must be positive"),
+        basicPrice: z.coerce.number("Basic price must be positive"),
         openingStock: z.coerce.number().min(0, "Stock cannot be negative"),
         mrp: z.coerce.number().positive("MRP must be positive"),
         pRate: z.coerce.number().positive("Purchase rate must be positive"),
@@ -188,15 +189,21 @@ const gstApplicabilityOptions = [
 
 export default function AddProduct() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Get id from query params
+  const productId = searchParams.get("id");
+  const isNew = searchParams.has("new");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [generatedProductId, setGeneratedProductId] = useState<number | null>(null);
 
   // Image states
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [relatedImageFiles, setRelatedImageFiles] = useState<File[]>([]);
   const [uploadedMainImage, setUploadedMainImage] = useState<string>("");
-  const [uploadedRelatedImages, setUploadedRelatedImages] = useState<string[]>(
-    [],
-  );
+  const [uploadedRelatedImages, setUploadedRelatedImages] = useState<string[]>([]);
 
   // State for dropdown open/close
   const [unitIdOpen, setUnitIdOpen] = useState(false);
@@ -216,6 +223,92 @@ export default function AddProduct() {
   // Watch batches for UI updates
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
+
+  // Load product data if editing
+  useEffect(() => {
+    const loadProductData = async () => {
+      if (productId && !isNew) {
+        setIsLoading(true);
+        try {
+          const productData = await productService.getProduct(Number(productId));
+          if (productData) {
+            populateFormWithProductData(productData);
+            setGeneratedProductId(productData.id);
+          }
+        } catch (error) {
+          console.error("Error loading product:", error);
+          toast.error("Failed to load product data");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadProductData();
+  }, [productId, isNew]);
+
+  // Populate form with existing product data
+  const populateFormWithProductData = (productData: Product) => {
+    form.reset({
+      productCode: productData.productCode,
+      productBrand: productData.productBrand,
+      description: productData.description,
+      hsnSacCode: productData.hsnSacCode,
+      goodsServices: productData.goodsServices as "Goods" | "Services",
+      weight: productData.weight,
+      unitId: productData.unitId || 0,
+      productGroupId: productData.productGroupId || 0,
+      productShortName: productData.productShortName || "",
+      purchaseUnit: productData.purchaseUnit || "",
+      conversionFactor: productData.conversionFactor || 1,
+      pricePerPcs: productData.pricePerPcs || 0,
+      productCompanyId: productData.productCompanyId || 0,
+      saleUnit: productData.saleUnit || "",
+      cartonPack: productData.cartonPack || 24,
+      innerPack: productData.innerPack || "",
+      packagingBasic: productData.packagingBasic,
+      packagingMRP: productData.packagingMRP,
+      insuranceTaxBasic: productData.insuranceTaxBasic,
+      insuranceTaxMRP: productData.insuranceTaxMRP,
+      gstRate: productData.gstRate || 18,
+      gstInclusive: productData.gstInclusive,
+      cessRate: productData.cessRate || 0,
+      hsnChapter: productData.hsnChapter || "",
+      gstApplicability: productData.gstApplicability as
+        | "Regular"
+        | "Composition"
+        | "Exempt",
+      status: productData.status,
+      mainImage: extractFilename(productData.mainImage || ""),
+      relatedImages:
+        productData.relatedImages?.map((img) =>
+          extractFilename(img.imageUrl),
+        ) || [],
+      batches:
+        productData.batches?.map((batch) => ({
+          bNo: batch.batchNo,
+          mfgDate: batch.mfgDate,
+          expDate: batch.expDate,
+          barcode: batch.barcode,
+          basicPrice: batch.basicPrice,
+          openingStock: batch.openingStock,
+          mrp: batch.mrp,
+          pRate: batch.purchaseRate,
+          sRate: batch.saleRate,
+          margin: batch.margin,
+          gstAmount: batch.gstAmount || 0,
+        })) || [],
+    });
+
+    const mainImg = extractFilename(productData.mainImage || "");
+    setUploadedMainImage(mainImg);
+
+    const relatedImgs =
+      productData.relatedImages?.map((img) =>
+        extractFilename(img.imageUrl),
+      ) || [];
+    setUploadedRelatedImages(relatedImgs);
+  };
 
   // Clean up object URLs
   useEffect(() => {
@@ -404,11 +497,25 @@ export default function AddProduct() {
 
       console.log("Converted form data:", formData);
 
-      await productService.createProduct(formData);
-      toast.success("Product created successfully!");
-
-      // Navigate back to inventory or reset form
-      navigate("/inventory/products");
+      let response: Product;
+      
+      if (productId && !isNew) {
+        // Update existing product
+        response = await productService.updateProduct(Number(productId), formData);
+        toast.success("Product updated successfully!");
+      } else {
+        // Create new product
+        response = await productService.createProduct(formData);
+        toast.success("Product created successfully!");
+        
+        // Set generated product ID and update URL
+        if (response?.id) {
+          setGeneratedProductId(response.id);
+          
+          // Update URL with the new product ID without navigation
+          setSearchParams({ id: response.id.toString() }, { replace: true });
+        }
+      }
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast.error("Failed to save product. Please try again.", {
@@ -424,9 +531,36 @@ export default function AddProduct() {
     toast.error("Please fix all validation errors before submitting.");
   };
 
-  const handleCancel = () => {
+  // Navigation handlers
+  const handleNewProduct = () => {
+    // Reset form and navigate to ?new
+    form.reset(defaultValues);
+    setMainImageFile(null);
+    setRelatedImageFiles([]);
+    setUploadedMainImage("");
+    setUploadedRelatedImages([]);
+    setGeneratedProductId(null);
+    setSearchParams({ new: "true" }, { replace: true });
+  };
+
+  const handleBackToInventory = () => {
     navigate("/inventory/products");
   };
+
+  // Determine if new product button should be visible
+  const canShowNewProduct = !!productId || !!generatedProductId;
+  const isEditMode = !!productId && !isNew;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -450,40 +584,53 @@ export default function AddProduct() {
           transition={{ delay: 0.1 }}
         >
           <div className="flex items-center gap-4">
-            {/* <Button
-              variant="outline"
-              size="icon"
-              onClick={handleCancel}
-              className="h-10 w-10"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button> */}
             <div>
               <h1 className="text-3xl font-bold text-heading flex items-center gap-2">
                 <Package className="h-8 w-8" />
-                Add New Product
+                {isEditMode ? "Edit Product" : "Add New Product"}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Create a new product in your inventory
+                {isEditMode 
+                  ? "Update product details and inventory information" 
+                  : generatedProductId 
+                    ? "Product saved successfully" 
+                    : "Create a new product in your inventory"}
               </p>
             </div>
           </div>
 
           <div className="flex gap-3">
+            {/* New Product Button - Visible after creation or in edit mode */}
+            {canShowNewProduct && (
+              <Button
+                variant="outline"
+                onClick={handleNewProduct}
+                className="gap-2"
+              >
+                <FilePlus className="h-4 w-4" />
+                New Product
+              </Button>
+            )}
+            
             <Button
               variant="outline"
-              onClick={handleCancel}
+              onClick={handleBackToInventory}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
+            
             <Button
               onClick={form.handleSubmit(onSubmit, onError)}
               disabled={isSubmitting}
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSubmitting ? "Saving..." : "Create Product"}
+              {isSubmitting 
+                ? "Saving..." 
+                : isEditMode 
+                  ? "Update Product" 
+                  : "Create Product"}
             </Button>
           </div>
         </motion.div>
@@ -1863,17 +2010,35 @@ export default function AddProduct() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
             >
+              {/* New Product Button - Also shown at bottom for convenience */}
+              {canShowNewProduct && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleNewProduct}
+                  className="gap-2"
+                >
+                  <FilePlus className="h-4 w-4" />
+                  New Product
+                </Button>
+              )}
+              
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCancel}
+                onClick={handleBackToInventory}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
+              
               <Button type="submit" disabled={isSubmitting} className="gap-2">
                 <Save className="h-4 w-4" />
-                {isSubmitting ? "Saving..." : "Create Product"}
+                {isSubmitting 
+                  ? "Saving..." 
+                  : isEditMode 
+                    ? "Update Product" 
+                    : "Create Product"}
               </Button>
             </motion.div>
           </form>

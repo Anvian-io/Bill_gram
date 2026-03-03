@@ -48,6 +48,8 @@ import {
   Tag,
   ArrowLeft,
   Save,
+  Printer,
+  FilePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -66,7 +68,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "@/components/forms/BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
@@ -87,6 +89,12 @@ interface ProductWithFactors {
   cartonPack: number;
   conversionFactor: number;
   productBrand: string;
+}
+
+interface PurchaseResponse {
+  id: number;
+  invoiceNo: string;
+  [key: string]: any;
 }
 
 // ----------------------------------------------------------------------
@@ -160,7 +168,7 @@ const emptyItem: PurchaseFormData["items"][0] = {
   sch1Percent: 0,
   sch1Amount: 0,
   sch2Percent: 0,
-  sch2Amount: 0
+  sch2Amount: 0,
 };
 
 // ----------------------------------------------------------------------
@@ -187,7 +195,21 @@ const defaultValues: PurchaseFormData = {
 // ----------------------------------------------------------------------
 export default function AddPurchase() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get id from query params
+  const purchaseId = searchParams.get("id");
+  const isNew = searchParams.has("new");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [generatedPurchaseId, setGeneratedPurchaseId] = useState<number | null>(
+    null,
+  );
+  const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
+    null,
+  );
+
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
@@ -229,6 +251,74 @@ export default function AddPurchase() {
     control: form.control,
     name: "creditAmount",
   });
+
+  // Load purchase data if editing
+  useEffect(() => {
+    const loadPurchaseData = async () => {
+      if (purchaseId && !isNew) {
+        setIsLoading(true);
+        try {
+          const purchaseData = await purchaseService.getPurchase(
+            Number(purchaseId),
+          );
+          if (purchaseData) {
+            populateFormWithPurchaseData(purchaseData);
+            setGeneratedPurchaseId(purchaseData.id);
+            setGeneratedInvoiceNo(purchaseData.invoiceNo);
+          }
+        } catch (error) {
+          console.error("Error loading purchase:", error);
+          toast.error("Failed to load purchase data");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadPurchaseData();
+  }, [purchaseId, isNew]);
+
+  // Populate form with existing purchase data
+  const populateFormWithPurchaseData = (purchaseData: any) => {
+    const mappedItems = (purchaseData.items ?? []).map((item: any) => ({
+      productId: item.productId ?? 0,
+      productCode: item.product?.productCode ?? "",
+      description: item.product?.description ?? "",
+      rate: item.rate ?? 0,
+      aQty: item.aQty ?? 0,
+      mQty: item.mQty ?? 0,
+      unit: item.unit ?? 0,
+      fQty: item.fQty ?? 0,
+      DQty: item.DQty ?? 0,
+      totalAmount: item.totalAmount ?? 0,
+      finalAmount: item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
+      taxRate: item.taxRate ?? 5,
+      taxAmount: item.taxAmount ?? 0,
+      schPercent: item.schPercent ?? 0,
+      schAmount: item.schAmount ?? 0,
+      batchId: item.batchId ?? undefined,
+      cartonPack: item.cartonPack ?? 0,
+      conversionFactor: item.conversionFactor ?? 1,
+      productBrand: item.productBrand ?? "",
+    }));
+
+    form.reset({
+      invoiceDate:
+        purchaseData.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
+      supplierId: purchaseData.supplier?.id ?? 0,
+      gstDetails: purchaseData.gstDetails ?? "With GST",
+      items: mappedItems.length > 0 ? mappedItems : defaultValues.items,
+      remarks: purchaseData.remarks ?? "",
+      grossAmount: purchaseData.grossAmount ?? 0,
+      boxUnit: purchaseData.boxUnit ?? 0,
+      cessInsurance: purchaseData.cessInsurance ?? 0,
+      discountPercent: purchaseData.discountPercent ?? 0,
+      tax: purchaseData.tax ?? 0,
+      amountAdd: purchaseData.amountAdd ?? 0,
+      creditAmount: purchaseData.creditAmount ?? 0,
+      finalAmount: purchaseData.finalAmount ?? 0,
+    });
+  };
 
   // ----------------------------------------------------------------------
   // Calculations
@@ -541,14 +631,35 @@ export default function AddPurchase() {
       // @ts-ignore
       delete payload.invoiceNo;
 
-      await purchaseService.createPurchase(payload);
-      toast.success("Purchase created successfully");
-      navigate("/purchases");
+      let response: PurchaseResponse;
+
+      if (purchaseId && !isNew) {
+        // Update existing purchase
+        response = await purchaseService.updatePurchase(
+          Number(purchaseId),
+          payload,
+        );
+        toast.success("Purchase updated successfully");
+      } else {
+        // Create new purchase
+        response = await purchaseService.createPurchase(payload);
+        toast.success("Purchase created successfully");
+
+        // Set generated purchase ID and update URL
+        if (response?.id) {
+          setGeneratedPurchaseId(response.id);
+          setGeneratedInvoiceNo(response.invoiceNo);
+
+          // Update URL with the new purchase ID without navigation
+          setSearchParams({ id: response.id.toString() }, { replace: true });
+        }
+      }
     } catch (error: any) {
-      console.error("Error creating purchase:", error);
-      toast.error("Failed to create purchase", {
-        description: error.response?.data?.message || "Please try again",
-      });
+      console.error("Error in form submission:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to save purchase. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -560,8 +671,47 @@ export default function AddPurchase() {
   };
 
   // ----------------------------------------------------------------------
+  // Navigation handlers
+  // ----------------------------------------------------------------------
+  const handleNewPurchase = () => {
+    // Reset form and navigate to ?new
+    form.reset(defaultValues);
+    setGeneratedPurchaseId(null);
+    setGeneratedInvoiceNo(null);
+    setSearchParams({ new: "true" }, { replace: true });
+  };
+
+  const handleBillPreview = () => {
+    const idToPreview = purchaseId || generatedPurchaseId;
+    if (idToPreview) {
+      // Open bill preview in new tab or navigate to preview route
+      window.open(`/purchases/preview/${idToPreview}`, "_blank");
+      // Alternative: navigate(`/purchases/preview/${idToPreview}`);
+    }
+  };
+
+  const handleBackToPurchases = () => {
+    navigate("/purchases");
+  };
+
+  // Determine if bill preview should be visible
+  const canShowBillPreview = !!purchaseId || !!generatedPurchaseId;
+  const isEditMode = !!purchaseId && !isNew;
+
+  // ----------------------------------------------------------------------
   // Render
   // ----------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-2 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading purchase data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       className="min-h-screen bg-background p-4 md:p-2"
@@ -582,27 +732,47 @@ export default function AddPurchase() {
           variants={itemVariants}
         >
           <div className="flex items-center gap-3">
-            {/* <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="h-10 w-10"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button> */}
             <div>
               <h1 className="text-3xl font-bold text-heading">
-                Add New Purchase
+                {isEditMode ? "Edit Purchase Invoice" : "Add New Purchase"}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Create a new purchase invoice
+                {isEditMode
+                  ? `Editing Invoice ${generatedInvoiceNo || ""}`
+                  : generatedInvoiceNo
+                    ? `Invoice ${generatedInvoiceNo} - Saved`
+                    : "Create a new purchase invoice"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Bill Preview Button - Only visible after generation */}
+            {canShowBillPreview && (
+              <Button
+                variant="outline"
+                onClick={handleBillPreview}
+                className="gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Bill Preview
+              </Button>
+            )}
+
+            {/* New Purchase Button - Visible after generation or in edit mode */}
+            {(canShowBillPreview || generatedPurchaseId) && (
+              <Button
+                variant="outline"
+                onClick={handleNewPurchase}
+                className="gap-2"
+              >
+                <FilePlus className="h-4 w-4" />
+                New Purchase
+              </Button>
+            )}
+
             <Button
               variant="outline"
-              onClick={() => navigate("/purchases")}
+              onClick={handleBackToPurchases}
               disabled={isSubmitting}
             >
               Cancel
@@ -613,7 +783,11 @@ export default function AddPurchase() {
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSubmitting ? "Saving..." : "Create Purchase"}
+              {isSubmitting
+                ? "Saving..."
+                : isEditMode
+                  ? "Update Purchase"
+                  : "Create Purchase"}
             </Button>
           </div>
         </motion.div>
@@ -630,6 +804,11 @@ export default function AddPurchase() {
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Invoice Details
+                    {generatedInvoiceNo && (
+                      <Badge variant="secondary" className="ml-2">
+                        {generatedInvoiceNo}
+                      </Badge>
+                    )}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Invoice Date */}
@@ -1503,13 +1682,26 @@ export default function AddPurchase() {
 
             {/* Bottom Actions */}
             <motion.div
-              className="flex justify-end gap-3 pt-4"
+              className="flex justify-end gap-3 pt-4 border-t"
               variants={itemVariants}
             >
+              {/* Bill Preview Button - Also shown at bottom for convenience */}
+              {canShowBillPreview && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBillPreview}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Bill Preview
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/purchases")}
+                onClick={handleBackToPurchases}
                 disabled={isSubmitting}
               >
                 Cancel
@@ -1521,7 +1713,11 @@ export default function AddPurchase() {
                 size="lg"
               >
                 <Save className="h-4 w-4" />
-                {isSubmitting ? "Saving..." : "Create Purchase"}
+                {isSubmitting
+                  ? "Saving..."
+                  : isEditMode
+                    ? "Update Purchase"
+                    : "Create Purchase"}
               </Button>
             </motion.div>
           </form>

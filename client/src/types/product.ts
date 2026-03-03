@@ -60,6 +60,7 @@ export interface ProductCompany {
   updatedAt: string;
 }
 export interface Product {
+  product: Product | PromiseLike<Product>;
   id: number;
   productCode: string;
   productBrand: string;
