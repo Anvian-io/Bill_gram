@@ -78,6 +78,7 @@ const formSchema = z.object({
     message: "Address must be at least 5 characters.",
   }),
   pincode: z.string().optional(),
+  gstIN: z.string().optional(),
   status: z.boolean(),
 });
 
@@ -97,6 +98,7 @@ interface CustomerFormProps {
     areaId: number | null;
     address: string;
     pincode: string | null;
+    gstIN: string | null;
     status: boolean;
   } | null;
   onSave: (data: CustomerFormData, id?: number) => void;
@@ -125,6 +127,7 @@ export default function CustomerForm({
       areaId: null,
       address: "",
       pincode: "",
+      gstIN: "",
       status: true,
     },
   });
@@ -142,6 +145,7 @@ export default function CustomerForm({
         areaId: editingCustomer.areaId,
         address: editingCustomer.address,
         pincode: editingCustomer.pincode || "",
+        gstIN: editingCustomer.gstIN || "",
         status: editingCustomer.status,
       });
     } else {
@@ -155,6 +159,7 @@ export default function CustomerForm({
         areaId: null,
         address: "",
         pincode: "",
+        gstIN: "",
         status: true,
       });
     }
@@ -396,6 +401,25 @@ export default function CustomerForm({
                     <FormControl>
                       <Input
                         placeholder="110001"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* GSTIN */}
+              <FormField
+                control={form.control}
+                name="gstIN"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GSTIN</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., 27AAPFU0939F1ZV"
                         {...field}
                         disabled={isSubmitting}
                       />

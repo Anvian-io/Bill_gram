@@ -26,6 +26,7 @@ import {
   EyeOff,
   Check,
   ChevronsUpDown,
+  FileText,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -113,6 +114,7 @@ export default function CustomerComponent() {
     personName: "",
     phoneNo: "",
     city: "",
+    gstIN: "",
     areaId: "all",
     customerType: "",
     status: "all",
@@ -135,6 +137,7 @@ export default function CustomerComponent() {
   const [personNameInput, setPersonNameInput] = useState<string>("");
   const [phoneNoInput, setPhoneNoInput] = useState<string>("");
   const [cityInput, setCityInput] = useState<string>("");
+  const [gstINInput, setGstINInput] = useState<string>("");
   const [customerTypeInput, setCustomerTypeInput] = useState<string>("");
 
   // Create debounced filter functions
@@ -156,6 +159,10 @@ export default function CustomerComponent() {
 
   const debouncedSetCity = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, city: value }));
+  }, 300);
+
+  const debouncedSetGstIN = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, gstIN: value }));
   }, 300);
 
   const debouncedSetCustomerType = useDebounce((value: string) => {
@@ -190,6 +197,12 @@ export default function CustomerComponent() {
   const handleCityChange = (value: string) => {
     setCityInput(value);
     debouncedSetCity(value);
+  };
+
+  // Handle GSTIN input change with debounce
+  const handleGstINChange = (value: string) => {
+    setGstINInput(value);
+    debouncedSetGstIN(value);
   };
 
   // Handle customer type input change with debounce
@@ -230,6 +243,9 @@ export default function CustomerComponent() {
       }
       if (filters.city) {
         params.city = filters.city;
+      }
+      if (filters.gstIN) {
+        params.gstIN = filters.gstIN;
       }
       if (filters.areaId && filters.areaId !== "all") {
         params.areaId = parseInt(filters.areaId);
@@ -305,6 +321,7 @@ export default function CustomerComponent() {
       personName: "",
       phoneNo: "",
       city: "",
+      gstIN: "",
       areaId: "all",
       customerType: "",
       status: "all",
@@ -315,6 +332,7 @@ export default function CustomerComponent() {
     setPersonNameInput("");
     setPhoneNoInput("");
     setCityInput("");
+    setGstINInput("");
     setCustomerTypeInput("");
   };
 
@@ -348,6 +366,9 @@ export default function CustomerComponent() {
         break;
       case "city":
         setCityInput("");
+        break;
+      case "gstIN":
+        setGstINInput("");
         break;
       case "customerType":
         setCustomerTypeInput("");
@@ -782,6 +803,41 @@ export default function CustomerComponent() {
                           </div>
                         </div>
 
+                        {/* GSTIN Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="gstIN"
+                            className="text-sm font-medium"
+                          >
+                            GSTIN
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="gstIN"
+                              placeholder="Enter GSTIN"
+                              value={gstINInput}
+                              onChange={(e) =>
+                                handleGstINChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
+                            {gstINInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setGstINInput("");
+                                  clearFilter("gstIN");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Area Filter - Command Dropdown */}
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Area</Label>
@@ -973,6 +1029,7 @@ export default function CustomerComponent() {
             filters.personName ||
             filters.phoneNo ||
             filters.city ||
+            filters.gstIN ||
             filters.areaId !== "all" ||
             filters.customerType ||
             filters.search ||
@@ -1016,6 +1073,7 @@ export default function CustomerComponent() {
                       <TableHead className="font-semibold">Type</TableHead>
                       <TableHead className="font-semibold">Area</TableHead>
                       <TableHead className="font-semibold">Address</TableHead>
+                      <TableHead className="font-semibold">GSTIN</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
@@ -1026,14 +1084,8 @@ export default function CustomerComponent() {
                   <TableBody>
                     <AnimatePresence>
                       {isLoading ? (
-                        <motion.tr
-                          key="loading"
-                          // initial={{ opacity: 0 }}
-                          // animate={{ opacity: 1 }}
-                          // exit={{ opacity: 0 }}
-                          // transition={{ duration: 0.3 }}
-                        >
-                          <TableCell colSpan={8} className="text-center py-12">
+                        <motion.tr key="loading">
+                          <TableCell colSpan={9} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -1051,7 +1103,7 @@ export default function CustomerComponent() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={8}
+                            colSpan={9}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1182,6 +1234,14 @@ export default function CustomerComponent() {
                                       ` - ${customer.pincode}`}
                                   </p>
                                 )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm font-mono">
+                                  {customer.gstIN || "N/A"}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">

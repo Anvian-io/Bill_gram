@@ -4,6 +4,7 @@ export interface Supplier {
   phoneNo: string;
   email: string;
   address: string | null;
+  gstIN: string | null;
   status: boolean;
   deleted: boolean;
   createdAt: string;
@@ -15,6 +16,7 @@ export interface SupplierFormData {
   phoneNo: string;
   email?: string;
   address?: string;
+  gstIN?: string;
   status: boolean;
 }
 
@@ -44,6 +46,7 @@ export interface SupplierFilters {
   phoneNo?: string;
   email?: string;
   address?: string;
+  gstIN?: string;
   status?: "all" | "active" | "inactive";
   showDeleted?: boolean;
 }

@@ -1,8 +1,6 @@
 // src/types/customer.ts
 export interface Customer {
   name: any;
-  name: ReactNode;
-  name: any;
   id: number;
   companyName: string;
   personName: string;
@@ -13,6 +11,7 @@ export interface Customer {
   areaId: number | null;
   address: string;
   pincode: string | null;
+  gstIN: string | null;
   status: boolean;
   deleted: boolean;
   createdAt: string;
@@ -29,6 +28,7 @@ export interface CustomerFormData {
   areaId?: number | null;
   address: string;
   pincode?: string;
+  gstIN?: string;
   status: boolean;
 }
 
@@ -58,6 +58,7 @@ export interface CustomerFilters {
   personName?: string;
   phoneNo?: string;
   city?: string;
+  gstIN?: string;
   areaId?: string;
   customerType?: string;
   status?: "all" | "active" | "inactive";
