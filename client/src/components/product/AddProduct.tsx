@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,6 +47,7 @@ import {
   ArrowLeft,
   Save,
   FilePlus,
+  Loader2,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Define the schema for form validation
 const productSchema = z.object({
@@ -193,11 +195,13 @@ export default function AddProduct() {
   
   // Get id from query params
   const productId = searchParams.get("id");
-  const isNew = searchParams.has("new");
+  const isNew = productId === "new" || !productId;
+  const isEditMode = productId && productId !== "new" ? true : false;
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedProductId, setGeneratedProductId] = useState<number | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [originalData, setOriginalData] = useState<FormData | null>(null);
 
   // Image states
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
@@ -223,17 +227,37 @@ export default function AddProduct() {
   // Watch batches for UI updates
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
+  const watchedValues = form.watch();
+
+  // Initialize URL with ?id=new if no id is present
+  useEffect(() => {
+    const currentId = searchParams.get("id");
+    if (!currentId) {
+      setSearchParams({ id: "new" }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Track form changes for edit mode
+  useEffect(() => {
+    if (isEditMode && originalData) {
+      const currentValues = form.getValues();
+      const isChanged = JSON.stringify(currentValues) !== JSON.stringify(originalData);
+      setHasChanges(isChanged);
+    }
+  }, [watchedValues, isEditMode, originalData, form]);
 
   // Load product data if editing
   useEffect(() => {
     const loadProductData = async () => {
-      if (productId && !isNew) {
+      if (isEditMode && productId) {
         setIsLoading(true);
         try {
           const productData = await productService.getProduct(Number(productId));
+          console.log(productData,"oiwfheif")
           if (productData) {
-            populateFormWithProductData(productData);
-            setGeneratedProductId(productData.id);
+            const formData = populateFormWithProductData(productData);
+            setOriginalData(formData);
+            setHasChanges(false);
           }
         } catch (error) {
           console.error("Error loading product:", error);
@@ -245,11 +269,11 @@ export default function AddProduct() {
     };
 
     loadProductData();
-  }, [productId, isNew]);
+  }, [productId, isEditMode]);
 
   // Populate form with existing product data
-  const populateFormWithProductData = (productData: Product) => {
-    form.reset({
+  const populateFormWithProductData = (productData: Product): FormData => {
+    const formData: FormData = {
       productCode: productData.productCode,
       productBrand: productData.productBrand,
       description: productData.description,
@@ -298,7 +322,9 @@ export default function AddProduct() {
           margin: batch.margin,
           gstAmount: batch.gstAmount || 0,
         })) || [],
-    });
+    };
+
+    form.reset(formData);
 
     const mainImg = extractFilename(productData.mainImage || "");
     setUploadedMainImage(mainImg);
@@ -308,6 +334,8 @@ export default function AddProduct() {
         extractFilename(img.imageUrl),
       ) || [];
     setUploadedRelatedImages(relatedImgs);
+
+    return formData;
   };
 
   // Clean up object URLs
@@ -499,20 +527,19 @@ export default function AddProduct() {
 
       let response: Product;
       
-      if (productId && !isNew) {
+      if (isEditMode) {
         // Update existing product
         response = await productService.updateProduct(Number(productId), formData);
         toast.success("Product updated successfully!");
+        setOriginalData(data);
+        setHasChanges(false);
       } else {
         // Create new product
         response = await productService.createProduct(formData);
         toast.success("Product created successfully!");
         
-        // Set generated product ID and update URL
+        // Update URL with the new product ID without navigation
         if (response?.id) {
-          setGeneratedProductId(response.id);
-          
-          // Update URL with the new product ID without navigation
           setSearchParams({ id: response.id.toString() }, { replace: true });
         }
       }
@@ -533,14 +560,15 @@ export default function AddProduct() {
 
   // Navigation handlers
   const handleNewProduct = () => {
-    // Reset form and navigate to ?new
+    // Reset form and navigate to ?id=new
     form.reset(defaultValues);
     setMainImageFile(null);
     setRelatedImageFiles([]);
     setUploadedMainImage("");
     setUploadedRelatedImages([]);
-    setGeneratedProductId(null);
-    setSearchParams({ new: "true" }, { replace: true });
+    setOriginalData(null);
+    setHasChanges(false);
+    setSearchParams({ id: "new" }, { replace: true });
   };
 
   const handleBackToInventory = () => {
@@ -548,15 +576,90 @@ export default function AddProduct() {
   };
 
   // Determine if new product button should be visible
-  const canShowNewProduct = !!productId || !!generatedProductId;
-  const isEditMode = !!productId && !isNew;
+  const canShowNewProduct = isEditMode;
+
+  // Skeleton Loading Component
+  const SkeletonCard = () => (
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <Skeleton className="h-6 w-32 mb-4" />
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const SkeletonBatch = () => (
+    <div className="mb-4 border rounded-lg overflow-hidden bg-card">
+      <div className="bg-muted/50 px-4 py-3 border-b">
+        <Skeleton className="h-5 w-32" />
+      </div>
+      <div className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading product data...</p>
+      <div className="min-h-screen bg-background p-6">
+        <div className={`mx-auto ${
+          CheckIsExpanded()
+            ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+            : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+        }`}>
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+          </div>
+
+          {/* Main Grid Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+            <div className="space-y-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+            <div className="space-y-4">
+              <SkeletonCard />
+            </div>
+          </div>
+
+          {/* Batch Section Skeleton */}
+          <div className="border-t pt-6 mt-6">
+            <Skeleton className="h-7 w-32 mb-4" />
+            <SkeletonBatch />
+          </div>
         </div>
       </div>
     );
@@ -592,15 +695,13 @@ export default function AddProduct() {
               <p className="text-muted-foreground mt-1">
                 {isEditMode 
                   ? "Update product details and inventory information" 
-                  : generatedProductId 
-                    ? "Product saved successfully" 
-                    : "Create a new product in your inventory"}
+                  : "Create a new product in your inventory"}
               </p>
             </div>
           </div>
 
           <div className="flex gap-3">
-            {/* New Product Button - Visible after creation or in edit mode */}
+            {/* New Product Button - Visible in edit mode */}
             {canShowNewProduct && (
               <Button
                 variant="outline"
@@ -622,10 +723,11 @@ export default function AddProduct() {
             
             <Button
               onClick={form.handleSubmit(onSubmit, onError)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isEditMode && !hasChanges)}
               className="gap-2"
             >
-              <Save className="h-4 w-4" />
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {!isSubmitting && <Save className="h-4 w-4" />}
               {isSubmitting 
                 ? "Saving..." 
                 : isEditMode 
@@ -2032,8 +2134,13 @@ export default function AddProduct() {
                 Cancel
               </Button>
               
-              <Button type="submit" disabled={isSubmitting} className="gap-2">
-                <Save className="h-4 w-4" />
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || (isEditMode && !hasChanges)} 
+                className="gap-2"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {!isSubmitting && <Save className="h-4 w-4" />}
                 {isSubmitting 
                   ? "Saving..." 
                   : isEditMode 
