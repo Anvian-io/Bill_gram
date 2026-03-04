@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { salesService } from "@/services/salesService";
 import type { SalesBillPreviewData } from "@/types/sales";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -9,8 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { CustomPagination } from "@/components/custom_ui";
 import { getFullImageUrl } from "@/utils/imageUtils";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -27,6 +29,7 @@ export default function SalesInvoicePreview({
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -154,11 +157,51 @@ export default function SalesInvoicePreview({
   const roundOff = 0; // not stored, can be omitted or computed if needed
   const finalAmount = sale.finalAmount || 0;
 
+  const handleDownloadPdf = async () => {
+    if (!saleId || downloadingPdf) return;
+
+    setDownloadingPdf(true);
+    try {
+      const blob = await salesService.downloadSalesBillPreviewPDF(saleId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeInvoiceNo = (sale.invoiceNo || `sale-${saleId}`)
+        .toString()
+        .replace(/[^a-zA-Z0-9_-]/g, "_");
+      link.download = `sales-invoice-${safeInvoiceNo}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Sales invoice PDF downloaded");
+    } catch (error) {
+      console.error("Failed to download sales invoice PDF", error);
+      toast.error("Failed to download sales invoice PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="min-w-[70vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0">
           <DialogTitle>Sales Invoice Preview</DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            className="mr-8"
+          >
+            {downloadingPdf ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {downloadingPdf ? "Generating..." : "Download PDF"}
+          </Button>
         </DialogHeader>
 
         <div className="bg-white text-gray-800 border border-gray-700 font-mono text-sm">

@@ -80,6 +80,7 @@ router.put("/:id", salesController.updateSale);
 router.delete("/:id", salesController.deleteSale);
 
 router.get("/:id/bill-preview", salesController.getSalesBillPreview); // new route
+router.get("/:id/bill-preview/pdf", salesController.downloadSalesBillPreviewPDF);
 
 
 export default router;

@@ -963,6 +963,19 @@ export const salesService = {
     }
   },
 
+  async downloadSalesBillPreviewPDF(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/sales/${id}/bill-preview/pdf`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales bill preview PDF:", message);
+      throw new Error(message);
+    }
+  },
+
   async getSalesBillPreview(id: number): Promise<SalesBillPreviewData> {
     try {
       const response = await apiClient.get<ApiResponse<SalesBillPreviewData>>(

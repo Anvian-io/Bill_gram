@@ -5675,15 +5675,10 @@ export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
 // GET SALES INVOICE BILL PREVIEW (with UPI QR code)
 // --------------------------------------------------------------------
 
-export const getSalesBillPreview = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const prisma = getPrismaOrFail(res);
-  if (!prisma) return;
-
-  // Fetch sale with all necessary relations
+const getSalesBillPreviewPayload = async (prisma, saleId) => {
   const sale = await prisma.salesInvoice.findFirst({
     where: {
-      id: parseInt(id),
+      id: saleId,
       deleted: false,
     },
     include: {
@@ -5742,15 +5737,7 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!sale) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      "Sales invoice not found",
-      statusType.NOT_FOUND,
-    );
-  }
+  if (!sale) return null;
 
   const taxBreakdownMap = new Map();
   (sale.items || []).forEach((item) => {
@@ -5806,6 +5793,56 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
     companyLogo: sale.user?.company_logo || null,
   };
 
+  return responseData;
+};
+
+const getPublicImageUrl = (req, imagePath) => {
+  if (!imagePath) return null;
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:")
+  ) {
+    return imagePath;
+  }
+
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  if (imagePath.startsWith("/")) {
+    return `${baseUrl}${imagePath}`;
+  }
+  if (imagePath.startsWith("api/")) {
+    return `${baseUrl}/${imagePath}`;
+  }
+  return `${baseUrl}/api/images/${imagePath}`;
+};
+
+export const getSalesBillPreview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const saleId = parseInt(id, 10);
+  if (Number.isNaN(saleId)) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid sales invoice id",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const responseData = await getSalesBillPreviewPayload(prisma, saleId);
+  if (!responseData) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Sales invoice not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
   return sendResponse(
     res,
     true,
@@ -5813,6 +5850,108 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
     "Bill preview data retrieved successfully",
     statusType.OK,
   );
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD SALES INVOICE BILL PREVIEW AS PDF
+// --------------------------------------------------------------------
+export const downloadSalesBillPreviewPDF = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const saleId = parseInt(id, 10);
+  if (Number.isNaN(saleId)) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid sales invoice id",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const previewData = await getSalesBillPreviewPayload(prisma, saleId);
+  if (!previewData) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Sales invoice not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const templateName = "salesInvoicePreview.ejs";
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const templatePath = path.join(__dirname, "../../views/sales", templateName);
+
+  const { sale, upiQrCode, taxBreakdown } = previewData;
+
+  const companyName =
+    sale.user?.company_name || sale.user?.shop_name || "Sales Invoice";
+
+  const html = await ejs.renderFile(templatePath, {
+    sale,
+    taxBreakdown: taxBreakdown || [],
+    upiQrCode,
+    companyName,
+    companyAddress: sale.user?.address || "",
+    companyPhone: sale.user?.phone || "",
+    customerName: sale.customer?.companyName || sale.customer?.personName || "",
+    customerAddress: sale.customer?.address || "",
+    customerPhone: sale.customer?.phoneNo || "",
+    customerGstin: sale.customer?.gstIN || "",
+    companyLogoUrl: getPublicImageUrl(req, sale.user?.company_logo || null),
+    signatureUrl: getPublicImageUrl(req, sale.user?.signature || null),
+    formatDate: (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB");
+      } catch {
+        return "";
+      }
+    },
+    formatAmount: (value) => Number(value || 0).toFixed(2),
+  });
+
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const footerTemplate = `
+    <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px;">
+      <span>${companyName}</span>
+      <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+    </div>
+  `;
+
+  const pdfBuffer = await page.pdf({
+    width: "297mm",
+    height: "210mm",
+    printBackground: true,
+    margin: { top: "0.5cm", bottom: "0.8cm", left: "0.4cm", right: "0.4cm" },
+    displayHeaderFooter: true,
+    headerTemplate: "<div></div>",
+    footerTemplate,
+  });
+
+  await browser.close();
+
+  const safeInvoiceNo = (sale.invoiceNo || `sale-${sale.id}`)
+    .toString()
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
+  const pdfFileName = `sales-invoice-${safeInvoiceNo}.pdf`;
+
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${pdfFileName}"`);
+  res.setHeader("Content-Length", pdfBuffer.length);
+
+  return res.end(pdfBuffer, "binary");
 });
 
 // --------------------------------------------------------------------
@@ -5852,4 +5991,5 @@ export const salesController = {
   getSalesGSTMonthly,
 
   getSalesBillPreview,
+  downloadSalesBillPreviewPDF,
 };
