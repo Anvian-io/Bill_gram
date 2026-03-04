@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { salesService } from "@/services/salesService";
 import type { SalesBillPreviewData } from "@/types/sales";
 import { Loader2 } from "lucide-react";
@@ -115,24 +115,28 @@ export default function SalesInvoicePreview({
   );
   const isLastPage = currentPage === totalPages;
 
-  // --- GST breakdown per percentage (CGST & SGST halves) ---
-  const gstMap = new Map<number, number>(); // total GST per rate
-  items.forEach((item) => {
-    const rate = item.taxRate || 0;
-    const amount = item.taxAmount || 0;
-    gstMap.set(rate, (gstMap.get(rate) || 0) + amount);
-  });
-
-  // Predefined percentages as per your layout
-  const percentages = [2.5, 6, 9, 14];
-  const cgstAmounts: Record<string, number> = {};
-  const sgstAmounts: Record<string, number> = {};
-
-  percentages.forEach((p) => {
-    const totalGst = gstMap.get(p) || 0;
-    // GST is split equally into CGST and SGST
-    cgstAmounts[`${p}%`] = totalGst / 2;
-    sgstAmounts[`${p}%`] = totalGst / 2;
+  // --- GST breakdown per percentage from API (fallback is handled in service) ---
+  const defaultTaxRates = [2.5, 6, 9, 14];
+  const taxBreakdown = previewData.taxBreakdown || [];
+  const taxRates = Array.from(
+    new Set([
+      ...defaultTaxRates,
+      ...taxBreakdown
+        .map((entry) => Number(entry.rate) || 0)
+        .filter((rate) => rate > 0),
+    ]),
+  ).sort((a, b) => a - b);
+  const cgstAmounts = new Map<number, number>();
+  const sgstAmounts = new Map<number, number>();
+  taxBreakdown.forEach((entry) => {
+    cgstAmounts.set(
+      Number(entry.rate),
+      (cgstAmounts.get(Number(entry.rate)) || 0) + (entry.cgstAmount || 0),
+    );
+    sgstAmounts.set(
+      Number(entry.rate),
+      (sgstAmounts.get(Number(entry.rate)) || 0) + (entry.sgstAmount || 0),
+    );
   });
 
   // --- Summary calculations ---
@@ -159,28 +163,34 @@ export default function SalesInvoicePreview({
 
         <div className="bg-white text-gray-800 border border-gray-700 font-mono text-sm">
           {/* Header with two columns + QR */}
-          <div className="flex justify-between items-start p-4">
-            <div className="text-left">
-              {companyLogoUrl && (
-                <img
-                  src={companyLogoUrl}
-                  alt="Company Logo"
-                  className="h-12 mb-2 object-contain"
-                />
-              )}
-              <h1 className="text-xl font-bold uppercase">{companyName}</h1>
-              <p className="text-xs">Address : {companyAddress}</p>
-              <p className="text-xs">Phone : {companyPhone}</p>
-              <p className="text-xs">GSTIN : {companyGstin}</p>
-              <p className="text-xs">FSSAI NO : {companyFssai}</p>
-            </div>
+          <div className="flex justify-between items-start p-4 gap-4">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2">
+              <div className="text-left pr-4">
+                <div className="flex items-start gap-3">
+                  {companyLogoUrl && (
+                    <img
+                      src={companyLogoUrl}
+                      alt="Company Logo"
+                      className="h-12 w-12 object-contain shrink-0"
+                    />
+                  )}
+                  <div>
+                    <h1 className="text-xl font-bold uppercase">{companyName}</h1>
+                    <p className="text-xs">Address : {companyAddress}</p>
+                    <p className="text-xs">Phone : {companyPhone}</p>
+                    <p className="text-xs">GSTIN : {companyGstin}</p>
+                    <p className="text-xs">FSSAI NO : {companyFssai}</p>
+                  </div>
+                </div>
+              </div>
 
-            <div className="text-right">
-              <h2 className="text-lg font-bold uppercase">{customerName}</h2>
-              <p className="text-xs">Address : {customerAddress}</p>
-              <p className="text-xs">Phone : {customerPhone}</p>
-              <p className="text-xs">GSTIN : {customerGstin}</p>
-              <p className="text-xs">FSSAI NO :</p>
+              <div className="text-right pl-4 border-l border-gray-400 mt-3 md:mt-0">
+                <h2 className="text-lg font-bold uppercase">{customerName}</h2>
+                <p className="text-xs">Address : {customerAddress}</p>
+                <p className="text-xs">Phone : {customerPhone}</p>
+                <p className="text-xs">GSTIN : {customerGstin}</p>
+                <p className="text-xs">FSSAI NO :</p>
+              </div>
             </div>
 
             <div className="border border-gray-400 w-32 h-32 flex items-center justify-center text-gray-500 text-xs">
@@ -294,59 +304,31 @@ export default function SalesInvoicePreview({
                     <td className="border border-gray-400 px-2 py-1 font-bold">
                       CGST
                     </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      2.5%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {cgstAmounts["2.5%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      6%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {cgstAmounts["6%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      9%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {cgstAmounts["9%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      14%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {cgstAmounts["14%"]?.toFixed(2) || "0.00"}
-                    </td>
+                    {taxRates.map((rate) => (
+                      <Fragment key={`cgst-${rate}`}>
+                        <td className="border border-gray-400 px-2 py-1 text-right">
+                          {rate}%
+                        </td>
+                        <td className="border border-gray-400 px-2 py-1 text-right">
+                          {(cgstAmounts.get(rate) || 0).toFixed(2)}
+                        </td>
+                      </Fragment>
+                    ))}
                   </tr>
                   <tr>
                     <td className="border border-gray-400 px-2 py-1 font-bold">
                       SGST
                     </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      2.5%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {sgstAmounts["2.5%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      6%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {sgstAmounts["6%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      9%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {sgstAmounts["9%"]?.toFixed(2) || "0.00"}
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      14%
-                    </td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">
-                      {sgstAmounts["14%"]?.toFixed(2) || "0.00"}
-                    </td>
+                    {taxRates.map((rate) => (
+                      <Fragment key={`sgst-${rate}`}>
+                        <td className="border border-gray-400 px-2 py-1 text-right">
+                          {rate}%
+                        </td>
+                        <td className="border border-gray-400 px-2 py-1 text-right">
+                          {(sgstAmounts.get(rate) || 0).toFixed(2)}
+                        </td>
+                      </Fragment>
+                    ))}
                   </tr>
                 </tbody>
               </table>

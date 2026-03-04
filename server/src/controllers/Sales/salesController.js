@@ -5752,6 +5752,35 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
     );
   }
 
+  const taxBreakdownMap = new Map();
+  (sale.items || []).forEach((item) => {
+    const totalRate = Number(item.taxRate) || 0;
+    const totalTaxAmount = Number(item.taxAmount) || 0;
+    if (totalRate <= 0 || totalTaxAmount <= 0) return;
+
+    const halfRate = Number((totalRate / 2).toFixed(2));
+    const prev = taxBreakdownMap.get(halfRate) || {
+      rate: halfRate,
+      cgstAmount: 0,
+      sgstAmount: 0,
+      totalTaxAmount: 0,
+    };
+
+    prev.cgstAmount += totalTaxAmount / 2;
+    prev.sgstAmount += totalTaxAmount / 2;
+    prev.totalTaxAmount += totalTaxAmount;
+    taxBreakdownMap.set(halfRate, prev);
+  });
+
+  const taxBreakdown = Array.from(taxBreakdownMap.values())
+    .map((entry) => ({
+      rate: entry.rate,
+      cgstAmount: Number(entry.cgstAmount.toFixed(2)),
+      sgstAmount: Number(entry.sgstAmount.toFixed(2)),
+      totalTaxAmount: Number(entry.totalTaxAmount.toFixed(2)),
+    }))
+    .sort((a, b) => a.rate - b.rate);
+
   // Generate UPI QR code if user has UPI ID
   let upiQrCode = null;
   if (sale.user?.upi_id) {
@@ -5771,6 +5800,7 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
   // Prepare response
   const responseData = {
     sale,
+    taxBreakdown,
     upiQrCode,
     signature: sale.user?.signature || null,
     companyLogo: sale.user?.company_logo || null,

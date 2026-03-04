@@ -169,6 +169,12 @@ export interface SalesBillPreviewData {
       fssai?: string; // not in schema
     };
   };
+  taxBreakdown?: Array<{
+    rate: number;
+    cgstAmount: number;
+    sgstAmount: number;
+    totalTaxAmount: number;
+  }>;
   upiQrCode: string | null; // base64 PNG data URL
   signature: string | null; // duplicate for convenience
   companyLogo: string | null; // duplicate for convenience
