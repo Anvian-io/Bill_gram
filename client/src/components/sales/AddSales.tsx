@@ -86,6 +86,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { salesService } from "@/services/salesService";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import SalesInvoicePreview from "./SalesInvoicePreview";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -325,6 +326,8 @@ export default function AddSales() {
   const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
     null,
   );
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewSaleId, setPreviewSaleId] = useState<number>(0);
 
   // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
@@ -919,11 +922,10 @@ export default function AddSales() {
   };
 
   const handleBillPreview = () => {
-    const idToPreview = saleId || generatedSaleId;
-    if (idToPreview) {
-      // Open bill preview in new tab or navigate to preview route
-      window.open(`/sales/preview/${idToPreview}`, "_blank");
-      // Alternative: navigate(`/sales/preview/${idToPreview}`);
+    const idToPreview = Number(saleId || generatedSaleId || 0);
+    if (idToPreview > 0) {
+      setPreviewSaleId(idToPreview);
+      setIsPreviewOpen(true);
     }
   };
 
@@ -2347,6 +2349,12 @@ export default function AddSales() {
             onBatchSelect={handleBatchSelect}
           />
         )}
+
+        <SalesInvoicePreview
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          saleId={previewSaleId}
+        />
       </div>
     </div>
   );
