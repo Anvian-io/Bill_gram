@@ -576,8 +576,8 @@ export default function Sales() {
         <div
           className={`mx-auto ${
             CheckIsExpanded()
-              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
-              : "max-w-9xl lg:max-w-5xl xl:max-w-7xl 2xl:max-w-10xl"
+              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-7xl"
+              : "max-w-9xl lg:max-w-5xl xl:max-w-7xl 2xl:max-w-8xl"
           }`}
         >
           {/* Header */}

@@ -5701,15 +5701,17 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
       area: { select: { id: true, name: true } },
       van: { select: { id: true, name: true, vehicleNo: true } },
       salesman: { select: { id: true, name: true, phoneNo: true } },
-      user: { // include the user who created the invoice
+      user: {
+        // The creator of the invoice (the current user)
         select: {
           id: true,
           username: true,
           company_name: true,
+          shop_name: true,
           phone: true,
           email: true,
           upi_id: true,
-          signature: true, // URL or path to signature image
+          signature: true,
           company_logo: true,
           address: true,
         },
@@ -5723,6 +5725,7 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
               description: true,
               productBrand: true,
               unit: true,
+              hsnSacCode: true,
             },
           },
           batch: {
@@ -5752,13 +5755,12 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
   // Generate UPI QR code if user has UPI ID
   let upiQrCode = null;
   if (sale.user?.upi_id) {
-    // Construct UPI payment string
-    // Format: upi://pay?pa=<UPI ID>&pn=<Payee Name>&am=<Amount>&cu=INR
-    const payeeName = encodeURIComponent(sale.user.company_name || "Payee");
+    const payeeName = encodeURIComponent(
+      sale.user.company_name || sale.user.shop_name || "Payee",
+    );
     const upiString = `upi://pay?pa=${sale.user.upi_id}&pn=${payeeName}&am=${sale.finalAmount}&cu=INR`;
 
     try {
-      // Generate QR code as data URL (base64 PNG)
       upiQrCode = await QRCode.toDataURL(upiString);
     } catch (qrError) {
       console.error("QR generation error:", qrError);
@@ -5766,10 +5768,10 @@ export const getSalesBillPreview = asyncHandler(async (req, res) => {
     }
   }
 
-  // Prepare response with additional fields
+  // Prepare response
   const responseData = {
     sale,
-    upiQrCode, // base64 PNG data URL (or null)
+    upiQrCode,
     signature: sale.user?.signature || null,
     companyLogo: sale.user?.company_logo || null,
   };

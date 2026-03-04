@@ -116,6 +116,8 @@ export interface Sales {
     name: string;
   };
   customer: {
+    address: string;
+    gstIN: string;
     id: number;
     companyName: string | null;
     personName: string | null;

@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CustomPagination } from "@/components/custom_ui";
-import { getFullImageUrl } from "@/utils/imageUtils"; // <-- ADD THIS IMPORT
+import { getFullImageUrl } from "@/utils/imageUtils";
 
 interface Props {
   open: boolean;
@@ -46,7 +46,6 @@ export default function SalesInvoicePreview({
     fetchPreview();
   }, [saleId, open]);
 
-  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       setPreviewData(null);
@@ -88,10 +87,9 @@ export default function SalesInvoicePreview({
   const companyName = user.company_name || user.shop_name || "SS MARKETING";
   const companyAddress = user.address || "";
   const companyPhone = user.phone || "";
-  const companyGstin = user.gstin || ""; // you might need to fetch from elsewhere
-  const companyFssai = user.fssai || ""; // same
+  const companyGstin = ""; // not in user schema yet
+  const companyFssai = ""; // not in user schema yet
 
-  // Get full image URLs
   const companyLogoUrl = user.company_logo
     ? getFullImageUrl(user.company_logo)
     : null;
@@ -103,7 +101,7 @@ export default function SalesInvoicePreview({
   const customerName = customer?.companyName || customer?.personName || "";
   const customerAddress = customer?.address || "";
   const customerPhone = customer?.phoneNo || "";
-  const customerGstin = customer?.gstIN || ""; // adjust if field name differs
+  const customerGstin = customer?.gstIN || "";
 
   const invoiceDate = sale.invoiceDate
     ? format(new Date(sale.invoiceDate), "dd/MM/yyyy")
@@ -117,25 +115,30 @@ export default function SalesInvoicePreview({
   );
   const isLastPage = currentPage === totalPages;
 
-  // Compute GST breakdown per tax rate (assuming intra-state: CGST & SGST split equally)
-  const taxRateMap = new Map<number, { cgst: number; sgst: number }>();
+  // --- GST breakdown per percentage (CGST & SGST halves) ---
+  const gstMap = new Map<number, number>(); // total GST per rate
   items.forEach((item) => {
     const rate = item.taxRate || 0;
-    const taxAmount = item.taxAmount || 0;
-    const half = taxAmount / 2;
-    const existing = taxRateMap.get(rate);
-    if (existing) {
-      existing.cgst += half;
-      existing.sgst += half;
-    } else {
-      taxRateMap.set(rate, { cgst: half, sgst: half });
-    }
+    const amount = item.taxAmount || 0;
+    gstMap.set(rate, (gstMap.get(rate) || 0) + amount);
   });
 
-  // Summary calculations
+  // Predefined percentages as per your layout
+  const percentages = [2.5, 6, 9, 14];
+  const cgstAmounts: Record<string, number> = {};
+  const sgstAmounts: Record<string, number> = {};
+
+  percentages.forEach((p) => {
+    const totalGst = gstMap.get(p) || 0;
+    // GST is split equally into CGST and SGST
+    cgstAmounts[`${p}%`] = totalGst / 2;
+    sgstAmounts[`${p}%`] = totalGst / 2;
+  });
+
+  // --- Summary calculations ---
   const gross = sale.grossAmount || 0;
   const discountPercent = sale.discountPercent || 0;
-  const discountAmount = gross * (discountPercent / 100);
+  const discountAmount = gross * (discountPercent / 100); // assuming discount on gross
   const schemeTotal = sale.scheme1 || 0;
   const damageAmount = items.reduce(
     (sum, item) => sum + (item.DQty || 0) * (item.rate || 0),
@@ -144,7 +147,7 @@ export default function SalesInvoicePreview({
   const amountAdd = sale.amountAdd || 0;
   const creditAmount = sale.creditAmount || 0;
   const totalGst = sale.tax || 0;
-  const roundOff = 0; // Not present in data, can be omitted or computed if needed
+  const roundOff = 0; // not stored, can be omitted or computed if needed
   const finalAmount = sale.finalAmount || 0;
 
   return (
@@ -177,9 +180,10 @@ export default function SalesInvoicePreview({
               <p className="text-xs">Address : {customerAddress}</p>
               <p className="text-xs">Phone : {customerPhone}</p>
               <p className="text-xs">GSTIN : {customerGstin}</p>
+              <p className="text-xs">FSSAI NO :</p>
             </div>
 
-            <div className="border border-gray-400 w-20 h-20 flex items-center justify-center text-gray-500 text-xs">
+            <div className="border border-gray-400 w-32 h-32 flex items-center justify-center text-gray-500 text-xs">
               {upiQrCode ? (
                 <img
                   src={upiQrCode}
@@ -210,7 +214,7 @@ export default function SalesInvoicePreview({
                   Prod Description
                 </th>
                 <th className="border border-gray-400 px-1 py-1">MRP</th>
-                <th className="border border-gray-400 px-1 py-1">Qty</th>
+                <th className="border border-gray-400 px-1 py-1">Bx/Qty</th>
                 <th className="border border-gray-400 px-1 py-1">FR</th>
                 <th className="border border-gray-400 px-1 py-1">Rate</th>
                 <th className="border border-gray-400 px-1 py-1">Scheme</th>
@@ -225,6 +229,8 @@ export default function SalesInvoicePreview({
                 const product = item.product || {};
                 const batch = item.batch || {};
                 const srNo = (currentPage - 1) * itemsPerPage + idx + 1;
+                // For Bx/Qty, you may need to compute from unit/cartonPack
+                const bxQty = `${item.mQty || 0}/${item.aQty || 0}`;
                 return (
                   <tr key={item.id || idx} className="border border-gray-400">
                     <td className="border border-gray-400 px-1 py-1">{srNo}</td>
@@ -238,7 +244,7 @@ export default function SalesInvoicePreview({
                       {batch.mrp || ""}
                     </td>
                     <td className="border border-gray-400 px-1 py-1 text-right">
-                      {item.aQty || 0}
+                      {bxQty}
                     </td>
                     <td className="border border-gray-400 px-1 py-1 text-right">
                       {item.fQty || 0}
@@ -281,34 +287,78 @@ export default function SalesInvoicePreview({
           {/* Footer (only on last page) */}
           {isLastPage && (
             <>
-              {/* CGST / SGST table */}
+              {/* CGST / SGST table - exactly as your original layout */}
               <table className="w-full border-collapse border border-gray-400 text-xs mt-2">
                 <tbody>
-                  {Array.from(taxRateMap.entries()).map(([rate, amounts]) => (
-                    <tr key={rate}>
-                      <td className="border border-gray-400 px-2 py-1 font-bold">
-                        CGST @ {rate}%
-                      </td>
-                      <td className="border border-gray-400 px-2 py-1 text-right">
-                        {amounts.cgst.toFixed(2)}
-                      </td>
-                      <td className="border border-gray-400 px-2 py-1 font-bold">
-                        SGST @ {rate}%
-                      </td>
-                      <td className="border border-gray-400 px-2 py-1 text-right">
-                        {amounts.sgst.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-1 font-bold">
+                      CGST
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      2.5%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {cgstAmounts["2.5%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      6%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {cgstAmounts["6%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      9%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {cgstAmounts["9%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      14%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {cgstAmounts["14%"]?.toFixed(2) || "0.00"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-1 font-bold">
+                      SGST
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      2.5%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {sgstAmounts["2.5%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      6%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {sgstAmounts["6%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      9%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {sgstAmounts["9%"]?.toFixed(2) || "0.00"}
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      14%
+                    </td>
+                    <td className="border border-gray-400 px-2 py-1 text-right">
+                      {sgstAmounts["14%"]?.toFixed(2) || "0.00"}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
 
-              {/* Summary table (single row) */}
+              {/* Summary table (two rows) */}
               <table className="w-full border-collapse border border-gray-400 text-xs mt-2">
                 <thead>
                   <tr>
                     <th className="border border-gray-400 px-2 py-1">GROSS</th>
-                    <th className="border border-gray-400 px-2 py-1">Disc</th>
+                    <th className="border border-gray-400 px-2 py-1">
+                      Disc-0%
+                    </th>
                     <th className="border border-gray-400 px-2 py-1">
                       Tot Sch
                     </th>
@@ -340,7 +390,7 @@ export default function SalesInvoicePreview({
                       {damageAmount.toFixed(2)}
                     </td>
                     <td className="border border-gray-400 px-2 py-1 text-right">
-                      {amountAdd.toFixed(2)} / {creditAmount.toFixed(2)}
+                      {amountAdd.toFixed(2)}/{creditAmount.toFixed(2)}
                     </td>
                     <td className="border border-gray-400 px-2 py-1 text-right">
                       {totalGst.toFixed(2)}
