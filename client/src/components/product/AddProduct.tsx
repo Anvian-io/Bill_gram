@@ -2125,14 +2125,14 @@ export default function AddProduct() {
                 </Button>
               )}
               
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 onClick={handleBackToInventory}
                 disabled={isSubmitting}
               >
                 Cancel
-              </Button>
+              </Button> */}
               
               <Button 
                 type="submit" 

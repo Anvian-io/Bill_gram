@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -101,6 +102,16 @@ const formatDateForAPI = (date: Date | undefined): string | undefined => {
 
 export default function Sales() {
   // State for sales
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Remove ?id from URL if present on mount
+  useEffect(() => {
+    if (searchParams.has("id")) {
+      searchParams.delete("id");
+      // Use setSearchParams to update the URL without the id param
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []); // Run only on mount
   const [sales, setSales] = useState<Sales[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

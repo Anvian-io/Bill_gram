@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverContent,
@@ -199,7 +200,10 @@ export default function AddPurchase() {
 
   // Get id from query params
   const purchaseId = searchParams.get("id");
-  const isNew = searchParams.has("new");
+
+  // Determine mode
+  const isNew = purchaseId === "new" || !purchaseId;
+  const isEditMode = purchaseId && purchaseId !== "new" ? true : false;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -236,6 +240,9 @@ export default function AddPurchase() {
     defaultValues,
   });
 
+  // Watch form state for dirty checking
+  const { isDirty } = form.formState;
+
   // Watch items and summary fields
   const items = form.watch("items");
   const cessInsurance = useWatch({
@@ -252,10 +259,17 @@ export default function AddPurchase() {
     name: "creditAmount",
   });
 
-  // Load purchase data if editing
+  // Effect 1: Redirect to ?id=new if no ID is present
+  useEffect(() => {
+    if (!purchaseId) {
+      setSearchParams({ id: "new" }, { replace: true });
+    }
+  }, [purchaseId, setSearchParams]);
+
+  // Effect 2: Load purchase data if editing
   useEffect(() => {
     const loadPurchaseData = async () => {
-      if (purchaseId && !isNew) {
+      if (isEditMode && purchaseId) {
         setIsLoading(true);
         try {
           const purchaseData = await purchaseService.getPurchase(
@@ -265,6 +279,8 @@ export default function AddPurchase() {
             populateFormWithPurchaseData(purchaseData);
             setGeneratedPurchaseId(purchaseData.id);
             setGeneratedInvoiceNo(purchaseData.invoiceNo);
+            // Reset dirty state after populating form
+            form.reset(form.getValues(), { keepDirty: false });
           }
         } catch (error) {
           console.error("Error loading purchase:", error);
@@ -276,7 +292,7 @@ export default function AddPurchase() {
     };
 
     loadPurchaseData();
-  }, [purchaseId, isNew]);
+  }, [purchaseId, isEditMode]);
 
   // Populate form with existing purchase data
   const populateFormWithPurchaseData = (purchaseData: any) => {
@@ -633,7 +649,7 @@ export default function AddPurchase() {
 
       let response: PurchaseResponse;
 
-      if (purchaseId && !isNew) {
+      if (isEditMode) {
         // Update existing purchase
         response = await purchaseService.updatePurchase(
           Number(purchaseId),
@@ -674,15 +690,16 @@ export default function AddPurchase() {
   // Navigation handlers
   // ----------------------------------------------------------------------
   const handleNewPurchase = () => {
-    // Reset form and navigate to ?new
+    // Reset form and navigate to ?id=new
     form.reset(defaultValues);
     setGeneratedPurchaseId(null);
     setGeneratedInvoiceNo(null);
-    setSearchParams({ new: "true" }, { replace: true });
+    setSearchParams({ id: "new" }, { replace: true });
   };
 
   const handleBillPreview = () => {
-    const idToPreview = purchaseId || generatedPurchaseId;
+    const idToPreview =
+      purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId;
     if (idToPreview) {
       // Open bill preview in new tab or navigate to preview route
       window.open(`/purchases/preview/${idToPreview}`, "_blank");
@@ -695,21 +712,119 @@ export default function AddPurchase() {
   };
 
   // Determine if bill preview should be visible
-  const canShowBillPreview = !!purchaseId || !!generatedPurchaseId;
-  const isEditMode = !!purchaseId && !isNew;
+  const canShowBillPreview =
+    (!!purchaseId && purchaseId !== "new") || !!generatedPurchaseId;
+
+  // ----------------------------------------------------------------------
+  // Skeleton Loader Component
+  // ----------------------------------------------------------------------
+  const SkeletonLoader = () => (
+    <div className="min-h-screen bg-background p-4 md:p-2">
+      <div
+        className={`mx-auto ${
+          CheckIsExpanded()
+            ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+            : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+        }`}
+      >
+        {/* Header Skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div>
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        {/* Invoice Details Card Skeleton */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <Skeleton className="h-6 w-48 mb-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Table Skeleton */}
+        <Card className="mb-6">
+          <CardContent className="p-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-9 w-32" />
+            </div>
+            <div className="border rounded-lg">
+              <div className="grid grid-cols-15 gap-4 p-4 bg-secondary/50">
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))}
+              </div>
+              {Array.from({ length: 3 }).map((_, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className="grid grid-cols-15 gap-4 p-4 border-t"
+                >
+                  {Array.from({ length: 15 }).map((_, colIndex) => (
+                    <Skeleton key={colIndex} className="h-8 w-full" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Summary Section Skeleton */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <Skeleton className="h-6 w-32 mb-3" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              <div className="lg:col-span-3">
+                <Skeleton className="h-6 w-32 mb-4" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i}>
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-20 w-full mt-4" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 
   // ----------------------------------------------------------------------
   // Render
   // ----------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 md:p-2 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading purchase data...</p>
-        </div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
@@ -770,16 +885,16 @@ export default function AddPurchase() {
               </Button>
             )}
 
-            <Button
+            {/* <Button
               variant="outline"
               onClick={handleBackToPurchases}
               disabled={isSubmitting}
             >
               Cancel
-            </Button>
+            </Button> */}
             <Button
               onClick={form.handleSubmit(onSubmit, onError)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isEditMode && !isDirty)}
               className="gap-2"
             >
               <Save className="h-4 w-4" />
@@ -1708,7 +1823,7 @@ export default function AddPurchase() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (isEditMode && !isDirty)}
                 className="gap-2"
                 size="lg"
               >

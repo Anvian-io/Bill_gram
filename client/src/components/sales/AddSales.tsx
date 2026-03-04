@@ -52,6 +52,7 @@ import {
   Eye,
   FilePlus,
   Printer,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -74,7 +75,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { salesService } from "@/services/salesService";
 import { CheckIsExpanded } from "@/utils/commonHelper";
@@ -218,6 +226,88 @@ const defaultValues: SalesFormData = {
 };
 
 // ----------------------------------------------------------------------
+// Skeleton Component
+// ----------------------------------------------------------------------
+function SalesFormSkeleton() {
+  return (
+    <div className="min-h-screen bg-background p-2 space-y-6">
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
+
+      {/* Invoice Details Card Skeleton */}
+      <Card className="p-4">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Table Skeleton */}
+      <Card className="p-2">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 p-2">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2 p-2">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+              <Skeleton className="h-24 col-span-2 md:col-span-4 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
 export default function AddSales() {
@@ -225,8 +315,9 @@ export default function AddSales() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Get id from query params
-  const saleId = searchParams.get("id");
-  const isNew = searchParams.has("new");
+  const idParam = searchParams.get("id");
+  const saleId = idParam && idParam !== "new" ? idParam : null;
+  const isNew = idParam === "new" || !idParam;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -263,7 +354,12 @@ export default function AddSales() {
   const form = useForm<SalesFormData>({
     resolver: zodResolver(salesSchema) as any,
     defaultValues,
+    mode: "onChange",
   });
+
+  // Track if form is dirty (has changes) - only relevant for edit mode
+  const isDirty = form.formState.isDirty;
+  const isValid = form.formState.isValid;
 
   // Watch values for filtering logic
   const items = form.watch("items");
@@ -307,6 +403,13 @@ export default function AddSales() {
     customers.find((c: Customer) => c.id === id);
   const findArea = (id: number) => areas.find((a) => a.id === id);
 
+  // Redirect to ?id=new if no id param is present
+  useEffect(() => {
+    if (!idParam) {
+      setSearchParams({ id: "new" }, { replace: true });
+    }
+  }, [idParam, setSearchParams]);
+
   // Load sale data if editing
   useEffect(() => {
     const loadSaleData = async () => {
@@ -318,10 +421,14 @@ export default function AddSales() {
             populateFormWithSaleData(saleData);
             setGeneratedSaleId(saleData.id);
             setGeneratedInvoiceNo(saleData.invoiceNo);
+            // Reset dirty state after populating form
+            form.reset(form.getValues(), { keepDirty: false });
           }
         } catch (error) {
           console.error("Error loading sale:", error);
           toast.error("Failed to load sale data");
+          // Redirect to new sale if load fails
+          setSearchParams({ id: "new" }, { replace: true });
         } finally {
           setIsLoading(false);
         }
@@ -329,7 +436,7 @@ export default function AddSales() {
     };
 
     loadSaleData();
-  }, [saleId, isNew]);
+  }, [saleId, isNew, form, setSearchParams]);
 
   // Populate form with existing sale data
   const populateFormWithSaleData = (saleData: any) => {
@@ -393,17 +500,17 @@ export default function AddSales() {
   const handlePhoneSelect = (customerId: number) => {
     const customer = findCustomer(customerId);
     if (customer) {
-      form.setValue("phoneNo", customer.phoneNo);
-      form.setValue("customerId", customer.id);
-      form.setValue("areaId", customer.areaId || 0);
-      form.setValue("address", customer.address || "");
+      form.setValue("phoneNo", customer.phoneNo, { shouldDirty: true });
+      form.setValue("customerId", customer.id, { shouldDirty: true });
+      form.setValue("areaId", customer.areaId || 0, { shouldDirty: true });
+      form.setValue("address", customer.address || "", { shouldDirty: true });
 
       const currentSalesman = form.getValues("salesmanId");
       const isSalesmanValid = salesmen.find(
         (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
       );
       if (!isSalesmanValid) {
-        form.setValue("salesmanId", 0);
+        form.setValue("salesmanId", 0, { shouldDirty: true });
       }
 
       setPhoneOpen(false);
@@ -415,11 +522,11 @@ export default function AddSales() {
   // Logic: Handle Area Selection
   // --------------------------------------------------------------------
   const handleAreaSelect = (selectedAreaId: number) => {
-    form.setValue("areaId", selectedAreaId);
-    form.setValue("customerId", 0);
-    form.setValue("salesmanId", 0);
-    form.setValue("phoneNo", "");
-    form.setValue("address", "");
+    form.setValue("areaId", selectedAreaId, { shouldDirty: true });
+    form.setValue("customerId", 0, { shouldDirty: true });
+    form.setValue("salesmanId", 0, { shouldDirty: true });
+    form.setValue("phoneNo", "", { shouldDirty: true });
+    form.setValue("address", "", { shouldDirty: true });
     setAreaOpen(false);
   };
 
@@ -429,17 +536,17 @@ export default function AddSales() {
   const handleCustomerSelect = (selectedCustomerId: number) => {
     const customer = findCustomer(selectedCustomerId);
     if (customer) {
-      form.setValue("customerId", customer.id);
-      form.setValue("areaId", customer.areaId || 0);
-      form.setValue("address", customer.address || "");
-      form.setValue("phoneNo", customer.phoneNo || "");
+      form.setValue("customerId", customer.id, { shouldDirty: true });
+      form.setValue("areaId", customer.areaId || 0, { shouldDirty: true });
+      form.setValue("address", customer.address || "", { shouldDirty: true });
+      form.setValue("phoneNo", customer.phoneNo || "", { shouldDirty: true });
 
       const currentSalesman = form.getValues("salesmanId");
       const isSalesmanValid = salesmen.find(
         (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
       );
       if (!isSalesmanValid) {
-        form.setValue("salesmanId", 0);
+        form.setValue("salesmanId", 0, { shouldDirty: true });
       }
     }
     setCustomerOpen(false);
@@ -475,11 +582,14 @@ export default function AddSales() {
         discountAmount -
         _creditAmount;
 
-      form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
-      form.setValue("tax", parseFloat(tax.toFixed(2)));
+      form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)), {
+        shouldDirty: false,
+      });
+      form.setValue("tax", parseFloat(tax.toFixed(2)), { shouldDirty: false });
       form.setValue(
         "finalAmount",
         Math.max(0, parseFloat(finalAmount.toFixed(2))),
+        { shouldDirty: false },
       );
     };
 
@@ -555,7 +665,7 @@ export default function AddSales() {
           },
         );
         updatedItems[index] = { ...item, aQty: item.batchOpeningStock };
-        form.setValue("items", updatedItems);
+        form.setValue("items", updatedItems, { shouldDirty: true });
         return;
       }
     }
@@ -604,7 +714,7 @@ export default function AddSales() {
       updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
     }
 
-    form.setValue("items", updatedItems);
+    form.setValue("items", updatedItems, { shouldDirty: true });
   };
 
   // --------------------------------------------------------------------
@@ -655,7 +765,7 @@ export default function AddSales() {
         batchOpeningStock: batch.openingStock,
       };
 
-      form.setValue("items", updatedItems);
+      form.setValue("items", updatedItems, { shouldDirty: true });
 
       toast.success(`Batch applied to ${productCode}`, {
         description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit} | Stock: ${batch.openingStock}`,
@@ -721,13 +831,13 @@ export default function AddSales() {
       cartonPack: 0,
       conversionFactor: 0,
     };
-    form.setValue("items", [...items, newItem]);
+    form.setValue("items", [...items, newItem], { shouldDirty: true });
   };
 
   const removeProductRow = (index: number) => {
     if (items.length > 0) {
       const updatedItems = items.filter((_, i) => i !== index);
-      form.setValue("items", updatedItems);
+      form.setValue("items", updatedItems, { shouldDirty: true });
     }
   };
 
@@ -763,6 +873,10 @@ export default function AddSales() {
         // Update existing sale
         response = await salesService.updateSale(Number(saleId), payload);
         toast.success("Sales updated successfully");
+
+        // Reset dirty state after successful update
+        form.reset(data, { keepDirty: false });
+        setGeneratedInvoiceNo(response.invoiceNo);
       } else {
         // Create new sale
         response = await salesService.createSale(payload);
@@ -775,6 +889,9 @@ export default function AddSales() {
 
           // Update URL with the new sale ID without navigation
           setSearchParams({ id: response.id.toString() }, { replace: true });
+
+          // Reset dirty state after successful creation
+          form.reset(data, { keepDirty: false });
         }
       }
     } catch (error: any) {
@@ -794,11 +911,11 @@ export default function AddSales() {
   // Navigation handlers
   // --------------------------------------------------------------------
   const handleNewSales = () => {
-    // Reset form and navigate to ?new
+    // Reset form and navigate to ?id=new
     form.reset(defaultValues);
     setGeneratedSaleId(null);
     setGeneratedInvoiceNo(null);
-    setSearchParams({ new: "true" }, { replace: true });
+    setSearchParams({ id: "new" }, { replace: true });
   };
 
   const handleBillPreview = () => {
@@ -818,18 +935,15 @@ export default function AddSales() {
   const canShowBillPreview = !!saleId || !!generatedSaleId;
   const isEditMode = !!saleId && !isNew;
 
+  // Determine if update button should be enabled (only in edit mode when dirty)
+  const isUpdateEnabled = isEditMode && isDirty && isValid;
+  const isCreateEnabled = isNew && isValid;
+
   // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-2 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading sale data...</p>
-        </div>
-      </div>
-    );
+    return <SalesFormSkeleton />;
   }
 
   return (
@@ -850,7 +964,7 @@ export default function AddSales() {
               </h1>
               <p className="text-muted-foreground mt-1">
                 {isEditMode
-                  ? `Editing Invoice ${generatedInvoiceNo || ""}`
+                  ? `Editing Invoice ${generatedInvoiceNo || saleId || ""}`
                   : generatedInvoiceNo
                     ? `Invoice ${generatedInvoiceNo} - Saved`
                     : "Create a new sales invoice"}
@@ -882,18 +996,19 @@ export default function AddSales() {
               </Button>
             )}
 
-            <Button
+            {/* <Button
               variant="outline"
               onClick={handleBackToSales}
               disabled={isSubmitting}
             >
               Cancel
-            </Button>
+            </Button> */}
 
             <Button
               onClick={form.handleSubmit(onSubmit, onError)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isEditMode && !isDirty)}
               className="gap-2"
+              title={isEditMode && !isDirty ? "No changes made" : ""}
             >
               <Save className="h-4 w-4" />
               {isSubmitting
@@ -904,6 +1019,14 @@ export default function AddSales() {
             </Button>
           </div>
         </div>
+
+        {/* Show unsaved changes indicator in edit mode */}
+        {isEditMode && isDirty && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+            You have unsaved changes
+          </div>
+        )}
 
         <Form {...form}>
           <form
@@ -1016,7 +1139,12 @@ export default function AddSales() {
                             <Input
                               type="date"
                               value={field.value ?? ""}
-                              onChange={field.onChange}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.setValue("invoiceDate", e.target.value, {
+                                  shouldDirty: true,
+                                });
+                              }}
                               className="pl-10"
                               disabled={isSubmitting}
                             />
@@ -1195,6 +1323,12 @@ export default function AddSales() {
                               placeholder="Customer address"
                               className="pl-10"
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.setValue("address", e.target.value, {
+                                  shouldDirty: true,
+                                });
+                              }}
                               disabled={isSubmitting}
                             />
                           </div>
@@ -1223,6 +1357,7 @@ export default function AddSales() {
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting}
+                                onClick={() => field.onChange(field.value)}
                               >
                                 {field.value
                                   ? findVanName(field.value)
@@ -1242,7 +1377,9 @@ export default function AddSales() {
                                       key={van.id}
                                       value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(van.id);
+                                        form.setValue("vanId", van.id, {
+                                          shouldDirty: true,
+                                        });
                                         setVanOpen(false);
                                       }}
                                     >
@@ -1321,7 +1458,11 @@ export default function AddSales() {
                                       key={salesman.id}
                                       value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
                                       onSelect={() => {
-                                        field.onChange(salesman.id);
+                                        form.setValue(
+                                          "salesmanId",
+                                          salesman.id,
+                                          { shouldDirty: true },
+                                        );
                                         setSalesmanOpen(false);
                                       }}
                                     >
@@ -1365,7 +1506,12 @@ export default function AddSales() {
                       <FormItem>
                         <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue("gstDetails", value, {
+                              shouldDirty: true,
+                            });
+                          }}
                           defaultValue={field.value}
                           disabled={isSubmitting}
                         >
@@ -1797,6 +1943,12 @@ export default function AddSales() {
                             placeholder="Enter any additional remarks, notes, or special instructions..."
                             className="min-h-[120px]"
                             {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              form.setValue("remarks", e.target.value, {
+                                shouldDirty: true,
+                              });
+                            }}
                             disabled={isSubmitting}
                           />
                         </FormControl>
@@ -1890,6 +2042,14 @@ export default function AddSales() {
                                   type="number"
                                   step="0.01"
                                   {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    form.setValue(
+                                      "cessInsurance",
+                                      parseFloat(e.target.value) || 0,
+                                      { shouldDirty: true },
+                                    );
+                                  }}
                                   disabled={isSubmitting}
                                   className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
                                 />
@@ -1919,6 +2079,14 @@ export default function AddSales() {
                                   type="number"
                                   step="0.01"
                                   {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    form.setValue(
+                                      "discountPercent",
+                                      parseFloat(e.target.value) || 0,
+                                      { shouldDirty: true },
+                                    );
+                                  }}
                                   disabled={isSubmitting}
                                   className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
                                 />
@@ -1980,6 +2148,14 @@ export default function AddSales() {
                                   type="number"
                                   step="0.01"
                                   {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    form.setValue(
+                                      "amountAdd",
+                                      parseFloat(e.target.value) || 0,
+                                      { shouldDirty: true },
+                                    );
+                                  }}
                                   disabled={isSubmitting}
                                   className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
                                 />
@@ -2010,6 +2186,14 @@ export default function AddSales() {
                                   type="number"
                                   step="0.01"
                                   {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    form.setValue(
+                                      "creditAmount",
+                                      parseFloat(e.target.value) || 0,
+                                      { shouldDirty: true },
+                                    );
+                                  }}
                                   disabled={isSubmitting}
                                   className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
                                 />
@@ -2133,7 +2317,12 @@ export default function AddSales() {
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={isSubmitting} className="gap-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting || (isEditMode && !isDirty)}
+                className="gap-2"
+                title={isEditMode && !isDirty ? "No changes made" : ""}
+              >
                 <Save className="h-4 w-4" />
                 {isSubmitting
                   ? "Saving..."
