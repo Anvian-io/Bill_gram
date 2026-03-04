@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -66,6 +67,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { salesService } from "@/services/salesService";
+import { CheckIsExpanded } from "@/utils/commonHelper";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -100,6 +102,16 @@ const formatDateForAPI = (date: Date | undefined): string | undefined => {
 
 export default function Sales() {
   // State for sales
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Remove ?id from URL if present on mount
+  useEffect(() => {
+    if (searchParams.has("id")) {
+      searchParams.delete("id");
+      // Use setSearchParams to update the URL without the id param
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []); // Run only on mount
   const [sales, setSales] = useState<Sales[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -545,7 +557,13 @@ export default function Sales() {
         animate="visible"
         variants={containerVariants}
       >
-        <div className="max-w-8xl mx-auto">
+        <div
+          className={`mx-auto ${
+            CheckIsExpanded()
+              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+              : "max-w-9xl lg:max-w-5xl xl:max-w-7xl 2xl:max-w-10xl"
+          }`}
+        >
           {/* Header */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"

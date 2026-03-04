@@ -11,10 +11,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
+
   /* Updated Color Palette */
   --radius: 0.625rem;
-  
+
   /* Light theme - White/Grey/Blue palette */
   --background: #ffffff;
   --foreground: #000000;
@@ -34,14 +34,14 @@
   --border: #e5e7eb;
   --input: #b4b2b2;
   --ring: #3b82f6;
-  
+
   /* Chart colors */
   --chart-1: #3b82f6;
   --chart-2: #60a5fa;
   --chart-3: #93c5fd;
   --chart-4: #bfdbfe;
   --chart-5: #dbeafe;
-  
+
   /* Sidebar colors for light theme */
   --sidebar: rgb(238, 243, 250);
   --sidebar-foreground: #111827;
@@ -51,96 +51,96 @@
   --sidebar-accent-foreground: #111827;
   --sidebar-border: #e5e7eb;
   --sidebar-ring: #3b82f6;
-  
+
   /* Summary Section Colors - Light Theme */
   --summary-bg-1: #ecfdf5; /* Green - Gross Amount */
   --summary-border-1: #d1fae5;
   --summary-text-1: #065f46;
   --summary-icon-1: #10b981;
-  
+
   --summary-bg-2: #fef3c7; /* Amber - Box/Unit */
   --summary-border-2: #fde68a;
   --summary-text-2: #92400e;
   --summary-icon-2: #f59e0b;
-  
+
   --summary-bg-3: #dbeafe; /* Blue - CESS/INS */
   --summary-border-3: #bfdbfe;
   --summary-text-3: #1e40af;
   --summary-icon-3: #3b82f6;
-  
+
   --summary-bg-4: #f3e8ff; /* Purple - Scheme 1 */
   --summary-border-4: #e9d5ff;
   --summary-text-4: #6b21a8;
   --summary-icon-4: #a855f7;
-  
+
   --summary-bg-5: #fee2e2; /* Rose - Discount % */
   --summary-border-5: #fecaca;
   --summary-text-5: #991b1b;
   --summary-icon-5: #ef4444;
-  
+
   --summary-bg-6: #e0f2fe; /* Sky - Tax Amount */
   --summary-border-6: #bae6fd;
   --summary-text-6: #0369a1;
   --summary-icon-6: #0ea5e9;
-  
+
   --summary-bg-7: #dcfce7; /* Lime - Add Amount */
   --summary-border-7: #bbf7d0;
   --summary-text-7: #166534;
   --summary-icon-7: #22c55e;
-  
+
   --summary-bg-8: #ffedd5; /* Orange - Credit Amount */
   --summary-border-8: #fed7aa;
   --summary-text-8: #9a3412;
   --summary-icon-8: #f97316;
-  
+
   --summary-bg-final: #1e40af; /* Indigo - Final Amount */
   --summary-border-final: #1e3a8a;
   --summary-text-final: #ffffff;
   --summary-icon-final: #ffffff;
-  
+
   /* Summary Container Colors */
   --summary-container-bg: #f8fafc;
   --summary-container-border: #e2e8f0;
   --summary-container-text: #1e293b;
-  
+
   /* Remarks Container Colors */
   --remarks-bg: #eff6ff;
   --remarks-border: #dbeafe;
   --remarks-text: #1e40af;
-  
+
   /* Additional colors for consistency */
   --text: #000000;
   --heading: #111827;
   --hover-text: #374151;
   --secondary-bg: #f3f4f6;
   --button-bg: #e5e7eb;
-  
+
   /* Light theme Toast colors */
   --toast-success-bg: #ecfdf5;
   --toast-success-text: #065f46;
   --toast-success-border: #a7f3d0;
   --toast-success-icon: #10b981;
-  
+
   --toast-error-bg: #fef2f2;
   --toast-error-text: #991b1b;
   --toast-error-border: #fecaca;
   --toast-error-icon: #ef4444;
-  
+
   --toast-warning-bg: #fffbeb;
   --toast-warning-text: #92400e;
   --toast-warning-border: #fde68a;
   --toast-warning-icon: #f59e0b;
-  
+
   --toast-info-bg: #eff6ff;
   --toast-info-text: #1e40af;
   --toast-info-border: #bfdbfe;
   --toast-info-icon: #3b82f6;
-  
+
   --toast-default-bg: #70a3f3;
   --toast-default-text: #000000;
   --toast-default-border: rgb(255, 255, 255);
   --toast-default-icon: #6b7280;
-  
+
   /* Light theme Gray scale */
   --gray1: #f9fafb;
   --gray2: #f3f4f6;
@@ -154,7 +154,7 @@
   --gray10: #111827;
   --gray11: #030712;
   --gray12: #000000;
-  
+
   /* Toast border radius */
   --toast-border-radius: var(--radius);
 }
@@ -179,14 +179,14 @@
   --border: #374151;
   --input: #1f2937;
   --ring: #60a5fa;
-  
+
   /* Chart colors for dark theme */
   --chart-1: #60a5fa;
   --chart-2: #3b82f6;
   --chart-3: #1d4ed8;
   --chart-4: #93c5fd;
   --chart-5: #bfdbfe;
-  
+
   /* Sidebar colors for dark theme */
   --sidebar: #111827;
   --sidebar-foreground: #ffffff;
@@ -196,96 +196,96 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #374151;
   --sidebar-ring: #60a5fa;
-  
+
   /* Summary Section Colors - Dark Theme */
   --summary-bg-1: #022c22; /* Green - Gross Amount */
   --summary-border-1: #065f46;
   --summary-text-1: #a7f3d0;
   --summary-icon-1: #10b981;
-  
+
   --summary-bg-2: #431407; /* Amber - Box/Unit */
   --summary-border-2: #92400e;
   --summary-text-2: #fed7aa;
   --summary-icon-2: #f59e0b;
-  
+
   --summary-bg-3: #172554; /* Blue - CESS/INS */
   --summary-border-3: #1e40af;
   --summary-text-3: #bfdbfe;
   --summary-icon-3: #60a5fa;
-  
+
   --summary-bg-4: #3b0764; /* Purple - Scheme 1 */
   --summary-border-4: #6b21a8;
   --summary-text-4: #e9d5ff;
   --summary-icon-4: #a855f7;
-  
+
   --summary-bg-5: #450a0a; /* Rose - Discount % */
   --summary-border-5: #991b1b;
   --summary-text-5: #fecaca;
   --summary-icon-5: #ef4444;
-  
+
   --summary-bg-6: #0c4a6e; /* Sky - Tax Amount */
   --summary-border-6: #0369a1;
   --summary-text-6: #bae6fd;
   --summary-icon-6: #0ea5e9;
-  
+
   --summary-bg-7: #052e16; /* Lime - Add Amount */
   --summary-border-7: #166534;
   --summary-text-7: #bbf7d0;
   --summary-icon-7: #22c55e;
-  
+
   --summary-bg-8: #431407; /* Orange - Credit Amount */
   --summary-border-8: #9a3412;
   --summary-text-8: #fed7aa;
   --summary-icon-8: #f97316;
-  
+
   --summary-bg-final: #1e3a8a; /* Indigo - Final Amount */
   --summary-border-final: #1e40af;
   --summary-text-final: #ffffff;
   --summary-icon-final: #ffffff;
-  
+
   /* Summary Container Colors - Dark Theme */
   --summary-container-bg: #0f172a;
   --summary-container-border: #1e293b;
   --summary-container-text: #f1f5f9;
-  
+
   /* Remarks Container Colors - Dark Theme */
   --remarks-bg: #1e3a8a;
   --remarks-border: #1e40af;
   --remarks-text: #dbeafe;
-  
+
   /* Additional colors for dark theme */
   --text: #ffffff;
   --heading: #f9fafb;
   --hover-text: #d1d5db;
   --secondary-bg: #374151;
   --button-bg: #4b5563;
-  
+
   /* Dark theme Toast colors */
   --toast-success-bg: #022c22;
   --toast-success-text: #a7f3d0;
   --toast-success-border: #065f46;
   --toast-success-icon: #10b981;
-  
+
   --toast-error-bg: #450a0a;
   --toast-error-text: #fecaca;
   --toast-error-border: #991b1b;
   --toast-error-icon: #ef4444;
-  
+
   --toast-warning-bg: #431407;
   --toast-warning-text: #fed7aa;
   --toast-warning-border: #92400e;
   --toast-warning-icon: #f59e0b;
-  
+
   --toast-info-bg: #172554;
   --toast-info-text: #bfdbfe;
   --toast-info-border: #1e40af;
   --toast-info-icon: #60a5fa;
-  
+
   --toast-default-bg: #4e80ee;
   --toast-default-text: #ffffff;
   --toast-default-border: #6b6b6b;
   --toast-default-icon: #9ca3af;
-  
+
   /* Dark theme Gray scale */
   --gray1: #030712;
   --gray2: #111827;
@@ -299,7 +299,7 @@
   --gray10: #f3f4f6;
   --gray11: #f9fafb;
   --gray12: #ffffff;
-  
+
   /* Toast border radius */
   --toast-border-radius: var(--radius);
 }
@@ -312,7 +312,18 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  
+
+  --max-width-10xl: 104rem;
+  --max-width-9xl: 96rem;
+  --max-width-8xl: 88rem;
+  --max-width-7.5xl: 86rem;
+  --max-width-7xl: 80rem;
+  --max-width-6xl: 72rem;
+  --max-width-5xl: 64rem;
+  --max-width-3xl: 56rem;
+  --max-width-2xl: 48rem;
+  --max-width-xl: 40rem;
+
   /* Core colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -332,14 +343,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
   /* Chart colors */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  
+
   /* Sidebar colors */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -349,89 +360,89 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  
+
   /* Summary Section Colors */
   --color-summary-bg-1: var(--summary-bg-1);
   --color-summary-border-1: var(--summary-border-1);
   --color-summary-text-1: var(--summary-text-1);
   --color-summary-icon-1: var(--summary-icon-1);
-  
+
   --color-summary-bg-2: var(--summary-bg-2);
   --color-summary-border-2: var(--summary-border-2);
   --color-summary-text-2: var(--summary-text-2);
   --color-summary-icon-2: var(--summary-icon-2);
-  
+
   --color-summary-bg-3: var(--summary-bg-3);
   --color-summary-border-3: var(--summary-border-3);
   --color-summary-text-3: var(--summary-text-3);
   --color-summary-icon-3: var(--summary-icon-3);
-  
+
   --color-summary-bg-4: var(--summary-bg-4);
   --color-summary-border-4: var(--summary-border-4);
   --color-summary-text-4: var(--summary-text-4);
   --color-summary-icon-4: var(--summary-icon-4);
-  
+
   --color-summary-bg-5: var(--summary-bg-5);
   --color-summary-border-5: var(--summary-border-5);
   --color-summary-text-5: var(--summary-text-5);
   --color-summary-icon-5: var(--summary-icon-5);
-  
+
   --color-summary-bg-6: var(--summary-bg-6);
   --color-summary-border-6: var(--summary-border-6);
   --color-summary-text-6: var(--summary-text-6);
   --color-summary-icon-6: var(--summary-icon-6);
-  
+
   --color-summary-bg-7: var(--summary-bg-7);
   --color-summary-border-7: var(--summary-border-7);
   --color-summary-text-7: var(--summary-text-7);
   --color-summary-icon-7: var(--summary-icon-7);
-  
+
   --color-summary-bg-8: var(--summary-bg-8);
   --color-summary-border-8: var(--summary-border-8);
   --color-summary-text-8: var(--summary-text-8);
   --color-summary-icon-8: var(--summary-icon-8);
-  
+
   --color-summary-bg-final: var(--summary-bg-final);
   --color-summary-border-final: var(--summary-border-final);
   --color-summary-text-final: var(--summary-text-final);
   --color-summary-icon-final: var(--summary-icon-final);
-  
+
   /* Summary Container Colors */
   --color-summary-container-bg: var(--summary-container-bg);
   --color-summary-container-border: var(--summary-container-border);
   --color-summary-container-text: var(--summary-container-text);
-  
+
   /* Remarks Container Colors */
   --color-remarks-bg: var(--remarks-bg);
   --color-remarks-border: var(--remarks-border);
   --color-remarks-text: var(--remarks-text);
-  
+
   /* Toast colors */
   --color-toast-success-bg: var(--toast-success-bg);
   --color-toast-success-text: var(--toast-success-text);
   --color-toast-success-border: var(--toast-success-border);
   --color-toast-success-icon: var(--toast-success-icon);
-  
+
   --color-toast-error-bg: var(--toast-error-bg);
   --color-toast-error-text: var(--toast-error-text);
   --color-toast-error-border: var(--toast-error-border);
   --color-toast-error-icon: var(--toast-error-icon);
-  
+
   --color-toast-warning-bg: var(--toast-warning-bg);
   --color-toast-warning-text: var(--toast-warning-text);
   --color-toast-warning-border: var(--toast-warning-border);
   --color-toast-warning-icon: var(--toast-warning-icon);
-  
+
   --color-toast-info-bg: var(--toast-info-bg);
   --color-toast-info-text: var(--toast-info-text);
   --color-toast-info-border: var(--toast-info-border);
   --color-toast-info-icon: var(--toast-info-icon);
-  
+
   --color-toast-default-bg: var(--toast-default-bg);
   --color-toast-default-text: var(--toast-default-text);
   --color-toast-default-border: var(--toast-default-border);
   --color-toast-default-icon: var(--toast-default-icon);
-  
+
   /* Additional utility colors */
   --color-text: var(--text);
   --color-heading: var(--heading);
@@ -447,10 +458,12 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Smooth transitions for theme changes */
   * {
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 }
 

@@ -75,11 +75,12 @@ export const salesService = {
 
   async createSale(data: SalesFormData): Promise<Sales> {
     try {
-      const response = await apiClient.post<ApiResponse<{ sales: Sales }>>(
+      const response = await apiClient.post<ApiResponse<{ sale: Sales }>>(
         "/sales",
         data,
       );
-      return response.data.data.sales;
+      // console.log(response)
+      return response.data.data.sale;
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error creating sale:", message);

@@ -5,7 +5,7 @@ import PurchaseHistory from "@/components/purchase/PurchaseHistory";
 
 export default function Purchase() {
   const [activeTab, setActiveTab] = useState<"add" | "purchase" | "history">(
-    "purchase",
+    "add",
   );
 
   // Refs for measuring tab positions

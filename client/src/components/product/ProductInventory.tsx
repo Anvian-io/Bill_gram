@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -60,6 +61,7 @@ import { type Product, type ProductFormData } from "@/types/product";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { useDebounce } from "@/utils/debounce";
 import { getFullImageUrl } from "@/utils/imageUtils";
+import { CheckIsExpanded } from "@/utils/commonHelper";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -111,7 +113,18 @@ interface ProductsResponse {
   };
 }
 
-export default function   ProductInventory() {
+export default function ProductInventory() {
+  // Remove ?id from query params on mount
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Remove ?id from URL if present on mount
+  useEffect(() => {
+    if (searchParams.has("id")) {
+      searchParams.delete("id");
+      // Use setSearchParams to update the URL without the id param
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []); // Run only on mount
   // State for products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -613,7 +626,13 @@ export default function   ProductInventory() {
         animate="visible"
         variants={containerVariants}
       >
-        <div className="max-w-8xl mx-auto">
+        <div
+          className={`mx-auto ${
+            CheckIsExpanded()
+              ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
+              : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
+          }`}
+        >
           {/* Header (unchanged) */}
           <motion.div
             className="flex flex-col gap-6 mb-6 w-full"
@@ -1221,7 +1240,7 @@ export default function   ProductInventory() {
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
-                <div className="max-w-365 overflow-x-auto">
+                <div className="overflow-x-auto w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">

@@ -148,6 +148,32 @@ interface PurchaseFormModalProps {
   isSubmitting?: boolean;
 }
 
+const emptyItem: PurchaseFormData["items"][0] = {
+  productId: 0,
+  productCode: "",
+  description: "",
+  rate: 0,
+  aQty: 0,
+  mQty: 0,
+  unit: 0,
+  fQty: 0,
+  DQty: 0,
+  totalAmount: 0,
+  finalAmount: 0,
+  taxRate: 5,
+  taxAmount: 0,
+  schPercent: 0,
+  schAmount: 0,
+  batchId: undefined,
+  cartonPack: 0,
+  conversionFactor: 0,
+  productBrand: "",
+  sch1Percent: 0,
+  sch1Amount: 0,
+  sch2Percent: 0,
+  sch2Amount: 0
+};
+
 // ----------------------------------------------------------------------
 // Initial Values
 // ----------------------------------------------------------------------
@@ -155,10 +181,10 @@ const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 0,
   gstDetails: "With GST",
-  items: [],
+  items: [{ ...emptyItem }], // one default row
   remarks: "",
   grossAmount: 0,
-  boxUnit: 0, // will be hidden
+  boxUnit: 0,
   cessInsurance: 0,
   discountPercent: 0,
   tax: 0,
@@ -829,374 +855,390 @@ export default function PurchaseForm({
                   )}
                 </div>
 
-                <div className="overflow-x-auto border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold w-12">Sr</TableHead>
-                        <TableHead className="font-semibold">
-                          Prod Code & Description
-                        </TableHead>
-                        <TableHead className="font-semibold">Rate</TableHead>
-                        <TableHead className="font-semibold">A. Qty</TableHead>
-                        <TableHead className="font-semibold">Fr</TableHead>
-                        <TableHead className="font-semibold">Dm</TableHead>
-                        <TableHead className="font-semibold">
-                          M. Qty *
-                        </TableHead>
-                        <TableHead className="font-semibold">Unit</TableHead>{" "}
-                        {/* New column */}
-                        <TableHead className="font-semibold">Amount</TableHead>
-                        <TableHead className="font-semibold">Sch%</TableHead>
-                        <TableHead className="font-semibold">Sch amt</TableHead>
-                        <TableHead className="font-semibold">Tax (%)</TableHead>
-                        <TableHead className="font-semibold">Tax Amt</TableHead>
-                        <TableHead className="font-semibold">
-                          Final Amt
-                        </TableHead>
-                        <TableHead className="font-semibold w-20">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <AnimatePresence>
-                        {items.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={14} // Increased colSpan for new column
-                              className="text-center py-8 text-muted-foreground"
-                            >
-                              No products added.{" "}
-                              {!isReadOnly &&
-                                'Click "Add Product" to get started.'}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          items.map((item, index) => (
-                            <motion.tr
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="hover:bg-secondary/30"
-                            >
-                              <TableCell>{index + 1}</TableCell>
+                <div className="flex items-center justify-center overflow-x-auto w-full">
+                  <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-4xl xl:max-w-7.5xl 2xl:max-w-10xl">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-secondary/50">
+                          <TableHead className="font-semibold w-12">
+                            Sr
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Prod Code & Description
+                          </TableHead>
+                          <TableHead className="font-semibold">Rate</TableHead>
+                          <TableHead className="font-semibold">
+                            A. Qty
+                          </TableHead>
+                          <TableHead className="font-semibold">Fr</TableHead>
+                          <TableHead className="font-semibold">Dm</TableHead>
+                          <TableHead className="font-semibold">
+                            M. Qty *
+                          </TableHead>
+                          <TableHead className="font-semibold">Unit</TableHead>{" "}
+                          {/* New column */}
+                          <TableHead className="font-semibold">
+                            Amount
+                          </TableHead>
+                          <TableHead className="font-semibold">Sch%</TableHead>
+                          <TableHead className="font-semibold">
+                            Sch amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax (%)
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax Amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Final Amt
+                          </TableHead>
+                          <TableHead className="font-semibold w-20">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <AnimatePresence>
+                          {items.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={14} // Increased colSpan for new column
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                No products added.{" "}
+                                {!isReadOnly &&
+                                  'Click "Add Product" to get started.'}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            items.map((item, index) => (
+                              <motion.tr
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="hover:bg-secondary/30"
+                              >
+                                <TableCell>{index + 1}</TableCell>
 
-                              {/* Product Selection */}
-                              <TableCell className="">
-                                {isReadOnly ? (
-                                  <div className="py-2 px-3 text-sm">
-                                    {item.productCode} – {item.description}
-                                  </div>
-                                ) : (
-                                  <Popover
-                                    open={
-                                      productOpen &&
-                                      activeProductIndex === index
-                                    }
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        setActiveProductIndex(index);
-                                      } else {
-                                        setActiveProductIndex(null);
+                                {/* Product Selection */}
+                                <TableCell className="">
+                                  {isReadOnly ? (
+                                    <div className="py-2 px-3 text-sm">
+                                      {item.productCode} – {item.description}
+                                    </div>
+                                  ) : (
+                                    <Popover
+                                      open={
+                                        productOpen &&
+                                        activeProductIndex === index
                                       }
-                                      setProductOpen(open);
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className="w-full justify-between"
-                                        disabled={isSubmitting || isReadOnly}
-                                      >
-                                        {item.productId
-                                          ? findProductName(item.productId)
-                                          : "Select product"}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0">
-                                      <Command>
-                                        <CommandInput placeholder="Search products..." />
-                                        <CommandList>
-                                          <CommandEmpty>
-                                            No product found.
-                                          </CommandEmpty>
-                                          <CommandGroup>
-                                            {products.map((product) => (
-                                              <CommandItem
-                                                key={product.id}
-                                                value={`${product.id} ${product.productCode} ${product.productBrand}`}
-                                                onSelect={() => {
-                                                  handleProductSelect(
-                                                    index,
-                                                    product.id,
-                                                  );
-                                                }}
-                                              >
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium">
-                                                    {product.productCode}
-                                                  </span>
-                                                  <span className="text-xs text-muted-foreground">
-                                                    {product.productBrand}
-                                                  </span>
-                                                </div>
-                                                <Check
-                                                  className={cn(
-                                                    "ml-auto h-4 w-4",
-                                                    product.id ===
-                                                      item.productId
-                                                      ? "opacity-100"
-                                                      : "opacity-0",
-                                                  )}
-                                                />
-                                              </CommandItem>
-                                            ))}
-                                          </CommandGroup>
-                                        </CommandList>
-                                      </Command>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </TableCell>
-
-                              {/* Rate */}
-                              <TableCell>
-                                <div className="relative">
-                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.rate}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "rate",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-24 pl-7"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* A. Qty */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.aQty}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "aQty",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Fr (Free Qty) */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.fQty}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "fQty",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Dm (Damaged Qty) */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.DQty}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "DQty",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* M. Qty - DISABLED */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.mQty}
-                                    readOnly
-                                    disabled
-                                    className="w-20 bg-muted cursor-not-allowed"
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Unit - DISABLED (new) */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.unit}
-                                    readOnly
-                                    disabled
-                                    className="w-20 bg-muted cursor-not-allowed"
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Amount (inclusive) */}
-                              <TableCell>
-                                <div className="relative">
-                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.totalAmount}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "totalAmount",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-24 pl-7"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch% */}
-                              <TableCell className="max-w-16">
-                                <div className="relative ">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.schPercent}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "schPercent",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-14 pl-5"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{item.schAmount.toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Tax Rate */}
-                              <TableCell className="max-w-16">
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.taxRate}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "taxRate",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-14 pl-6"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Tax Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{item.taxAmount.toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Final Amount (item) */}
-                              <TableCell>
-                                <div className="font-bold text-sm text-green-700">
-                                  ₹{item.finalAmount.toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Actions */}
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  {!isReadOnly && (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openBatchModal(index)}
-                                        disabled={
-                                          !item.productId || isSubmitting
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          setActiveProductIndex(index);
+                                        } else {
+                                          setActiveProductIndex(null);
                                         }
-                                        className="h-7 w-7 p-0"
-                                        title="Select Batch"
-                                      >
-                                        <Layers className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => removeProductRow(index)}
-                                        disabled={isSubmitting}
-                                        className="h-7 w-7 p-0"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </>
+                                        setProductOpen(open);
+                                      }}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className="w-full justify-between"
+                                          disabled={isSubmitting || isReadOnly}
+                                        >
+                                          {item.productId
+                                            ? findProductName(item.productId)
+                                            : "Select product"}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-full p-0">
+                                        <Command>
+                                          <CommandInput placeholder="Search products..." />
+                                          <CommandList>
+                                            <CommandEmpty>
+                                              No product found.
+                                            </CommandEmpty>
+                                            <CommandGroup>
+                                              {products.map((product) => (
+                                                <CommandItem
+                                                  key={product.id}
+                                                  value={`${product.id} ${product.productCode} ${product.productBrand}`}
+                                                  onSelect={() => {
+                                                    handleProductSelect(
+                                                      index,
+                                                      product.id,
+                                                    );
+                                                  }}
+                                                >
+                                                  <div className="flex flex-col">
+                                                    <span className="font-medium">
+                                                      {product.productCode}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                      {product.productBrand}
+                                                    </span>
+                                                  </div>
+                                                  <Check
+                                                    className={cn(
+                                                      "ml-auto h-4 w-4",
+                                                      product.id ===
+                                                        item.productId
+                                                        ? "opacity-100"
+                                                        : "opacity-0",
+                                                    )}
+                                                  />
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
                                   )}
-                                </div>
-                              </TableCell>
-                            </motion.tr>
-                          ))
-                        )}
-                      </AnimatePresence>
-                    </TableBody>
-                  </Table>
-                  <div className="p-2 text-xs text-muted-foreground border-t">
-                    * M Qty = floor(A Qty / Carton Pack), Unit = A Qty % Carton
-                    Pack (both auto‑calculated, cannot be edited).
+                                </TableCell>
+
+                                {/* Rate */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.rate}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "rate",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-24 pl-7"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* A. Qty */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.aQty}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "aQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Fr (Free Qty) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.fQty}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "fQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Dm (Damaged Qty) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.DQty}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "DQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* M. Qty - DISABLED */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.mQty}
+                                      readOnly
+                                      disabled
+                                      className="w-20 bg-muted cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Unit - DISABLED (new) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.unit}
+                                      readOnly
+                                      disabled
+                                      className="w-20 bg-muted cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Amount (inclusive) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.totalAmount}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "totalAmount",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-24 pl-7"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Sch% */}
+                                <TableCell className="max-w-16">
+                                  <div className="relative ">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.schPercent}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "schPercent",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-14 pl-5"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                    <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </TableCell>
+
+                                {/* Sch Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{item.schAmount.toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Tax Rate */}
+                                <TableCell className="max-w-16">
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.taxRate}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "taxRate",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-14 pl-6"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                    <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </TableCell>
+
+                                {/* Tax Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{item.taxAmount.toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Final Amount (item) */}
+                                <TableCell>
+                                  <div className="font-bold text-sm text-green-700">
+                                    ₹{item.finalAmount.toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Actions */}
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    {!isReadOnly && (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openBatchModal(index)}
+                                          disabled={
+                                            !item.productId || isSubmitting
+                                          }
+                                          className="h-7 w-7 p-0"
+                                          title="Select Batch"
+                                        >
+                                          <Layers className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            removeProductRow(index)
+                                          }
+                                          disabled={isSubmitting}
+                                          className="h-7 w-7 p-0"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </motion.tr>
+                            ))
+                          )}
+                        </AnimatePresence>
+                      </TableBody>
+                    </Table>
+                    <div className="p-2 text-xs text-muted-foreground border-t">
+                      * M Qty = floor(A Qty / Carton Pack), Unit = A Qty %
+                      Carton Pack (both auto‑calculated, cannot be edited).
+                    </div>
                   </div>
                 </div>
               </div>

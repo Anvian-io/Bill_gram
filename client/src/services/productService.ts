@@ -68,7 +68,7 @@ export const productService = {
       const response = await apiClient.get<ApiResponse<Product>>(
         `/products/${id}`,
       );
-      return response.data.data;
+      return response.data.data.product;
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching product:", message);
@@ -83,7 +83,7 @@ export const productService = {
         "/products",
         data,
       );
-      return response.data.data;
+      return response.data.data.product;
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error creating product:", message);

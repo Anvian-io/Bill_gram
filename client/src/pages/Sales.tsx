@@ -5,7 +5,7 @@ import SalesHistory from "@/components/sales/SalesHistory";
 
 export default function Sales() {
   const [activeTab, setActiveTab] = useState<"add" | "sales" | "history">(
-    "sales",
+    "add",
   );
 
   // Refs for measuring tab positions
