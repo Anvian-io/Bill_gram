@@ -163,19 +163,21 @@ export default function SalesInvoicePreview({
 
         <div className="bg-white text-gray-800 border border-gray-700 font-mono text-sm">
           {/* Header with two columns + QR */}
-          <div className="flex justify-between items-start p-4 gap-4">
+          <div className="flex justify-between items-start p-2 gap-4">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2">
               <div className="text-left pr-4">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2">
                   {companyLogoUrl && (
                     <img
                       src={companyLogoUrl}
                       alt="Company Logo"
-                      className="h-12 w-12 object-contain shrink-0"
+                      className="h-32 w-32 object-contain shrink-0"
                     />
                   )}
                   <div>
-                    <h1 className="text-xl font-bold uppercase">{companyName}</h1>
+                    <h1 className="text-xl font-bold uppercase">
+                      {companyName}
+                    </h1>
                     <p className="text-xs">Address : {companyAddress}</p>
                     <p className="text-xs">Phone : {companyPhone}</p>
                     <p className="text-xs">GSTIN : {companyGstin}</p>
@@ -184,7 +186,8 @@ export default function SalesInvoicePreview({
                 </div>
               </div>
 
-              <div className="text-right pl-4 border-l border-gray-400 mt-3 md:mt-0">
+              {/* Customer column - left aligned, full height border, no top margin */}
+              <div className="text-left pl-4 border-l border-gray-400 h-full">
                 <h2 className="text-lg font-bold uppercase">{customerName}</h2>
                 <p className="text-xs">Address : {customerAddress}</p>
                 <p className="text-xs">Phone : {customerPhone}</p>
@@ -408,7 +411,7 @@ export default function SalesInvoicePreview({
                     <img
                       src={signatureUrl}
                       alt="Signature"
-                      className="h-12 object-contain mx-auto"
+                      className="h-20 object-contain mx-auto"
                     />
                   ) : (
                     <p className="border-t border-gray-400 pt-1 text-xs text-center">
