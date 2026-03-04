@@ -5,6 +5,7 @@ import type {
   PaginatedResponse,
   ApiResponse,
   SalesFilters,
+  SalesBillPreviewData,
 } from "@/types/sales";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 import type {
@@ -958,6 +959,19 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading sales report history Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  async getSalesBillPreview(id: number): Promise<SalesBillPreviewData> {
+    try {
+      const response = await apiClient.get<ApiResponse<SalesBillPreviewData>>(
+        `/sales/${id}/bill-preview`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales bill preview:", message);
       throw new Error(message);
     }
   },

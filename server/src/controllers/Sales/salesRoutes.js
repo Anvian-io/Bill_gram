@@ -79,4 +79,7 @@ router.put("/:id", salesController.updateSale);
 // Delete sales invoice (soft delete)
 router.delete("/:id", salesController.deleteSale);
 
+router.get("/:id/bill-preview", salesController.getSalesBillPreview); // new route
+
+
 export default router;

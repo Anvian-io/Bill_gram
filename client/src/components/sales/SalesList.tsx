@@ -68,6 +68,14 @@ import {
 } from "@/components/ui/command";
 import { salesService } from "@/services/salesService";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import { FileText } from "lucide-react"; // add this
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"; // add this
+import SalesInvoicePreview from "./SalesInvoicePreview";
 
 // Date utility functions
 const parseDateFromString = (dateString: string): Date | undefined => {
@@ -123,6 +131,9 @@ export default function Sales() {
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [salesToDelete, setSalesToDelete] = useState<Sales | null>(null);
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewSaleId, setPreviewSaleId] = useState<number>(0);
 
   // Get data from Redux store
   const { areas, customers, salesmen, vans } = useActiveLists();
@@ -548,6 +559,11 @@ export default function Sales() {
     const salesman = salesmen.find((s) => s.id.toString() === id);
     return salesman ? salesman.name : "Select Salesman";
   };
+
+    const handlePreview = (saleId: number) => {
+      setPreviewSaleId(saleId);
+      setIsPreviewOpen(true);
+    };
 
   return (
     <>
@@ -1522,6 +1538,15 @@ export default function Sales() {
                                   >
                                     <Trash2 className="h-4 w-4 text-red-600" />
                                   </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePreview(sale.id)}
+                                    className="h-8 w-8 hover:bg-gray-100"
+                                    disabled={isLoading}
+                                  >
+                                    <FileText className="h-4 w-4 text-gray-600" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1551,6 +1576,12 @@ export default function Sales() {
           )}
         </div>
       </motion.div>
+
+      <SalesInvoicePreview
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        saleId={previewSaleId}
+      />
 
       {/* Sales Form Modal */}
       <SalesForm

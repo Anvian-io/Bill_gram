@@ -25,6 +25,7 @@ model User {
   notification    Boolean          @default(true)
   sound           Boolean          @default(true)
   company_logo    String?          // store logo URL or file path
+  signature       String?          // store logo URL or file path
   upi_id          String?
   company_name    String?
   address         String?

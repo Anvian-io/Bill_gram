@@ -149,3 +149,25 @@ export interface Sales {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface SalesBillPreviewData {
+  sale: Sales & {
+    user: {
+      id: number;
+      username: string;
+      company_name: string | null; // shop name
+      shop_name?: string | null; // fallback
+      phone: string | null;
+      email: string | null;
+      upi_id: string | null;
+      signature: string | null; // URL or path
+      company_logo: string | null; // URL or path
+      address: string | null;
+      gstin?: string; // not in schema but might be stored
+      fssai?: string; // not in schema
+    };
+  };
+  upiQrCode: string | null; // base64 PNG data URL
+  signature: string | null; // duplicate for convenience
+  companyLogo: string | null; // duplicate for convenience
+}

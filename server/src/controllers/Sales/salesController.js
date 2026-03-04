@@ -13,6 +13,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import ExcelJS from "exceljs";
+import QRCode from "qrcode";
 /**
  * Helper: Update batch stock (decrement for sales)
  * @param {PrismaClient} prisma
@@ -5671,6 +5672,118 @@ export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// GET SALES INVOICE BILL PREVIEW (with UPI QR code)
+// --------------------------------------------------------------------
+
+export const getSalesBillPreview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  // Fetch sale with all necessary relations
+  const sale = await prisma.salesInvoice.findFirst({
+    where: {
+      id: parseInt(id),
+      deleted: false,
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          companyName: true,
+          personName: true,
+          phoneNo: true,
+          email: true,
+          address: true,
+          gstIN: true,
+        },
+      },
+      area: { select: { id: true, name: true } },
+      van: { select: { id: true, name: true, vehicleNo: true } },
+      salesman: { select: { id: true, name: true, phoneNo: true } },
+      user: { // include the user who created the invoice
+        select: {
+          id: true,
+          username: true,
+          company_name: true,
+          phone: true,
+          email: true,
+          upi_id: true,
+          signature: true, // URL or path to signature image
+          company_logo: true,
+          address: true,
+        },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              productCode: true,
+              description: true,
+              productBrand: true,
+              unit: true,
+            },
+          },
+          batch: {
+            select: {
+              id: true,
+              batchNo: true,
+              barcode: true,
+              mrp: true,
+              saleRate: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!sale) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Sales invoice not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  // Generate UPI QR code if user has UPI ID
+  let upiQrCode = null;
+  if (sale.user?.upi_id) {
+    // Construct UPI payment string
+    // Format: upi://pay?pa=<UPI ID>&pn=<Payee Name>&am=<Amount>&cu=INR
+    const payeeName = encodeURIComponent(sale.user.company_name || "Payee");
+    const upiString = `upi://pay?pa=${sale.user.upi_id}&pn=${payeeName}&am=${sale.finalAmount}&cu=INR`;
+
+    try {
+      // Generate QR code as data URL (base64 PNG)
+      upiQrCode = await QRCode.toDataURL(upiString);
+    } catch (qrError) {
+      console.error("QR generation error:", qrError);
+      // Continue without QR code
+    }
+  }
+
+  // Prepare response with additional fields
+  const responseData = {
+    sale,
+    upiQrCode, // base64 PNG data URL (or null)
+    signature: sale.user?.signature || null,
+    companyLogo: sale.user?.company_logo || null,
+  };
+
+  return sendResponse(
+    res,
+    true,
+    responseData,
+    "Bill preview data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object
 // --------------------------------------------------------------------
 export const salesController = {
@@ -5705,4 +5818,6 @@ export const salesController = {
 
   getSalesWithGST,
   getSalesGSTMonthly,
+
+  getSalesBillPreview,
 };

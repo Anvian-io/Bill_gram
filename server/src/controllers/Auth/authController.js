@@ -183,6 +183,7 @@ export const check = asyncHandler(async (req, res) => {
         notification: true,
         sound: true,
         company_logo: true, // store logo URL or file path
+        signature: true, // store logo URL or file path
         upi_id: true,
         company_name: true,
         address: true,
@@ -400,6 +401,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     notification,
     sound,
     company_logo,
+    signature,
     upi_id,
     company_name,
     address,
@@ -489,6 +491,22 @@ export const updateProfile = asyncHandler(async (req, res) => {
       }
     }
   }
+  if (signature !== undefined) {
+    // If the logo is being removed (null or empty string)
+    if (signature === null || signature === "") {
+      updateData.signature = null;
+    } else {
+      // Extract filename from the URL (assumes the image has been uploaded)
+      const filename = extractFilename(signature);
+      if (filename) {
+        updateData.signature = filename;
+      } else {
+        // If extraction fails, you might want to store the original string or return error
+        // For safety, we'll store null or ignore
+        updateData.signature = null;
+      }
+    }
+  }
 
   // Perform update
   const updatedUser = await prisma.user.update({
@@ -503,6 +521,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
       notification: true,
       sound: true,
       company_logo: true,
+      signature: true,
       upi_id: true,
       company_name: true,
       address: true,
@@ -515,6 +534,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
   const userWithImageUrl = {
     ...updatedUser,
     company_logo: getImageUrl(updatedUser.company_logo),
+    signature: getImageUrl(updatedUser.signature),
   };
 
   return sendResponse(
