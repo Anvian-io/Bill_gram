@@ -10,8 +10,16 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   updatedAt: string;
+  page?: string;      // ← add this
+  section?: string;   // ← add this if your backend returns it
 }
-
+export interface ApiResponse<T> {
+  status: boolean;
+  data: T;
+  message: string;
+  statusCode: number;
+  apiVersion: string;
+}
 export interface PaginatedNotifications {
   notifications: Notification[];
   pagination: {
@@ -166,12 +174,12 @@ class WebSocketService {
 export const notificationAPI = {
   // Get notifications
   getNotifications: (params?: {
-    page?: number;
-    limit?: number;
-    unreadOnly?: boolean;
-  }) => {
-    return api.get<PaginatedNotifications>("/notifications", { params });
-  },
+  page?: number;
+  limit?: number;
+  unreadOnly?: boolean;
+}) => {
+  return api.get<ApiResponse<PaginatedNotifications>>("/notifications", { params });
+},
 
   // Mark as read
   markAsRead: (id: number) => {

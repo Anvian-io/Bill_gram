@@ -58,11 +58,12 @@ export const createProductGroup = asyncHandler(async (req, res) => {
 
   // Send notification to all users
   await createNotification({
-    title: "New Product Group Created",
-    message: `Product group "${name}" has been created by ${req.user?.username || 'Admin'}`,
-    type: "success",
-    // category: "product_group"
-  }, res);
+  title: "New Product Group Created",
+  message: `Product group "${name}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "product group",
+  page: "master"
+}, res);
 
   return sendResponse(
     res,
@@ -312,12 +313,12 @@ export const updateProductGroup = asyncHandler(async (req, res) => {
 
   // Send notification to all users
   await createNotification({
-    title: "Product Group Updated",
-    message: `Product group "${updatedProductGroup.name}" has been updated by ${req.user?.username || 'Admin'}`,
-    type: "info",
-    section: "Product Group",
-    page: "Master"
-  }, res);
+  title: "Product Group Updated",
+  message: `Product group "${updatedProductGroup.name}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "product group",
+  page: "master"
+}, res);
 
   return sendResponse(
     res,
@@ -366,12 +367,14 @@ export const deleteProductGroup = asyncHandler(async (req, res) => {
   });
 
   // Send notification to all users
-  await createNotification({
-    title: "Product Group Deleted",
-    message: `Product group "${existingGroup.name}" has been deleted by ${req.user?.username || 'Admin'}`,
-    type: "warning",
-    // category: "product_group"
-  }, res);
+  // Inside deleteProductGroup, after soft delete
+await createNotification({
+  title: "Product Group Deleted",
+  message: `Product group "${existingGroup.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "product group",
+  page: "master"
+}, res);
 
   return sendResponse(
     res,
@@ -434,11 +437,12 @@ export const bulkDeleteProductGroups = asyncHandler(async (req, res) => {
 
   // Send notification to all users
   await createNotification({
-    title: "Product Groups Bulk Deleted",
-    message: `${productGroupIds.length} product groups (${groupNames}) have been deleted by ${req.user?.username || 'Admin'}`,
-    type: "warning",
-    // category: "product_group"
-  }, res);
+  title: "Product Groups Bulk Deleted",
+  message: `${productGroupIds.length} product groups (${groupNames}) have been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "product group",
+  page: "master"
+}, res);
 
   return sendResponse(
     res,
