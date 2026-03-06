@@ -5,6 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
+import { createNotification } from "../../utils/notificationHelper.js";
 import { groupByMonth } from "./salesHelper.js";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
 import ejs from "ejs";
@@ -304,7 +305,13 @@ export const createSale = asyncHandler(async (req, res) => {
       where: { id: result.id },
       data: { invoiceNo: `SINV-${paddedId}` },
     });
-
+    await createNotification({
+  title: "New Sales Invoice Created",
+  message: `Sales invoice "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: null,
+  page: "Sales"
+}, res);
     return sendResponse(
       res,
       true,
@@ -893,7 +900,13 @@ export const updateSale = asyncHandler(async (req, res) => {
         },
       });
     });
-
+    await createNotification({
+  title: "Sales Invoice Updated",
+  message: `Sales invoice "${updatedInvoice.invoiceNo}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: null,
+  page: "Sales"
+}, res);
     return sendResponse(
       res,
       true,
@@ -961,7 +974,13 @@ export const deleteSale = asyncHandler(async (req, res) => {
 
       // Items are cascade deleted (hard delete), history remains.
     });
-
+    await createNotification({
+  title: "Sales Invoice Deleted",
+  message: `Sales invoice "${invoice.invoiceNo}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: null,
+  page: "Sales"
+}, res);
     return sendResponse(
       res,
       true,

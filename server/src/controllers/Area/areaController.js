@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Area
 export const createArea = asyncHandler(async (req, res) => {
   const {
@@ -74,7 +74,13 @@ export const createArea = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+  await createNotification({
+  title: "New Area Created",
+  message: `Area "${name}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "Area",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -390,7 +396,13 @@ export const updateArea = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+await createNotification({
+  title: "Area Updated",
+  message: `Area "${updatedArea.name}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "Area",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -455,7 +467,13 @@ export const deleteArea = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+await createNotification({
+  title: "Area Deleted",
+  message: `Area "${existingArea.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "Area",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,

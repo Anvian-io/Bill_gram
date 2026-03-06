@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Salesman
 export const createSalesman = asyncHandler(async (req, res) => {
   const { name, phoneNo, email, areaId, status = true } = req.body;
@@ -61,7 +61,13 @@ export const createSalesman = asyncHandler(async (req, res) => {
       createdAt: true,
     },
   });
-
+  await createNotification({
+  title: "New Salesman Created",
+  message: `Salesman "${name}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "Salesman",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -326,7 +332,13 @@ export const updateSalesman = asyncHandler(async (req, res) => {
       createdAt: true,
     },
   });
-
+await createNotification({
+  title: "Salesman Updated",
+  message: `Salesman "${updatedSalesman.name}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "Salesman",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -392,7 +404,13 @@ export const deleteSalesman = asyncHandler(async (req, res) => {
       deletedAt: new Date(),
     },
   });
-
+await createNotification({
+  title: "Salesman Deleted",
+  message: `Salesman "${existingSalesman.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "Salesman",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,

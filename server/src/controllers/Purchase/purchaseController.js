@@ -5,6 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
+import { createNotification } from "../../utils/notificationHelper.js";
 import ejs from "ejs";
 import puppeteer from "puppeteer";
 import path from "path";
@@ -221,7 +222,13 @@ export const createPurchase = asyncHandler(async (req, res) => {
       where: { id: result.id },
       data: { invoiceNo: `INV-${paddedId}` }, // e.g. "INV-1"
     });
-
+    await createNotification({
+  title: "New Purchase Invoice Created",
+  message: `Purchase invoice "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: null,
+  page: "Purchase"
+}, res);
     return sendResponse(
       res,
       true,
@@ -680,7 +687,13 @@ export const updatePurchase = asyncHandler(async (req, res) => {
         );
       }
     });
-
+    await createNotification({
+  title: "Purchase Invoice Updated",
+  message: `Purchase invoice "${existingInvoice.invoiceNo}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: null,
+  page: "Purchase"
+}, res);
     return sendResponse(
       res,
       true,
@@ -740,7 +753,13 @@ export const deletePurchase = asyncHandler(async (req, res) => {
       // Optionally: soft delete items? They are not soft-deleted, but cascade delete will remove them.
       // We keep history as is (audit log).
     });
-
+    await createNotification({
+  title: "Purchase Invoice Deleted",
+  message: `Purchase invoice "${invoice.invoiceNo}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: null,
+  page: "Purchase"
+}, res);
     return sendResponse(
       res,
       true,

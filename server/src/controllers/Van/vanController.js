@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Van
 export const createVan = asyncHandler(async (req, res) => {
   const { name, vehicleNo, model, area, city, status = true } = req.body;
@@ -66,7 +66,13 @@ export const createVan = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+await createNotification({
+  title: "New Van Created",
+  message: `Van "${name}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "Van",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -388,7 +394,13 @@ export const updateVan = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+await createNotification({
+  title: "Van Updated",
+  message: `Van "${updatedVan.name}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "Van",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -453,7 +465,13 @@ export const deleteVan = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+await createNotification({
+  title: "Van Deleted",
+  message: `Van "${existingVan.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "Van",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
