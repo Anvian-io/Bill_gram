@@ -58,8 +58,12 @@ router.get(
 );
 
 router.get("/sales-gst", salesController.getSalesWithGST);
+router.get("/gst/excel", salesController.downloadSalesGSTExcel);
+router.get("/b2c", salesController.getSalesB2C);
+router.get("/b2c/excel", salesController.downloadSalesB2CExcel);
 
 router.get("/sales-gst-montly", salesController.getSalesGSTMonthly);
+router.get("/gst-monthly/excel", salesController.downloadSalesGSTMonthlyExcel);
 
 // Get all sales report history with filters & pagination
 router.get("/history/all", salesController.getAllSalesReportHistory);

@@ -1648,7 +1648,7 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
     const titleRow = worksheet.getRow(1);
     titleRow.getCell(1).value = "Purchase Summary Report";
     titleRow.getCell(1).font = { size: 16, bold: true };
-    titleRow.getCell(1).alignment = { horizontal: "center" };
+    titleRow.getCell(1).alignment = { horizontal: "left" };
 
     // Shop name & date range
     worksheet.mergeCells("A2:L2");
@@ -2230,7 +2230,7 @@ export const downloadPurchaseReportHistoryExcel = asyncHandler(
     const titleRow = worksheet.getRow(1);
     titleRow.getCell(1).value = "Purchase Summary Report";
     titleRow.getCell(1).font = { size: 16, bold: true };
-    titleRow.getCell(1).alignment = { horizontal: "center" };
+    titleRow.getCell(1).alignment = { horizontal: "left" };
 
     // Shop name & date range
     worksheet.mergeCells("A2:L2");
@@ -2451,7 +2451,7 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
             phoneNo: true,
             email: true,
             address: true,
-            // GSTIN will be added here when supplier model is updated
+            gstIN: true,
           },
         },
         items: {
@@ -2561,7 +2561,7 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
       purchaseId: invoice.id,
       invoiceId: invoice.invoiceNo,
       customerName: invoice.supplier?.name || "",
-      gstin: "",
+      gstin: invoice.supplier?.gstIN || "",
       invoiceDate: invoice.invoiceDate,
       refInvoiceId: "",
       refDate: null,
@@ -2643,6 +2643,721 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
     "Purchase GST data retrieved successfully",
     statusType.OK,
   );
+});
+
+// --------------------------------------------------------------------
+// GET PURCHASE B2B REPORT (supplier-wise)
+// --------------------------------------------------------------------
+export const getPurchaseB2B = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    supplierId,
+    fromDate,
+    toDate,
+    sortBy = "invoiceDate",
+    sortOrder = "desc",
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const { page: validatedPage, limit: validatedLimit } = validatePagination(
+    page,
+    limit,
+  );
+  const skip = (validatedPage - 1) * validatedLimit;
+
+  const andConditions = [{ deleted: false }];
+  if (supplierId) {
+    andConditions.push({ supplierId: parseInt(supplierId) });
+  }
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+  const validSortFields = [
+    "invoiceNo",
+    "invoiceDate",
+    "finalAmount",
+    "grossAmount",
+    "createdAt",
+    "updatedAt",
+  ];
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+      sortOrder === "asc" ? "asc" : "desc",
+  };
+
+  const [invoices, total] = await Promise.all([
+    prisma.purchaseInvoice.findMany({
+      where,
+      skip,
+      take: validatedLimit,
+      orderBy,
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            gstIN: true,
+            address: true,
+          },
+        },
+        items: {
+          select: {
+            id: true,
+            rate: true,
+            aQty: true,
+            taxRate: true,
+            taxAmount: true,
+            product: {
+              select: {
+                gstRate: true,
+                cessRate: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.purchaseInvoice.count({ where }),
+  ]);
+
+  const numberOrZero = (value) => (Number.isFinite(value) ? value : 0);
+  const rows = invoices.flatMap((invoice) =>
+    invoice.items.map((item) => {
+      const gstRate = numberOrZero(item.taxRate) || numberOrZero(item.product?.gstRate);
+      const taxable = numberOrZero(item.rate) * numberOrZero(item.aQty);
+      const taxValue = numberOrZero(item.taxAmount) || (taxable * gstRate) / 100;
+      const cessValue = taxable * (numberOrZero(item.product?.cessRate) / 100);
+
+      return {
+        id: `${invoice.id}-${item.id}`,
+        party: invoice.supplier?.name || "",
+        gstinNumber: invoice.supplier?.gstIN || "",
+        invoiceNo: invoice.invoiceNo || "",
+        invoiceDate: invoice.invoiceDate,
+        place: invoice.supplier?.address || "",
+        invoiceType: invoice.gstDetails || "Regular",
+        finalAmount: numberOrZero(invoice.finalAmount),
+        rate: gstRate,
+        taxable,
+        taxValue,
+        cess: numberOrZero(invoice.cessInsurance) || cessValue,
+        addCess: 0,
+        apmc: 0,
+      };
+    }),
+  );
+
+  const totalPages = Math.ceil(total / validatedLimit);
+
+  return sendResponse(
+    res,
+    true,
+    {
+      rows,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: validatedPage,
+        limit: validatedLimit,
+        hasNextPage: validatedPage < totalPages,
+        hasPrevPage: validatedPage > 1,
+      },
+    },
+    "Purchase B2B data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE B2B REPORT AS EXCEL
+// --------------------------------------------------------------------
+export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
+  const {
+    supplierId,
+    fromDate,
+    toDate,
+    sortBy = "invoiceDate",
+    sortOrder = "desc",
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const andConditions = [{ deleted: false }];
+  if (supplierId) {
+    andConditions.push({ supplierId: parseInt(supplierId) });
+  }
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+  const validSortFields = [
+    "invoiceNo",
+    "invoiceDate",
+    "finalAmount",
+    "grossAmount",
+    "createdAt",
+    "updatedAt",
+  ];
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+      sortOrder === "asc" ? "asc" : "desc",
+  };
+
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy,
+    include: {
+      supplier: {
+        select: {
+          id: true,
+          name: true,
+          gstIN: true,
+          address: true,
+        },
+      },
+      items: {
+        select: {
+          id: true,
+          rate: true,
+          aQty: true,
+          taxRate: true,
+          taxAmount: true,
+          product: {
+            select: {
+              gstRate: true,
+              cessRate: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const numberOrZero = (value) => (Number.isFinite(value) ? value : 0);
+  const rows = invoices.flatMap((invoice) =>
+    invoice.items.map((item) => {
+      const gstRate = numberOrZero(item.taxRate) || numberOrZero(item.product?.gstRate);
+      const taxable = numberOrZero(item.rate) * numberOrZero(item.aQty);
+      const taxValue = numberOrZero(item.taxAmount) || (taxable * gstRate) / 100;
+      const cessValue = taxable * (numberOrZero(item.product?.cessRate) / 100);
+
+      return {
+        party: invoice.supplier?.name || "",
+        gstinNumber: invoice.supplier?.gstIN || "",
+        invoiceNo: invoice.invoiceNo || "",
+        invoiceDate: invoice.invoiceDate,
+        place: invoice.supplier?.address || "",
+        invoiceType: invoice.gstDetails || "Regular",
+        finalAmount: numberOrZero(invoice.finalAmount),
+        rate: gstRate,
+        taxable,
+        taxValue,
+        cess: numberOrZero(invoice.cessInsurance) || cessValue,
+        addCess: 0,
+        apmc: 0,
+      };
+    }),
+  );
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("B2B Report");
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  worksheet.mergeCells("A1:M1");
+  worksheet.getCell("A1").value = "B2B Report";
+  worksheet.getCell("A1").font = { bold: true, size: 14 };
+  worksheet.getCell("A1").alignment = { horizontal: "left" };
+
+  const selectedSupplier = supplierId
+    ? await prisma.supplier.findUnique({
+        where: { id: parseInt(supplierId) },
+        select: { name: true },
+      })
+    : null;
+  const reportUser = req.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { company_name: true, shop_name: true },
+      })
+    : null;
+
+  worksheet.getCell("A2").value =
+    `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
+  worksheet.getCell("A3").value = `Supplier: ${selectedSupplier?.name || "All"}`;
+  worksheet.getCell("A4").value = `From Date: ${formatDate(fromDate) || "All"}`;
+  worksheet.getCell("A5").value = `To Date: ${formatDate(toDate) || "All"}`;
+  worksheet.getCell("A6").value =
+    `Sort By: ${sortBy} (${(sortOrder || "desc").toUpperCase()})`;
+  worksheet.addRow([]);
+
+  const headers = [
+    "Party",
+    "GSTIN Number",
+    "Invoice No",
+    "Invoice Date",
+    "Place",
+    "Invoice Type",
+    "Final Amount",
+    "Rate",
+    "Taxable",
+    "Tax Value",
+    "CESS",
+    "Add Cess",
+    "APMC",
+  ];
+
+  const headerRow = worksheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFEAEAEA" },
+    };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  rows.forEach((rowData) => {
+    const row = worksheet.addRow([
+      rowData.party,
+      rowData.gstinNumber,
+      rowData.invoiceNo,
+      formatDate(rowData.invoiceDate),
+      rowData.place,
+      rowData.invoiceType,
+      rowData.finalAmount,
+      rowData.rate,
+      rowData.taxable,
+      rowData.taxValue,
+      rowData.cess,
+      rowData.addCess,
+      rowData.apmc,
+    ]);
+
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      if (colNumber >= 7 && colNumber <= 13) {
+        cell.alignment = { horizontal: "right" };
+        cell.numFmt = "#,##0.00";
+      }
+    });
+  });
+
+  worksheet.views = [{ state: "frozen", ySplit: 8 }];
+  worksheet.columns.forEach((column) => {
+    let maxLength = 12;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const val = cell.value?.toString() || "";
+      maxLength = Math.max(maxLength, val.length + 2);
+    });
+    column.width = Math.min(maxLength, 28);
+  });
+
+  const fromStr = formatDateForFilename(fromDate || new Date().toISOString());
+  const toStr = formatDateForFilename(toDate || new Date().toISOString());
+  const excelFileName = `b2b-report-${fromStr}_to_${toStr}.xlsx`;
+
+  await prisma.purchaseReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      template: "b2bReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalRows: rows.length,
+      }),
+    },
+  });
+
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${excelFileName}"`);
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE GST AS EXCEL
+// --------------------------------------------------------------------
+export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
+  const {
+    supplierId,
+    fromDate,
+    toDate,
+    sortBy = "invoiceDate",
+    sortOrder = "desc",
+  } = req.query;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const andConditions = [{ deleted: false }];
+
+  if (supplierId) {
+    andConditions.push({ supplierId: parseInt(supplierId) });
+  }
+
+  if (fromDate || toDate) {
+    const dateFilter = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start.toISOString();
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end.toISOString();
+    }
+    andConditions.push({ invoiceDate: dateFilter });
+  }
+
+  const where = { AND: andConditions };
+  const validSortFields = [
+    "invoiceNo",
+    "invoiceDate",
+    "grossAmount",
+    "finalAmount",
+    "createdAt",
+    "updatedAt",
+  ];
+  const orderBy = {
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+      sortOrder === "asc" ? "asc" : "desc",
+  };
+
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy,
+    include: {
+      supplier: {
+        select: {
+          id: true,
+          name: true,
+          gstIN: true,
+        },
+      },
+      items: {
+        select: {
+          id: true,
+          rate: true,
+          aQty: true,
+          taxRate: true,
+          taxAmount: true,
+          schAmount: true,
+          DQty: true,
+          product: {
+            select: {
+              gstRate: true,
+              cessRate: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Purchase GST");
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  const numberOrZero = (value) => (Number.isFinite(value) ? value : 0);
+
+  worksheet.mergeCells("A1:AJ1");
+  worksheet.getCell("A1").value = "Purchase GST Report";
+  worksheet.getCell("A1").font = { bold: true, size: 14 };
+  worksheet.getCell("A1").alignment = { horizontal: "left" };
+
+  const selectedSupplier = supplierId
+    ? await prisma.supplier.findUnique({
+        where: { id: parseInt(supplierId) },
+        select: { name: true },
+      })
+    : null;
+  const reportUser = req.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { company_name: true, shop_name: true },
+      })
+    : null;
+
+  worksheet.getCell("A2").value =
+    `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
+  worksheet.getCell("A3").value = `Supplier: ${selectedSupplier?.name || "All"}`;
+  worksheet.getCell("A4").value = `From Date: ${formatDate(fromDate) || "All"}`;
+  worksheet.getCell("A5").value = `To Date: ${formatDate(toDate) || "All"}`;
+  worksheet.getCell("A6").value =
+    `Sort By: ${sortBy} (${(sortOrder || "desc").toUpperCase()})`;
+
+  worksheet.addRow([]);
+
+  const headers = [
+    "Purchase ID",
+    "Date of Invoice",
+    "Party Name",
+    "Invoice No",
+    "GSTIN Number",
+    "Gross",
+    "Scheme",
+    "Discount Amount",
+    "TCS Amt",
+    "Add Less",
+    "Final Amount",
+    "Taxable 0%",
+    "INTER_STATE_TAXABLE 5%",
+    "INTER_STATE_TAXABLE 12%",
+    "INTER_STATE_TAXABLE 18%",
+    "INTER_STATE_TAXABLE 28%",
+    "INTRA_STATE_TAXABLE 5%",
+    "INTRA_STATE_TAXABLE 12%",
+    "INTRA_STATE_TAXABLE 18%",
+    "INTRA_STATE_TAXABLE 28%",
+    "IGST 5%",
+    "IGST 12%",
+    "IGST 18%",
+    "IGST 28%",
+    "SGST 2.5%",
+    "SGST 6%",
+    "SGST 9%",
+    "SGST 14%",
+    "CGST 2.5%",
+    "CGST 6%",
+    "CGST 9%",
+    "CGST 14%",
+    "CESS",
+    "Add Cess",
+    "APMC",
+    "Remark",
+  ];
+
+  const headerRow = worksheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFEAEAEA" },
+    };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  invoices.forEach((invoice) => {
+    const byRateTaxable = { 5: 0, 12: 0, 18: 0, 28: 0 };
+    const byRateIGST = { 5: 0, 12: 0, 18: 0, 28: 0 };
+    const byRateSGST = { 5: 0, 12: 0, 18: 0, 28: 0 };
+    const byRateCGST = { 5: 0, 12: 0, 18: 0, 28: 0 };
+    let cessTotal = 0;
+    let schemeTotal = 0;
+
+    invoice.items.forEach((item) => {
+      const gstRate = [5, 12, 18, 28].includes(Number(item.taxRate))
+        ? Number(item.taxRate)
+        : [5, 12, 18, 28].includes(Number(item.product?.gstRate))
+          ? Number(item.product?.gstRate)
+          : 0;
+
+      const taxable = numberOrZero(item.rate) * numberOrZero(item.aQty);
+      const taxAmount =
+        numberOrZero(item.taxAmount) ||
+        (gstRate > 0 ? (taxable * gstRate) / 100 : 0);
+      const cessAmount =
+        taxable * (numberOrZero(item.product?.cessRate) / 100);
+
+      if (gstRate && byRateTaxable[gstRate] !== undefined) {
+        byRateTaxable[gstRate] += taxable;
+        byRateSGST[gstRate] += taxAmount / 2;
+        byRateCGST[gstRate] += taxAmount / 2;
+      }
+
+      cessTotal += cessAmount;
+      schemeTotal += numberOrZero(item.schAmount);
+    });
+
+    const discountAmount =
+      (numberOrZero(invoice.finalAmount) * numberOrZero(invoice.discountPercent)) /
+      100;
+
+    const row = worksheet.addRow([
+      invoice.id,
+      formatDate(invoice.invoiceDate),
+      invoice.supplier?.name || "",
+      invoice.invoiceNo || "",
+      invoice.supplier?.gstIN || "",
+      numberOrZero(invoice.grossAmount),
+      numberOrZero(invoice.scheme1) || schemeTotal,
+      discountAmount,
+      0,
+      numberOrZero(invoice.amountAdd),
+      numberOrZero(invoice.finalAmount),
+      0,
+      0,
+      0,
+      0,
+      0,
+      numberOrZero(byRateTaxable[5]),
+      numberOrZero(byRateTaxable[12]),
+      numberOrZero(byRateTaxable[18]),
+      numberOrZero(byRateTaxable[28]),
+      numberOrZero(byRateIGST[5]),
+      numberOrZero(byRateIGST[12]),
+      numberOrZero(byRateIGST[18]),
+      numberOrZero(byRateIGST[28]),
+      numberOrZero(byRateSGST[5]),
+      numberOrZero(byRateSGST[12]),
+      numberOrZero(byRateSGST[18]),
+      numberOrZero(byRateSGST[28]),
+      numberOrZero(byRateCGST[5]),
+      numberOrZero(byRateCGST[12]),
+      numberOrZero(byRateCGST[18]),
+      numberOrZero(byRateCGST[28]),
+      numberOrZero(invoice.cessInsurance) || cessTotal,
+      0,
+      0,
+      invoice.remarks || "",
+    ]);
+
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      if (colNumber >= 6 && colNumber <= 35) {
+        cell.alignment = { horizontal: "right" };
+        cell.numFmt = "#,##0.00";
+      }
+    });
+
+  });
+
+  worksheet.views = [{ state: "frozen", ySplit: 7 }];
+  worksheet.columns.forEach((column) => {
+    let maxLength = 12;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const val = cell.value?.toString() || "";
+      maxLength = Math.max(maxLength, val.length + 2);
+    });
+    column.width = Math.min(maxLength, 28);
+  });
+
+  const fromStr = formatDateForFilename(fromDate || new Date().toISOString());
+  const toStr = formatDateForFilename(toDate || new Date().toISOString());
+  const excelFileName = `purchase-gst-${fromStr}_to_${toStr}.xlsx`;
+
+  await prisma.purchaseReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      template: "purchaseGSTReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalInvoices: invoices.length,
+      }),
+    },
+  });
+
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${excelFileName}"`);
+
+  await workbook.xlsx.write(res);
+  res.end();
 });
 
 // --------------------------------------------------------------------
@@ -2793,6 +3508,281 @@ export const getPurchaseGSTMonthly = asyncHandler(async (req, res) => {
     "Purchase GST monthly report retrieved successfully",
     statusType.OK,
   );
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE GST MONTHLY REPORT AS EXCEL
+// --------------------------------------------------------------------
+export const downloadPurchaseGSTMonthlyExcel = asyncHandler(async (req, res) => {
+  const { fromDate, toDate } = req.query;
+
+  if (!fromDate || !toDate) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Both fromDate and toDate are required",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const startDate = new Date(fromDate);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(toDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const where = {
+    deleted: false,
+    invoiceDate: {
+      gte: startDate.toISOString(),
+      lte: endDate.toISOString(),
+    },
+  };
+
+  const invoices = await prisma.purchaseInvoice.findMany({
+    where,
+    orderBy: { invoiceDate: "asc" },
+    include: {
+      supplier: {
+        select: { id: true, name: true, phoneNo: true, email: true, address: true },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              productCode: true,
+              description: true,
+              hsnSacCode: true,
+              gstRate: true,
+              gstInclusive: true,
+              cessRate: true,
+              unit: { select: { name: true, symbol: true } },
+            },
+          },
+          batch: {
+            select: {
+              id: true,
+              batchNo: true,
+              mrp: true,
+              basicPrice: true,
+              purchaseRate: true,
+            },
+          },
+        },
+      },
+      user: { select: { id: true, shop_name: true, company_name: true } },
+    },
+  });
+
+  const monthlyData = groupByMonth(invoices, "purchase");
+  const grandTotals = monthlyData.reduce(
+    (acc, month) => {
+      acc.totalGrossAmount += month.totalGrossAmount;
+      acc.totalSchemeAmount += month.totalSchemeAmount;
+      acc.totalDiscountAmount += month.totalDiscountAmount;
+      acc.totalDamageAmount += month.totalDamageAmount;
+      acc.totalTaxableValue += month.totalTaxableValue;
+      acc.totalCGST += month.totalCGST;
+      acc.totalSGST += month.totalSGST;
+      acc.totalIGST += month.totalIGST;
+      acc.totalCess += month.totalCess;
+      acc.totalAddAmount += month.totalAddAmount;
+      acc.totalCreditAmount += month.totalCreditAmount;
+      acc.totalFinalAmount += month.totalFinalAmount;
+      acc.totalInvoices += month.invoiceCount;
+      return acc;
+    },
+    {
+      totalGrossAmount: 0,
+      totalSchemeAmount: 0,
+      totalDiscountAmount: 0,
+      totalDamageAmount: 0,
+      totalTaxableValue: 0,
+      totalCGST: 0,
+      totalSGST: 0,
+      totalIGST: 0,
+      totalCess: 0,
+      totalAddAmount: 0,
+      totalCreditAmount: 0,
+      totalFinalAmount: 0,
+      totalInvoices: 0,
+    },
+  );
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Purchase Monthly GST");
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+  const formatMonthYear = (monthKey) => {
+    try {
+      const [year, month] = monthKey.split("-");
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    } catch {
+      return monthKey;
+    }
+  };
+
+  worksheet.mergeCells("A1:N1");
+  worksheet.getCell("A1").value = "Purchase Monthly GST Report";
+  worksheet.getCell("A1").font = { bold: true, size: 14 };
+  worksheet.getCell("A1").alignment = { horizontal: "left" };
+
+  const reportUser = req.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { company_name: true, shop_name: true },
+      })
+    : null;
+
+  worksheet.getCell("A2").value =
+    `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
+  worksheet.getCell("A3").value = `From Date: ${formatDate(fromDate)}`;
+  worksheet.getCell("A4").value = `To Date: ${formatDate(toDate)}`;
+  worksheet.addRow([]);
+
+  const headers = [
+    "Month",
+    "Invoices",
+    "Gross Amount",
+    "Scheme",
+    "Discount",
+    "Damage",
+    "Taxable Value",
+    "CGST",
+    "SGST",
+    "IGST",
+    "Cess",
+    "Add Amt",
+    "Credit",
+    "Final Amount",
+  ];
+
+  const headerRow = worksheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEAEAEA" } };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  monthlyData.forEach((month) => {
+    const row = worksheet.addRow([
+      formatMonthYear(month.monthKey),
+      month.invoiceCount,
+      month.totalGrossAmount,
+      month.totalSchemeAmount,
+      month.totalDiscountAmount,
+      month.totalDamageAmount,
+      month.totalTaxableValue,
+      month.totalCGST,
+      month.totalSGST,
+      month.totalIGST,
+      month.totalCess,
+      month.totalAddAmount,
+      month.totalCreditAmount,
+      month.totalFinalAmount,
+    ]);
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      if (colNumber >= 3 && colNumber <= 14) {
+        cell.alignment = { horizontal: "right" };
+        cell.numFmt = "#,##0.00";
+      }
+    });
+  });
+
+  const totalRow = worksheet.addRow([
+    "GRAND TOTAL",
+    grandTotals.totalInvoices,
+    grandTotals.totalGrossAmount,
+    grandTotals.totalSchemeAmount,
+    grandTotals.totalDiscountAmount,
+    grandTotals.totalDamageAmount,
+    grandTotals.totalTaxableValue,
+    grandTotals.totalCGST,
+    grandTotals.totalSGST,
+    grandTotals.totalIGST,
+    grandTotals.totalCess,
+    grandTotals.totalAddAmount,
+    grandTotals.totalCreditAmount,
+    grandTotals.totalFinalAmount,
+  ]);
+  totalRow.font = { bold: true };
+  totalRow.eachCell((cell, colNumber) => {
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+    if (colNumber >= 3 && colNumber <= 14) {
+      cell.alignment = { horizontal: "right" };
+      cell.numFmt = "#,##0.00";
+    }
+  });
+
+  worksheet.views = [{ state: "frozen", ySplit: 6 }];
+  worksheet.columns.forEach((column) => {
+    let maxLength = 12;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const val = cell.value?.toString() || "";
+      maxLength = Math.max(maxLength, val.length + 2);
+    });
+    column.width = Math.min(maxLength, 24);
+  });
+
+  const fromStr = formatDateForFilename(fromDate);
+  const toStr = formatDateForFilename(toDate);
+  const excelFileName = `purchase-monthly-gst-${fromStr}_to_${toStr}.xlsx`;
+
+  await prisma.purchaseReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      template: "purchaseMonthlyGST.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: { fromDate, toDate },
+        totalMonths: monthlyData.length,
+      }),
+    },
+  });
+
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${excelFileName}"`);
+  await workbook.xlsx.write(res);
+  res.end();
 });
 
 // --------------------------------------------------------------------
@@ -3126,7 +4116,7 @@ export const downloadPurchaseRegisterExcel = asyncHandler(async (req, res) => {
   const titleRow = worksheet.getRow(1);
   titleRow.getCell(1).value = "Purchase Register";
   titleRow.getCell(1).font = { size: 16, bold: true };
-  titleRow.getCell(1).alignment = { horizontal: "center" };
+  titleRow.getCell(1).alignment = { horizontal: "left" };
 
   // Shop & date range
   worksheet.mergeCells("A2:G2");
@@ -3285,5 +4275,9 @@ export const purchaseController = {
   downloadPurchaseReportHistoryPDF,
   downloadPurchaseReportHistoryExcel,
   getPurchaseWithGST,
+  getPurchaseB2B,
+  downloadPurchaseB2BExcel,
+  downloadPurchaseGSTExcel,
   getPurchaseGSTMonthly,
+  downloadPurchaseGSTMonthlyExcel,
 };

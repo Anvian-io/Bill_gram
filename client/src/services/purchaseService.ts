@@ -13,6 +13,8 @@ import type {
   PaginatedHistoryResponse,
   PurchaseGSTFilters,
   PurchaseGSTResponse,
+  PurchaseB2BFilters,
+  PurchaseB2BResponse,
   PurchaseMonthlyFilters,
   PurchaseMonthlyGSTResponse,
 } from "@/types/purchase";
@@ -443,6 +445,64 @@ export const purchaseService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading purchase GST Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // ========== Purchase B2B Report ==========
+  async getPurchaseB2B(
+    filters?: PurchaseB2BFilters,
+  ): Promise<PurchaseB2BResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters) {
+        if (filters.page) params.append("page", filters.page.toString());
+        if (filters.limit) params.append("limit", filters.limit.toString());
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<ApiResponse<PurchaseB2BResponse>>(
+        `/purchases/b2b?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase B2B data:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseB2BExcel(
+    filters?: Omit<PurchaseB2BFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(`/purchases/b2b/excel?${params.toString()}`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase B2B Excel:", message);
       throw new Error(message);
     }
   },

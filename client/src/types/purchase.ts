@@ -420,6 +420,45 @@ export interface PurchaseGSTFilters {
   limit?: number;
 }
 
+export interface PurchaseB2BRow {
+  id: string;
+  party: string;
+  gstinNumber: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  place: string;
+  invoiceType: string;
+  finalAmount: number;
+  rate: number;
+  taxable: number;
+  taxValue: number;
+  cess: number;
+  addCess: number;
+  apmc: number;
+}
+
+export interface PurchaseB2BFilters {
+  supplierId?: number;
+  fromDate?: Date;
+  toDate?: Date;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface PurchaseB2BResponse {
+  rows: PurchaseB2BRow[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 export interface PurchaseMonthlyData {
   cessAmount: number;
   monthKey: string; // Format: "YYYY-MM"

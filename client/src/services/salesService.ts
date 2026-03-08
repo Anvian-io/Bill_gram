@@ -19,6 +19,8 @@ import type {
   SalesmanWisePDFData,
   SalesGSTFilters,
   SalesGSTResponse,
+  SalesB2CFilters,
+  SalesB2CResponse,
   SalesMonthlyFilters,
   SalesMonthlyGSTResponse,
   PaginatedSalesHistoryResponse,
@@ -835,6 +837,67 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading sales GST Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get sales B2C summary data with filters
+  async getSalesB2C(filters: SalesB2CFilters): Promise<SalesB2CResponse> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get<ApiResponse<SalesB2CResponse>>(
+        `/sales/b2c?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching sales B2C data:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download sales B2C Excel report
+  async downloadSalesB2CExcel(filters: SalesB2CFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(
+        `/sales/b2c/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading sales B2C Excel:", message);
       throw new Error(message);
     }
   },

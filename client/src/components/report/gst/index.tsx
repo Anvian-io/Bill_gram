@@ -196,8 +196,8 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
               <PurchaseGST isCollapsed={isCollapsed} />
             )}
             {activeTab === "salesGst" && <SalesGST isCollapsed={isCollapsed} />}
-            {activeTab === "b2b" && <B2B />}
-            {activeTab === "b2c" && <B2C />}
+            {activeTab === "b2b" && <B2B isCollapsed={isCollapsed} />}
+            {activeTab === "b2c" && <B2C isCollapsed={isCollapsed} />}
             {activeTab === "purchaseMonthlyGst" && (
               <PurchaseMonthlyGST isCollapsed={isCollapsed} />
             )}

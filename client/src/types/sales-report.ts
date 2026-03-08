@@ -402,6 +402,39 @@ export interface SalesGSTFilters {
   limit?: number;
 }
 
+export interface SalesB2CRow {
+  id: string;
+  type: string;
+  place: string;
+  rate: number;
+  taxable: number;
+  taxAmt: number;
+  cess: number;
+  addCess: number;
+  apmc: number;
+}
+
+export interface SalesB2CSummary {
+  taxable: number;
+  taxAmt: number;
+  cess: number;
+  addCess: number;
+  apmc: number;
+}
+
+export interface SalesB2CFilters {
+  fromDate?: Date;
+  toDate?: Date;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface SalesB2CResponse {
+  rows: SalesB2CRow[];
+  summary: SalesB2CSummary;
+  count: number;
+}
+
 // For SalesMonthlyGST (aggregated monthly view)
 export interface SalesMonthlyData {
   monthKey: string; // Format: "YYYY-MM"
