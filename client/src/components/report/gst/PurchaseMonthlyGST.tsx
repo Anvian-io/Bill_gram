@@ -279,7 +279,7 @@ export default function PurchaseMonthlyGST({
         className={`mx-auto ${
           isCollapsed
             ? "max-w-5xl lg:max-w-2xl xl:max-w-7xl 2xl:max-w-9xl"
-            : "max-w-9xl lg:max-w-xl xl:max-w-5xl 2xl:max-w-10xl"
+            : "max-w-9xl lg:max-w-xl xl:max-w-4xl 2xl:max-w-6xl"
         }`}
       >
         {/* Header Section */}

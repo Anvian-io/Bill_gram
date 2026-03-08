@@ -307,7 +307,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
         className={`mx-auto ${
           isCollapsed
             ? "max-w-5xl lg:max-w-2xl xl:max-w-7xl 1xl:max-w-8xl 2xl:max-w-9xl"
-            : "max-w-9xl lg:max-w-xl xl:max-w-5xl 1xl:max-w-5xl 2xl:max-w-10xl"
+            : "max-w-9xl lg:max-w-xl xl:max-w-4xl 2xl:max-w-6xl"
         }`}
       >
         {/* Header Section */}
