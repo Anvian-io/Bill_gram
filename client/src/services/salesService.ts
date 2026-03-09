@@ -21,6 +21,8 @@ import type {
   SalesGSTResponse,
   SalesB2CFilters,
   SalesB2CResponse,
+  HSNSummaryFilters,
+  HSNSummaryResponse,
   SalesMonthlyFilters,
   SalesMonthlyGSTResponse,
   PaginatedSalesHistoryResponse,
@@ -870,6 +872,43 @@ export const salesService = {
     }
   },
 
+  // Download GSTR1 Excel report
+  async downloadGSTR1Excel(
+    filters: Omit<SalesGSTFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.customerId) {
+        params.append("customerId", filters.customerId.toString());
+      }
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(
+        `/sales/gstr1/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading GSTR1 Excel:", message);
+      throw new Error(message);
+    }
+  },
+
   // Download sales B2C Excel report
   async downloadSalesB2CExcel(filters: SalesB2CFilters): Promise<Blob> {
     try {
@@ -898,6 +937,55 @@ export const salesService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading sales B2C Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Get HSN summary report
+  async getHSNSummary(filters: HSNSummaryFilters): Promise<HSNSummaryResponse> {
+    try {
+      const params = new URLSearchParams();
+      params.append("source", filters.source || "all");
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+
+      const response = await apiClient.get<ApiResponse<HSNSummaryResponse>>(
+        `/sales/hsn-summary?${params.toString()}`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching HSN summary:", message);
+      throw new Error(message);
+    }
+  },
+
+  // Download HSN summary report as Excel
+  async downloadHSNSummaryExcel(filters: HSNSummaryFilters): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      params.append("source", filters.source || "all");
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate.toISOString());
+      }
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate.toISOString());
+      }
+
+      const response = await apiClient.get(
+        `/sales/hsn-summary/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading HSN summary Excel:", message);
       throw new Error(message);
     }
   },

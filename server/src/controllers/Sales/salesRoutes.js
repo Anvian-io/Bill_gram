@@ -59,6 +59,9 @@ router.get(
 
 router.get("/sales-gst", salesController.getSalesWithGST);
 router.get("/gst/excel", salesController.downloadSalesGSTExcel);
+router.get("/gstr1/excel", salesController.downloadGSTR1Excel);
+router.get("/hsn-summary", salesController.getHSNSummaryReport);
+router.get("/hsn-summary/excel", salesController.downloadHSNSummaryExcel);
 router.get("/b2c", salesController.getSalesB2C);
 router.get("/b2c/excel", salesController.downloadSalesB2CExcel);
 

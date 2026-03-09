@@ -435,6 +435,39 @@ export interface SalesB2CResponse {
   count: number;
 }
 
+export interface HSNSummaryRow {
+  id: string;
+  goodsOrService: string;
+  hsnSac: string;
+  tax: number;
+  uqc: string;
+  totalQty: number;
+  totalValue: number;
+  taxable: number;
+  igst: number;
+  cgstAmt: number;
+  sgstAmt: number;
+  cess: number;
+  addCess: number;
+  apmc: number;
+}
+
+export interface HSNSummaryFilters {
+  source?: "all" | "sales" | "purchase";
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+export interface HSNSummaryResponse {
+  rows: HSNSummaryRow[];
+  count: number;
+  source: "all" | "sales" | "purchase";
+  filters: {
+    fromDate: string | null;
+    toDate: string | null;
+  };
+}
+
 // For SalesMonthlyGST (aggregated monthly view)
 export interface SalesMonthlyData {
   monthKey: string; // Format: "YYYY-MM"

@@ -480,6 +480,35 @@ export const purchaseService = {
     }
   },
 
+  // Download GSTR2 Excel report
+  async downloadGSTR2Excel(
+    filters?: Omit<PurchaseGSTFilters, "page" | "limit">,
+  ): Promise<Blob> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.supplierId)
+          params.append("supplierId", filters.supplierId.toString());
+        if (filters.fromDate)
+          params.append("fromDate", filters.fromDate.toISOString());
+        if (filters.toDate)
+          params.append("toDate", filters.toDate.toISOString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      }
+
+      const response = await apiClient.get(
+        `/purchases/gstr2/excel?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading GSTR2 Excel:", message);
+      throw new Error(message);
+    }
+  },
+
   async downloadPurchaseB2BExcel(
     filters?: Omit<PurchaseB2BFilters, "page" | "limit">,
   ): Promise<Blob> {

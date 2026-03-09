@@ -43,6 +43,7 @@ router.get(
 // GET /api/purchase/gst - Get all purchases with GST details (paginated)
 router.get("/purchase-gst", purchaseController.getPurchaseWithGST);
 router.get("/purchase-gst/excel", purchaseController.downloadPurchaseGSTExcel);
+router.get("/gstr2/excel", purchaseController.downloadGSTR2Excel);
 
 router.get("/purchase-gst-monthly", purchaseController.getPurchaseGSTMonthly);
 router.get(

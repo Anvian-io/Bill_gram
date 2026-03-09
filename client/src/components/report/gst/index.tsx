@@ -5,6 +5,9 @@ import B2B from "./B2B";
 import B2C from "./B2C";
 import PurchaseMonthlyGST from "./PurchaseMonthlyGST";
 import SalesMonthlyGST from "./SalesMonthlyGST";
+import GSTR1 from "./GSTR1";
+import GSTR2 from "./GSTR2";
+import HSNSummary from "./HSNSummary";
 
 export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
   const [activeTab, setActiveTab] = useState<
@@ -14,6 +17,9 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
     | "b2c"
     | "purchaseMonthlyGst"
     | "salesMonthlyGst"
+    | "gstr1"
+    | "gstr2"
+    | "hsnSummary"
   >("purchaseGst");
 
   // Refs for measuring tab positions
@@ -24,6 +30,9 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
   const b2cTabRef = useRef<HTMLButtonElement>(null);
   const purchaseMonthlyGstTabRef = useRef<HTMLButtonElement>(null);
   const salesMonthlyGstTabRef = useRef<HTMLButtonElement>(null);
+  const gstr1TabRef = useRef<HTMLButtonElement>(null);
+  const gstr2TabRef = useRef<HTMLButtonElement>(null);
+  const hsnSummaryTabRef = useRef<HTMLButtonElement>(null);
 
   // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -43,6 +52,12 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
         return purchaseMonthlyGstTabRef;
       case "salesMonthlyGst":
         return salesMonthlyGstTabRef;
+      case "gstr1":
+        return gstr1TabRef;
+      case "gstr2":
+        return gstr2TabRef;
+      case "hsnSummary":
+        return hsnSummaryTabRef;
       default:
         return purchaseGstTabRef;
     }
@@ -188,6 +203,54 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
             >
               Sales Monthly GST
             </button>
+
+            <button
+              ref={gstr1TabRef}
+              onClick={() => setActiveTab("gstr1")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none inline-block
+                ${
+                  activeTab === "gstr1"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              GSTR1
+            </button>
+
+            <button
+              ref={gstr2TabRef}
+              onClick={() => setActiveTab("gstr2")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none inline-block
+                ${
+                  activeTab === "gstr2"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              GSTR2
+            </button>
+
+            <button
+              ref={hsnSummaryTabRef}
+              onClick={() => setActiveTab("hsnSummary")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none inline-block
+                ${
+                  activeTab === "hsnSummary"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              HSN Summary
+            </button>
           </div>
 
           {/* Tab content */}
@@ -202,6 +265,9 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
               <PurchaseMonthlyGST isCollapsed={isCollapsed} />
             )}
             {activeTab === "salesMonthlyGst" && <SalesMonthlyGST isCollapsed={isCollapsed} />}
+            {activeTab === "gstr1" && <GSTR1 isCollapsed={isCollapsed} />}
+            {activeTab === "gstr2" && <GSTR2 isCollapsed={isCollapsed} />}
+            {activeTab === "hsnSummary" && <HSNSummary isCollapsed={isCollapsed} />}
           </div>
         </div>
       </div>
