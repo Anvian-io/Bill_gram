@@ -14,6 +14,7 @@ import { dirname } from "path";
 import ExcelJS from "exceljs";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
 import { groupByMonth } from "./purchaseHelper.js";
+import QRCode from "qrcode";
 /**
  * Helper: Update batch stock
  * @param {PrismaClient} prisma
@@ -4607,6 +4608,282 @@ export const downloadPurchaseRegisterExcel = asyncHandler(async (req, res) => {
 });
 
 // --------------------------------------------------------------------
+// GET PURCHASE INVOICE BILL PREVIEW (with UPI QR code)
+// --------------------------------------------------------------------
+const getPurchaseBillPreviewPayload = async (prisma, purchaseId) => {
+  const purchase = await prisma.purchaseInvoice.findFirst({
+    where: {
+      id: purchaseId,
+      deleted: false,
+    },
+    include: {
+      supplier: {
+        select: {
+          id: true,
+          name: true,
+          phoneNo: true,
+          email: true,
+          address: true,
+          gstIN: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          username: true,
+          company_name: true,
+          shop_name: true,
+          phone: true,
+          email: true,
+          upi_id: true,
+          signature: true,
+          company_logo: true,
+          address: true,
+        },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              productCode: true,
+              description: true,
+              productBrand: true,
+              unit: true,
+              hsnSacCode: true,
+            },
+          },
+          batch: {
+            select: {
+              id: true,
+              batchNo: true,
+              barcode: true,
+              mrp: true,
+              purchaseRate: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!purchase) return null;
+
+  const taxBreakdownMap = new Map();
+  (purchase.items || []).forEach((item) => {
+    const totalRate = Number(item.taxRate) || 0;
+    const totalTaxAmount = Number(item.taxAmount) || 0;
+    if (totalRate <= 0 || totalTaxAmount <= 0) return;
+
+    const halfRate = Number((totalRate / 2).toFixed(2));
+    const prev = taxBreakdownMap.get(halfRate) || {
+      rate: halfRate,
+      cgstAmount: 0,
+      sgstAmount: 0,
+      totalTaxAmount: 0,
+    };
+
+    prev.cgstAmount += totalTaxAmount / 2;
+    prev.sgstAmount += totalTaxAmount / 2;
+    prev.totalTaxAmount += totalTaxAmount;
+    taxBreakdownMap.set(halfRate, prev);
+  });
+
+  const taxBreakdown = Array.from(taxBreakdownMap.values())
+    .map((entry) => ({
+      rate: entry.rate,
+      cgstAmount: Number(entry.cgstAmount.toFixed(2)),
+      sgstAmount: Number(entry.sgstAmount.toFixed(2)),
+      totalTaxAmount: Number(entry.totalTaxAmount.toFixed(2)),
+    }))
+    .sort((a, b) => a.rate - b.rate);
+
+  let upiQrCode = null;
+  if (purchase.user?.upi_id) {
+    const payeeName = encodeURIComponent(
+      purchase.user.company_name || purchase.user.shop_name || "Payee",
+    );
+    const upiString = `upi://pay?pa=${purchase.user.upi_id}&pn=${payeeName}&am=${purchase.finalAmount}&cu=INR`;
+
+    try {
+      upiQrCode = await QRCode.toDataURL(upiString);
+    } catch (qrError) {
+      console.error("QR generation error:", qrError);
+    }
+  }
+
+  return {
+    purchase,
+    taxBreakdown,
+    upiQrCode,
+    signature: purchase.user?.signature || null,
+    companyLogo: purchase.user?.company_logo || null,
+  };
+};
+
+const getPublicImageUrl = (req, imagePath) => {
+  if (!imagePath) return null;
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:")
+  ) {
+    return imagePath;
+  }
+
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  if (imagePath.startsWith("/")) {
+    return `${baseUrl}${imagePath}`;
+  }
+  if (imagePath.startsWith("api/")) {
+    return `${baseUrl}/${imagePath}`;
+  }
+  return `${baseUrl}/api/images/${imagePath}`;
+};
+
+export const getPurchaseBillPreview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const purchaseId = parseInt(id, 10);
+  if (Number.isNaN(purchaseId)) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid purchase invoice id",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const responseData = await getPurchaseBillPreviewPayload(prisma, purchaseId);
+  if (!responseData) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Purchase invoice not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  return sendResponse(
+    res,
+    true,
+    responseData,
+    "Bill preview data retrieved successfully",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// DOWNLOAD PURCHASE INVOICE BILL PREVIEW AS PDF
+// --------------------------------------------------------------------
+export const downloadPurchaseBillPreviewPDF = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const purchaseId = parseInt(id, 10);
+  if (Number.isNaN(purchaseId)) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid purchase invoice id",
+      statusType.BAD_REQUEST,
+    );
+  }
+
+  const previewData = await getPurchaseBillPreviewPayload(prisma, purchaseId);
+  if (!previewData) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Purchase invoice not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const templateName = "purchaseInvoicePreview.ejs";
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const templatePath = path.join(
+    __dirname,
+    "../../views/purchase",
+    templateName,
+  );
+
+  const { purchase, upiQrCode, taxBreakdown } = previewData;
+
+  const companyName =
+    purchase.user?.company_name || purchase.user?.shop_name || "Purchase Invoice";
+
+  const html = await ejs.renderFile(templatePath, {
+    purchase,
+    taxBreakdown: taxBreakdown || [],
+    upiQrCode,
+    companyName,
+    companyAddress: purchase.user?.address || "",
+    companyPhone: purchase.user?.phone || "",
+    supplierName: purchase.supplier?.name || "",
+    supplierAddress: purchase.supplier?.address || "",
+    supplierPhone: purchase.supplier?.phoneNo || "",
+    supplierGstin: purchase.supplier?.gstIN || "",
+    companyLogoUrl: getPublicImageUrl(req, purchase.user?.company_logo || null),
+    signatureUrl: getPublicImageUrl(req, purchase.user?.signature || null),
+    formatDate: (dateStr) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-GB");
+      } catch {
+        return "";
+      }
+    },
+    formatAmount: (value) => Number(value || 0).toFixed(2),
+  });
+
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const footerTemplate = `
+    <div style="font-size: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px;">
+      <span>${companyName}</span>
+      <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+    </div>
+  `;
+
+  const pdfBuffer = await page.pdf({
+    width: "297mm",
+    height: "210mm",
+    printBackground: true,
+    margin: { top: "0.5cm", bottom: "0.8cm", left: "0.4cm", right: "0.4cm" },
+    displayHeaderFooter: true,
+    headerTemplate: "<div></div>",
+    footerTemplate,
+  });
+
+  await browser.close();
+
+  const safeInvoiceNo = (purchase.invoiceNo || `purchase-${purchase.id}`)
+    .toString()
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
+  const pdfFileName = `purchase-invoice-${safeInvoiceNo}.pdf`;
+
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${pdfFileName}"`);
+  res.setHeader("Content-Length", pdfBuffer.length);
+
+  return res.end(pdfBuffer, "binary");
+});
+
+// --------------------------------------------------------------------
 // Export all functions as a controller object (like areaController)
 // --------------------------------------------------------------------
 export const purchaseController = {
@@ -4635,4 +4912,6 @@ export const purchaseController = {
   downloadGSTR2Excel,
   getPurchaseGSTMonthly,
   downloadPurchaseGSTMonthlyExcel,
+  getPurchaseBillPreview,
+  downloadPurchaseBillPreviewPDF,
 };

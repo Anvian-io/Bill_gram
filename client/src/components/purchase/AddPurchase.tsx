@@ -77,6 +77,7 @@ import { gst_details } from "@/store/dropdown_data/gst_details";
 import { purchaseService } from "@/services/purchaseService";
 import { containerVariants, itemVariants } from "@/components/FramerVariants";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -213,6 +214,8 @@ export default function AddPurchase() {
   const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
     null,
   );
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
@@ -698,12 +701,12 @@ export default function AddPurchase() {
   };
 
   const handleBillPreview = () => {
-    const idToPreview =
-      purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId;
-    if (idToPreview) {
-      // Open bill preview in new tab or navigate to preview route
-      window.open(`/purchases/preview/${idToPreview}`, "_blank");
-      // Alternative: navigate(`/purchases/preview/${idToPreview}`);
+    const idToPreview = Number(
+      purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId || 0,
+    );
+    if (idToPreview > 0) {
+      setPreviewPurchaseId(idToPreview);
+      setIsPreviewOpen(true);
     }
   };
 
@@ -1852,6 +1855,12 @@ export default function AddPurchase() {
           onBatchSelect={handleBatchSelect}
         />
       )}
+
+      <PurchaseInvoicePreview
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        purchaseId={previewPurchaseId}
+      />
     </motion.div>
   );
 }

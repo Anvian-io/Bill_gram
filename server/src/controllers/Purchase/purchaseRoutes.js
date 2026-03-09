@@ -58,6 +58,9 @@ router.get("/history/all", purchaseController.getAllPurchaseReportHistory);
 router.get("/history/:id/pdf", purchaseController.downloadPurchaseReportHistoryPDF);
 router.get("/history/:id/excel", purchaseController.downloadPurchaseReportHistoryExcel);
 
+router.get("/:id/bill-preview", purchaseController.getPurchaseBillPreview);
+router.get("/:id/bill-preview/pdf", purchaseController.downloadPurchaseBillPreviewPDF);
+
 // Get single purchase by ID
 router.get("/:id", purchaseController.getPurchaseById);
 

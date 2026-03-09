@@ -17,6 +17,7 @@ import type {
   PurchaseB2BResponse,
   PurchaseMonthlyFilters,
   PurchaseMonthlyGSTResponse,
+  PurchaseBillPreviewData,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -581,6 +582,32 @@ export const purchaseService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error downloading monthly GST Excel:", message);
+      throw new Error(message);
+    }
+  },
+
+  async downloadPurchaseBillPreviewPDF(id: number): Promise<Blob> {
+    try {
+      const response = await apiClient.get(`/purchases/${id}/bill-preview/pdf`, {
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error downloading purchase bill preview PDF:", message);
+      throw new Error(message);
+    }
+  },
+
+  async getPurchaseBillPreview(id: number): Promise<PurchaseBillPreviewData> {
+    try {
+      const response = await apiClient.get<ApiResponse<PurchaseBillPreviewData>>(
+        `/purchases/${id}/bill-preview`,
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching purchase bill preview:", message);
       throw new Error(message);
     }
   },

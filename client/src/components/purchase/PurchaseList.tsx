@@ -25,6 +25,7 @@ import {
   ChevronsUpDown,
   Check,
   Calendar,
+  FileText,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,6 +74,7 @@ import type {
   PurchaseFilters,
 } from "@/types/purchase";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -128,6 +130,8 @@ export default function Purchase() {
   );
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
   // Filters state – added toDate
   const [filters, setFilters] = useState<PurchaseFilters>({
@@ -391,6 +395,11 @@ export default function Purchase() {
   const handleRefresh = () => {
     fetchPurchases();
     toast.info("Refreshing purchase data...");
+  };
+
+  const handlePreview = (purchaseId: number) => {
+    setPreviewPurchaseId(purchaseId);
+    setIsPreviewOpen(true);
   };
 
   // --------------------------------------------------------------------
@@ -1130,6 +1139,15 @@ export default function Purchase() {
                                   >
                                     <Trash2 className="h-4 w-4 text-red-600" />
                                   </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePreview(purchase.id)}
+                                    className="h-8 w-8 hover:bg-gray-100"
+                                    disabled={isLoading}
+                                  >
+                                    <FileText className="h-4 w-4 text-gray-600" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1167,6 +1185,12 @@ export default function Purchase() {
         editingPurchase={editingPurchase}
         onSave={handleSavePurchase}
         isSubmitting={isSubmitting}
+      />
+
+      <PurchaseInvoicePreview
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        purchaseId={previewPurchaseId}
       />
 
       {/* Delete Confirmation */}

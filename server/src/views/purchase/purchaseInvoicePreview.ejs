@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Purchase Invoice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 12px;
+      color: #111827;
+      font-size: 12px;
+    }
+
+    .invoice {
+      border: 1px solid #374151;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px;
+    }
+
+    .party {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .company {
+      flex: 1;
+      padding-right: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .company img.logo {
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .supplier {
+      flex: 1;
+      border-left: 1px solid #9ca3af;
+      padding-left: 10px;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    .company h1 {
+      font-size: 20px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .supplier h2 {
+      font-size: 18px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .qr-box {
+      width: 128px;
+      height: 128px;
+      border: 1px solid #9ca3af;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #6b7280;
+      flex-shrink: 0;
+    }
+
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .title-row {
+      border-top: 1px solid #9ca3af;
+      border-bottom: 1px solid #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+    }
+
+    .title-row h3 {
+      font-size: 18px;
+      text-transform: uppercase;
+    }
+
+    .title-row .inv-meta {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid #9ca3af;
+      padding: 4px 5px;
+      word-wrap: break-word;
+    }
+
+    th {
+      background: #f3f4f6;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    td.right, th.right {
+      text-align: right;
+    }
+
+    .mt-8 {
+      margin-top: 8px;
+    }
+
+    .remarks-sign {
+      border-top: 1px solid #9ca3af;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .remarks {
+      width: 67%;
+      padding: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .sign {
+      width: 33%;
+      border: 1px solid #9ca3af;
+      border-top: none;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 90px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    .sign img {
+      max-height: 80px;
+      object-fit: contain;
+      margin: 0 auto 6px;
+    }
+
+    .sign p {
+      border-top: 1px solid #9ca3af;
+      padding-top: 6px;
+      font-size: 11px;
+    }
+
+    thead {
+      display: table-header-group;
+    }
+  </style>
+</head>
+<body>
+  <%
+    const items = purchase.items || [];
+    const defaultTaxRates = [2.5, 6, 9, 14];
+    const cgstMap = new Map();
+    const sgstMap = new Map();
+    (taxBreakdown || []).forEach((entry) => {
+      const rate = Number(entry.rate) || 0;
+      if (rate <= 0) return;
+      cgstMap.set(rate, (cgstMap.get(rate) || 0) + (Number(entry.cgstAmount) || 0));
+      sgstMap.set(rate, (sgstMap.get(rate) || 0) + (Number(entry.sgstAmount) || 0));
+    });
+    const taxRates = Array.from(new Set([
+      ...defaultTaxRates,
+      ...(taxBreakdown || []).map((x) => Number(x.rate) || 0).filter((r) => r > 0),
+    ])).sort((a, b) => a - b);
+
+    const gross = Number(purchase.grossAmount || 0);
+    const discountPercent = Number(purchase.discountPercent || 0);
+    const discountAmount = gross * (discountPercent / 100);
+    const schemeTotal = Number(purchase.scheme1 || 0);
+    const damageAmount = items.reduce((sum, item) => sum + (Number(item.DQty || 0) * Number(item.rate || 0)), 0);
+    const amountAdd = Number(purchase.amountAdd || 0);
+    const creditAmount = Number(purchase.creditAmount || 0);
+    const totalGst = Number(purchase.tax || 0);
+    const roundOff = 0;
+    const finalAmount = Number(purchase.finalAmount || 0);
+  %>
+
+  <div class="invoice">
+    <div class="header">
+      <div class="party">
+        <div class="company">
+          <% if (companyLogoUrl) { %>
+            <img class="logo" src="<%= companyLogoUrl %>" alt="Company Logo" />
+          <% } %>
+          <div class="meta">
+            <h1><%= companyName %></h1>
+            <p>Address : <%= companyAddress || "" %></p>
+            <p>Phone : <%= companyPhone || "" %></p>
+            <p>GSTIN : </p>
+            <p>FSSAI NO : </p>
+          </div>
+        </div>
+
+        <div class="supplier meta">
+          <h2><%= supplierName || "" %></h2>
+          <p>Address : <%= supplierAddress || "" %></p>
+          <p>Phone : <%= supplierPhone || "" %></p>
+          <p>GSTIN : <%= supplierGstin || "" %></p>
+          <p>FSSAI NO :</p>
+        </div>
+      </div>
+
+      <div class="qr-box">
+        <% if (upiQrCode) { %>
+          <img src="<%= upiQrCode %>" alt="UPI QR" />
+        <% } else { %>
+          QR Code
+        <% } %>
+      </div>
+    </div>
+
+    <div class="title-row">
+      <h3>Tax Invoice</h3>
+      <p class="inv-meta">Inv. No. : <%= purchase.invoiceNo || "" %> | Date : <%= formatDate(purchase.invoiceDate) %></p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 3%;">Sr</th>
+          <th style="width: 8%;">HSN</th>
+          <th style="width: 19%;">Prod Description</th>
+          <th class="right" style="width: 8%;">MRP</th>
+          <th class="right" style="width: 8%;">Bx/Qty</th>
+          <th class="right" style="width: 6%;">FR</th>
+          <th class="right" style="width: 8%;">Rate</th>
+          <th class="right" style="width: 8%;">Scheme</th>
+          <th class="right" style="width: 10%;">Amount</th>
+          <th class="right" style="width: 6%;">GST%</th>
+          <th class="right" style="width: 8%;">GST Amt</th>
+          <th class="right" style="width: 8%;">Net Amt</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach((item, idx) => { %>
+          <tr>
+            <td><%= idx + 1 %></td>
+            <td><%= item?.product?.hsnSacCode || "" %></td>
+            <td><%= item?.product?.description || "" %></td>
+            <td class="right"><%= formatAmount(item?.batch?.mrp || 0) %></td>
+            <td class="right"><%= Number(item?.mQty || 0) %>/<%= Number(item?.aQty || 0) %></td>
+            <td class="right"><%= Number(item?.fQty || 0) %></td>
+            <td class="right"><%= formatAmount(item?.rate || 0) %></td>
+            <td class="right"><%= formatAmount(item?.schAmount || 0) %></td>
+            <td class="right"><%= formatAmount(item?.totalAmount || 0) %></td>
+            <td class="right"><%= Number(item?.taxRate || 0) %>%</td>
+            <td class="right"><%= formatAmount(item?.taxAmount || 0) %></td>
+            <td class="right"><%= formatAmount(item?.finalAmount || 0) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <table class="mt-8">
+      <tbody>
+        <tr>
+          <td><strong>CGST</strong></td>
+          <% taxRates.forEach((rate) => { %>
+            <td class="right"><%= rate %>%</td>
+            <td class="right"><%= formatAmount(cgstMap.get(rate) || 0) %></td>
+          <% }) %>
+        </tr>
+        <tr>
+          <td><strong>SGST</strong></td>
+          <% taxRates.forEach((rate) => { %>
+            <td class="right"><%= rate %>%</td>
+            <td class="right"><%= formatAmount(sgstMap.get(rate) || 0) %></td>
+          <% }) %>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="mt-8">
+      <thead>
+        <tr>
+          <th class="right">GROSS</th>
+          <th class="right">Disc-0%</th>
+          <th class="right">Tot Sch</th>
+          <th class="right">Damage</th>
+          <th class="right">Add/Less</th>
+          <th class="right">Total Gst</th>
+          <th class="right">R/O</th>
+          <th class="right">Total Pay</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="right"><%= formatAmount(gross) %></td>
+          <td class="right"><%= formatAmount(discountAmount) %></td>
+          <td class="right"><%= formatAmount(schemeTotal) %></td>
+          <td class="right"><%= formatAmount(damageAmount) %></td>
+          <td class="right"><%= formatAmount(amountAdd) %>/<%= formatAmount(creditAmount) %></td>
+          <td class="right"><%= formatAmount(totalGst) %></td>
+          <td class="right"><%= formatAmount(roundOff) %></td>
+          <td class="right"><%= formatAmount(finalAmount) %></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remarks-sign">
+      <div class="remarks">
+        <p>Cheque Return Charges Rs.500/-</p>
+        <p>Remarks : <%= purchase.remarks || "" %></p>
+        <p style="margin-top: 8px; font-size: 10px;">
+          We hereby certify that our Registration Certificate under the GST Act 2017 is in force on the date on
+          which sale of this goods specified in this Tax Invoice is made by us and that the transaction of sale
+          covered by this Tax invoice has been effected by us and it shall be accounted for in the turnover of sales
+          while filing of return and the due tax, if any payable on the sale has been paid or shall be paid.
+        </p>
+      </div>
+      <div class="sign">
+        <% if (signatureUrl) { %>
+          <img src="<%= signatureUrl %>" alt="Signature" />
+        <% } %>
+        <p>For <%= companyName %></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

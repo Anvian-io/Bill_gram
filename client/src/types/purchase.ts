@@ -85,6 +85,52 @@ export interface Purchase {
   updatedAt: string;
 }
 
+export interface PurchaseBillPreviewData {
+  purchase: Purchase & {
+    supplier: {
+      id: number;
+      name: string;
+      phoneNo?: string | null;
+      email?: string | null;
+      address?: string | null;
+      gstIN?: string | null;
+    };
+    user: {
+      id: number;
+      username: string;
+      company_name: string | null;
+      shop_name?: string | null;
+      phone: string | null;
+      email: string | null;
+      upi_id: string | null;
+      signature: string | null;
+      company_logo: string | null;
+      address: string | null;
+    } | null;
+    items: Array<
+      PurchaseItem & {
+        product?: {
+          hsnSacCode?: string | null;
+          description?: string | null;
+        };
+        batch?: {
+          mrp?: number | null;
+          purchaseRate?: number | null;
+        };
+      }
+    >;
+  };
+  taxBreakdown?: Array<{
+    rate: number;
+    cgstAmount: number;
+    sgstAmount: number;
+    totalTaxAmount: number;
+  }>;
+  upiQrCode: string | null;
+  signature: string | null;
+  companyLogo: string | null;
+}
+
 export interface Supplier {
   id: number;
   name: string;
