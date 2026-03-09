@@ -36,6 +36,7 @@ model User {
   salesInvoices    SalesInvoice[]
   PurchaseReportHistory    PurchaseReportHistory[]
   SalesReportHistory       SalesReportHistory[]
+  GstReportHistory         GstReportHistory[]
   googleDriveToken GoogleDriveToken?
   backupHistories  BackupHistory[]
   createdAt       DateTime         @default(now()) @map("created_at")
@@ -631,6 +632,25 @@ model SalesReportHistory {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("sales_report_histories")
+}
+
+model GstReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  source    String   // 'sales' or 'purchase'
+  reportKey String   @map("report_key") // gst, gstr1, gstr2, b2b, b2c, etc.
+  template  String
+  fileName  String?  @map("file_name")
+  data      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([source])
+  @@index([reportKey])
+  @@index([type])
+  @@map("gst_report_histories")
 }
 
 // ========== BACKUP & RESTORE MODULES ==========

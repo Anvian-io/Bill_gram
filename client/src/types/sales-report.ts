@@ -532,7 +532,16 @@ export interface SalesReportHistory {
   id: number;
   userId: number;
   type: "pdf" | "excel";
-  tab: "summary" | "register" | "area-wise" | "salesman-wise";
+  tab:
+    | "summary"
+    | "register"
+    | "area-wise"
+    | "salesman-wise"
+    | "b2c"
+    | "gst"
+    | "gstr1"
+    | "hsn-summary"
+    | "sales-monthly-gst";
   template: string;
   fileName: string | null;
   data: string; // JSON string of the report data
@@ -550,13 +559,73 @@ export interface SalesReportHistoryFilters {
   search?: string;
   fileName?: string;
   type?: "pdf" | "excel" | "";
-  tab?: "summary" | "register" | "area-wise" | "salesman-wise" | "";
+  tab?:
+    | "summary"
+    | "register"
+    | "area-wise"
+    | "salesman-wise"
+    | "b2c"
+    | "gst"
+    | "gstr1"
+    | "hsn-summary"
+    | "sales-monthly-gst"
+    | "";
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedSalesHistoryResponse {
   histories: SalesReportHistory[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface GSTReportHistory {
+  id: number;
+  userId: number;
+  type: "pdf" | "excel";
+  source: "sales" | "purchase";
+  reportKey:
+    | "gst"
+    | "gstr1"
+    | "b2c"
+    | "hsn-summary"
+    | "sales-monthly-gst"
+    | "purchase-gst"
+    | "gstr2"
+    | "b2b"
+    | "purchase-monthly-gst";
+  template: string;
+  fileName: string | null;
+  data: string;
+  createdAt: string;
+  user?: {
+    id: number;
+    username: string;
+    shop_name: string | null;
+  };
+}
+
+export interface GSTReportHistoryFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  fileName?: string;
+  type?: "pdf" | "excel" | "";
+  source?: "sales" | "purchase" | "";
+  reportKey?: GSTReportHistory["reportKey"] | "";
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface PaginatedGSTHistoryResponse {
+  histories: GSTReportHistory[];
   pagination: {
     total: number;
     totalPages: number;

@@ -20,6 +20,7 @@ import { verifyUser } from "./middleware/verifyToken.js";
 import notificationRoutes from "./controllers/Notification/notificationRoutes.js"; // Add this
 import dashboardRoutes from "./controllers/Dashboard/dashboardRoutes.js";
 import backupRoutes from "./controllers/Backup/backupRoutes.js";
+import gstHistoryRoutes from "./controllers/GSTHistory/gstHistoryRoutes.js";
 import { initBackupScheduler } from "./controllers/Backup/backupScheduler.js";
 import { createServer } from "http";
 import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
@@ -72,6 +73,7 @@ const startServer = async () => {
     app.use("/api/suppliers", supplierRoutes);
     app.use("/api/sales", salesRoutes);
     app.use("/api/dashboard", dashboardRoutes);
+    app.use("/api/gst-history", gstHistoryRoutes);
 
     // Health check
     app.get("/api/health", (req, res) => {

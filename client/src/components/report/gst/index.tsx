@@ -8,6 +8,7 @@ import SalesMonthlyGST from "./SalesMonthlyGST";
 import GSTR1 from "./GSTR1";
 import GSTR2 from "./GSTR2";
 import HSNSummary from "./HSNSummary";
+import GSTHistory from "./GSTHistory";
 
 export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
   const [activeTab, setActiveTab] = useState<
@@ -20,6 +21,7 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
     | "gstr1"
     | "gstr2"
     | "hsnSummary"
+    | "gstHistory"
   >("purchaseGst");
 
   // Refs for measuring tab positions
@@ -33,6 +35,7 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
   const gstr1TabRef = useRef<HTMLButtonElement>(null);
   const gstr2TabRef = useRef<HTMLButtonElement>(null);
   const hsnSummaryTabRef = useRef<HTMLButtonElement>(null);
+  const gstHistoryTabRef = useRef<HTMLButtonElement>(null);
 
   // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -58,6 +61,8 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
         return gstr2TabRef;
       case "hsnSummary":
         return hsnSummaryTabRef;
+      case "gstHistory":
+        return gstHistoryTabRef;
       default:
         return purchaseGstTabRef;
     }
@@ -251,6 +256,22 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
             >
               HSN Summary
             </button>
+
+            <button
+              ref={gstHistoryTabRef}
+              onClick={() => setActiveTab("gstHistory")}
+              className={`
+                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                focus:outline-none inline-block
+                ${
+                  activeTab === "gstHistory"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              GST History
+            </button>
           </div>
 
           {/* Tab content */}
@@ -268,6 +289,7 @@ export default function GST({ isCollapsed }: { isCollapsed: boolean }) {
             {activeTab === "gstr1" && <GSTR1 isCollapsed={isCollapsed} />}
             {activeTab === "gstr2" && <GSTR2 isCollapsed={isCollapsed} />}
             {activeTab === "hsnSummary" && <HSNSummary isCollapsed={isCollapsed} />}
+            {activeTab === "gstHistory" && <GSTHistory />}
           </div>
         </div>
       </div>

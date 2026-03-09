@@ -5858,6 +5858,20 @@ export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
       }),
     },
   });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "sales",
+      reportKey: "b2c",
+      template: "b2cReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: { fromDate: fromDate || null, toDate: toDate || null, sortBy, sortOrder },
+        count: rows.length,
+      }),
+    },
+  });
 
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -6177,6 +6191,26 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
       }),
     },
   });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "sales",
+      reportKey: "gst",
+      template: "salesGSTReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          customerId: customerId ? parseInt(customerId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalInvoices: invoices.length,
+      }),
+    },
+  });
 
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -6451,6 +6485,26 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
       userId: req.user.id,
       type: "excel",
       tab: "gstr1",
+      template: "gstr1Report.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          customerId: customerId ? parseInt(customerId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalInvoices: invoices.length,
+      }),
+    },
+  });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "sales",
+      reportKey: "gstr1",
       template: "gstr1Report.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
@@ -6824,6 +6878,24 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
       userId: req.user.id,
       type: "excel",
       tab: "hsn-summary",
+      template: "hsnSummaryReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          source: normalizedSource,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+        },
+        totalRows: rows.length,
+      }),
+    },
+  });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "sales",
+      reportKey: "hsn-summary",
       template: "hsnSummaryReport.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
@@ -7276,6 +7348,20 @@ export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
       userId: req.user.id,
       type: "excel",
       tab: "sales-monthly-gst",
+      template: "salesMonthlyGST.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: { fromDate, toDate },
+        totalMonths: monthlyData.length,
+      }),
+    },
+  });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "sales",
+      reportKey: "sales-monthly-gst",
       template: "salesMonthlyGST.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({

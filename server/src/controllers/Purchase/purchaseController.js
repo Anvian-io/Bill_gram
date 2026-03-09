@@ -3027,6 +3027,26 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
       }),
     },
   });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "purchase",
+      reportKey: "b2b",
+      template: "b2bReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalRows: rows.length,
+      }),
+    },
+  });
 
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -3346,6 +3366,26 @@ export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
       }),
     },
   });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "purchase",
+      reportKey: "purchase-gst",
+      template: "purchaseGSTReport.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalInvoices: invoices.length,
+      }),
+    },
+  });
 
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -3612,6 +3652,26 @@ export const downloadGSTR2Excel = asyncHandler(async (req, res) => {
     data: {
       userId: req.user.id,
       type: "excel",
+      template: "gstr2Report.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: {
+          supplierId: supplierId ? parseInt(supplierId) : null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          sortBy,
+          sortOrder,
+        },
+        totalInvoices: invoices.length,
+      }),
+    },
+  });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "purchase",
+      reportKey: "gstr2",
       template: "gstr2Report.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
@@ -4044,6 +4104,20 @@ export const downloadPurchaseGSTMonthlyExcel = asyncHandler(async (req, res) => 
     data: {
       userId: req.user.id,
       type: "excel",
+      template: "purchaseMonthlyGST.xlsx",
+      fileName: excelFileName,
+      data: JSON.stringify({
+        filters: { fromDate, toDate },
+        totalMonths: monthlyData.length,
+      }),
+    },
+  });
+  await prisma.gstReportHistory.create({
+    data: {
+      userId: req.user.id,
+      type: "excel",
+      source: "purchase",
+      reportKey: "purchase-monthly-gst",
       template: "purchaseMonthlyGST.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
