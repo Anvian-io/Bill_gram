@@ -416,6 +416,7 @@ export default function AddSales() {
   // Load sale data if editing
   useEffect(() => {
     const loadSaleData = async () => {
+      console.log("bigboy",areas);
       if (saleId && !isNew) {
         setIsLoading(true);
         try {

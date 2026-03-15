@@ -1,130 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Sales Register Report</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      color: #000;
-      background: #fff;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .header h1 {
-      font-size: 24px;
-      margin: 0;
-    }
-    .info-row {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-    .details {
-      font-size: 13px;
-      margin: 15px 0;
-    }
-    .details span.label {
-      font-weight: 600;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      margin-top: 20px;
-    }
-    th, td {
-      border: none;
-      padding: 8px 5px;
-      text-align: left;
-    }
-    thead th {
-      background: #f2f2f2;
-      font-weight: 600;
-      text-align: center;
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-    }
-    td.right {
-      text-align: right;
-    }
-    tr.total-row td {
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-    }
-    .footer {
-      margin-top: 20px;
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-    }
-    thead {
-      display: table-header-group;
-    }
-    tfoot {
-      display: table-footer-group;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Sales Register Report</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 30px;
+  color: #000;
+  background: #fff;
+}
+
+/* TABLE */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+thead {
+  display: table-header-group;
+}
+
+tfoot {
+  display: table-footer-group;
+}
+
+th, td {
+  border: none;
+  padding: 8px 5px;
+  text-align: left;
+}
+
+/* COLUMN HEADERS */
+
+thead th {
+  background: #f2f2f2;
+  font-weight: 600;
+  text-align: center;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+
+/* HEADER STYLE (same as old) */
+
+.report-header {
+  text-align: center;
+  padding-bottom: 5px;
+}
+
+.report-header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.details {
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.details span.label {
+  font-weight: 600;
+}
+
+/* ALIGNMENT */
+
+.right {
+  text-align: right;
+}
+
+/* TOTAL ROW */
+
+.total-row td {
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  font-weight: bold;
+  background: #f0f0f0;
+}
+
+/* FOOTER */
+
+.footer {
+  margin-top: 20px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="header">
-    <h1>Sales Register</h1>
-    <div class="info-row">
-      <span>Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %></span>
-    </div>
+
+<table>
+
+<thead>
+
+<!-- HEADER (repeats every page but styled like old layout) -->
+
+<tr>
+<td colspan="8">
+
+<div class="report-header">
+  <h1>Sales Register</h1>
+
+  <div class="info-row">
+    <span>Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %></span>
+  </div>
+</div>
+
+<div class="details">
+  <div>
+    <span class="label">INVOICE :</span>
+    <%= invoiceRange.start || '—' %> to <%= invoiceRange.end || '—' %>
   </div>
 
-  <div class="details">
-    <div><span class="label">INVOICE :</span> <%= invoiceRange.start || '—' %> to <%= invoiceRange.end || '—' %></div>
-    <div><span class="label">AREA :</span> <%= areas.length ? areas.join(', ') : 'All' %></div>
+  <div>
+    <span class="label">AREA :</span>
+    <%= areas.length ? areas.join(', ') : 'All' %>
   </div>
+</div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Sr.</th>
-        <th>Invoice No</th>
-        <th>Date</th>
-        <th>Customer Name</th>
-        <th>Amount</th>
-        <th>Cash</th>
-        <th>Cheque</th>
-        <th>Balance</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% invoices.forEach((inv, index) => { %>
-        <tr>
-          <td><%= index + 1 %></td>
-          <td><%= inv.invoiceNo %></td>
-          <td><%= formatDate(inv.invoiceDate) %></td>
-          <td><%= inv.customerName || '—' %></td>
-          <td class="right">₹<%= inv.amount.toFixed(2) %></td>
-          <td class="right"><%= inv.cash || '—' %></td>
-          <td class="right"><%= inv.cheque || '—' %></td>
-          <td class="right">₹<%= inv.balance.toFixed(2) %></td>
-        </tr>
-      <% }) %>
-      <% if (totals) { %>
-        <tr class="total-row" style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="4">Total <%= invoices.length %> invoices</td>
-          <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
-          <td></td>
-          <td></td>
-          <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
-        </tr>
-      <% } %>
-    </tbody>
-  </table>
+</td>
+</tr>
 
-  <div class="footer">
-    <span><%= user.shop_name || 'Your Shop' %></span>
-    <span class="pageNumbers"></span>
-  </div>
+<!-- COLUMN HEADERS -->
+
+<tr>
+  <th>Sr.</th>
+  <th>Invoice No</th>
+  <th>Date</th>
+  <th>Customer Name</th>
+  <th>Amount</th>
+  <th>Cash</th>
+  <th>Cheque</th>
+  <th>Balance</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<% invoices.forEach((inv, index) => { %>
+
+<tr>
+  <td><%= index + 1 %></td>
+  <td><%= inv.invoiceNo %></td>
+  <td><%= formatDate(inv.invoiceDate) %></td>
+  <td><%= inv.customerName || '—' %></td>
+  <td class="right">₹<%= inv.amount.toFixed(2) %></td>
+  <td class="right"><%= inv.cash || '—' %></td>
+  <td class="right"><%= inv.cheque || '—' %></td>
+  <td class="right">₹<%= inv.balance.toFixed(2) %></td>
+</tr>
+
+<% }) %>
+
+<% if (totals) { %>
+
+<tr class="total-row">
+  <td colspan="4">Total <%= invoices.length %> invoices</td>
+  <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
+  <td></td>
+  <td></td>
+  <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
+</tr>
+
+<% } %>
+
+</tbody>
+
+</table>
+
+<div class="footer">
+  <span><%= user.shop_name || 'Your Shop' %></span>
+  <span class="pageNumbers"></span>
+</div>
+
 </body>
 </html>

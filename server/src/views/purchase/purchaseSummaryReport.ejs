@@ -1,166 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Purchase Summary Report</title>
-  <style>
-    /* GLOBAL RESET & BASE */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      color: #000;
-      background: #fff;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .header h1 {
-      font-size: 24px;
-      margin: 0;
-    }
-    .info-row {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-    .details {
-      font-size: 13px;
-      margin: 15px 0;
-    }
-    .details span.label {
-      font-weight: 600;
-    }
+<meta charset="UTF-8">
+<title>Purchase Summary Report</title>
 
-    /* TABLE STYLES – borders removed from cells, only header & total row get black borders */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      margin-top: 20px;
-      /* no outer border */
-    }
+<style>
 
-    th, td {
-      /* NO BORDERS on individual cells */
-      border: none;
-      padding: 8px 5px;          /* keep original padding */
-      text-align: left;
-    }
+/* GLOBAL RESET & BASE */
 
-    /* Header styling: dark background + black top/bottom borders */
-    thead th {
-      background: #f2f2f2;
-      font-weight: 600;
-      text-align: center;
-      border-top: 2px solid #000;      /* black top border */
-      border-bottom: 2px solid #000;   /* black bottom border */
-    }
+body {
+  font-family: Arial, sans-serif;
+  margin: 30px;
+  color: #000;
+  background: #fff;
+}
 
-    /* Align right for numeric cells (preserve original classes) */
-    td.right {
-      text-align: right;
-    }
+/* HEADER STYLE */
 
-    /* Totals row (last row) – black top & bottom borders, bold background from inline style */
-    tr.total-row td {
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-    }
+.header {
+  text-align: center;
+  margin-bottom: 10px;
+}
 
-    /* keep the rest of the layout */
-    tbody tr:last-child td {
-      /* background is handled inline, we keep the existing background */
-    }
+.header h1 {
+  font-size: 24px;
+  margin: 0;
+}
 
-    .footer {
-      margin-top: 20px;
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .page-break {
-      page-break-before: always;
-    }
-    /* Ensure table header repeats on every printed page */
-    thead {
-      display: table-header-group;
-    }
-    tfoot {
-      display: table-footer-group;
-    }
-  </style>
+.info-row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.details {
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.details span.label {
+  font-weight: 600;
+}
+
+/* TABLE */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+th, td {
+  border: none;
+  padding: 8px 5px;
+  text-align: left;
+}
+
+/* COLUMN HEADERS */
+
+thead th {
+  background: #f2f2f2;
+  font-weight: 600;
+  text-align: center;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+
+/* IMPORTANT: header repeat */
+
+thead {
+  display: table-header-group;
+}
+
+tfoot {
+  display: table-footer-group;
+}
+
+/* ALIGNMENT */
+
+td.right {
+  text-align: right;
+}
+
+/* TOTAL ROW */
+
+tr.total-row td {
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+
+/* FOOTER */
+
+.footer {
+  margin-top: 20px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Prevent row splitting */
+
+tr {
+  page-break-inside: avoid;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="header">
-    <h1>Purchase Summary</h1>
-    <div class="info-row">
-      <span>Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %></span>
-    </div>
+
+<table>
+
+<thead>
+
+<!-- REPORT HEADER (repeats every page) -->
+
+<tr>
+<td colspan="12">
+
+<div class="header">
+  <h1>Purchase Summary</h1>
+
+  <div class="info-row">
+    <span>
+      Date: <%= formatDate(dateRange.from) %> to <%= formatDate(dateRange.to) %>
+    </span>
+  </div>
+</div>
+
+<div class="details">
+  <div>
+    <span class="label">INVOICE :</span>
+    <%= invoiceRange.start || '—' %> to <%= invoiceRange.end || '—' %>
   </div>
 
-  <div class="details">
-    <div><span class="label">INVOICE :</span> <%= invoiceRange.start || '—' %> to <%= invoiceRange.end || '—' %></div>
-    <div><span class="label">AREA :</span> <%= areas.length ? areas.join(', ') : 'All' %></div>
+  <div>
+    <span class="label">AREA :</span>
+    <%= areas.length ? areas.join(', ') : 'All' %>
   </div>
+</div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Sr.</th>
-        <th>P.Code</th>
-        <th>Description</th>
-        <th>MRP</th>
-        <th>BOX</th>
-        <th>UNIT</th>
-        <th>QTY</th>
-        <th>FR</th>
-        <th>REP</th>
-        <th>DMG</th>
-        <th>RATE</th>
-        <th>AMT</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% products.forEach((product, index) => { %>
-        <tr>
-          <td><%= index + 1 %></td>
-          <td><%= product.productCode %></td>
-          <td><%= product.description ? (product.description.length > 20 ? product.description.substring(0,20)+'…' : product.description) : 'No description' %></td>
-          <td class="right"><%= product.mrp.toFixed(2) %></td>
-          <td class="right"><%= product.totalMqty %></td>
-          <td class="right"><%= product.totalUnit %></td>
-          <td class="right"><%= product.totalUnitsPurchased %></td>
-          <td class="right"><%= product.fQty %></td>
-          <td class="right">0</td>
-          <td class="right"><%= product.dQty %></td>
-          <td class="right"><%= product.purchaseRate.toFixed(2) %></td>
-          <td class="right">₹<%= product.finalAmount.toFixed(2) %></td>
-        </tr>
-      <% }) %>
-      <!-- Totals row with class="total-row" for specific border styling -->
-      <% if (totals) { %>
-        <tr class="total-row" style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="4">Total <%= products.length %> products</td>
-          <td class="right"><%= totals.totalMqty %></td>
-          <td class="right"><%= totals.totalUnit %></td>
-          <td class="right"><%= totals.totalUnitsPurchased %></td>
-          <td class="right"><%= totals.fQty %></td>
-          <td class="right"><%= totals.rep %></td>
-          <td class="right"><%= totals.dQty %></td>
-          <td></td>
-          <td class="right">₹<%= totals.finalAmount.toFixed(2) %></td>
-        </tr>
-      <% } %>
-    </tbody>
-  </table>
+</td>
+</tr>
 
-  <!-- Static footer (Puppeteer may replace page numbers) -->
-  <div class="footer">
-    <span><%= user.shop_name || 'Your Shop' %></span>
-    <span class="pageNumbers"></span>
-  </div>
+<!-- COLUMN HEADERS -->
+
+<tr>
+  <th>Sr.</th>
+  <th>P.Code</th>
+  <th>Description</th>
+  <th>MRP</th>
+  <th>BOX</th>
+  <th>UNIT</th>
+  <th>QTY</th>
+  <th>FR</th>
+  <th>REP</th>
+  <th>DMG</th>
+  <th>RATE</th>
+  <th>AMT</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<% products.forEach((product, index) => { %>
+
+<tr>
+  <td><%= index + 1 %></td>
+  <td><%= product.productCode %></td>
+
+  <td>
+    <%= product.description
+      ? (product.description.length > 20
+        ? product.description.substring(0,20)+'…'
+        : product.description)
+      : 'No description' %>
+  </td>
+
+  <td class="right"><%= product.mrp.toFixed(2) %></td>
+  <td class="right"><%= product.totalMqty %></td>
+  <td class="right"><%= product.totalUnit %></td>
+  <td class="right"><%= product.totalUnitsPurchased %></td>
+  <td class="right"><%= product.fQty %></td>
+  <td class="right">0</td>
+  <td class="right"><%= product.dQty %></td>
+  <td class="right"><%= product.purchaseRate.toFixed(2) %></td>
+  <td class="right">₹<%= product.finalAmount.toFixed(2) %></td>
+</tr>
+
+<% }) %>
+
+<% if (totals) { %>
+
+<tr class="total-row" style="font-weight: bold; background: #f0f0f0;">
+  <td colspan="4">Total <%= products.length %> products</td>
+  <td class="right"><%= totals.totalMqty %></td>
+  <td class="right"><%= totals.totalUnit %></td>
+  <td class="right"><%= totals.totalUnitsPurchased %></td>
+  <td class="right"><%= totals.fQty %></td>
+  <td class="right"><%= totals.rep %></td>
+  <td class="right"><%= totals.dQty %></td>
+  <td></td>
+  <td class="right">₹<%= totals.finalAmount.toFixed(2) %></td>
+</tr>
+
+<% } %>
+
+</tbody>
+
+</table>
+
+<div class="footer">
+  <span><%= user.shop_name || 'Your Shop' %></span>
+  <span class="pageNumbers"></span>
+</div>
+
 </body>
 </html>
