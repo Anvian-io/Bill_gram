@@ -1,63 +1,68 @@
 import { motion } from "framer-motion";
-import { Zap } from "lucide-react";
+import { Boxes } from "lucide-react";
 
-const links = {
-  Product: ["Features", "Pricing", "Download", "Changelog"],
-  Support: ["Help Center", "Contact Us", "FAQs", "Community"],
-  Legal: ["Privacy Policy", "Terms of Service", "Refund Policy"],
+const groups = {
+  Product: [
+    { label: "Modules", href: "#features" },
+    { label: "Preview", href: "#preview" },
+    { label: "Workflow", href: "#workflow" },
+  ],
+  Explore: [
+    { label: "Proof", href: "#proof" },
+    { label: "Testimonials", href: "#testimonials" },
+    { label: "FAQ", href: "#faq" },
+  ],
+  Action: [
+    { label: "Download", href: "#download" },
+    { label: "Top of page", href: "#hero" },
+  ],
 };
 
 export const Footer = () => {
   return (
-    <footer className="border-t border-border py-16">
+    <footer className="border-t border-border/70 py-16">
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.3fr_0.7fr_0.7fr_0.7fr]">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                <Boxes className="h-5 w-5" />
               </div>
-              <span className="font-display font-bold text-lg text-foreground">BillFlow</span>
+              <div>
+                <p className="font-display text-lg font-bold text-foreground">Nebula Billing</p>
+                <p className="text-xs text-muted-foreground">Desktop operations platform</p>
+              </div>
             </div>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              The modern billing & business management solution for Indian wholesalers.
+            <p className="max-w-md text-sm leading-7 text-text-secondary">
+              A product website for a business app should explain the real workflow clearly. This
+              footer keeps the message simple: billing, stock, GST, master data, and backups in one place.
             </p>
           </div>
 
-          {Object.entries(links).map(([category, items]) => (
-            <div key={category}>
-              <h4 className="font-display font-bold text-foreground mb-4">{category}</h4>
-              <ul className="space-y-3">
+          {Object.entries(groups).map(([title, items]) => (
+            <div key={title}>
+              <h4 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-foreground">
+                {title}
+              </h4>
+              <div className="mt-5 space-y-3">
                 {items.map((item) => (
-                  <li key={item}>
-                    <motion.a
-                      href="#"
-                      whileHover={{ x: 4 }}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {item}
-                    </motion.a>
-                  </li>
+                  <motion.a
+                    key={item.label}
+                    href={item.href}
+                    whileHover={{ x: 4 }}
+                    className="block text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {item.label}
+                  </motion.a>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">© 2024 BillFlow. All rights reserved.</p>
-          <div className="flex gap-4">
-            {["Twitter", "LinkedIn", "YouTube"].map((social) => (
-              <motion.a
-                key={social}
-                href="#"
-                whileHover={{ scale: 1.1 }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {social}
-              </motion.a>
-            ))}
-          </div>
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border/70 pt-8 text-sm text-muted-foreground md:flex-row md:items-center">
+          <p>Copyright {new Date().getFullYear()} Nebula Billing. Built for clearer business operations.</p>
+          <p>Billing / Inventory / Reports / GST / Backup</p>
         </div>
       </div>
     </footer>
