@@ -134,7 +134,8 @@ const LiveCounter = ({
   const [display, setDisplay] = useState(value * 0.6);
   useEffect(() => {
     let frame: number;
-    const start = display;
+    const start = value * 0.6;
+    setDisplay(start);
     const duration = 1800;
     const startTime = performance.now();
     const animate = (now: number) => {
