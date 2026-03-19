@@ -9,10 +9,75 @@ import { normalizeEmail } from "../utils/normalize.js";
 
 const router = Router();
 
-router.use(requireAdminSession);
+const loadNodemailer = async () => {
+  try {
+    const nodemailerModule = await import("nodemailer");
+    return nodemailerModule.default;
+  } catch {
+    throw new Error(
+      "nodemailer is not installed yet. Run `npm install` inside the nebula-billing/server folder to enable SMTP delivery.",
+    );
+  }
+};
+
+const assertMailConfig = () => {
+  if (
+    !env.sendinblueHost ||
+    !env.sendinblueUser ||
+    !env.sendinbluePassword ||
+    !env.senderEmail
+  ) {
+    throw new Error("Brevo SMTP configuration is incomplete in nebula-billing/server/.env");
+  }
+};
+
+const buildCredentialExpiryDate = (registeredAt = new Date()) =>
+  new Date(
+    Date.UTC(registeredAt.getUTCFullYear() + 1, 2, 31, 23, 59, 59, 999),
+  );
+
+const sendRegistrationEmail = async ({ email, name, password, expiresAt }) => {
+  assertMailConfig();
+  const nodemailer = await loadNodemailer();
+
+  const transporter = nodemailer.createTransport({
+    host: env.sendinblueHost,
+    port: env.sendinbluePort,
+    secure: false,
+    auth: {
+      user: env.sendinblueUser,
+      pass: env.sendinbluePassword,
+    },
+  });
+
+  const expiryLabel = new Date(expiresAt).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  await transporter.sendMail({
+    from: `"${env.senderName}" <${env.senderEmail}>`,
+    to: email,
+    subject: "Bill Gram account credentials",
+    text: `Hello ${name}, your Bill Gram account is ready. Email: ${email}. Password: ${password}. Access valid until ${expiryLabel}.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+        <h2 style="margin-bottom: 8px;">Bill Gram Account Details</h2>
+        <p>Hello ${name},</p>
+        <p>Your Bill Gram account has been created successfully.</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+        <p><strong>Access valid until:</strong> ${expiryLabel}</p>
+        <p>Please keep these credentials safe.</p>
+      </div>
+    `,
+  });
+};
 
 router.post(
   "/tokens",
+  requireAdminSession,
   asyncHandler(async (req, res) => {
     const requestedDays = Number(req.body?.expiresInDays);
     const expiresInDays =
@@ -45,10 +110,13 @@ router.post(
     const email = normalizeEmail(req.body?.email);
     const name = String(req.body?.name ?? "").trim();
     const phoneNumber = String(req.body?.phoneNumber ?? "").trim();
+    const providedPassword = String(req.body?.password ?? "").trim();
     const token = String(req.body?.token ?? "").trim();
 
     if (!email || !name || !phoneNumber || !token) {
-      return res.status(400).json({ message: "Email, name, phone number, and token are required" });
+      return res.status(400).json({
+        message: "Email, name, phone number, and token are required",
+      });
     }
 
     const inviteToken = await InviteToken.findOne({ token });
@@ -70,16 +138,28 @@ router.post(
       return res.status(409).json({ message: "A user with this email already exists" });
     }
 
+    const registeredAt = new Date();
+    const expiresAt = buildCredentialExpiryDate(registeredAt);
+    const password =
+      providedPassword || generateRandomToken("PWD", 12).replace("PWD-", "");
+
+    await sendRegistrationEmail({
+      email,
+      name,
+      password,
+      expiresAt,
+    });
+
     const user = await ManagedUser.create({
       email,
       name,
       phoneNumber,
-      registeredBy: req.admin.email,
+      registeredBy: inviteToken.createdByEmail,
       inviteToken: inviteToken.token,
     });
 
     inviteToken.used = true;
-    inviteToken.usedAt = new Date();
+    inviteToken.usedAt = registeredAt;
     inviteToken.usedByEmail = email;
     await inviteToken.save();
 
@@ -94,12 +174,18 @@ router.post(
         registeredBy: user.registeredBy,
         inviteToken: user.inviteToken,
       },
+      credentials: {
+        email,
+        password,
+        expiresAt,
+      },
     });
   }),
 );
 
 router.get(
   "/users",
+  requireAdminSession,
   asyncHandler(async (_req, res) => {
     const users = await ManagedUser.find().sort({ createdAt: -1 });
 
