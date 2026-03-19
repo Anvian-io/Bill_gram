@@ -2,6 +2,7 @@ import { Router } from "express";
 import { env } from "../config/env.js";
 import { AdminSession } from "../models/AdminSession.js";
 import { OtpChallenge } from "../models/OtpChallenge.js";
+import { sendOtpEmail } from "../services/mailService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { generateOtp, generateRandomToken, hashValue } from "../utils/crypto.js";
 import { normalizeEmail } from "../utils/normalize.js";
@@ -41,10 +42,29 @@ router.post(
       },
     );
 
-    console.log(`OTP for ${email}: ${otp}`);
+    let deliveryWarning = null;
+
+    try {
+      await sendOtpEmail({
+        email,
+        otp,
+        expiresInMinutes: env.otpTtlMinutes,
+      });
+    } catch (error) {
+      deliveryWarning = error instanceof Error ? error.message : "Failed to send OTP email";
+      console.error(`Failed to send OTP email to ${email}`, error);
+
+      if (!env.exposeOtpInResponse) {
+        return res.status(500).json({
+          message: "OTP was generated but email delivery failed",
+          deliveryWarning,
+        });
+      }
+    }
 
     return res.status(200).json({
-      message: "OTP generated successfully",
+      message: deliveryWarning ? "OTP generated with delivery fallback" : "OTP generated and sent successfully",
+      ...(deliveryWarning ? { deliveryWarning } : {}),
       ...(env.exposeOtpInResponse ? { otp } : {}),
     });
   }),

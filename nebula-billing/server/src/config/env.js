@@ -31,4 +31,10 @@ export const env = {
   adminSessionTtlHours: parseNumber(process.env.ADMIN_SESSION_TTL_HOURS, 12),
   tokenTtlDays: parseNumber(process.env.TOKEN_TTL_DAYS, 30),
   exposeOtpInResponse: String(process.env.EXPOSE_OTP_IN_RESPONSE ?? "false").toLowerCase() === "true",
+  sendinblueHost: process.env.SENDINBLUE_HOST ?? "",
+  sendinbluePort: parseNumber(process.env.SENDINBLUE_PORT, 587),
+  sendinblueUser: process.env.SENDINBLUE_USER ?? "",
+  sendinbluePassword: process.env.SENDINBLUE_PASSWORD ?? "",
+  senderEmail: process.env.SENDER_EMAIL ?? "",
+  senderName: process.env.SENDER_NAME ?? "Bill Gram",
 };
