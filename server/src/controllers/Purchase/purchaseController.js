@@ -15,6 +15,37 @@ import ExcelJS from "exceljs";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
 import { groupByMonth } from "./purchaseHelper.js";
 import QRCode from "qrcode";
+
+const DEFAULT_GST_DETAILS_ID = "1";
+const GST_DETAILS_LABELS = {
+  0: "Both",
+  1: "With GST",
+  2: "Without GST",
+};
+
+const normalizeGstDetails = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return DEFAULT_GST_DETAILS_ID;
+  }
+
+  const normalizedValue = String(value).trim().toLowerCase();
+  const valueMap = {
+    "0": "0",
+    "1": "1",
+    "2": "2",
+    both: "0",
+    "with gst": "1",
+    "without gst": "2",
+    "against gst": "1",
+    "with gst and without gst": "0",
+    "with gst & without gst": "0",
+  };
+
+  return valueMap[normalizedValue] ?? DEFAULT_GST_DETAILS_ID;
+};
+
+const getGstDetailsLabel = (value) =>
+  GST_DETAILS_LABELS[normalizeGstDetails(value)] || GST_DETAILS_LABELS[1];
 /**
  * Helper: Update batch stock
  * @param {PrismaClient} prisma
@@ -165,7 +196,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
           // invoiceNo,
           invoiceDate: new Date(invoiceDate),
           supplierId,
-          gstDetails: gstDetails || "Against GST",
+          gstDetails: normalizeGstDetails(gstDetails),
           remarks,
           grossAmount,
           boxUnit: boxUnit || 0,
@@ -613,7 +644,9 @@ export const updatePurchase = asyncHandler(async (req, res) => {
           supplierId: supplierId || existingInvoice.supplierId,
           invoiceNo: invoiceNo || existingInvoice.invoiceNo,
           gstDetails:
-            gstDetails !== undefined ? gstDetails : existingInvoice.gstDetails,
+            gstDetails !== undefined
+              ? normalizeGstDetails(gstDetails)
+              : existingInvoice.gstDetails,
           remarks: remarks !== undefined ? remarks : existingInvoice.remarks,
           grossAmount:
             grossAmount !== undefined
@@ -2752,7 +2785,7 @@ export const getPurchaseB2B = asyncHandler(async (req, res) => {
         invoiceNo: invoice.invoiceNo || "",
         invoiceDate: invoice.invoiceDate,
         place: invoice.supplier?.address || "",
-        invoiceType: invoice.gstDetails || "Regular",
+        invoiceType: getGstDetailsLabel(invoice.gstDetails),
         finalAmount: numberOrZero(invoice.finalAmount),
         rate: gstRate,
         taxable,
@@ -2877,7 +2910,7 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
         invoiceNo: invoice.invoiceNo || "",
         invoiceDate: invoice.invoiceDate,
         place: invoice.supplier?.address || "",
-        invoiceType: invoice.gstDetails || "Regular",
+        invoiceType: getGstDetailsLabel(invoice.gstDetails),
         finalAmount: numberOrZero(invoice.finalAmount),
         rate: gstRate,
         taxable,

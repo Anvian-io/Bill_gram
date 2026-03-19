@@ -67,7 +67,11 @@ import {
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "@/components/forms/BatchSelectionModal";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import { gst_details } from "@/store/dropdown_data/gst_details";
+import {
+  gst_details,
+  GST_DETAILS_DEFAULT_ID,
+  normalizeGstDetailsValue,
+} from "@/store/dropdown_data/gst_details";
 import {
   Select,
   SelectContent,
@@ -189,7 +193,7 @@ const defaultValues: SalesFormData = {
   vanId: 0,
   salesmanId: 0,
   address: "",
-  gstDetails: "With GST",
+  gstDetails: GST_DETAILS_DEFAULT_ID,
   phoneNo: "",
   items: [
     {
@@ -483,7 +487,7 @@ export default function AddSales() {
       vanId: saleData.van?.id ?? 0,
       salesmanId: saleData.salesman?.id ?? 0,
       address: saleData.address ?? "",
-      gstDetails: saleData.gstDetails ?? "With GST",
+      gstDetails: normalizeGstDetailsValue(saleData.gstDetails),
       items: mappedItems.length > 0 ? mappedItems : defaultValues.items,
       remarks: saleData.remarks ?? "",
       grossAmount: saleData.grossAmount ?? 0,
@@ -1515,7 +1519,7 @@ export default function AddSales() {
                               shouldDirty: true,
                             });
                           }}
-                          defaultValue={field.value}
+                          value={field.value ?? GST_DETAILS_DEFAULT_ID}
                           disabled={isSubmitting}
                         >
                           <FormControl>
@@ -1525,7 +1529,7 @@ export default function AddSales() {
                           </FormControl>
                           <SelectContent>
                             {gst_details.map((gst) => (
-                              <SelectItem key={gst.id} value={gst.type}>
+                              <SelectItem key={gst.id} value={String(gst.id)}>
                                 {gst.type}
                               </SelectItem>
                             ))}

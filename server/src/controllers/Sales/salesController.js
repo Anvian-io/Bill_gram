@@ -15,6 +15,29 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
+
+const DEFAULT_GST_DETAILS_ID = "1";
+
+const normalizeGstDetails = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return DEFAULT_GST_DETAILS_ID;
+  }
+
+  const normalizedValue = String(value).trim().toLowerCase();
+  const valueMap = {
+    "0": "0",
+    "1": "1",
+    "2": "2",
+    both: "0",
+    "with gst": "1",
+    "without gst": "2",
+    "against gst": "1",
+    "with gst and without gst": "0",
+    "with gst & without gst": "0",
+  };
+
+  return valueMap[normalizedValue] ?? DEFAULT_GST_DETAILS_ID;
+};
 /**
  * Helper: Update batch stock (decrement for sales)
  * @param {PrismaClient} prisma
@@ -238,7 +261,7 @@ export const createSale = asyncHandler(async (req, res) => {
           vanId: vanId || null,
           salesmanId: salesmanId || null,
           address: address || null,
-          gstDetails: gstDetails || "Against GST",
+          gstDetails: normalizeGstDetails(gstDetails),
           remarks,
           grossAmount,
           boxUnit: boxUnit || 0,
@@ -793,7 +816,9 @@ export const updateSale = asyncHandler(async (req, res) => {
           address: address !== undefined ? address : existingInvoice.address,
           invoiceNo: invoiceNo || existingInvoice.invoiceNo,
           gstDetails:
-            gstDetails !== undefined ? gstDetails : existingInvoice.gstDetails,
+            gstDetails !== undefined
+              ? normalizeGstDetails(gstDetails)
+              : existingInvoice.gstDetails,
           remarks: remarks !== undefined ? remarks : existingInvoice.remarks,
           grossAmount:
             grossAmount !== undefined

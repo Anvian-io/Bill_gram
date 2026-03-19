@@ -67,7 +67,11 @@ import {
 import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "./BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import { gst_details } from "@/store/dropdown_data/gst_details";
+import {
+  gst_details,
+  GST_DETAILS_DEFAULT_ID,
+  normalizeGstDetailsValue,
+} from "@/store/dropdown_data/gst_details";
 import {
   Select,
   SelectContent,
@@ -180,7 +184,7 @@ const emptyItem: PurchaseFormData["items"][0] = {
 const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 0,
-  gstDetails: "With GST",
+  gstDetails: GST_DETAILS_DEFAULT_ID,
   items: [{ ...emptyItem }], // one default row
   remarks: "",
   grossAmount: 0,
@@ -298,7 +302,7 @@ export default function PurchaseForm({
       form.reset({
         invoiceDate: editingPurchase.invoiceDate.split("T")[0],
         supplierId: editingPurchase.supplier.id,
-        gstDetails: editingPurchase.gstDetails,
+        gstDetails: normalizeGstDetailsValue(editingPurchase.gstDetails),
         items: editingPurchase.items.map((item: any) => ({
           productId: item.productId,
           productCode: item.productCode,
@@ -789,7 +793,7 @@ export default function PurchaseForm({
                         <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value ?? GST_DETAILS_DEFAULT_ID}
                           disabled={isSubmitting || isReadOnly}
                         >
                           <FormControl>
@@ -799,7 +803,7 @@ export default function PurchaseForm({
                           </FormControl>
                           <SelectContent>
                             {gst_details.map((gst) => (
-                              <SelectItem key={gst.id} value={gst.type}>
+                              <SelectItem key={gst.id} value={String(gst.id)}>
                                 {gst.type}
                               </SelectItem>
                             ))}

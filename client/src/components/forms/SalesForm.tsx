@@ -69,7 +69,11 @@ import {
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "./BatchSelectionModal";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import { gst_details } from "@/store/dropdown_data/gst_details";
+import {
+  gst_details,
+  GST_DETAILS_DEFAULT_ID,
+  normalizeGstDetailsValue,
+} from "@/store/dropdown_data/gst_details";
 import {
   Select,
   SelectContent,
@@ -184,7 +188,7 @@ const defaultValues: SalesFormData = {
   vanId: 0,
   salesmanId: 0,
   address: "",
-  gstDetails: "With GST",
+  gstDetails: GST_DETAILS_DEFAULT_ID,
   phoneNo: "",
   items: [
     // <-- one default row
@@ -453,7 +457,7 @@ export default function SalesForm({
         vanId: editingSales.van?.id ?? 0,
         salesmanId: editingSales.salesman?.id ?? 0,
         address: editingSales.address ?? "",
-        gstDetails: editingSales.gstDetails ?? "Against GST",
+        gstDetails: normalizeGstDetailsValue(editingSales.gstDetails),
         items: mappedItems,
         remarks: editingSales.remarks ?? "",
         grossAmount: editingSales.grossAmount ?? 0,
@@ -1250,7 +1254,7 @@ export default function SalesForm({
                         <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value ?? GST_DETAILS_DEFAULT_ID}
                           disabled={isSubmitting || isReadOnly}
                         >
                           <FormControl>
@@ -1260,7 +1264,7 @@ export default function SalesForm({
                           </FormControl>
                           <SelectContent>
                             {gst_details.map((gst) => (
-                              <SelectItem key={gst.id} value={gst.type}>
+                              <SelectItem key={gst.id} value={String(gst.id)}>
                                 {gst.type}
                               </SelectItem>
                             ))}

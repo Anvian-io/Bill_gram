@@ -73,7 +73,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "@/components/forms/BatchSelection";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import { gst_details } from "@/store/dropdown_data/gst_details";
+import {
+  gst_details,
+  GST_DETAILS_DEFAULT_ID,
+  normalizeGstDetailsValue,
+} from "@/store/dropdown_data/gst_details";
 import { purchaseService } from "@/services/purchaseService";
 import { containerVariants, itemVariants } from "@/components/FramerVariants";
 import { CheckIsExpanded } from "@/utils/commonHelper";
@@ -179,7 +183,7 @@ const emptyItem: PurchaseFormData["items"][0] = {
 const defaultValues: PurchaseFormData = {
   invoiceDate: new Date().toISOString().split("T")[0],
   supplierId: 0,
-  gstDetails: "With GST",
+  gstDetails: GST_DETAILS_DEFAULT_ID,
   items: [{ ...emptyItem }], // one default row
   remarks: "",
   grossAmount: 0,
@@ -325,7 +329,7 @@ export default function AddPurchase() {
       invoiceDate:
         purchaseData.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
       supplierId: purchaseData.supplier?.id ?? 0,
-      gstDetails: purchaseData.gstDetails ?? "With GST",
+      gstDetails: normalizeGstDetailsValue(purchaseData.gstDetails),
       items: mappedItems.length > 0 ? mappedItems : defaultValues.items,
       remarks: purchaseData.remarks ?? "",
       grossAmount: purchaseData.grossAmount ?? 0,
@@ -1045,7 +1049,7 @@ export default function AddPurchase() {
                           <FormLabel className="text-sm">GST Details</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value ?? GST_DETAILS_DEFAULT_ID}
                             disabled={isSubmitting}
                           >
                             <FormControl>
@@ -1055,7 +1059,7 @@ export default function AddPurchase() {
                             </FormControl>
                             <SelectContent>
                               {gst_details.map((gst) => (
-                                <SelectItem key={gst.id} value={gst.type}>
+                                <SelectItem key={gst.id} value={String(gst.id)}>
                                   {gst.type}
                                 </SelectItem>
                               ))}

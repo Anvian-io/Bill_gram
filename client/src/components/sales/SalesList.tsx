@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
+import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
 import {
   Select,
   SelectContent,
@@ -1495,7 +1496,7 @@ export default function Sales() {
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 <div className="text-xs text-muted-foreground">
-                                  {sale.gstDetails}
+                                  {getGstDetailsLabel(sale.gstDetails)}
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
