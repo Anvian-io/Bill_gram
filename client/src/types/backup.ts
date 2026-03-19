@@ -41,6 +41,25 @@ export interface TriggerBackupResult {
   fileSizeKb: number;
 }
 
+export interface EnsureDailyBackupResult {
+  alreadyBackedUp: boolean;
+  backupTaken: boolean;
+  attempted: boolean;
+  fileName?: string | null;
+  driveLink?: string | null;
+  fileSizeKb?: number | null;
+  reason?: string | null;
+  checkedAt: string;
+  backup?: {
+    id: number;
+    trigger: "auto" | "manual";
+    fileName?: string | null;
+    driveLink?: string | null;
+    fileSizeKb?: number | null;
+    createdAt: string;
+  };
+}
+
 export interface RestoreResult {
   fileName: string;
   fileSizeKb: number;

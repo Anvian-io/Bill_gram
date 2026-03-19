@@ -26,6 +26,7 @@ import {
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
 import AppInitializer from "./components/AppInitializer";
+import BackupSessionGuard from "./components/BackupSessionGuard";
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -50,6 +51,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
+          <BackupSessionGuard />
           <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <Routes>
               <Route path="/login" element={<Login />} />

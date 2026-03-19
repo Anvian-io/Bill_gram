@@ -6,6 +6,7 @@ import {
   getGoogleDriveStatus,
   disconnectGoogleDrive,
   triggerManualBackup,
+  ensureDailyBackup,
   getBackupHistory,
   checkConnectivity,
   downloadBackupZip,
@@ -40,6 +41,7 @@ router.get("/auth-url", getGoogleAuthUrl);
 router.get("/drive-status", getGoogleDriveStatus);
 router.delete("/disconnect", disconnectGoogleDrive);
 router.post("/trigger", triggerManualBackup);
+router.post("/ensure-daily", ensureDailyBackup);
 router.get("/download", downloadBackupZip);
 router.get("/history", getBackupHistory);
 router.get("/connectivity", checkConnectivity);

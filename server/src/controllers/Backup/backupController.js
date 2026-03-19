@@ -20,6 +20,8 @@ import {
 } from "../../utils/googleDriveService.js";
 import { getDatabasePath, closeDatabase, initializeDatabase } from "../../db/database.js";
 
+const IST_OFFSET_MINUTES = 330;
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const getShopkeeperDir = () => {
@@ -94,6 +96,45 @@ async function getAuthClientForUser(prisma, userId) {
   });
 
   return oAuth2Client;
+}
+
+function getTodayBoundsInIst(date = new Date()) {
+  const start = new Date(date);
+  start.setUTCMinutes(start.getUTCMinutes() + IST_OFFSET_MINUTES);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCMinutes(start.getUTCMinutes() - IST_OFFSET_MINUTES);
+
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return { start, end };
+}
+
+export async function getTodaySuccessfulBackup(prisma, userId) {
+  const { start, end } = getTodayBoundsInIst();
+
+  return prisma.backupHistory.findFirst({
+    where: {
+      userId,
+      status: "success",
+      trigger: { in: ["auto", "manual"] },
+      createdAt: {
+        gte: start,
+        lt: end,
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      trigger: true,
+      fileName: true,
+      driveLink: true,
+      fileSizeKb: true,
+      createdAt: true,
+    },
+  });
 }
 
 // ─── Core Backup Logic (shared by manual + scheduler) ───────────────────────
@@ -409,6 +450,74 @@ export const triggerManualBackup = asyncHandler(async (req, res) => {
       fileSizeKb: result.fileSizeKb,
     },
     "Backup completed successfully",
+    statusType.OK
+  );
+});
+
+/**
+ * POST /api/backup/ensure-daily
+ * Ensures the logged-in user has one successful backup for the current IST day.
+ */
+export const ensureDailyBackup = asyncHandler(async (req, res) => {
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const userId = req.user.userId;
+  const existingBackup = await getTodaySuccessfulBackup(prisma, userId);
+
+  if (existingBackup) {
+    return sendResponse(
+      res,
+      true,
+      {
+        alreadyBackedUp: true,
+        backupTaken: true,
+        attempted: false,
+        backup: existingBackup,
+        checkedAt: new Date().toISOString(),
+      },
+      "Today's backup already exists",
+      statusType.OK
+    );
+  }
+
+  const driveToken = await prisma.googleDriveToken.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!driveToken) {
+    return sendResponse(
+      res,
+      true,
+      {
+        alreadyBackedUp: false,
+        backupTaken: false,
+        attempted: false,
+        reason: "Google Drive not connected",
+        checkedAt: new Date().toISOString(),
+      },
+      "Google Drive not connected",
+      statusType.OK
+    );
+  }
+
+  const result = await performBackup(prisma, userId, "auto");
+
+  return sendResponse(
+    res,
+    true,
+    {
+      alreadyBackedUp: false,
+      backupTaken: result.success,
+      attempted: true,
+      fileName: result.fileName || null,
+      driveLink: result.driveLink || null,
+      fileSizeKb: result.fileSizeKb || null,
+      reason: result.success ? null : result.reason || "Backup failed",
+      checkedAt: new Date().toISOString(),
+    },
+    result.success ? "Daily backup completed" : result.reason || "Backup failed",
     statusType.OK
   );
 });

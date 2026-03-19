@@ -5,6 +5,7 @@ import type {
   BackupHistoryResponse,
   ConnectivityStatus,
   TriggerBackupResult,
+  EnsureDailyBackupResult,
   RestoreResult,
 } from "@/types/backup";
 
@@ -24,7 +25,7 @@ export const backupService = {
         "/backup/connectivity"
       );
       return response.data.data;
-    } catch (error) {
+    } catch {
       // If the request itself fails, we're definitely offline
       return { online: false, checkedAt: new Date().toISOString() };
     }
@@ -88,6 +89,21 @@ export const backupService = {
   },
 
   /**
+   * Ensure today's backup exists for the logged-in user.
+   */
+  async ensureDailyBackup(): Promise<EnsureDailyBackupResult> {
+    try {
+      const response = await apiClient.post<ApiResponse<EnsureDailyBackupResult>>(
+        "/backup/ensure-daily"
+      );
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      throw new Error(message);
+    }
+  },
+
+  /**
    * Download a local zip backup from backend and trigger browser download.
    */
   async downloadBackupZip(): Promise<string> {
@@ -137,10 +153,7 @@ export const backupService = {
   /**
    * Restore database from a uploaded zip file
    */
-  async restoreFromUpload(
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<RestoreResult> {
+  async restoreFromUpload(file: File): Promise<RestoreResult> {
     try {
       const formData = new FormData();
       formData.append("file", file);
