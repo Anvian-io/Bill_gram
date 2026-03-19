@@ -9,6 +9,20 @@ const __dirname = path.dirname(__filename);
 
 let prisma = null;
 
+async function ensureSubscriptionExpiryColumn(client) {
+  const columns = await client.$queryRawUnsafe(`PRAGMA table_info("users")`);
+  const hasSubscriptionExpiryColumn = columns.some(
+    (column) => column.name === "subscription_expires_at",
+  );
+
+  if (!hasSubscriptionExpiryColumn) {
+    await client.$executeRawUnsafe(
+      `ALTER TABLE "users" ADD COLUMN "subscription_expires_at" DATETIME`
+    );
+    console.log("Added subscription expiry column to users table");
+  }
+}
+
 /**
  * Get the appropriate database path based on platform
  * Always use OS-specific AppData/Local directory
@@ -75,6 +89,7 @@ export async function initializeDatabase() {
     try {
       // This will create tables if they don't exist on first query
       await prisma.$queryRaw`SELECT 1 as test`;
+      await ensureSubscriptionExpiryColumn(prisma);
       console.log("✅ Database connection verified");
     } catch (error) {
       console.log(

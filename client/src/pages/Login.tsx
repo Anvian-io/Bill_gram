@@ -31,70 +31,12 @@ import { backupService } from "@/services/backupService";
 // Import Lottie JSON files
 import loginLottie from "@/assets/Login_lottie.json";
 
-const FALLBACK_CREDENTIAL_STORAGE_KEY = "billgram_registered_credentials";
-
-type StoredCredentialRecord = {
-  email: string;
-  password: string;
-  username: string;
-  shopName: string;
-  phone: string;
-  expiresAt: string;
-  registeredAt: string;
-};
-
-type ElectronCredentialResult = {
-  success: boolean;
-  error?: string;
-  path?: string;
-  record?: StoredCredentialRecord | null;
-};
-
-type LoginElectronApi = {
-  getUserCredential?: (email: string) => Promise<ElectronCredentialResult>;
-};
-
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
-
-const formatExpiryDate = (value: string) =>
-  new Date(value).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 
 const formatSize = (sizeKb?: number) => {
   if (!sizeKb || Number.isNaN(sizeKb)) return "0 KB";
   if (sizeKb >= 1024) return `${(sizeKb / 1024).toFixed(2)} MB`;
   return `${sizeKb.toFixed(2)} KB`;
-};
-
-const getFallbackCredentialStore = (): StoredCredentialRecord[] => {
-  const raw = window.localStorage.getItem(FALLBACK_CREDENTIAL_STORAGE_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as StoredCredentialRecord[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    window.localStorage.removeItem(FALLBACK_CREDENTIAL_STORAGE_KEY);
-    return [];
-  }
-};
-
-const getStoredCredential = async (email: string) => {
-  const electronAPI = (
-    window as typeof window & { electronAPI?: LoginElectronApi }
-  ).electronAPI;
-
-  if (electronAPI?.getUserCredential) {
-    return electronAPI.getUserCredential(email);
-  }
-
-  const record =
-    getFallbackCredentialStore().find((item) => item.email === email) ?? null;
-
-  return { success: true, record };
 };
 
 export default function Login() {
@@ -115,34 +57,6 @@ export default function Login() {
 
     try {
       const normalizedEmail = normalizeEmail(email);
-      const credentialLookup = await getStoredCredential(normalizedEmail);
-
-      if (!credentialLookup.success) {
-        throw new Error(
-          credentialLookup.error || "Unable to read stored credentials",
-        );
-      }
-
-      const storedRecord = credentialLookup.record;
-
-      if (!storedRecord) {
-        throw new Error(
-          "No stored credential entry was found for this email. Please register first.",
-        );
-      }
-
-      if (new Date(storedRecord.expiresAt).getTime() <= Date.now()) {
-        throw new Error(
-          `This account expired on ${formatExpiryDate(storedRecord.expiresAt)}.`,
-        );
-      }
-
-      if (storedRecord.password !== password) {
-        throw new Error(
-          "Entered password does not match the saved credential record.",
-        );
-      }
-
       const result = await login(normalizedEmail, password);
 
       if (!result.success) {

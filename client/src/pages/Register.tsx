@@ -31,17 +31,6 @@ import registerLottie from "@/assets/Register_lottie.json";
 const NEBULA_API_BASE = (
   import.meta.env.VITE_NEBULA_API_BASE_URL ?? "http://localhost:5000/api"
 ).replace(/\/$/, "");
-const FALLBACK_CREDENTIAL_STORAGE_KEY = "billgram_registered_credentials";
-
-type StoredCredentialRecord = {
-  email: string;
-  password: string;
-  username: string;
-  shopName: string;
-  phone: string;
-  expiresAt: string;
-  registeredAt: string;
-};
 
 type NebulaRegisterResponse = {
   message: string;
@@ -54,24 +43,6 @@ type NebulaRegisterResponse = {
     registeredBy: string;
     inviteToken: string;
   };
-  credentials: {
-    email: string;
-    password: string;
-    expiresAt: string;
-  };
-};
-
-type ElectronCredentialResult = {
-  success: boolean;
-  error?: string;
-  path?: string;
-  record?: StoredCredentialRecord | null;
-};
-
-type RegisterElectronApi = {
-  saveUserCredential?: (
-    record: StoredCredentialRecord
-  ) => Promise<ElectronCredentialResult>;
 };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -82,45 +53,6 @@ const formatExpiryDate = (value: string) =>
     month: "2-digit",
     year: "numeric",
   });
-
-const getFallbackCredentialStore = (): StoredCredentialRecord[] => {
-  const raw = window.localStorage.getItem(FALLBACK_CREDENTIAL_STORAGE_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as StoredCredentialRecord[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    window.localStorage.removeItem(FALLBACK_CREDENTIAL_STORAGE_KEY);
-    return [];
-  }
-};
-
-const saveCredentialRecord = async (record: StoredCredentialRecord) => {
-  const electronAPI = (
-    window as typeof window & { electronAPI?: RegisterElectronApi }
-  ).electronAPI;
-
-  if (electronAPI?.saveUserCredential) {
-    return electronAPI.saveUserCredential(record);
-  }
-
-  const records = getFallbackCredentialStore();
-  const existingIndex = records.findIndex((item) => item.email === record.email);
-
-  if (existingIndex >= 0) {
-    records[existingIndex] = record;
-  } else {
-    records.push(record);
-  }
-
-  window.localStorage.setItem(
-    FALLBACK_CREDENTIAL_STORAGE_KEY,
-    JSON.stringify(records),
-  );
-
-  return { success: true, record };
-};
 
 const parseNebulaResponse = async (response: Response) => {
   const data = (await response.json().catch(() => null)) as
@@ -200,26 +132,14 @@ export default function Register() {
         );
       }
 
-      const saveResult = await saveCredentialRecord({
-        email: nebulaResponse.credentials.email,
-        password: nebulaResponse.credentials.password,
-        username: formData.username.trim(),
-        shopName: formData.shop_name.trim(),
-        phone: formData.phone.trim(),
-        expiresAt: nebulaResponse.credentials.expiresAt,
-        registeredAt: new Date().toISOString(),
-      });
-
-      if (!saveResult.success) {
-        throw new Error(
-          saveResult.error || "Registered, but failed to store credential file",
-        );
-      }
+      const subscriptionExpiresAt = result.data?.user?.subscriptionExpiresAt;
 
       toast.success(
-        `${nebulaResponse.message}. Access valid until ${formatExpiryDate(
-          nebulaResponse.credentials.expiresAt,
-        )}.`,
+        subscriptionExpiresAt
+          ? `${nebulaResponse.message}. Access valid until ${formatExpiryDate(
+              subscriptionExpiresAt,
+            )}.`
+          : nebulaResponse.message,
       );
       navigate("/login");
     } catch (error) {

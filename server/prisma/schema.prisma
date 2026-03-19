@@ -29,6 +29,7 @@ model User {
   upi_id          String?
   company_name    String?
   address         String?
+  subscriptionExpiresAt DateTime?  @map("subscription_expires_at")
 
   products        Product[]
   Notification    Notification[]

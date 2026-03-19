@@ -7,8 +7,165 @@ import {
   getPrismaOrFail,
 } from "../../utils/index.js";
 import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
+import { createNotification as createNotificationHelper } from "../../utils/notificationHelper.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const SUBSCRIPTION_TEST_DURATION_DAYS = 1;
+const SUBSCRIPTION_WARNING_WINDOW_MS =
+  SUBSCRIPTION_TEST_DURATION_DAYS * 24 * 60 * 60 * 1000;
+const SUBSCRIPTION_NOTIFICATION_SECTION = "subscription";
+const SUBSCRIPTION_NOTIFICATION_PAGE = "notifications";
+
+const formatSubscriptionDate = (value) =>
+  new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const getTodayBounds = (date = new Date()) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  return { start, end };
+};
+
+const calculateSubscriptionExpiryDate = (registrationDate = new Date()) => {
+  const expiryDate = new Date(registrationDate);
+
+  if (SUBSCRIPTION_TEST_DURATION_DAYS > 0) {
+    expiryDate.setDate(expiryDate.getDate() + SUBSCRIPTION_TEST_DURATION_DAYS);
+    expiryDate.setHours(23, 59, 59, 999);
+    return expiryDate;
+  }
+
+  return new Date(
+    registrationDate.getFullYear() + 1,
+    2,
+    31,
+    23,
+    59,
+    59,
+    999
+  );
+};
+
+const getFixedExistingUserSubscriptionExpiry = () =>
+  new Date(2027, 2, 31, 23, 59, 59, 999);
+
+async function setUserSubscriptionExpiry(prisma, userId, expiryDate) {
+  await prisma.$executeRawUnsafe(
+    `UPDATE users SET subscription_expires_at = ? WHERE id = ?`,
+    expiryDate.toISOString(),
+    userId
+  );
+}
+
+async function getUserSubscriptionExpiry(prisma, userId) {
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT subscription_expires_at AS subscriptionExpiresAt FROM users WHERE id = ? LIMIT 1`,
+    userId
+  );
+
+  const subscriptionExpiresAt = rows?.[0]?.subscriptionExpiresAt ?? null;
+  return subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
+}
+
+async function createSubscriptionNotificationOnce(
+  prisma,
+  res,
+  { userId, title, message, type }
+) {
+  const { start, end } = getTodayBounds();
+
+  const existingNotification = await prisma.notification.findFirst({
+    where: {
+      userId,
+      title,
+      section: SUBSCRIPTION_NOTIFICATION_SECTION,
+      createdAt: {
+        gte: start,
+        lt: end,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (existingNotification) {
+    return;
+  }
+
+  await createNotificationHelper(
+    {
+      title,
+      message,
+      type,
+      userIds: [userId],
+      section: SUBSCRIPTION_NOTIFICATION_SECTION,
+      page: SUBSCRIPTION_NOTIFICATION_PAGE,
+    },
+    res
+  );
+}
+
+async function notifySubscriptionStatus(prisma, res, user, { onRegister = false } = {}) {
+  // if (user?.subscriptionExpiresAt == null) {
+  //   return { expired: false };
+  // }
+  const expiryDate =
+    user?.subscriptionExpiresAt instanceof Date
+      ? user.subscriptionExpiresAt
+      : user?.subscriptionExpiresAt
+        ? new Date(user.subscriptionExpiresAt)
+        : await getUserSubscriptionExpiry(prisma, user.id);
+
+  if (!expiryDate) {
+    return { expired: true };
+  }
+
+  const now = new Date();
+
+  if (expiryDate.getTime() <= now.getTime()) {
+    await createSubscriptionNotificationOnce(prisma, res, {
+      userId: user.id,
+      title: "Subscription Expired",
+      message: `Your subscription expired on ${formatSubscriptionDate(
+        expiryDate
+      )}. Please renew to continue using BillGram.`,
+      type: "error",
+    });
+
+    return { expired: true, expiryDate };
+  }
+
+  if (onRegister) {
+    await createSubscriptionNotificationOnce(prisma, res, {
+      userId: user.id,
+      title: "Subscription Activated",
+      message: `Your subscription is active until ${formatSubscriptionDate(
+        expiryDate
+      )}.`,
+      type: "success",
+    });
+  }
+
+  const timeRemaining = expiryDate.getTime() - now.getTime();
+  if (timeRemaining <= SUBSCRIPTION_WARNING_WINDOW_MS) {
+    await createSubscriptionNotificationOnce(prisma, res, {
+      userId: user.id,
+      title: "Subscription Expiring Soon",
+      message: `Your subscription will expire on ${formatSubscriptionDate(
+        expiryDate
+      )}. Please renew soon.`,
+      type: "warning",
+    });
+  }
+
+  return { expired: false, expiryDate };
+}
 
 // Register user
 export const register = asyncHandler(async (req, res) => {
@@ -36,6 +193,13 @@ export const register = asyncHandler(async (req, res) => {
   });
 
   if (existingUser) {
+    const subscriptionExpiresAt = getFixedExistingUserSubscriptionExpiry();
+
+    await setUserSubscriptionExpiry(prisma, existingUser.id, subscriptionExpiresAt);
+    existingUser.subscriptionExpiresAt = subscriptionExpiresAt;
+
+    await notifySubscriptionStatus(prisma, res, existingUser, { onRegister: true });
+
     return sendResponse(
       res,
       true,
@@ -50,6 +214,7 @@ export const register = asyncHandler(async (req, res) => {
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
+  const subscriptionExpiresAt = calculateSubscriptionExpiryDate();
 
   // Create user using Prisma
   const user = await prisma.user.create({
@@ -69,6 +234,11 @@ export const register = asyncHandler(async (req, res) => {
       createdAt: true,
     },
   });
+
+  await setUserSubscriptionExpiry(prisma, user.id, subscriptionExpiresAt);
+  user.subscriptionExpiresAt = subscriptionExpiresAt;
+
+  await notifySubscriptionStatus(prisma, res, user, { onRegister: true });
 
   return sendResponse(
     res,
@@ -118,15 +288,30 @@ export const login = asyncHandler(async (req, res) => {
 
   // Check password
   const validPassword = await bcrypt.compare(password, user.password);
-  // if (!validPassword) {
-  //   return sendResponse(
-  //     res,
-  //     false,
-  //     null,
-  //     "Invalid credentials",
-  //     statusType.UNAUTHORIZED,
-  //   );
-  // }
+  if (!validPassword) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Invalid credentials",
+      statusType.UNAUTHORIZED,
+    );
+  }
+
+  const subscriptionStatus = await notifySubscriptionStatus(prisma, res, user);
+  if (subscriptionStatus.expired) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      `Subscription expired on ${formatSubscriptionDate(
+        subscriptionStatus.expiryDate
+      )}`,
+      statusType.FORBIDDEN,
+    );
+  }
+
+  user.subscriptionExpiresAt = subscriptionStatus.expiryDate || null;
 
   // Create token
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
@@ -201,6 +386,22 @@ export const check = asyncHandler(async (req, res) => {
         null,
         "User not found",
         statusType.NOT_FOUND,
+      );
+    }
+
+    const subscriptionExpiresAt = await getUserSubscriptionExpiry(prisma, user.id);
+    user.subscriptionExpiresAt = subscriptionExpiresAt;
+
+    const subscriptionStatus = await notifySubscriptionStatus(prisma, res, user);
+    if (subscriptionStatus.expired) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Subscription expired on ${formatSubscriptionDate(
+          subscriptionStatus.expiryDate
+        )}`,
+        statusType.FORBIDDEN,
       );
     }
 

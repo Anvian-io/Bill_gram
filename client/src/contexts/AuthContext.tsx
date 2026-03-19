@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useState,
@@ -5,7 +6,21 @@ import React, {
   useEffect,
   type ReactNode,
 } from "react";
-import { authAPI, type User } from "../services/api";
+import axios from "axios";
+import { authAPI, type RegisterData, type User } from "../services/api";
+
+type RegisterResponseData = {
+  message: string;
+  user: User;
+};
+
+const getAuthErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || error.response?.data?.error || fallback;
+  }
+
+  return fallback;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -14,8 +29,8 @@ interface AuthContextType {
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
   register: (
-    userData: any
-  ) => Promise<{ success: boolean; error?: string; data?: any }>;
+    userData: RegisterData
+  ) => Promise<{ success: boolean; error?: string; data?: RegisterResponseData }>;
   logout: () => void;
   loading: boolean;
 }
@@ -53,8 +68,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authAPI.checkAuth();
       localStorage.setItem("user", JSON.stringify(response.data.data.user));
       setUser(response.data.data.user);
-    } catch (error) {
+    } catch {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
     } finally {
       setLoading(false);
     }
@@ -69,28 +85,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem("token", token);
       setUser(user);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.response?.data?.error || "Login failed",
+        error: getAuthErrorMessage(error, "Login failed"),
       };
     }
   };
 
-  const register = async (userData: any) => {
+  const register = async (userData: RegisterData) => {
     try {
       const response = await authAPI.register(userData);
-      return { success: true, data: response.data.data };
-    } catch (error: any) {
+      return { success: true, data: response.data.data as RegisterResponseData };
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.response?.data?.error || "Registration failed",
+        error: getAuthErrorMessage(error, "Registration failed"),
       };
     }
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 
