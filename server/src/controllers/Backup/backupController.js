@@ -589,6 +589,73 @@ export const checkConnectivity = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Shared restore logic for authenticated and pre-login restore flows.
+ */
+async function restoreBackupFromUpload(prisma, file, userId = null) {
+  const targetDir = getShopkeeperDir();
+  const tmpZipPath = path.join(os.tmpdir(), `restore-${Date.now()}.zip`);
+
+  try {
+    fs.writeFileSync(tmpZipPath, file.buffer);
+
+    const fileSizeKb = parseFloat((file.size / 1024).toFixed(2));
+
+    await closeDatabase();
+
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(tmpZipPath)
+        .pipe(
+          unzipper.Extract({
+            path: targetDir,
+            forceStream: true,
+          })
+        )
+        .on("close", resolve)
+        .on("error", reject);
+    });
+
+    await initializeDatabase();
+
+    if (userId) {
+      await prisma.backupHistory.create({
+        data: {
+          userId,
+          status: "success",
+          trigger: "restore",
+          fileName: file.originalname,
+          fileSizeKb,
+        },
+      });
+    }
+
+    return { success: true, fileName: file.originalname, fileSizeKb };
+  } catch (error) {
+    console.error("Restore error:", error);
+
+    try {
+      await initializeDatabase();
+    } catch {}
+
+    if (userId) {
+      await prisma.backupHistory.create({
+        data: {
+          userId,
+          status: "failed",
+          trigger: "restore",
+          errorMsg: error.message?.substring(0, 500),
+        },
+      });
+    }
+
+    throw error;
+  } finally {
+    if (fs.existsSync(tmpZipPath)) {
+      fs.unlinkSync(tmpZipPath);
+    }
+  }
+}
+
+/**
  * POST /api/backup/restore
  * Accepts a zip file upload, extracts it to the Shopkeeper data folder
  */
@@ -608,69 +675,17 @@ export const restoreFromUpload = asyncHandler(async (req, res) => {
     );
   }
 
-  const targetDir = getShopkeeperDir();
-  const tmpZipPath = path.join(os.tmpdir(), `restore-${Date.now()}.zip`);
-
   try {
-    // Write uploaded buffer to temp file
-    fs.writeFileSync(tmpZipPath, req.file.buffer);
-
-    const fileSizeKb = parseFloat((req.file.size / 1024).toFixed(2));
-
-    // Close the current database connection
-    await closeDatabase();
-
-    // Extract zip to the Shopkeeper directory (overwrite existing files)
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(tmpZipPath)
-        .pipe(
-          unzipper.Extract({
-            path: targetDir,
-            forceStream: true,
-          })
-        )
-        .on("close", resolve)
-        .on("error", reject);
-    });
-
-    // Re-initialize the database
-    await initializeDatabase();
-
-    // Log the restore event
-    await prisma.backupHistory.create({
-      data: {
-        userId,
-        status: "success",
-        trigger: "restore",
-        fileName: req.file.originalname,
-        fileSizeKb,
-      },
-    });
+    const result = await restoreBackupFromUpload(prisma, req.file, userId);
 
     return sendResponse(
       res,
       true,
-      { fileName: req.file.originalname, fileSizeKb },
+      result,
       "Database restored successfully",
       statusType.OK
     );
   } catch (error) {
-    console.error("Restore error:", error);
-
-    // Try to re-initialize DB even if restore partially failed
-    try {
-      await initializeDatabase();
-    } catch {}
-
-    await prisma.backupHistory.create({
-      data: {
-        userId,
-        status: "failed",
-        trigger: "restore",
-        errorMsg: error.message?.substring(0, 500),
-      },
-    });
-
     return sendResponse(
       res,
       false,
@@ -678,9 +693,44 @@ export const restoreFromUpload = asyncHandler(async (req, res) => {
       `Restore failed: ${error.message}`,
       statusType.INTERNAL_SERVER_ERROR
     );
-  } finally {
-    if (fs.existsSync(tmpZipPath)) {
-      fs.unlinkSync(tmpZipPath);
-    }
+  }
+});
+
+/**
+ * POST /api/backup/restore-public
+ * Allows restore from the login page before authentication.
+ */
+export const restoreFromUploadPublic = asyncHandler(async (req, res) => {
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  if (!req.file) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "No zip file provided",
+      statusType.BAD_REQUEST
+    );
+  }
+
+  try {
+    const result = await restoreBackupFromUpload(prisma, req.file);
+
+    return sendResponse(
+      res,
+      true,
+      result,
+      "Database restored successfully",
+      statusType.OK
+    );
+  } catch (error) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      `Restore failed: ${error.message}`,
+      statusType.INTERNAL_SERVER_ERROR
+    );
   }
 });

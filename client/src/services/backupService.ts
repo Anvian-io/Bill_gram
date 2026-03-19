@@ -153,15 +153,26 @@ export const backupService = {
   /**
    * Restore database from a uploaded zip file
    */
-  async restoreFromUpload(file: File): Promise<RestoreResult> {
+  async restoreFromUpload(
+    file: File,
+    options?: { publicRoute?: boolean }
+  ): Promise<RestoreResult> {
     try {
       const formData = new FormData();
       formData.append("file", file);
 
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:3001/api/backup/restore", {
+      const route = options?.publicRoute
+        ? "http://localhost:3001/api/backup/restore-public"
+        : "http://localhost:3001/api/backup/restore";
+      const headers =
+        token && !options?.publicRoute
+          ? { Authorization: `Bearer ${token}` }
+          : {};
+
+      const response = await fetch(route, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
         body: formData,
       });
 

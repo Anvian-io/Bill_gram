@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { motion } from "framer-motion";
@@ -14,8 +14,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Database,
+  FileArchive,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
+import { backupService } from "@/services/backupService";
 
 // Import Lottie JSON files
 import loginLottie from "@/assets/Login_lottie.json";
@@ -52,6 +63,12 @@ const formatExpiryDate = (value: string) =>
     year: "numeric",
   });
 
+const formatSize = (sizeKb?: number) => {
+  if (!sizeKb || Number.isNaN(sizeKb)) return "0 KB";
+  if (sizeKb >= 1024) return `${(sizeKb / 1024).toFixed(2)} MB`;
+  return `${sizeKb.toFixed(2)} KB`;
+};
+
 const getFallbackCredentialStore = (): StoredCredentialRecord[] => {
   const raw = window.localStorage.getItem(FALLBACK_CREDENTIAL_STORAGE_KEY);
   if (!raw) return [];
@@ -85,8 +102,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +156,60 @@ export default function Login() {
     }
     finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      toast.error("Please select a .zip backup file");
+      return;
+    }
+
+    setRestoreFile(file);
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      toast.error("Please drop a .zip backup file");
+      return;
+    }
+
+    setRestoreFile(file);
+  };
+
+  const handleRestore = async () => {
+    if (!restoreFile) return;
+
+    if (
+      !window.confirm(
+        "This will replace the current database with the selected backup. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    setRestoring(true);
+    try {
+      const result = await backupService.restoreFromUpload(restoreFile, {
+        publicRoute: true,
+      });
+      toast.success(
+        `Database restored from ${result.fileName}. Please sign in again after restarting if needed.`
+      );
+      setRestoreFile(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Restore failed");
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -263,7 +338,7 @@ export default function Login() {
       >
         <motion.div
           variants={cardVariants}
-          className="w-full max-w-md"
+          className="w-full max-w-md space-y-4"
           whileHover={{ y: -5 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
@@ -439,6 +514,100 @@ export default function Login() {
                 </motion.span>
               </motion.p>
             </CardFooter>
+          </Card>
+
+          <Card className="border-border/40 p-4 shadow-lg backdrop-blur-sm bg-card/60">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="w-4 h-4 text-orange-500" />
+                Lost your data?
+              </CardTitle>
+              <CardDescription>
+                Restore a backup zip before login if your local data is missing.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div
+                className={`rounded-xl border-2 border-dashed p-5 text-center transition-all cursor-pointer ${
+                  isDragOver
+                    ? "border-primary bg-primary/5"
+                    : restoreFile
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-border/60 hover:border-primary/60 hover:bg-primary/5"
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={handleFileDrop}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+
+                {restoreFile ? (
+                  <div className="space-y-2">
+                    <FileArchive className="w-8 h-8 mx-auto text-emerald-500" />
+                    <p className="text-sm font-medium break-all">{restoreFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatSize(restoreFile.size / 1024)}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRestoreFile(null);
+                      }}
+                    >
+                      Remove file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm font-medium">Upload backup zip</p>
+                    <p className="text-xs text-muted-foreground">
+                      Drag and drop here or click to browse
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 space-y-1">
+                <p className="font-semibold flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Important
+                </p>
+                <p>This will replace the current local database on this device.</p>
+                <p>Use this only when you need to recover lost data.</p>
+              </div>
+
+              <button
+                type="button"
+                className="w-full h-11 rounded-sm bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                onClick={handleRestore}
+                disabled={!restoreFile || restoring}
+              >
+                {restoring ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Restoring...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4" />
+                    Restore Database
+                  </>
+                )}
+              </button>
+            </CardContent>
           </Card>
         </motion.div>
 
