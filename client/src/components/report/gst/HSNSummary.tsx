@@ -43,6 +43,7 @@ import {
 import { toast } from "sonner";
 import { salesService } from "@/services/salesService";
 import type { HSNSummaryFilters, HSNSummaryRow } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
@@ -77,13 +78,18 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
 
   const [filters, setFilters] = useState<HSNSummaryFilters>({
     source: "all",
+    gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
   });
   const [fromDateInput, setFromDateInput] = useState("");
   const [toDateInput, setToDateInput] = useState("");
 
-  const activeFiltersCount = [filters.fromDate, filters.toDate].filter(
+  const activeFiltersCount = [
+    filters.gstDetails,
+    filters.fromDate,
+    filters.toDate,
+  ].filter(
     (v) => v !== undefined && v !== null,
   ).length;
 
@@ -150,6 +156,7 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
   const clearFilters = () => {
     setFilters((prev) => ({
       ...prev,
+      gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
     }));
@@ -299,6 +306,14 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            setFilters((prev) => ({ ...prev, gstDetails: value }))
+                          }
+                          disabled={isLoading}
+                        />
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Data Type</Label>
                           <Select

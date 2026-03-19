@@ -34,6 +34,7 @@ import type {
   SalesMonthlyData,
   SalesMonthlyFilters,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 // ----------------------------------------------------------------------
 // Date Utilities (Copied from SalesGST)
@@ -98,6 +99,7 @@ export default function SalesMonthlyGST({
   const [filters, setFilters] = useState<SalesMonthlyFilters>({
     fromDate: getDefaultFromDate(),
     toDate: getDefaultToDate(),
+    gstDetails: undefined,
   });
 
   // Local inputs for debounced fields - initialized with default dates
@@ -149,6 +151,7 @@ export default function SalesMonthlyGST({
     setFilters({
       fromDate: defaultFrom,
       toDate: defaultTo,
+      gstDetails: undefined,
     });
     setFromDateInput(formatDateToDisplay(defaultFrom));
     setToDateInput(formatDateToDisplay(defaultTo));
@@ -169,6 +172,11 @@ export default function SalesMonthlyGST({
         toDate: defaultTo,
       }));
       setToDateInput(formatDateToDisplay(defaultTo));
+    } else if (filterName === "gstDetails") {
+      setFilters((prev) => ({
+        ...prev,
+        gstDetails: undefined,
+      }));
     }
   };
 
@@ -219,6 +227,7 @@ export default function SalesMonthlyGST({
       const blob = await salesService.downloadSalesGSTMonthlyExcel({
         fromDate: filters.fromDate,
         toDate: filters.toDate,
+        gstDetails: filters.gstDetails,
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -246,7 +255,11 @@ export default function SalesMonthlyGST({
   // ----------------------------------------------------------------------
   // Helper functions
   // ----------------------------------------------------------------------
-  const activeFiltersCount = [filters.fromDate, filters.toDate].filter(
+  const activeFiltersCount = [
+    filters.gstDetails,
+    filters.fromDate,
+    filters.toDate,
+  ].filter(
     (v) => v !== undefined && v !== null,
   ).length;
 
@@ -391,7 +404,15 @@ export default function SalesMonthlyGST({
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            setFilters((prev) => ({ ...prev, gstDetails: value }))
+                          }
+                          disabled={isLoading}
+                        />
+
                         {/* From Date */}
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">

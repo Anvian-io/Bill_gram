@@ -62,6 +62,7 @@ import type {
   SalesReportFilters,
   SalesRegisterReportData,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import SalesRegisterPreviewModal from "./SalesRegisterPreviewModal";
 
 // ----------------------------------------------------------------------
@@ -120,6 +121,7 @@ export default function SalesRegister() {
     areaId: undefined,
     vanId: undefined,
     salesmanId: undefined,
+    gstDetails: undefined,
     productGroupId: undefined,
   });
 
@@ -180,7 +182,10 @@ export default function SalesRegister() {
     setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  const handleFilterChange = (field: keyof SalesReportFilters, value: any) => {
+  const handleFilterChange = <K extends keyof SalesReportFilters>(
+    field: K,
+    value: SalesReportFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -193,6 +198,7 @@ export default function SalesRegister() {
       areaId: undefined,
       vanId: undefined,
       salesmanId: undefined,
+      gstDetails: undefined,
       productGroupId: undefined,
     });
     setInvoiceNoInput("");
@@ -210,6 +216,8 @@ export default function SalesRegister() {
         filterName === "salesmanId" ||
         filterName === "productGroupId"
           ? undefined
+          : filterName === "gstDetails"
+            ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : "",
@@ -241,6 +249,7 @@ export default function SalesRegister() {
         areaId: filters.areaId,
         vanId: filters.vanId,
         salesmanId: filters.salesmanId,
+        gstDetails: filters.gstDetails,
         productGroupId: filters.productGroupId,
       };
       const data = await salesService.getSalesReport(apiFilters);
@@ -263,7 +272,7 @@ export default function SalesRegister() {
   // Helper functions
   // --------------------------------------------------------------------
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
+    ([, value]) =>
       value !== undefined &&
       value !== "" &&
       !(value instanceof Date && isNaN(value.getTime())),
@@ -280,7 +289,11 @@ export default function SalesRegister() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
 
-  const getDisplayName = (list: any[], id?: number, defaultValue = "All") => {
+  const getDisplayName = (
+    list: Array<{ id: number; name: string }>,
+    id?: number,
+    defaultValue = "All",
+  ) => {
     if (!id) return `All ${defaultValue}s`;
     const item = list.find((i) => i.id === id);
     return item ? item.name : `Select ${defaultValue}`;
@@ -321,13 +334,14 @@ export default function SalesRegister() {
           areaId: filters.areaId,
           vanId: filters.vanId,
           salesmanId: filters.salesmanId,
+          gstDetails: filters.gstDetails,
         },
         page,
         registerLimit,
       );
       setRegisterData(data);
       setRegisterPage(data.pagination.currentPage);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load register");
     } finally {
       setRegisterLoading(false);
@@ -575,6 +589,14 @@ export default function SalesRegister() {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* Area */}
                         <div className="space-y-2">

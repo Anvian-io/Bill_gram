@@ -16,7 +16,6 @@ import {
   X,
   RefreshCw,
   FileText,
-  FileSpreadsheet,
   Calendar,
   ChevronsUpDown,
   Check,
@@ -63,6 +62,7 @@ import type {
   PurchaseReportFilters,
   PurchaseSummaryReportData,
 } from "@/types/purchase";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import PurchaseSummaryPreviewModal from "./PurchaseSummaryPreviewModal";
 
 // ----------------------------------------------------------------------
@@ -116,6 +116,7 @@ export default function PurchaseSummary() {
     toDate: undefined,
     invoiceNo: "",
     supplierId: undefined,
+    gstDetails: undefined,
     productGroupId: undefined,
   });
 
@@ -178,7 +179,7 @@ export default function PurchaseSummary() {
 
   const handleFilterChange = (
     field: keyof PurchaseReportFilters,
-    value: any,
+    value: PurchaseReportFilters[keyof PurchaseReportFilters],
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -189,6 +190,7 @@ export default function PurchaseSummary() {
       toDate: undefined,
       invoiceNo: "",
       supplierId: undefined,
+      gstDetails: undefined,
       productGroupId: undefined,
     });
     setInvoiceNoInput("");
@@ -202,6 +204,8 @@ export default function PurchaseSummary() {
       [filterName]:
         filterName === "supplierId" || filterName === "productGroupId"
           ? undefined
+          : filterName === "gstDetails"
+            ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : "",
@@ -230,6 +234,7 @@ export default function PurchaseSummary() {
         toDate: filters.toDate,
         invoiceNo: filters.invoiceNo || undefined,
         supplierId: filters.supplierId,
+        gstDetails: filters.gstDetails,
         productGroupId: filters.productGroupId,
       };
       const data = await purchaseService.getPurchaseReport(apiFilters);
@@ -241,7 +246,6 @@ export default function PurchaseSummary() {
       setReportData([]);
     } finally {
       setIsLoading(false);
-      console.log(isLoading, "fewoifhioew");
     }
   };
 
@@ -252,21 +256,8 @@ export default function PurchaseSummary() {
   // --------------------------------------------------------------------
   // Export placeholders
   // --------------------------------------------------------------------
-  const handleExportPDF = () => {
-    toast.info("PDF export coming soon");
-    // Implement PDF generation logic
-  };
-
-  const handleExportExcel = () => {
-    toast.info("Excel export coming soon");
-    // Implement Excel generation logic
-  };
-
-  // --------------------------------------------------------------------
-  // Helper functions
-  // --------------------------------------------------------------------
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
+    ([, value]) =>
       value !== undefined &&
       value !== "" &&
       !(value instanceof Date && isNaN(value.getTime())),
@@ -319,6 +310,7 @@ export default function PurchaseSummary() {
           toDate: filters.toDate,
           invoiceNo: filters.invoiceNo || undefined,
           supplierId: filters.supplierId,
+          gstDetails: filters.gstDetails,
           productGroupId: filters.productGroupId,
         },
         page,
@@ -326,7 +318,7 @@ export default function PurchaseSummary() {
       );
       setSummaryData(data);
       setSummaryPage(data.pagination.currentPage);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load summary");
     } finally {
       setSummaryLoading(false);
@@ -572,6 +564,14 @@ export default function PurchaseSummary() {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* Product Group */}
                         <div className="space-y-2">

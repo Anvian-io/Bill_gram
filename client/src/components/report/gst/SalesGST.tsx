@@ -56,10 +56,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import type {
-  SalesGSTResponse,
   SalesGSTInvoice,
   SalesGSTFilters,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -95,9 +95,6 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
   // State
   const [reportData, setReportData] = useState<SalesGSTInvoice[]>([]);
-  const [summaryData, setSummaryData] = useState<
-    SalesGSTResponse["summary"] | null
-  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -106,6 +103,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
   // Filters state
   const [filters, setFilters] = useState<SalesGSTFilters>({
     customerId: undefined,
+    gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
     sortBy: "invoiceDate",
@@ -164,13 +162,17 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  const handleFilterChange = (field: keyof SalesGSTFilters, value: any) => {
+  const handleFilterChange = <K extends keyof SalesGSTFilters>(
+    field: K,
+    value: SalesGSTFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
   };
 
   const clearFilters = () => {
     setFilters({
       customerId: undefined,
+      gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
       sortBy: "invoiceDate",
@@ -186,7 +188,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "customerId"
+        filterName === "customerId" || filterName === "gstDetails"
           ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
@@ -211,13 +213,11 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const response = await salesService.getSalesGST(filters);
       setReportData(response.sales);
-      setSummaryData(response.summary);
       setPagination(response.pagination);
     } catch (error) {
       console.error("Error fetching sales GST data:", error);
       toast.error("Failed to fetch sales GST data");
       setReportData([]);
-      setSummaryData(null);
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +235,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const blob = await salesService.downloadSalesGSTExcel({
         customerId: filters.customerId,
+        gstDetails: filters.gstDetails,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         sortBy: filters.sortBy,
@@ -265,6 +266,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
   // ----------------------------------------------------------------------
   const activeFiltersCount = [
     filters.customerId,
+    filters.gstDetails,
     filters.fromDate,
     filters.toDate,
   ].filter((v) => v !== undefined && v !== null).length;
@@ -500,6 +502,14 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* From Date */}
                         <div className="space-y-2">

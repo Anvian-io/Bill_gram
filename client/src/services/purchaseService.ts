@@ -21,6 +21,15 @@ import type {
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
+const appendGstDetailsParam = (
+  params: URLSearchParams,
+  gstDetails?: string,
+) => {
+  if (gstDetails !== undefined && gstDetails !== "" && gstDetails !== "all") {
+    params.append("gstDetails", gstDetails);
+  }
+};
+
 export const purchaseService = {
   // Get all purchases with pagination & filters
   async getPurchases(
@@ -148,6 +157,7 @@ export const purchaseService = {
         if (filters.supplierId) {
           params.append("supplierId", filters.supplierId.toString());
         }
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.productGroupId) {
           params.append("productGroupId", filters.productGroupId.toString());
         }
@@ -181,6 +191,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.productGroupId)
           params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -210,6 +221,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.productGroupId)
           params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -238,6 +250,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.productGroupId)
           params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -273,6 +286,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
       }
 
       const response = await apiClient.get<ApiResponse<PurchaseRegisterData>>(
@@ -299,6 +313,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
       }
       const response = await apiClient.get(
         `/purchases/purchase-register-report/pdf?${params.toString()}`,
@@ -325,6 +340,7 @@ export const purchaseService = {
         if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
       }
       const response = await apiClient.get(
         `/purchases/purchase-register-report/excel?${params.toString()}`,
@@ -403,6 +419,7 @@ export const purchaseService = {
         if (filters.limit) params.append("limit", filters.limit.toString());
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.fromDate)
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
@@ -430,6 +447,7 @@ export const purchaseService = {
       if (filters) {
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.fromDate)
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
@@ -462,6 +480,7 @@ export const purchaseService = {
         if (filters.limit) params.append("limit", filters.limit.toString());
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.fromDate)
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
@@ -490,6 +509,7 @@ export const purchaseService = {
       if (filters) {
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.fromDate)
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
@@ -518,6 +538,7 @@ export const purchaseService = {
       if (filters) {
         if (filters.supplierId)
           params.append("supplierId", filters.supplierId.toString());
+        appendGstDetailsParam(params, filters.gstDetails);
         if (filters.fromDate)
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
@@ -549,6 +570,7 @@ export const purchaseService = {
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
           params.append("toDate", filters.toDate.toISOString());
+        appendGstDetailsParam(params, filters.gstDetails);
       }
 
       const response = await apiClient.get<
@@ -572,6 +594,7 @@ export const purchaseService = {
           params.append("fromDate", filters.fromDate.toISOString());
         if (filters.toDate)
           params.append("toDate", filters.toDate.toISOString());
+        appendGstDetailsParam(params, filters.gstDetails);
       }
 
       const response = await apiClient.get(

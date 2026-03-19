@@ -56,6 +56,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import type { PurchaseB2BFilters, PurchaseB2BRow } from "@/types/purchase";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
@@ -91,6 +92,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
 
   const [filters, setFilters] = useState<PurchaseB2BFilters>({
     supplierId: undefined,
+    gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
     sortBy: "invoiceDate",
@@ -113,7 +115,10 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
 
   const { suppliers } = useActiveLists();
 
-  const handleFilterChange = (field: keyof PurchaseB2BFilters, value: any) => {
+  const handleFilterChange = <K extends keyof PurchaseB2BFilters>(
+    field: K,
+    value: PurchaseB2BFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
   };
 
@@ -151,7 +156,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "supplierId"
+        filterName === "supplierId" || filterName === "gstDetails"
           ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
@@ -166,6 +171,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
   const clearFilters = () => {
     setFilters({
       supplierId: undefined,
+      gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
       sortBy: "invoiceDate",
@@ -201,6 +207,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const blob = await purchaseService.downloadPurchaseB2BExcel({
         supplierId: filters.supplierId,
+        gstDetails: filters.gstDetails,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         sortBy: filters.sortBy,
@@ -226,6 +233,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
 
   const activeFiltersCount = [
     filters.supplierId,
+    filters.gstDetails,
     filters.fromDate,
     filters.toDate,
   ].filter((v) => v !== undefined && v !== null).length;
@@ -352,6 +360,14 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Sort By</Label>
                           <Select

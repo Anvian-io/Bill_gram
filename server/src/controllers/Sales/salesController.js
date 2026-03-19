@@ -38,6 +38,27 @@ const normalizeGstDetails = (value) => {
 
   return valueMap[normalizedValue] ?? DEFAULT_GST_DETAILS_ID;
 };
+
+const getGstDetailsFilterValue = (value) => {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    String(value).trim().toLowerCase() === "all"
+  ) {
+    return null;
+  }
+
+  return normalizeGstDetails(value);
+};
+
+const appendGstDetailsCondition = (andConditions, value) => {
+  const normalizedGstDetails = getGstDetailsFilterValue(value);
+  if (normalizedGstDetails !== null) {
+    andConditions.push({ gstDetails: normalizedGstDetails });
+  }
+  return normalizedGstDetails;
+};
 /**
  * Helper: Update batch stock (decrement for sales)
  * @param {PrismaClient} prisma
@@ -364,6 +385,7 @@ export const getAllSales = asyncHandler(async (req, res) => {
     search = "",
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -400,6 +422,7 @@ export const getAllSales = asyncHandler(async (req, res) => {
   if (customerId) {
     andConditions.push({ customerId: parseInt(customerId) });
   }
+  appendGstDetailsCondition(andConditions, gstDetails);
   if (areaId) {
     andConditions.push({ areaId: parseInt(areaId) });
   }
@@ -1063,6 +1086,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -1082,6 +1106,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
   if (customerId) {
     andConditions.push({ customerId: parseInt(customerId) });
   }
+  appendGstDetailsCondition(andConditions, gstDetails);
   if (areaId) {
     andConditions.push({ areaId: parseInt(areaId) });
   }
@@ -1197,6 +1222,7 @@ export const getAreaWiseSalesReport = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     vanId,
     salesmanId,
     productGroupId,
@@ -1213,6 +1239,10 @@ export const getAreaWiseSalesReport = asyncHandler(async (req, res) => {
   }
   if (customerId) {
     invoiceWhere.customerId = parseInt(customerId);
+  }
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
+  if (normalizedGstDetails !== null) {
+    invoiceWhere.gstDetails = normalizedGstDetails;
   }
   if (vanId) {
     invoiceWhere.vanId = parseInt(vanId);
@@ -1305,6 +1335,7 @@ export const getSalesmanWiseSalesReport = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     productGroupId,
@@ -1321,6 +1352,10 @@ export const getSalesmanWiseSalesReport = asyncHandler(async (req, res) => {
   }
   if (customerId) {
     invoiceWhere.customerId = parseInt(customerId);
+  }
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
+  if (normalizedGstDetails !== null) {
+    invoiceWhere.gstDetails = normalizedGstDetails;
   }
   if (areaId) {
     invoiceWhere.areaId = parseInt(areaId);
@@ -1413,6 +1448,7 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -1435,6 +1471,10 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -1604,6 +1644,7 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -1646,6 +1687,7 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -1660,6 +1702,10 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -1835,6 +1881,7 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
       toDate: toDate || null,
       invoiceNo: invoiceNo || null,
       customerId: customerId ? parseInt(customerId) : null,
+      gstDetails: normalizedGstDetails,
       areaId: areaId ? parseInt(areaId) : null,
       vanId: vanId ? parseInt(vanId) : null,
       salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -1930,6 +1977,7 @@ export const downloadSalesSummaryReportExcel = asyncHandler(
       toDate,
       invoiceNo = "",
       customerId,
+      gstDetails,
       areaId,
       vanId,
       salesmanId,
@@ -1944,6 +1992,10 @@ export const downloadSalesSummaryReportExcel = asyncHandler(
 
     if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
     if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+    const normalizedGstDetails = appendGstDetailsCondition(
+      andConditions,
+      gstDetails,
+    );
     if (areaId) andConditions.push({ areaId: parseInt(areaId) });
     if (vanId) andConditions.push({ vanId: parseInt(vanId) });
     if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -2118,6 +2170,7 @@ export const downloadSalesSummaryReportExcel = asyncHandler(
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -2324,6 +2377,7 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -2345,6 +2399,10 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -2447,6 +2505,7 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -2491,6 +2550,7 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     salesmanId,
@@ -2504,6 +2564,10 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -2615,6 +2679,7 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
       toDate: toDate || null,
       invoiceNo: invoiceNo || null,
       customerId: customerId ? parseInt(customerId) : null,
+      gstDetails: normalizedGstDetails,
       areaId: areaId ? parseInt(areaId) : null,
       vanId: vanId ? parseInt(vanId) : null,
       salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -2707,6 +2772,7 @@ export const downloadSalesRegisterReportExcel = asyncHandler(
       toDate,
       invoiceNo = "",
       customerId,
+      gstDetails,
       areaId,
       vanId,
       salesmanId,
@@ -2720,6 +2786,10 @@ export const downloadSalesRegisterReportExcel = asyncHandler(
 
     if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
     if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+    const normalizedGstDetails = appendGstDetailsCondition(
+      andConditions,
+      gstDetails,
+    );
     if (areaId) andConditions.push({ areaId: parseInt(areaId) });
     if (vanId) andConditions.push({ vanId: parseInt(vanId) });
     if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
@@ -2831,6 +2901,7 @@ export const downloadSalesRegisterReportExcel = asyncHandler(
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         salesmanId: salesmanId ? parseInt(salesmanId) : null,
@@ -3015,6 +3086,7 @@ export const getAreaWisePDFData = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     vanId,
     salesmanId,
     productGroupId,
@@ -3036,6 +3108,10 @@ export const getAreaWisePDFData = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
 
@@ -3202,6 +3278,7 @@ export const getAreaWisePDFData = asyncHandler(async (req, res) => {
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         vanId: vanId ? parseInt(vanId) : null,
         salesmanId: salesmanId ? parseInt(salesmanId) : null,
         productGroupId: productGroupId ? parseInt(productGroupId) : null,
@@ -3243,6 +3320,7 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     vanId,
     salesmanId,
     productGroupId,
@@ -3256,6 +3334,10 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
 
@@ -3426,6 +3508,7 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
       toDate: toDate || null,
       invoiceNo: invoiceNo || null,
       customerId: customerId ? parseInt(customerId) : null,
+      gstDetails: normalizedGstDetails,
       vanId: vanId ? parseInt(vanId) : null,
       salesmanId: salesmanId ? parseInt(salesmanId) : null,
       productGroupId: productGroupId ? parseInt(productGroupId) : null,
@@ -3517,6 +3600,7 @@ export const downloadAreaWiseReportExcel = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     vanId,
     salesmanId,
     productGroupId,
@@ -3530,6 +3614,10 @@ export const downloadAreaWiseReportExcel = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
   if (salesmanId) andConditions.push({ salesmanId: parseInt(salesmanId) });
 
@@ -3692,10 +3780,11 @@ export const downloadAreaWiseReportExcel = asyncHandler(async (req, res) => {
     filters: {
       fromDate: fromDate || null,
       toDate: toDate || null,
-      invoiceNo: invoiceNo || null,
-      customerId: customerId ? parseInt(customerId) : null,
-      vanId: vanId ? parseInt(vanId) : null,
-      salesmanId: salesmanId ? parseInt(salesmanId) : null,
+        invoiceNo: invoiceNo || null,
+        customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
+        vanId: vanId ? parseInt(vanId) : null,
+        salesmanId: salesmanId ? parseInt(salesmanId) : null,
       productGroupId: productGroupId ? parseInt(productGroupId) : null,
     },
   };
@@ -3871,6 +3960,7 @@ export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     productGroupId,
@@ -3892,6 +3982,10 @@ export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
 
@@ -4058,6 +4152,7 @@ export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         productGroupId: productGroupId ? parseInt(productGroupId) : null,
@@ -4099,6 +4194,7 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
     toDate,
     invoiceNo = "",
     customerId,
+    gstDetails,
     areaId,
     vanId,
     productGroupId,
@@ -4112,6 +4208,10 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
 
   if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
   if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (areaId) andConditions.push({ areaId: parseInt(areaId) });
   if (vanId) andConditions.push({ vanId: parseInt(vanId) });
 
@@ -4280,6 +4380,7 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
       toDate: toDate || null,
       invoiceNo: invoiceNo || null,
       customerId: customerId ? parseInt(customerId) : null,
+      gstDetails: normalizedGstDetails,
       areaId: areaId ? parseInt(areaId) : null,
       vanId: vanId ? parseInt(vanId) : null,
       productGroupId: productGroupId ? parseInt(productGroupId) : null,
@@ -4372,6 +4473,7 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
       toDate,
       invoiceNo = "",
       customerId,
+      gstDetails,
       areaId,
       vanId,
       productGroupId,
@@ -4385,6 +4487,10 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
 
     if (invoiceNo) andConditions.push({ invoiceNo: { contains: invoiceNo } });
     if (customerId) andConditions.push({ customerId: parseInt(customerId) });
+    const normalizedGstDetails = appendGstDetailsCondition(
+      andConditions,
+      gstDetails,
+    );
     if (areaId) andConditions.push({ areaId: parseInt(areaId) });
     if (vanId) andConditions.push({ vanId: parseInt(vanId) });
 
@@ -4549,6 +4655,7 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
         toDate: toDate || null,
         invoiceNo: invoiceNo || null,
         customerId: customerId ? parseInt(customerId) : null,
+        gstDetails: normalizedGstDetails,
         areaId: areaId ? parseInt(areaId) : null,
         vanId: vanId ? parseInt(vanId) : null,
         productGroupId: productGroupId ? parseInt(productGroupId) : null,
@@ -5269,6 +5376,7 @@ export const getSalesWithGST = asyncHandler(async (req, res) => {
     page = 1,
     limit = 10,
     customerId,
+    gstDetails,
     fromDate,
     toDate,
     sortBy = "invoiceDate",
@@ -5551,12 +5659,19 @@ export const getSalesWithGST = asyncHandler(async (req, res) => {
 // GET SALES B2C REPORT (B2CS summary)
 // --------------------------------------------------------------------
 export const getSalesB2C = asyncHandler(async (req, res) => {
-  const { fromDate, toDate, sortBy = "place", sortOrder = "asc" } = req.query;
+  const {
+    fromDate,
+    toDate,
+    gstDetails,
+    sortBy = "place",
+    sortOrder = "asc",
+  } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
   const andConditions = [{ deleted: false }];
+  appendGstDetailsCondition(andConditions, gstDetails);
   if (fromDate || toDate) {
     const dateFilter = {};
     if (fromDate) {
@@ -5665,12 +5780,22 @@ export const getSalesB2C = asyncHandler(async (req, res) => {
 // DOWNLOAD SALES B2C REPORT AS EXCEL
 // --------------------------------------------------------------------
 export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
-  const { fromDate, toDate, sortBy = "place", sortOrder = "asc" } = req.query;
+  const {
+    fromDate,
+    toDate,
+    gstDetails,
+    sortBy = "place",
+    sortOrder = "asc",
+  } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
 
   const andConditions = [{ deleted: false }];
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
   if (fromDate || toDate) {
     const dateFilter = {};
     if (fromDate) {
@@ -5878,7 +6003,13 @@ export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
       template: "b2cReport.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
-        filters: { fromDate: fromDate || null, toDate: toDate || null, sortBy, sortOrder },
+        filters: {
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          gstDetails: normalizedGstDetails,
+          sortBy,
+          sortOrder,
+        },
         count: rows.length,
       }),
     },
@@ -5892,7 +6023,13 @@ export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
       template: "b2cReport.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
-        filters: { fromDate: fromDate || null, toDate: toDate || null, sortBy, sortOrder },
+        filters: {
+          fromDate: fromDate || null,
+          toDate: toDate || null,
+          gstDetails: normalizedGstDetails,
+          sortBy,
+          sortOrder,
+        },
         count: rows.length,
       }),
     },
@@ -5916,6 +6053,7 @@ export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
 export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
   const {
     customerId,
+    gstDetails,
     fromDate,
     toDate,
     sortBy = "invoiceDate",
@@ -5930,6 +6068,10 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
   if (customerId) {
     andConditions.push({ customerId: parseInt(customerId) });
   }
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
 
   if (fromDate || toDate) {
     const dateFilter = {};
@@ -6207,6 +6349,7 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
       data: JSON.stringify({
         filters: {
           customerId: customerId ? parseInt(customerId) : null,
+          gstDetails: normalizedGstDetails,
           fromDate: fromDate || null,
           toDate: toDate || null,
           sortBy,
@@ -6227,6 +6370,7 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
       data: JSON.stringify({
         filters: {
           customerId: customerId ? parseInt(customerId) : null,
+          gstDetails: normalizedGstDetails,
           fromDate: fromDate || null,
           toDate: toDate || null,
           sortBy,
@@ -6256,6 +6400,7 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
 export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
   const {
     customerId,
+    gstDetails,
     fromDate,
     toDate,
     sortBy = "invoiceDate",
@@ -6270,6 +6415,10 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
   if (customerId) {
     andConditions.push({ customerId: parseInt(customerId) });
   }
+  const normalizedGstDetails = appendGstDetailsCondition(
+    andConditions,
+    gstDetails,
+  );
 
   if (fromDate || toDate) {
     const dateFilter = {};
@@ -6515,6 +6664,7 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
       data: JSON.stringify({
         filters: {
           customerId: customerId ? parseInt(customerId) : null,
+          gstDetails: normalizedGstDetails,
           fromDate: fromDate || null,
           toDate: toDate || null,
           sortBy,
@@ -6535,6 +6685,7 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
       data: JSON.stringify({
         filters: {
           customerId: customerId ? parseInt(customerId) : null,
+          gstDetails: normalizedGstDetails,
           fromDate: fromDate || null,
           toDate: toDate || null,
           sortBy,
@@ -6558,7 +6709,13 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
   res.end();
 });
 
-const buildHSNSummaryRows = async (prisma, source, fromDate, toDate) => {
+const buildHSNSummaryRows = async (
+  prisma,
+  source,
+  fromDate,
+  toDate,
+  gstDetails,
+) => {
   const numberOrZero = (value) => (Number.isFinite(value) ? value : 0);
   const grouped = new Map();
 
@@ -6611,11 +6768,15 @@ const buildHSNSummaryRows = async (prisma, source, fromDate, toDate) => {
   };
 
   const dateFilter = buildDateFilter();
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
 
   if (source === "sales" || source === "all") {
     const salesWhere = dateFilter
       ? { deleted: false, invoiceDate: dateFilter }
       : { deleted: false };
+    if (normalizedGstDetails !== null) {
+      salesWhere.gstDetails = normalizedGstDetails;
+    }
 
     const salesInvoices = await prisma.salesInvoice.findMany({
       where: salesWhere,
@@ -6679,6 +6840,9 @@ const buildHSNSummaryRows = async (prisma, source, fromDate, toDate) => {
     const purchaseWhere = dateFilter
       ? { deleted: false, invoiceDate: dateFilter }
       : { deleted: false };
+    if (normalizedGstDetails !== null) {
+      purchaseWhere.gstDetails = normalizedGstDetails;
+    }
 
     const purchaseInvoices = await prisma.purchaseInvoice.findMany({
       where: purchaseWhere,
@@ -6747,7 +6911,7 @@ const buildHSNSummaryRows = async (prisma, source, fromDate, toDate) => {
 // GET HSN SUMMARY REPORT
 // --------------------------------------------------------------------
 export const getHSNSummaryReport = asyncHandler(async (req, res) => {
-  const { source = "all", fromDate, toDate } = req.query;
+  const { source = "all", fromDate, toDate, gstDetails } = req.query;
   const normalizedSource = ["all", "sales", "purchase"].includes(source)
     ? source
     : "all";
@@ -6760,12 +6924,23 @@ export const getHSNSummaryReport = asyncHandler(async (req, res) => {
     normalizedSource,
     fromDate,
     toDate,
+    gstDetails,
   );
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
 
   return sendResponse(
     res,
     true,
-    { rows, count: rows.length, source: normalizedSource, filters: { fromDate: fromDate || null, toDate: toDate || null } },
+    {
+      rows,
+      count: rows.length,
+      source: normalizedSource,
+      filters: {
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        gstDetails: normalizedGstDetails,
+      },
+    },
     "HSN summary report retrieved successfully",
     statusType.OK,
   );
@@ -6775,7 +6950,7 @@ export const getHSNSummaryReport = asyncHandler(async (req, res) => {
 // DOWNLOAD HSN SUMMARY REPORT AS EXCEL
 // --------------------------------------------------------------------
 export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
-  const { source = "all", fromDate, toDate } = req.query;
+  const { source = "all", fromDate, toDate, gstDetails } = req.query;
   const normalizedSource = ["all", "sales", "purchase"].includes(source)
     ? source
     : "all";
@@ -6788,7 +6963,9 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
     normalizedSource,
     fromDate,
     toDate,
+    gstDetails,
   );
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("HSN Summary");
@@ -6910,6 +7087,7 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
           source: normalizedSource,
           fromDate: fromDate || null,
           toDate: toDate || null,
+          gstDetails: normalizedGstDetails,
         },
         totalRows: rows.length,
       }),
@@ -6928,6 +7106,7 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
           source: normalizedSource,
           fromDate: fromDate || null,
           toDate: toDate || null,
+          gstDetails: normalizedGstDetails,
         },
         totalRows: rows.length,
       }),
@@ -6951,7 +7130,7 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
 // GET SALES GST MONTHLY REPORT
 // --------------------------------------------------------------------
 export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
-  const { fromDate, toDate } = req.query;
+  const { fromDate, toDate, gstDetails } = req.query;
 
   // Validation
   if (!fromDate || !toDate) {
@@ -6981,6 +7160,10 @@ export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
       lte: endDate.toISOString(),
     },
   };
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
+  if (normalizedGstDetails !== null) {
+    where.gstDetails = normalizedGstDetails;
+  }
 
   // Fetch all invoices in date range with related data
   const invoices = await prisma.salesInvoice.findMany({
@@ -7101,6 +7284,7 @@ export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
       filters: {
         fromDate,
         toDate,
+        gstDetails: normalizedGstDetails,
       },
       period: {
         from: startDate.toISOString(),
@@ -7119,7 +7303,7 @@ export const getSalesGSTMonthly = asyncHandler(async (req, res) => {
 // DOWNLOAD SALES GST MONTHLY REPORT AS EXCEL
 // --------------------------------------------------------------------
 export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
-  const { fromDate, toDate } = req.query;
+  const { fromDate, toDate, gstDetails } = req.query;
 
   if (!fromDate || !toDate) {
     return sendResponse(
@@ -7139,11 +7323,17 @@ export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
   const endDate = new Date(toDate);
   endDate.setHours(23, 59, 59, 999);
 
+  const where = {
+    deleted: false,
+    invoiceDate: { gte: startDate.toISOString(), lte: endDate.toISOString() },
+  };
+  const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
+  if (normalizedGstDetails !== null) {
+    where.gstDetails = normalizedGstDetails;
+  }
+
   const invoices = await prisma.salesInvoice.findMany({
-    where: {
-      deleted: false,
-      invoiceDate: { gte: startDate.toISOString(), lte: endDate.toISOString() },
-    },
+    where,
     orderBy: { invoiceDate: "asc" },
     include: {
       customer: {
@@ -7376,7 +7566,7 @@ export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
       template: "salesMonthlyGST.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
-        filters: { fromDate, toDate },
+        filters: { fromDate, toDate, gstDetails: normalizedGstDetails },
         totalMonths: monthlyData.length,
       }),
     },
@@ -7390,7 +7580,7 @@ export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
       template: "salesMonthlyGST.xlsx",
       fileName: excelFileName,
       data: JSON.stringify({
-        filters: { fromDate, toDate },
+        filters: { fromDate, toDate, gstDetails: normalizedGstDetails },
         totalMonths: monthlyData.length,
       }),
     },

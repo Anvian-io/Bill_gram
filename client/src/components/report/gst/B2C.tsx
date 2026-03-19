@@ -41,6 +41,7 @@ import type {
   SalesB2CResponse,
   SalesB2CRow,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 const parseDateFromString = (dateString: string): Date | undefined => {
   if (!dateString) return undefined;
@@ -82,6 +83,7 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
   const [filters, setFilters] = useState<SalesB2CFilters>({
     fromDate: getDefaultFromDate(),
     toDate: getDefaultToDate(),
+    gstDetails: undefined,
     sortBy: "place",
     sortOrder: "asc",
   });
@@ -93,7 +95,10 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
     formatDateToDisplay(getDefaultToDate()),
   );
 
-  const handleFilterChange = (field: keyof SalesB2CFilters, value: any) => {
+  const handleFilterChange = <K extends keyof SalesB2CFilters>(
+    field: K,
+    value: SalesB2CFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -136,6 +141,8 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
       const date = getDefaultToDate();
       setFilters((prev) => ({ ...prev, toDate: date }));
       setToDateInput(formatDateToDisplay(date));
+    } else if (filterName === "gstDetails") {
+      setFilters((prev) => ({ ...prev, gstDetails: undefined }));
     }
   };
 
@@ -145,6 +152,7 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters({
       fromDate: defaultFrom,
       toDate: defaultTo,
+      gstDetails: undefined,
       sortBy: "place",
       sortOrder: "asc",
     });
@@ -279,6 +287,14 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4 border-t">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Sort By</Label>
                           <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange("sortBy", value)} disabled={isLoading}>

@@ -62,6 +62,7 @@ import type {
   PurchaseReportFilters,
   PurchaseRegisterData,
 } from "@/types/purchase";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import PurchaseRegisterPreviewModal from "./PurchaseRegisterPreviewModal";
 
 // ----------------------------------------------------------------------
@@ -115,6 +116,7 @@ export default function PurchaseRegister() {
     toDate: undefined,
     invoiceNo: "",
     supplierId: undefined,
+    gstDetails: undefined,
   });
 
   // Local inputs for debounced fields
@@ -176,7 +178,7 @@ export default function PurchaseRegister() {
 
   const handleFilterChange = (
     field: keyof PurchaseReportFilters,
-    value: any,
+    value: PurchaseReportFilters[keyof PurchaseReportFilters],
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -187,6 +189,7 @@ export default function PurchaseRegister() {
       toDate: undefined,
       invoiceNo: "",
       supplierId: undefined,
+      gstDetails: undefined,
     });
     setInvoiceNoInput("");
     setFromDateInput("");
@@ -199,6 +202,8 @@ export default function PurchaseRegister() {
       [filterName]:
         filterName === "supplierId"
           ? undefined
+          : filterName === "gstDetails"
+            ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : "",
@@ -227,6 +232,7 @@ export default function PurchaseRegister() {
         toDate: filters.toDate,
         invoiceNo: filters.invoiceNo || undefined,
         supplierId: filters.supplierId,
+        gstDetails: filters.gstDetails,
       };
       const data = await purchaseService.getPurchaseReport(apiFilters);
       setReportData(data);
@@ -256,13 +262,14 @@ export default function PurchaseRegister() {
           toDate: filters.toDate,
           invoiceNo: filters.invoiceNo || undefined,
           supplierId: filters.supplierId,
+          gstDetails: filters.gstDetails,
         },
         page,
         registerLimit,
       );
       setRegisterData(data);
       setRegisterPage(data.pagination.currentPage);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load register");
     } finally {
       setRegisterLoading(false);
@@ -282,7 +289,7 @@ export default function PurchaseRegister() {
   // Helper functions
   // --------------------------------------------------------------------
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
+    ([, value]) =>
       value !== undefined &&
       value !== "" &&
       !(value instanceof Date && isNaN(value.getTime())),
@@ -547,6 +554,14 @@ export default function PurchaseRegister() {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* From Date */}
                         <div className="space-y-2">

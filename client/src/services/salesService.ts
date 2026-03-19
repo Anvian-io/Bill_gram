@@ -29,6 +29,15 @@ import type {
   SalesReportHistoryFilters,
 } from "@/types/sales-report";
 
+const appendGstDetailsParam = (
+  params: URLSearchParams,
+  gstDetails?: string,
+) => {
+  if (gstDetails !== undefined && gstDetails !== "" && gstDetails !== "all") {
+    params.append("gstDetails", gstDetails);
+  }
+};
+
 export const salesService = {
   async getSales(
     page: number = 1,
@@ -157,6 +166,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -200,6 +210,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -240,6 +251,7 @@ export const salesService = {
       if (filters.vanId) {
         params.append("vanId", filters.vanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -284,6 +296,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -328,6 +341,7 @@ export const salesService = {
       if (filters.vanId) {
         params.append("vanId", filters.vanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -375,6 +389,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -416,6 +431,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -510,6 +526,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
 
       const response = await apiClient.get<
         ApiResponse<SalesRegisterReportData>
@@ -548,6 +565,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
 
       const response = await apiClient.get(
         `/sales/sales-register-report/pdf?${params.toString()}`,
@@ -589,6 +607,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
 
       const response = await apiClient.get(
         `/sales/sales-register-report/excel?${params.toString()}`,
@@ -627,6 +646,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -668,6 +688,7 @@ export const salesService = {
       if (filters.salesmanId) {
         params.append("salesmanId", filters.salesmanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -709,6 +730,7 @@ export const salesService = {
       if (filters.vanId) {
         params.append("vanId", filters.vanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -750,6 +772,7 @@ export const salesService = {
       if (filters.vanId) {
         params.append("vanId", filters.vanId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.productGroupId) {
         params.append("productGroupId", filters.productGroupId.toString());
       }
@@ -782,6 +805,7 @@ export const salesService = {
       if (filters.customerId) {
         params.append("customerId", filters.customerId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -816,6 +840,7 @@ export const salesService = {
       if (filters.customerId) {
         params.append("customerId", filters.customerId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -848,6 +873,7 @@ export const salesService = {
     try {
       const params = new URLSearchParams();
 
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -882,6 +908,7 @@ export const salesService = {
       if (filters.customerId) {
         params.append("customerId", filters.customerId.toString());
       }
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -914,6 +941,7 @@ export const salesService = {
     try {
       const params = new URLSearchParams();
 
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -946,6 +974,7 @@ export const salesService = {
     try {
       const params = new URLSearchParams();
       params.append("source", filters.source || "all");
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -969,6 +998,7 @@ export const salesService = {
     try {
       const params = new URLSearchParams();
       params.append("source", filters.source || "all");
+      appendGstDetailsParam(params, filters.gstDetails);
       if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toISOString());
       }
@@ -1003,6 +1033,7 @@ export const salesService = {
 
       params.append("fromDate", filters.fromDate.toISOString());
       params.append("toDate", filters.toDate.toISOString());
+      appendGstDetailsParam(params, filters.gstDetails);
 
       const response = await apiClient.get<
         ApiResponse<SalesMonthlyGSTResponse>
@@ -1028,6 +1059,7 @@ export const salesService = {
 
       params.append("fromDate", filters.fromDate.toISOString());
       params.append("toDate", filters.toDate.toISOString());
+      appendGstDetailsParam(params, filters.gstDetails);
 
       const response = await apiClient.get(
         `/sales/gst-monthly/excel?${params.toString()}`,

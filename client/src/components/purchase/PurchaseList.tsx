@@ -30,6 +30,7 @@ import {
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import {
   Select,
   SelectContent,
@@ -138,6 +139,7 @@ export default function Purchase() {
   const [filters, setFilters] = useState<PurchaseFilters>({
     search: "",
     supplierId: "all",
+    gstDetails: undefined,
     minAmount: "",
     maxAmount: "",
     fromDate: undefined,
@@ -233,6 +235,7 @@ export default function Purchase() {
     setFilters({
       search: "",
       supplierId: "all",
+      gstDetails: undefined,
       minAmount: "",
       maxAmount: "",
       fromDate: undefined,
@@ -256,6 +259,8 @@ export default function Purchase() {
       [filterName]:
         filterName === "supplierId" || filterName === "status"
           ? "all"
+          : filterName === "gstDetails"
+            ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : filterName === "showDeleted"
@@ -294,6 +299,7 @@ export default function Purchase() {
         search: filters.search || undefined,
         supplierId:
           filters.supplierId !== "all" ? filters.supplierId : undefined,
+        gstDetails: filters.gstDetails,
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         fromDate: filters.fromDate,
@@ -690,6 +696,14 @@ export default function Purchase() {
                               </PopoverContent>
                             </Popover>
                           </div>
+
+                          <GstDetailsFilter
+                            value={filters.gstDetails}
+                            onChange={(value) =>
+                              handleFilterChange("gstDetails", value)
+                            }
+                            disabled={isLoading}
+                          />
 
                           {/* Amount Range */}
                           <div className="space-y-2">

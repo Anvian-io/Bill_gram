@@ -56,10 +56,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import type {
-  PurchaseGSTResponse,
   PurchaseGSTInvoice,
   PurchaseGSTFilters,
 } from "@/types/purchase";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -95,9 +95,6 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   // State
   const [reportData, setReportData] = useState<PurchaseGSTInvoice[]>([]);
-  const [summaryData, setSummaryData] = useState<
-    PurchaseGSTResponse["summary"] | null
-  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
@@ -106,6 +103,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   // Filters state
   const [filters, setFilters] = useState<PurchaseGSTFilters>({
     supplierId: undefined,
+    gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
     sortBy: "invoiceDate",
@@ -164,13 +162,17 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  const handleFilterChange = (field: keyof PurchaseGSTFilters, value: any) => {
+  const handleFilterChange = <K extends keyof PurchaseGSTFilters>(
+    field: K,
+    value: PurchaseGSTFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
   };
 
   const clearFilters = () => {
     setFilters({
       supplierId: undefined,
+      gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
       sortBy: "invoiceDate",
@@ -186,7 +188,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "supplierId"
+        filterName === "supplierId" || filterName === "gstDetails"
           ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
@@ -211,13 +213,11 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const response = await purchaseService.getPurchaseGST(filters);
       setReportData(response.purchases);
-      setSummaryData(response.summary);
       setPagination(response.pagination);
     } catch (error) {
       console.error("Error fetching purchase GST data:", error);
       toast.error("Failed to fetch purchase GST data");
       setReportData([]);
-      setSummaryData(null);
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +235,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const blob = await purchaseService.downloadPurchaseGSTExcel({
         supplierId: filters.supplierId,
+        gstDetails: filters.gstDetails,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         sortBy: filters.sortBy,
@@ -265,6 +266,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   // ----------------------------------------------------------------------
   const activeFiltersCount = [
     filters.supplierId,
+    filters.gstDetails,
     filters.fromDate,
     filters.toDate,
   ].filter((v) => v !== undefined && v !== null).length;
@@ -500,6 +502,14 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* From Date */}
                         <div className="space-y-2">

@@ -8,6 +8,7 @@ export interface SalesReportFilters {
   areaId?: number;
   vanId?: number;
   salesmanId?: number;
+  gstDetails?: string;
   productGroupId?: number;
 }
 
@@ -82,6 +83,7 @@ export interface AreaWisePDFData {
     customerId: number | null;
     vanId: number | null;
     salesmanId: number | null;
+    gstDetails: string | null;
     productGroupId: number | null;
     page: number;
     limit: number;
@@ -137,6 +139,7 @@ export interface SalesmanWisePDFData {
     customerId: number | null;
     areaId: number | null;
     vanId: number | null;
+    gstDetails: string | null;
     productGroupId: number | null;
     page: number;
     limit: number;
@@ -207,6 +210,7 @@ export interface SalesSummaryReportData {
     areaId: number | null;
     vanId: number | null;
     salesmanId: number | null;
+    gstDetails: string | null;
     productGroupId: number | null;
     page: number;
     limit: number;
@@ -257,6 +261,7 @@ export interface SalesRegisterReportData {
     areaId: number | null;
     vanId: number | null;
     salesmanId: number | null;
+    gstDetails: string | null;
     page: number;
     limit: number;
   };
@@ -394,6 +399,7 @@ export interface SalesGSTResponse {
 
 export interface SalesGSTFilters {
   customerId?: number;
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
   sortBy?: string;
@@ -423,6 +429,7 @@ export interface SalesB2CSummary {
 }
 
 export interface SalesB2CFilters {
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
   sortBy?: string;
@@ -454,6 +461,7 @@ export interface HSNSummaryRow {
 
 export interface HSNSummaryFilters {
   source?: "all" | "sales" | "purchase";
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
 }
@@ -463,6 +471,7 @@ export interface HSNSummaryResponse {
   count: number;
   source: "all" | "sales" | "purchase";
   filters: {
+    gstDetails: string | null;
     fromDate: string | null;
     toDate: string | null;
   };
@@ -516,6 +525,7 @@ export interface SalesMonthlyGSTResponse {
   filters: {
     fromDate: string;
     toDate: string;
+    gstDetails: string | null;
   };
   period: SalesMonthlyPeriod;
   monthlyData: SalesMonthlyData[];
@@ -525,6 +535,7 @@ export interface SalesMonthlyGSTResponse {
 export interface SalesMonthlyFilters {
   fromDate?: Date;
   toDate?: Date;
+  gstDetails?: string;
 }
 
 // ========== Sales Report History Types ==========

@@ -22,6 +22,7 @@ export interface PurchaseFilters {
   search?: string;
   // invoiceNo is removed – auto-generated
   supplierId?: string | number;
+  gstDetails?: string;
   fromDate?: Date; // ← only Date, never string
   toDate?: Date;
   minAmount?: number | string;
@@ -162,7 +163,7 @@ export type PurchaseFormData = {
   gstDetails: string; // invoiceNo removed – auto-generated
   items: Array<{
     schAmount: number;
-    schPercent: any;
+    schPercent: number;
     fQty: string | number | readonly string[] | undefined;
     DQty: string | number | readonly string[] | undefined;
     finalAmount: number;
@@ -217,6 +218,7 @@ export interface PurchaseReportFilters {
   toDate?: Date;
   invoiceNo?: string;
   supplierId?: number | undefined;
+  gstDetails?: string;
   productGroupId?: number | undefined;
 }
 
@@ -241,6 +243,7 @@ export interface PurchaseSummaryReportData {
     toDate: string | null;
     invoiceNo: string | null;
     supplierId: number | null;
+    gstDetails: string | null;
     productGroupId: number | null;
     page: number;
     limit: number;
@@ -296,6 +299,7 @@ export interface PurchaseRegisterData {
     toDate: string | null;
     invoiceNo: string | null;
     supplierId: number | null;
+    gstDetails: string | null;
     page: number;
     limit: number;
   };
@@ -458,6 +462,7 @@ export interface PurchaseGSTResponse {
 
 export interface PurchaseGSTFilters {
   supplierId?: number;
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
   sortBy?: string;
@@ -485,6 +490,7 @@ export interface PurchaseB2BRow {
 
 export interface PurchaseB2BFilters {
   supplierId?: number;
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
   sortBy?: string;
@@ -547,6 +553,7 @@ export interface PurchaseMonthlyGSTResponse {
   filters: {
     fromDate: string;
     toDate: string;
+    gstDetails: string | null;
   };
   period: {
     from: string;
@@ -560,4 +567,5 @@ export interface PurchaseMonthlyGSTResponse {
 export interface PurchaseMonthlyFilters {
   fromDate?: Date;
   toDate?: Date;
+  gstDetails?: string;
 }

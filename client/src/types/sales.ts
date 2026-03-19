@@ -24,6 +24,7 @@ export interface SalesFilters {
   areaId?: string | number;
   vanId?: string | number;
   salesmanId?: string | number;
+  gstDetails?: string;
   fromDate?: Date;
   toDate?: Date;
   minAmount?: number | string;

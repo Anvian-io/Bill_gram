@@ -29,6 +29,7 @@ import {
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import {
   Select,
   SelectContent,
@@ -147,6 +148,7 @@ export default function Sales() {
     customerId: "all",
     vanId: "all",
     salesmanId: "all",
+    gstDetails: undefined,
     minAmount: "",
     maxAmount: "",
     fromDate: undefined,
@@ -262,6 +264,7 @@ export default function Sales() {
       customerId: "all",
       vanId: "all",
       salesmanId: "all",
+      gstDetails: undefined,
       minAmount: "",
       maxAmount: "",
       fromDate: undefined,
@@ -288,6 +291,8 @@ export default function Sales() {
         filterName === "salesmanId" ||
         filterName === "status"
           ? "all"
+          : filterName === "gstDetails"
+            ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : "",
@@ -339,6 +344,7 @@ export default function Sales() {
         vanId: filters.vanId === "all" ? undefined : filters.vanId,
         salesmanId:
           filters.salesmanId === "all" ? undefined : filters.salesmanId,
+        gstDetails: filters.gstDetails,
         status: filters.status === "all" ? undefined : filters.status,
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
@@ -389,6 +395,7 @@ export default function Sales() {
     filters.customerId,
     filters.vanId,
     filters.salesmanId,
+    filters.gstDetails,
     filters.status,
     filters.minAmount,
     filters.maxAmount,
@@ -436,6 +443,7 @@ export default function Sales() {
     filters.maxAmount,
     filters.fromDate,
     filters.toDate,
+    filters.gstDetails,
     filters.status,
   ]);
 
@@ -911,6 +919,14 @@ export default function Sales() {
                               </PopoverContent>
                             </Popover>
                           </div>
+
+                          <GstDetailsFilter
+                            value={filters.gstDetails}
+                            onChange={(value) =>
+                              handleFilterChange("gstDetails", value)
+                            }
+                            disabled={isLoading}
+                          />
 
                           {/* Van Filter */}
                           <div className="space-y-2">

@@ -64,6 +64,7 @@ import type {
   AreaWiseReportItem,
   AreaWisePDFData,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import AreaWisePreviewModal from "./AreaWisePreviewModal";
 
 // ----------------------------------------------------------------------
@@ -132,6 +133,7 @@ export default function AreaWise() {
     toDate: undefined,
     invoiceNo: "",
     customerId: undefined,
+    gstDetails: undefined,
     areaId: undefined,
     vanId: undefined,
     salesmanId: undefined,
@@ -195,7 +197,10 @@ export default function AreaWise() {
     setToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
-  const handleFilterChange = (field: keyof SalesReportFilters, value: any) => {
+  const handleFilterChange = <K extends keyof SalesReportFilters>(
+    field: K,
+    value: SalesReportFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -205,6 +210,7 @@ export default function AreaWise() {
       toDate: undefined,
       invoiceNo: "",
       customerId: undefined,
+      gstDetails: undefined,
       areaId: undefined,
       vanId: undefined,
       salesmanId: undefined,
@@ -220,6 +226,7 @@ export default function AreaWise() {
       ...prev,
       [filterName]:
         filterName === "customerId" ||
+        filterName === "gstDetails" ||
         filterName === "areaId" ||
         filterName === "vanId" ||
         filterName === "salesmanId" ||
@@ -266,6 +273,7 @@ export default function AreaWise() {
         toDate: filters.toDate,
         invoiceNo: filters.invoiceNo || undefined,
         customerId: filters.customerId,
+        gstDetails: filters.gstDetails,
         areaId: filters.areaId,
         vanId: filters.vanId,
         salesmanId: filters.salesmanId,
@@ -300,6 +308,7 @@ export default function AreaWise() {
           toDate: filters.toDate,
           invoiceNo: filters.invoiceNo || undefined,
           customerId: filters.customerId,
+          gstDetails: filters.gstDetails,
           vanId: filters.vanId,
           salesmanId: filters.salesmanId,
           productGroupId: filters.productGroupId,
@@ -309,7 +318,7 @@ export default function AreaWise() {
       );
       setPdfData(data);
       setPdfPage(data.pagination.currentPage);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load area-wise PDF data");
     } finally {
       setPdfLoading(false);
@@ -328,19 +337,8 @@ export default function AreaWise() {
   // --------------------------------------------------------------------
   // Export placeholders
   // --------------------------------------------------------------------
-  const handleExportPDF = () => {
-    toast.info("Use the Show button to preview and download PDF");
-  };
-
-  const handleExportExcel = () => {
-    toast.info("Excel export coming soon");
-  };
-
-  // --------------------------------------------------------------------
-  // Helper functions
-  // --------------------------------------------------------------------
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
+    ([, value]) =>
       value !== undefined &&
       value !== "" &&
       !(value instanceof Date && isNaN(value.getTime())),
@@ -357,7 +355,11 @@ export default function AreaWise() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
 
-  const getDisplayName = (list: any[], id?: number, defaultValue = "All") => {
+  const getDisplayName = (
+    list: Array<{ id: number; name: string }>,
+    id?: number,
+    defaultValue = "All",
+  ) => {
     if (!id) return `All ${defaultValue}s`;
     const item = list.find((i) => i.id === id);
     return item ? item.name : `Select ${defaultValue}`;
@@ -599,6 +601,14 @@ export default function AreaWise() {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         {/* Area (filter) */}
                         <div className="space-y-2">

@@ -61,6 +61,7 @@ import type {
   SalesGSTItem,
   SalesGSTResponse,
 } from "@/types/sales-report";
+import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 
 type GSTR1Row = {
   id: string;
@@ -180,6 +181,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
   const [toDateInput, setToDateInput] = useState("");
   const [filters, setFilters] = useState<SalesGSTFilters>({
     customerId: undefined,
+    gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
     sortBy: "invoiceDate",
@@ -202,7 +204,10 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
     [invoices],
   );
 
-  const handleFilterChange = (field: keyof SalesGSTFilters, value: any) => {
+  const handleFilterChange = <K extends keyof SalesGSTFilters>(
+    field: K,
+    value: SalesGSTFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
   };
 
@@ -240,7 +245,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       [filterName]:
-        filterName === "customerId"
+        filterName === "customerId" || filterName === "gstDetails"
           ? undefined
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
@@ -254,6 +259,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
   const clearFilters = () => {
     setFilters({
       customerId: undefined,
+      gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
       sortBy: "invoiceDate",
@@ -291,6 +297,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
     try {
       const blob = await salesService.downloadGSTR1Excel({
         customerId: filters.customerId,
+        gstDetails: filters.gstDetails,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         sortBy: filters.sortBy,
@@ -317,6 +324,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
 
   const activeFiltersCount = [
     filters.customerId,
+    filters.gstDetails,
     filters.fromDate,
     filters.toDate,
   ].filter((v) => v !== undefined && v !== null).length;
@@ -488,6 +496,14 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
                             </PopoverContent>
                           </Popover>
                         </div>
+
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">From Date</Label>
