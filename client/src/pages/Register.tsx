@@ -547,7 +547,7 @@ export default function Register() {
                     whileTap={{ scale: 0.98 }}
                   >
                     {loading ? (
-                      <>
+                      <div className="flex justify-center items-center">
                         <motion.div
                           initial={{ rotate: 0 }}
                           animate={{ rotate: 360 }}
@@ -559,7 +559,7 @@ export default function Register() {
                           className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
                         />
                         Creating account...
-                      </>
+                      </div>
                     ) : (
                       <motion.span
                         initial={{ opacity: 0, y: 10 }}

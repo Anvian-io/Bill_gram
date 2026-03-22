@@ -43,6 +43,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showBackupUpload, setShowBackupUpload] = useState(false);
   const [loading, setLoading] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [restoring, setRestoring] = useState(false);
@@ -67,9 +68,15 @@ export default function Login() {
       navigate("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed");
-    }
-    finally {
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const clearRestoreFile = () => {
+    setRestoreFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -79,6 +86,9 @@ export default function Login() {
 
     if (!file.name.toLowerCase().endsWith(".zip")) {
       toast.error("Please select a .zip backup file");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -119,7 +129,8 @@ export default function Login() {
       toast.success(
         `Database restored from ${result.fileName}. Please sign in again after restarting if needed.`
       );
-      setRestoreFile(null);
+      clearRestoreFile();
+      setShowBackupUpload(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Restore failed");
     } finally {
@@ -256,6 +267,7 @@ export default function Login() {
           whileHover={{ y: -5 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
+          {!showBackupUpload && (
           <Card className="border-border/40 p-4 shadow-xl backdrop-blur-sm bg-card/50">
             <CardHeader className="space-y-1 pb-6">
               <motion.div
@@ -273,14 +285,14 @@ export default function Login() {
                   <Mail className="w-6 h-6 text-primary" />
                 </div>
               </motion.div>
-              <motion.div variants={itemVariants}>
+              <div>
                 <CardTitle className="text-2xl text-center font-bold">
                   Welcome Back
                 </CardTitle>
                 <CardDescription className="text-center">
                   Enter your credentials to access your dashboard
                 </CardDescription>
-              </motion.div>
+              </div>
             </CardHeader>
             <CardContent>
               <motion.form
@@ -386,7 +398,7 @@ export default function Login() {
                     whileTap={{ scale: 0.98 }}
                   >
                     {loading ? (
-                      <>
+                      <div className="flex justify-center items-center">
                         <motion.div
                           initial={{ rotate: 0 }}
                           animate={{ rotate: 360 }}
@@ -398,7 +410,7 @@ export default function Login() {
                           className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
                         />
                         Signing in...
-                      </>
+                      </div>
                     ) : (
                       <motion.span
                         initial={{ opacity: 0, y: 10 }}
@@ -410,13 +422,22 @@ export default function Login() {
                     )}
                   </motion.button>
                 </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <motion.button
+                    type="button"
+                    className="w-full rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700 transition-all hover:bg-orange-100"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowBackupUpload(true)}
+                  >
+                    Do you want to upload backup data?
+                  </motion.button>
+                </motion.div>
               </motion.form>
             </CardContent>
             <CardFooter className="flex justify-center border-t border-border/40 pt-6">
-              <motion.p
-                variants={itemVariants}
-                className="text-sm text-muted-foreground"
-              >
+              <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <motion.span whileHover={{ scale: 1.05 }}>
                   <Link
@@ -426,15 +447,17 @@ export default function Login() {
                     Create account
                   </Link>
                 </motion.span>
-              </motion.p>
+              </p>
             </CardFooter>
           </Card>
+          )}
 
+          {showBackupUpload && (
           <Card className="border-border/40 p-4 shadow-lg backdrop-blur-sm bg-card/60">
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-base flex items-center gap-2">
                 <Database className="w-4 h-4 text-orange-500" />
-                Lost your data?
+                Upload backup data
               </CardTitle>
               <CardDescription>
                 Restore a backup zip before login if your local data is missing.
@@ -477,7 +500,7 @@ export default function Login() {
                       className="text-xs text-red-500 hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setRestoreFile(null);
+                        clearRestoreFile();
                       }}
                     >
                       Remove file
@@ -522,7 +545,22 @@ export default function Login() {
                 )}
               </button>
             </CardContent>
+            <CardFooter className="flex justify-center border-t border-border/40 pt-6">
+              <motion.button
+                type="button"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowBackupUpload(false);
+                  setIsDragOver(false);
+                }}
+              >
+                Back to login
+              </motion.button>
+            </CardFooter>
           </Card>
+          )}
         </motion.div>
 
         {/* <motion.div
