@@ -52,12 +52,12 @@ import { formatDistanceToNow } from "date-fns";
 // Available page filter options (based on your schema's "page" field)
 const PAGE_OPTIONS = [
   { value: "all", label: "All Pages" },
-  { value: "master", label: "Master" },
-  { value: "sales", label: "Sales" },
-  { value: "report", label: "Report" },
-  { value: "product inventory", label: "Product Inventory" },
-  { value: "purchase", label: "Purchase" },
-  { value: "profile", label: "Profile" },
+  { value: "Master", label: "Master" },
+  { value: "Sales", label: "Sales" },
+  { value: "Report", label: "Report" },
+  { value: "Product inventory", label: "Product Inventory" },
+  { value: "Purchase", label: "Purchase" },
+  { value: "Profile", label: "Profile" },
 ];
 
 // Notification type badge color mapping
