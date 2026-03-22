@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -16,7 +17,6 @@ import {
   Search,
   X,
   MailOpen,
-  Mail,
   Clock,
   Layout,
   CheckCheck,
@@ -24,18 +24,10 @@ import {
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { CustomAlert } from "@/components/custom_ui";
 import {
   containerVariants,
   itemVariants,
@@ -43,136 +35,123 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
-} from "../components/FramerVariants";
+} from "@/components/FramerVariants";
 import { useDebounce } from "@/utils/debounce";
-import type { Notification } from "@/services/notificationService";
-import { notificationAPI, webSocketService } from "@/services/notificationService";
+import type {
+  Notification,
+  NotificationQueryParams,
+} from "@/services/notificationService";
+import { notificationAPI } from "@/services/notificationService";
 import { formatDistanceToNow } from "date-fns";
 
-// Available page filter options (based on your schema's "page" field)
-const PAGE_OPTIONS = [
-  { value: "all", label: "All Pages" },
-  { value: "Master", label: "Master" },
-  { value: "Sales", label: "Sales" },
-  { value: "Report", label: "Report" },
-  { value: "product", label: "Product Inventory" },
-  { value: "Purchase", label: "Purchase" },
-  { value: "Profile", label: "Profile" },
-];
-
-// Notification type badge color mapping
 const typeColorMap: Record<string, string> = {
-  success: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
-  warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
+  success:
+    "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+  warning:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
   error: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
   info: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
-  create: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400",
-  update: "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400",
+  create:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400",
+  update:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400",
   delete: "bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-400",
 };
 
-export default function NotificationPage() {
-  // State for notifications
+interface NotificationHistoryPanelProps {
+  title: string;
+  pageName: string;
+}
+
+export default function NotificationHistoryPanel({
+  title,
+  pageName,
+}: NotificationHistoryPanelProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMarkingAll, setIsMarkingAll] = useState(false);
-
-  // Delete / mark read confirmation (optional, for bulk actions)
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [notificationToMark, setNotificationToMark] = useState<Notification | null>(null);
-
-  // Filter state
+  const [isMarkingVisible, setIsMarkingVisible] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-  search: "",
-  title: "",
-  message: "",
-  pageName: "all",   // was 'page'
-  unreadOnly: false,
-});
-
-  // Local input states for debounced fields
+    search: "",
+    title: "",
+    message: "",
+    unreadOnly: false,
+  });
   const [searchInput, setSearchInput] = useState("");
   const [titleInput, setTitleInput] = useState("");
   const [messageInput, setMessageInput] = useState("");
-
-  // Debounced filter setters
-  const debouncedSetSearch = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, search: value }));
-  }, 300);
-  const debouncedSetTitle = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, title: value }));
-  }, 300);
-  const debouncedSetMessage = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, message: value }));
-  }, 300);
-
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
 
-  // WebSocket real‑time updates (optional)
   useEffect(() => {
-  webSocketService.setOnNotificationCallback((newNotification) => {
-    toast.info(`New notification: ${newNotification.title}`);
-    // Go to first page to show the newest notification
-    setCurrentPage(1);
-    // No need to call fetchNotifications() – it will be triggered by the page change
-  });
-  webSocketService.connect();
+    if (!searchParams.has("id")) {
+      return;
+    }
 
-  return () => {
-    webSocketService.disconnect();
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("id");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, 300);
+
+  const debouncedSetTitle = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, title: value }));
+  }, 300);
+
+  const debouncedSetMessage = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, message: value }));
+  }, 300);
+
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const params: NotificationQueryParams = {
+        page: currentPage,
+        limit: itemsPerPage,
+        pageName,
+      };
+
+      if (filters.search) params.search = filters.search;
+      if (filters.title) params.title = filters.title;
+      if (filters.message) params.message = filters.message;
+      if (filters.unreadOnly) params.unreadOnly = true;
+
+      const response = await notificationAPI.getNotifications(params);
+      const payload = response.data?.data;
+
+      setNotifications(payload?.notifications ?? []);
+      setTotalItems(payload?.pagination?.total ?? 0);
+      setTotalPages(payload?.pagination?.totalPages ?? 1);
+    } catch (error: any) {
+      toast.error(`Failed to fetch ${pageName.toLowerCase()} notifications`, {
+        description: error.message,
+      });
+      setNotifications([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
   };
-}, []); 
-
-  // Fetch notifications
-const fetchNotifications = async () => {
-  setIsLoading(true);
-  try {
-    const params: any = {
-      page: currentPage,
-      limit: itemsPerPage,
-    };
-    if (filters.search) params.search = filters.search;
-    if (filters.title) params.title = filters.title;
-    if (filters.message) params.message = filters.message;
-    if (filters.pageName !== "all") params.pageName = filters.pageName;
-    if (filters.unreadOnly) params.unreadOnly = true;
-
-    const response = await notificationAPI.getNotifications(params);
-    console.log('API response notification:', response);
-
-    // ✅ Now response.data is ApiResponse, so we drill into .data.data
-    const payload = response.data?.data;   // this is PaginatedNotifications
-    setNotifications(payload?.notifications ?? []);
-    setTotalItems(payload?.pagination?.total ?? 0);
-    setTotalPages(payload?.pagination?.totalPages ?? 1);
-  } catch (error: any) {
-    toast.error("Failed to fetch notifications", {
-      description: error.message,
-    });
-    setNotifications([]);
-    setTotalItems(0);
-    setTotalPages(1);
-  } finally {
-    setIsLoading(false);
-  }
-};
 
   useEffect(() => {
     fetchNotifications();
-  }, [currentPage, itemsPerPage, filters]);
+  }, [currentPage, itemsPerPage, filters, pageName]);
 
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, itemsPerPage]);
+  }, [filters, itemsPerPage, pageName]);
 
-  // Handlers for filter changes
-  const handleFilterChange = (field: string, value: any) => {
+  const handleFilterChange = (
+    field: keyof typeof filters,
+    value: string | boolean,
+  ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -196,7 +175,6 @@ const fetchNotifications = async () => {
       search: "",
       title: "",
       message: "",
-      pageName: "all",
       unreadOnly: false,
     });
     setSearchInput("");
@@ -207,22 +185,25 @@ const fetchNotifications = async () => {
   const clearFilter = (field: keyof typeof filters) => {
     setFilters((prev) => ({
       ...prev,
-      [field]: field === "pageName" ? "all" : field === "unreadOnly" ? false : "",
+      [field]: field === "unreadOnly" ? false : "",
     }));
-    // Clear corresponding input
+
     if (field === "search") setSearchInput("");
     if (field === "title") setTitleInput("");
     if (field === "message") setMessageInput("");
   };
 
-  // Mark single notification as read
   const handleMarkAsRead = async (notification: Notification) => {
-    if (notification.read) return;
+    if (notification.read) {
+      return;
+    }
+
     try {
       await notificationAPI.markAsRead(notification.id);
-      // Optimistic update
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+        prev.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item,
+        ),
       );
       toast.success("Notification marked as read");
     } catch (error: any) {
@@ -230,36 +211,71 @@ const fetchNotifications = async () => {
     }
   };
 
-  // Mark all as read
-  const handleMarkAllAsRead = async () => {
-    setIsMarkingAll(true);
+  const handleMarkVisibleAsRead = async () => {
+    const unreadNotifications = notifications.filter((notification) => !notification.read);
+
+    if (unreadNotifications.length === 0) {
+      return;
+    }
+
+    setIsMarkingVisible(true);
+
     try {
-      await notificationAPI.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      toast.success("All notifications marked as read");
-    } catch (error: any) {
-      toast.error("Failed to mark all as read", { description: error.message });
+      const results = await Promise.allSettled(
+        unreadNotifications.map((notification) =>
+          notificationAPI.markAsRead(notification.id).then(() => notification.id),
+        ),
+      );
+
+      const markedIds = new Set(
+        results
+          .filter(
+            (
+              result,
+            ): result is PromiseFulfilledResult<number> =>
+              result.status === "fulfilled",
+          )
+          .map((result) => result.value),
+      );
+
+      if (markedIds.size > 0) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            markedIds.has(notification.id)
+              ? { ...notification, read: true }
+              : notification,
+          ),
+        );
+      }
+
+      if (markedIds.size === unreadNotifications.length) {
+        toast.success("Visible notifications marked as read");
+      } else if (markedIds.size > 0) {
+        toast.warning(
+          `${markedIds.size} of ${unreadNotifications.length} notifications marked as read`,
+        );
+      } else {
+        toast.error("Failed to mark visible notifications as read");
+      }
     } finally {
-      setIsMarkingAll(false);
+      setIsMarkingVisible(false);
     }
   };
 
-  // Refresh
   const handleRefresh = () => {
     fetchNotifications();
-    toast.info("Refreshing notifications...");
+    toast.info(`Refreshing ${pageName.toLowerCase()} notifications...`);
   };
 
-  // Pagination helpers
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-  const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) =>
-      key !== "search" &&
-      ((key === "unreadOnly" && value) || (value && value !== "all"))
-  ).length;
+  const activeFiltersCount = useMemo(
+    () =>
+      Object.entries(filters).filter(
+        ([key, value]) =>
+          key !== "search" && ((key === "unreadOnly" && value) || Boolean(value)),
+      ).length,
+    [filters],
+  );
 
-  // Format time
   const formatRelativeTime = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
@@ -267,6 +283,10 @@ const fetchNotifications = async () => {
       return "Invalid date";
     }
   };
+
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+  const hasUnreadNotifications = notifications.some((notification) => !notification.read);
 
   return (
     <motion.div
@@ -276,17 +296,23 @@ const fetchNotifications = async () => {
       variants={containerVariants}
     >
       <div className="max-w-8xl mx-auto">
-        {/* Header */}
         <motion.div
           className="flex flex-col gap-6 mb-6 w-full"
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-heading">Notifications</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-heading">{title}</h1>
+                <Badge variant="secondary" className="text-sm">
+                  {pageName}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground mt-1">
+                Track recent {pageName.toLowerCase()} notifications and activity.
+              </p>
             </div>
 
-            {/* Global Search */}
             <motion.div
               className="relative w-100"
               initial={{ opacity: 0, y: -10 }}
@@ -299,7 +325,7 @@ const fetchNotifications = async () => {
                 placeholder="Search by title or message..."
                 className="pl-10 py-6 text-base"
                 value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
               />
               {searchInput && (
                 <Button
@@ -316,7 +342,6 @@ const fetchNotifications = async () => {
               )}
             </motion.div>
 
-            {/* Action Buttons */}
             <motion.div className="flex flex-wrap items-center gap-3">
               <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
                 <Button
@@ -334,23 +359,21 @@ const fetchNotifications = async () => {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={handleMarkAllAsRead}
-                  disabled={isMarkingAll || notifications.every((n) => n.read)}
+                  onClick={handleMarkVisibleAsRead}
+                  disabled={isMarkingVisible || !hasUnreadNotifications}
                 >
                   <CheckCheck className="h-4 w-4" />
-                  Mark all as read
+                  Mark shown as read
                 </Button>
               </motion.div>
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Filter Section */}
         <motion.div className="mb-2" variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardContent className="p-1">
               <div className="flex flex-col gap-4 p-1">
-                {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Filter className="h-5 w-5 text-muted-foreground" />
@@ -383,7 +406,6 @@ const fetchNotifications = async () => {
                   </div>
                 </div>
 
-                {/* Filter Controls */}
                 <AnimatePresence>
                   {showFilters && (
                     <motion.div
@@ -393,18 +415,17 @@ const fetchNotifications = async () => {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        {/* Title Filter */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                         <div className="space-y-2">
-                          <Label htmlFor="title" className="text-sm font-medium">
+                          <Label htmlFor={`${pageName}-title`} className="text-sm font-medium">
                             Title
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="title"
+                              id={`${pageName}-title`}
                               placeholder="Filter by title"
                               value={titleInput}
-                              onChange={(e) => handleTitleChange(e.target.value)}
+                              onChange={(event) => handleTitleChange(event.target.value)}
                               className="flex-1"
                             />
                             {titleInput && (
@@ -423,17 +444,19 @@ const fetchNotifications = async () => {
                           </div>
                         </div>
 
-                        {/* Message Filter */}
                         <div className="space-y-2">
-                          <Label htmlFor="message" className="text-sm font-medium">
+                          <Label
+                            htmlFor={`${pageName}-message`}
+                            className="text-sm font-medium"
+                          >
                             Description
                           </Label>
                           <div className="flex gap-2">
                             <Input
-                              id="message"
+                              id={`${pageName}-message`}
                               placeholder="Filter by description"
                               value={messageInput}
-                              onChange={(e) => handleMessageChange(e.target.value)}
+                              onChange={(event) => handleMessageChange(event.target.value)}
                               className="flex-1"
                             />
                             {messageInput && (
@@ -452,43 +475,23 @@ const fetchNotifications = async () => {
                           </div>
                         </div>
 
-                        {/* Page Dropdown */}
                         <div className="space-y-2">
-                          <Label htmlFor="page" className="text-sm font-medium">
-                            Page
-                          </Label>
-                          <Select
-                            value={filters.pageName}
-                            onValueChange={(value) => handleFilterChange("pageName", value)}
+                          <Label
+                            htmlFor={`${pageName}-unreadOnly`}
+                            className="text-sm font-medium"
                           >
-                            <SelectTrigger id="page">
-                              <SelectValue placeholder="Select page" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PAGE_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Unread Only Toggle */}
-                        <div className="space-y-2">
-                          <Label htmlFor="unreadOnly" className="text-sm font-medium">
                             Show Unread Only
                           </Label>
                           <div className="flex items-center gap-3 pt-2">
                             <Switch
-                              id="unreadOnly"
+                              id={`${pageName}-unreadOnly`}
                               checked={filters.unreadOnly}
                               onCheckedChange={(checked) =>
                                 handleFilterChange("unreadOnly", checked)
                               }
                             />
                             <Label
-                              htmlFor="unreadOnly"
+                              htmlFor={`${pageName}-unreadOnly`}
                               className={`text-sm cursor-pointer ${
                                 filters.unreadOnly
                                   ? "text-primary"
@@ -511,7 +514,6 @@ const fetchNotifications = async () => {
           </Card>
         </motion.div>
 
-        {/* Results Count & Items Per Page */}
         <motion.div
           className="flex justify-between items-center mb-4"
           variants={itemVariants}
@@ -525,25 +527,20 @@ const fetchNotifications = async () => {
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => setItemsPerPage(Number(value))}
+            <select
+              value={itemsPerPage}
+              onChange={(event) => setItemsPerPage(Number(event.target.value))}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[5, 10, 20, 50].map((size) => (
-                  <SelectItem key={size} value={size.toString()}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {[5, 10, 20, 50].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
           </div>
         </motion.div>
 
-        {/* Notifications Table */}
         <motion.div variants={itemVariants}>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
@@ -581,8 +578,8 @@ const fetchNotifications = async () => {
                               animate={{ scale: 1, opacity: 1 }}
                             >
                               <Bell className="h-12 w-12 text-muted-foreground/50 mb-2" />
-                              <p>No notifications found.</p>
-                              {activeFiltersCount > 0 && (
+                              <p>No {pageName.toLowerCase()} notifications found.</p>
+                              {(activeFiltersCount > 0 || searchInput) && (
                                 <Button variant="link" onClick={clearFilters} className="mt-2">
                                   Clear filters
                                 </Button>
@@ -635,7 +632,7 @@ const fetchNotifications = async () => {
                               <div className="flex items-center gap-2">
                                 <Layout className="h-3 w-3 text-muted-foreground" />
                                 <span className="text-sm capitalize">
-                                  {notification.page || "—"}
+                                  {notification.page || "-"}
                                 </span>
                               </div>
                             </TableCell>
@@ -678,10 +675,6 @@ const fetchNotifications = async () => {
                                     </Button>
                                   </motion.div>
                                 )}
-                                {/* Optional: delete action if your API supports it */}
-                                {/* <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button> */}
                               </div>
                             </TableCell>
                           </motion.tr>
@@ -695,7 +688,6 @@ const fetchNotifications = async () => {
           </Card>
         </motion.div>
 
-        {/* Pagination */}
         {!isLoading && notifications.length > 0 && totalPages > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

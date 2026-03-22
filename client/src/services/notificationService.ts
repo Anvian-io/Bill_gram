@@ -30,6 +30,16 @@ export interface PaginatedNotifications {
   };
 }
 
+export interface NotificationQueryParams {
+  page?: number;
+  limit?: number;
+  unreadOnly?: boolean;
+  search?: string;
+  title?: string;
+  message?: string;
+  pageName?: string;
+}
+
 class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectInterval: number = 5000; // 5 seconds
@@ -173,13 +183,11 @@ class WebSocketService {
 // REST API calls
 export const notificationAPI = {
   // Get notifications
-  getNotifications: (params?: {
-  page?: number;
-  limit?: number;
-  unreadOnly?: boolean;
-}) => {
-  return api.get<ApiResponse<PaginatedNotifications>>("/notifications", { params });
-},
+  getNotifications: (params?: NotificationQueryParams) => {
+    return api.get<ApiResponse<PaginatedNotifications>>("/notifications", {
+      params,
+    });
+  },
 
   // Mark as read
   markAsRead: (id: number) => {
