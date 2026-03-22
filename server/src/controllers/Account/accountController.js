@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Account
 export const createAccount = asyncHandler(async (req, res) => {
   const {
@@ -74,7 +74,13 @@ export const createAccount = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+await createNotification({
+  title: "New Account Created",
+  message: `Account "${accountHolder}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "Account",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -382,7 +388,13 @@ export const updateAccount = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+await createNotification({
+  title: "Account Updated",
+  message: `Account "${updatedAccount.accountHolder}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "Account",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -447,7 +459,13 @@ export const deleteAccount = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+await createNotification({
+  title: "Account Deleted",
+  message: `Account "${existingAccount.accountHolder}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "Account",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,

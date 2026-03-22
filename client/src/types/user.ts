@@ -1,5 +1,6 @@
 // src/types/user.ts
 export interface User {
+  signature: any;
   id: number;
   username: string;
   email: string;

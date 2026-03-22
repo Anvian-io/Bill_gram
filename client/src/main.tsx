@@ -4,12 +4,11 @@ import './index.css'
 import App from './App.tsx'
 import { Provider } from "react-redux";
 import { store } from "@/store";
-import AppInitializer from "@/components/AppInitializer";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
-      <AppInitializer />
+      {/* <AppInitializer /> */}
       <App />
     </Provider>
   </StrictMode>,

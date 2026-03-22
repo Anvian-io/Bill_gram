@@ -2,7 +2,7 @@ import { getPrismaOrFail, sendResponse, asyncHandler, statusType } from "../../u
 import { 
   createNotification as createNotificationHelper,
   getAllNotifications as getAllNotificationsHelper,
-  getNotificationsForUser as getNotificationsForUserHelper,
+  getNotificationsForUserHelper,
   markNotificationAsRead as markNotificationAsReadHelper,
   markAllNotificationsAsRead as markAllNotificationsAsReadHelper,
   getUnreadCount as getUnreadCountHelper,
@@ -34,7 +34,7 @@ export const sendNotificationToUser = (userId, notification) => {
  * Create a new notification (HTTP endpoint)
  */
 export const createNotification = asyncHandler(async (req, res) => {
-  const { userId, title, message, type = 'info' } = req.body;
+  const { userId, title, message, type = 'info', section, page } = req.body;
 
   if (!title || !message) {
     return sendResponse(
@@ -52,7 +52,8 @@ export const createNotification = asyncHandler(async (req, res) => {
       message,
       type,
       userIds: userId ? [parseInt(userId)] : [],
-      // category
+      section,
+      page,
     }, res);
 
     return sendResponse(
@@ -77,17 +78,37 @@ export const createNotification = asyncHandler(async (req, res) => {
 /**
  * Get notifications for current user
  */
+// In src/controllers/Notification/notificationController.js
+
 export const getUserNotifications = asyncHandler(async (req, res) => {
   const userId = req.user?.id;
-  const { page = 1, limit = 20, unreadOnly = false } = req.query;
+  const { 
+    page = 1, 
+    limit = 20, 
+    unreadOnly = false, 
+    search, 
+    title, 
+    message, 
+    pageName 
+  } = req.query;
 
   if (!userId) {
     return sendResponse(res, false, null, "User not authenticated", statusType.UNAUTHORIZED);
   }
 
   try {
-    const result = await getNotificationsForUserHelper(userId, page, limit, unreadOnly === 'true', res);
-    
+    const result = await getNotificationsForUserHelper(
+      userId,
+      parseInt(page),
+      parseInt(limit),
+      unreadOnly === 'true',
+      search,
+      title,
+      message,
+      pageName,
+      res  // ← pass res here
+    );
+
     return sendResponse(
       res,
       true,

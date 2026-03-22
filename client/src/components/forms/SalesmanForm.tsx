@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -27,8 +27,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useActiveLists } from "@/hooks/useActiveLists";
 
-// Define the form schema with boolean status
+// Define the form schema with areaId
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
@@ -37,8 +53,8 @@ const formSchema = z.object({
     message: "Phone number must be at least 10 digits.",
   }),
   email: z.string().email().or(z.literal("")).optional(),
-  area: z.string().min(2, {
-    message: "Area must be at least 2 characters.",
+  areaId: z.number({
+    message: "Please select an area",
   }),
   status: z.boolean(),
 });
@@ -53,7 +69,7 @@ interface SalesmanFormProps {
     name: string;
     phoneNo: string;
     email: string;
-    area: string;
+    areaId: number | null;
     status: boolean;
   } | null;
   onSave: (data: SalesmanFormData, id?: number) => void;
@@ -67,13 +83,16 @@ export default function SalesmanForm({
   onSave,
   isSubmitting = false,
 }: SalesmanFormProps) {
+  const { areas } = useActiveLists();
+  const [areaOpen, setAreaOpen] = useState(false);
+
   const form = useForm<SalesmanFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phoneNo: "",
       email: "",
-      area: "",
+      areaId: undefined,
       status: true,
     },
   });
@@ -85,7 +104,7 @@ export default function SalesmanForm({
         name: editingSalesman.name,
         phoneNo: editingSalesman.phoneNo,
         email: editingSalesman.email || "",
-        area: editingSalesman.area,
+        areaId: editingSalesman.areaId || undefined,
         status: editingSalesman.status,
       });
     } else {
@@ -93,11 +112,17 @@ export default function SalesmanForm({
         name: "",
         phoneNo: "",
         email: "",
-        area: "",
+        areaId: undefined,
         status: true,
       });
     }
   }, [editingSalesman, form]);
+
+  const getAreaName = (id: number | null | undefined) => {
+    if (!id) return "Select Area *";
+    const area = areas.find((a) => a.id === id);
+    return area ? area.name : "Select Area *";
+  };
 
   const onSubmit = (data: SalesmanFormData) => {
     onSave(data, editingSalesman?.id);
@@ -156,19 +181,57 @@ export default function SalesmanForm({
                 )}
               />
 
+              {/* Area - Command Dropdown */}
               <FormField
                 control={form.control}
-                name="area"
+                name="areaId"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sales Area *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., South Delhi"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Area *</FormLabel>
+                    <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={areaOpen}
+                          className="w-full justify-between"
+                          disabled={isSubmitting}
+                        >
+                          {getAreaName(field.value)}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search area..." />
+                          <CommandList>
+                            <CommandEmpty>No area found.</CommandEmpty>
+                            <CommandGroup>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={area.id.toString()}
+                                  onSelect={() => {
+                                    field.onChange(area.id);
+                                    setAreaOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === area.id
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {area.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

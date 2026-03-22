@@ -1,6 +1,6 @@
 // src/types/customer.ts
 export interface Customer {
-  name: string;
+  name: any;
   id: number;
   companyName: string;
   personName: string;
@@ -8,8 +8,10 @@ export interface Customer {
   email: string;
   customerType: string | null;
   city: string | null;
+  areaId: number | null;
   address: string;
   pincode: string | null;
+  gstIN: string | null;
   status: boolean;
   deleted: boolean;
   createdAt: string;
@@ -23,8 +25,10 @@ export interface CustomerFormData {
   email?: string;
   customerType?: string;
   city?: string;
+  areaId?: number | null;
   address: string;
   pincode?: string;
+  gstIN?: string;
   status: boolean;
 }
 
@@ -54,6 +58,8 @@ export interface CustomerFilters {
   personName?: string;
   phoneNo?: string;
   city?: string;
+  gstIN?: string;
+  areaId?: string;
   customerType?: string;
   status?: "all" | "active" | "inactive";
   showDeleted?: boolean;

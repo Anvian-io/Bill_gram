@@ -7,6 +7,7 @@ import {
 } from "../../utils/index.js";
 import path from "path";
 import fs from "fs";
+import { createNotification } from "../../utils/notificationHelper.js";
 import { getDatabasePath } from "../../db/database.js";
 import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
 /**
@@ -295,7 +296,13 @@ export const createProduct = asyncHandler(async (req, res) => {
         imageUrl: getImageUrl(img.imageUrl),
       })),
     };
-
+    await createNotification({
+  title: "New Product Created",
+  message: `Product "${product.productCode} - ${product.productBrand}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: null,
+  page: "product"
+}, res);
     return sendResponse(
       res,
       true,
@@ -991,7 +998,13 @@ export const updateProduct = asyncHandler(async (req, res) => {
         imageUrl: getImageUrl(image.imageUrl),
       })),
     };
-
+    await createNotification({
+  title: "Product Updated",
+  message: `Product "${completeProduct.productCode} - ${completeProduct.productBrand}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: null,
+  page: "product"
+}, res);
     return sendResponse(
       res,
       true,
@@ -1069,7 +1082,13 @@ export const deleteProduct = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+  await createNotification({
+  title: "Product Deleted",
+  message: `Product "${existingProduct.productCode} - ${existingProduct.productBrand}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: null,
+  page: "product"
+}, res);
   return sendResponse(
     res,
     true,

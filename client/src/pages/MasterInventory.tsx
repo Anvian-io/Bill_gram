@@ -38,7 +38,7 @@ interface SidebarItem {
 
 export default function MasterInventory() {
   const [activeSection, setActiveSection] = useState<string>("product-group");
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
   const sidebarItems: SidebarItem[] = [
@@ -117,7 +117,7 @@ export default function MasterInventory() {
       component: <Account />,
       badge: 36,
       category: "finance",
-    }
+    },
   ];
 
   // Category sections
@@ -224,7 +224,7 @@ export default function MasterInventory() {
               >
                 <div className="flex-shrink-0">{item.icon}</div>
 
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                   {!isCollapsed && (
                     <motion.div
                       initial={{ opacity: 0, width: 0 }}
@@ -283,7 +283,7 @@ export default function MasterInventory() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={activeSection}
             variants={contentVariants}

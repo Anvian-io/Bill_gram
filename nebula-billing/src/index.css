@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 39% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 30% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 30% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 171 72% 42%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 34 92% 64%;
+    --secondary-foreground: 216 39% 8%;
+
+    --muted: 216 24% 18%;
+    --muted-foreground: 215 16% 69%;
+
+    --accent: 171 72% 42%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 23% 22%;
+    --input: 215 23% 22%;
+    --ring: 171 72% 42%;
+
+    --radius: 0.75rem;
+
+    --glass: 216 34% 10%;
+    --glass-border: 214 25% 20%;
+    --glow-primary: 171 72% 42%;
+    --glow-secondary: 34 92% 64%;
+    --text-secondary: 215 16% 69%;
+
+    --sidebar-background: 216 34% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 171 72% 42%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 216 24% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 214 25% 20%;
+    --sidebar-ring: 171 72% 42%;
+  }
+
+  .light {
+    --background: 45 33% 97%;
+    --foreground: 217 36% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 36% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 36% 18%;
+
+    --primary: 170 76% 32%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 33 90% 52%;
+    --secondary-foreground: 217 36% 18%;
+
+    --muted: 42 27% 92%;
+    --muted-foreground: 216 16% 40%;
+
+    --accent: 170 76% 32%;
+    --accent-foreground: 210 40% 98%;
+
+    --border: 37 24% 83%;
+    --input: 37 24% 83%;
+    --ring: 170 76% 32%;
+
+    --glass: 0 0% 100%;
+    --glass-border: 38 23% 88%;
+    --text-secondary: 216 16% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.16), transparent 28%),
+      radial-gradient(circle at top right, hsl(var(--secondary) / 0.12), transparent 24%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    min-height: 100vh;
+    overflow-x: clip;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .glass-card {
+    @apply bg-glass/70 backdrop-blur-xl border border-glass-border rounded-xl shadow-[0_22px_70px_-38px_rgba(15,23,42,0.85)];
+  }
+
+  .surface-panel {
+    @apply rounded-[1.5rem] border border-glass-border bg-card/80 shadow-[0_22px_90px_-42px_rgba(15,23,42,0.95)] backdrop-blur-xl;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px -10px hsl(var(--glow-primary) / 0.4);
+  }
+
+  .glow-secondary {
+    box-shadow: 0 0 40px -10px hsl(var(--glow-secondary) / 0.4);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary;
+  }
+
+  .info-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/70 px-3 py-2 text-sm text-muted-foreground;
+  }
+
+  .shimmer-btn {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.15),
+      transparent
+    );
+    animation: shimmer 3s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--glass-border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--glass-border) / 0.3) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .mesh-bg {
+    background-image:
+      radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.16), transparent 20%),
+      radial-gradient(circle at 80% 10%, hsl(var(--secondary) / 0.16), transparent 18%),
+      radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.12), transparent 30%);
+  }
+}

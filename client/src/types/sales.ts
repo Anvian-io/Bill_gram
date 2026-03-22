@@ -24,7 +24,8 @@ export interface SalesFilters {
   areaId?: string | number;
   vanId?: string | number;
   salesmanId?: string | number;
-  fromDate?: Date; // replaced single invoiceDate
+  gstDetails?: string;
+  fromDate?: Date;
   toDate?: Date;
   minAmount?: number | string;
   maxAmount?: number | string;
@@ -49,24 +50,26 @@ export interface SalesFormData {
   vanId: number;
   salesmanId: number;
   address: string;
-  // invoiceNo removed – backend generates it
   gstDetails: string;
+  phoneNo?: string; // ADDED: UI-only field for phone search
   items: Array<{
-    batchOpeningStock: number | undefined;
     productId: number;
     productCode: string;
     description: string;
     rate: number;
     aQty: number;
     mQty: number;
+    unit: number;
+    fQty: number;
+    DQty: number;
     totalAmount: number;
+    finalAmount: number;
     taxRate: number;
     taxAmount: number;
-    sch1Percent: number;
-    sch1Amount: number;
-    sch2Percent: number;
-    sch2Amount: number;
+    schPercent: number;
+    schAmount: number;
     batchId?: number;
+    batchOpeningStock?: number;
     cartonPack?: number;
     conversionFactor?: number;
   }>;
@@ -91,13 +94,15 @@ export interface SalesItem {
   rate: number;
   aQty: number;
   mQty: number;
+  unit: number;
+  fQty: number;
+  DQty: number;
   totalAmount: number;
+  finalAmount: number;
   taxRate: number;
   taxAmount: number;
-  sch1Percent: number;
-  sch1Amount: number;
-  sch2Percent: number;
-  sch2Amount: number;
+  schPercent: number;
+  schAmount: number;
   batchId?: number;
   cartonPack?: number;
   conversionFactor?: number;
@@ -112,6 +117,8 @@ export interface Sales {
     name: string;
   };
   customer: {
+    address: string;
+    gstIN: string;
     id: number;
     companyName: string | null;
     personName: string | null;
@@ -144,4 +151,32 @@ export interface Sales {
   deleted: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SalesBillPreviewData {
+  sale: Sales & {
+    user: {
+      id: number;
+      username: string;
+      company_name: string | null; // shop name
+      shop_name?: string | null; // fallback
+      phone: string | null;
+      email: string | null;
+      upi_id: string | null;
+      signature: string | null; // URL or path
+      company_logo: string | null; // URL or path
+      address: string | null;
+      gstin?: string; // not in schema but might be stored
+      fssai?: string; // not in schema
+    };
+  };
+  taxBreakdown?: Array<{
+    rate: number;
+    cgstAmount: number;
+    sgstAmount: number;
+    totalTaxAmount: number;
+  }>;
+  upiQrCode: string | null; // base64 PNG data URL
+  signature: string | null; // duplicate for convenience
+  companyLogo: string | null; // duplicate for convenience
 }

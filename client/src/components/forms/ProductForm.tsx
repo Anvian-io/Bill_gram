@@ -126,7 +126,7 @@ const productSchema = z.object({
         mfgDate: z.string().optional().nullable(),
         expDate: z.string().optional().nullable(),
         barcode: z.string().min(1, "Barcode is required"),
-        basicPrice: z.coerce.number().positive("Basic price must be positive"),
+        basicPrice: z.coerce.number("Basic price must be positive"),
         openingStock: z.coerce.number().min(0, "Stock cannot be negative"),
         mrp: z.coerce.number().positive("MRP must be positive"),
         pRate: z.coerce.number().positive("Purchase rate must be positive"),
@@ -497,7 +497,7 @@ export default function ProductFormModal({
         toast.success("Main image uploaded successfully");
       } catch (error: any) {
         toast.error("Failed to upload main image", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
         setMainImageFile(null);
       }
@@ -528,7 +528,7 @@ export default function ProductFormModal({
         toast.success(`${files.length} image(s) uploaded successfully`);
       } catch (error: any) {
         toast.error("Failed to upload images", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       }
     }
@@ -556,7 +556,7 @@ export default function ProductFormModal({
         toast.success("Image removed successfully");
       } catch (error: any) {
         toast.error("Failed to remove image", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       }
     }

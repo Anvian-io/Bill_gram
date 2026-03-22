@@ -19,9 +19,14 @@ import {
   MasterInventory,
   Purchase,
   Sales,
-  Profile
+  Profile,
+  Report,
+  Restore_Backup,
+  Notifications
 } from "./pages";
 import { Toaster } from "@/components/ui/sonner";
+import AppInitializer from "./components/AppInitializer";
+import BackupSessionGuard from "./components/BackupSessionGuard";
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -30,6 +35,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
+        <AppInitializer/>
         Loading...
       </div>
     );
@@ -45,6 +51,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
+          <BackupSessionGuard />
           <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -150,6 +157,46 @@ function App() {
                       setIsExpanded={setIsExpanded}
                     >
                       <Profile />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" />} />
+              <Route
+                path="/reports"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Report />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/backup"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Restore_Backup />
+                    </Navbar>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <PrivateRoute>
+                    <Navbar
+                      isExpanded={isExpanded}
+                      setIsExpanded={setIsExpanded}
+                    >
+                      <Notifications />
                     </Navbar>
                   </PrivateRoute>
                 }

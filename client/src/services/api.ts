@@ -26,6 +26,7 @@ export interface User {
   phone: string | null;
   created_at: string;
   updated_at: string;
+  subscriptionExpiresAt?: string | null;
 }
 
 export interface LoginCredentials {

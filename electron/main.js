@@ -81,6 +81,50 @@ function getDatabaseDirectory() {
   }
 }
 
+function getCredentialDirectory() {
+  if (process.env.NODE_ENV === "development") {
+    return path.join(__dirname, "../client");
+  }
+
+  return path.join(app.getPath("userData"), "client");
+}
+
+function getCredentialStorePath() {
+  return path.join(getCredentialDirectory(), "registered-credentials.json");
+}
+
+function ensureCredentialDirectory() {
+  const credentialDir = getCredentialDirectory();
+  if (!fs.existsSync(credentialDir)) {
+    fs.mkdirSync(credentialDir, { recursive: true });
+  }
+  return credentialDir;
+}
+
+function readCredentialStore() {
+  const storePath = getCredentialStorePath();
+
+  if (!fs.existsSync(storePath)) {
+    return { users: [] };
+  }
+
+  try {
+    const raw = fs.readFileSync(storePath, "utf-8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.users) ? parsed : { users: [] };
+  } catch (error) {
+    console.error("Failed to read credential store:", error);
+    return { users: [] };
+  }
+}
+
+function writeCredentialStore(store) {
+  ensureCredentialDirectory();
+  const storePath = getCredentialStorePath();
+  fs.writeFileSync(storePath, JSON.stringify(store, null, 2), "utf-8");
+  return storePath;
+}
+
 function startBackend() {
   let backendPath;
 
@@ -225,6 +269,69 @@ ipcMain.handle("open-database-folder", async () => {
     shell.openPath(dbDir);
     return { success: true };
   } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("save-user-credential", async (_event, credential) => {
+  try {
+    const email = String(credential?.email ?? "").trim().toLowerCase();
+    const password = String(credential?.password ?? "").trim();
+    const expiresAt = String(credential?.expiresAt ?? "").trim();
+
+    if (!email || !password || !expiresAt) {
+      return {
+        success: false,
+        error: "Email, password, and expiry are required to save credentials",
+      };
+    }
+
+    const store = readCredentialStore();
+    const nextRecord = {
+      ...credential,
+      email,
+      password,
+      expiresAt,
+      savedAt: new Date().toISOString(),
+    };
+    const existingIndex = store.users.findIndex((user) => user.email === email);
+
+    if (existingIndex >= 0) {
+      store.users[existingIndex] = nextRecord;
+    } else {
+      store.users.push(nextRecord);
+    }
+
+    const pathToStore = writeCredentialStore(store);
+    return {
+      success: true,
+      path: pathToStore,
+      record: nextRecord,
+    };
+  } catch (error) {
+    console.error("Failed to save credentials:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("get-user-credential", async (_event, emailInput) => {
+  try {
+    const email = String(emailInput ?? "").trim().toLowerCase();
+
+    if (!email) {
+      return { success: false, error: "Email is required" };
+    }
+
+    const store = readCredentialStore();
+    const record = store.users.find((user) => user.email === email) ?? null;
+
+    return {
+      success: true,
+      path: getCredentialStorePath(),
+      record,
+    };
+  } catch (error) {
+    console.error("Failed to read credentials:", error);
     return { success: false, error: error.message };
   }
 });

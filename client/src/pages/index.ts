@@ -7,6 +7,9 @@ import MasterInventory from "./MasterInventory";
 import Purchase from "./Purchase";
 import Sales from "./Sales";
 import Profile from "./Profile";
+import Report from "./Report";
+import Restore_Backup from "./Restore_Backup";
+import Notifications from "./Notifications";
 
 export {
   Dashboard,
@@ -18,4 +21,7 @@ export {
   Purchase,
   Sales,
   Profile,
+  Report,
+  Restore_Backup,
+  Notifications
 };

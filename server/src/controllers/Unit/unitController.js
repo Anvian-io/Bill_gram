@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Unit
 export const createUnit = asyncHandler(async (req, res) => {
   const { name, symbol, status = true } = req.body;
@@ -61,7 +61,13 @@ export const createUnit = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+  await createNotification({
+    title: "New Unit Created",
+    message: `Unit "${name}" (${symbol}) has been created by ${req.user?.username || 'Admin'}`,
+    type: "success",
+    section: "unit",
+    page: "master"
+  }, res);
   return sendResponse(
     res,
     true,
@@ -331,7 +337,13 @@ export const updateUnit = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+  await createNotification({
+    title: "Unit Updated",
+    message: `Unit "${updatedUnit.name}" (${updatedUnit.symbol}) has been updated by ${req.user?.username || 'Admin'}`,
+    type: "info",
+    section: "unit",
+    page: "master"
+  }, res);
   return sendResponse(
     res,
     true,
@@ -397,7 +409,13 @@ export const deleteUnit = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+  await createNotification({
+    title: "Unit Deleted",
+    message: `Unit "${existingUnit.name}" (${existingUnit.symbol}) has been deleted by ${req.user?.username || 'Admin'}`,
+    type: "warning",
+    section: "unit",
+    page: "master"
+  }, res);
   return sendResponse(
     res,
     true,
@@ -478,7 +496,13 @@ export const bulkDeleteUnits = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+  await createNotification({
+    title: "Units Bulk Deleted",
+    message: `${unitIds.length} units (${unitNamesList}) have been deleted by ${req.user?.username || 'Admin'}`,
+    type: "warning",
+    section: "unit",
+    page: "master"
+  }, res);
   return sendResponse(
     res,
     true,

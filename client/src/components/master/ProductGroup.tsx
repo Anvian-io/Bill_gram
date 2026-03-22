@@ -181,7 +181,7 @@ export default function ProductGroup() {
     } catch (error: any) {
       console.error("Error fetching product groups:", error);
       toast.error("Failed to fetch product groups", {
-        description: error.response?.data?.message || "Please try again later",
+        description: error.message || "Please try again later",
       });
       setProductGroups([]);
       setTotalItems(0);
@@ -282,7 +282,7 @@ export default function ProductGroup() {
       fetchProductGroups();
     } catch (error: any) {
       toast.error("Failed to save product group", {
-        description: error.response?.data?.message || "Please try again",
+        description: error.message || "Please try again",
       });
     } finally {
       setIsSubmitting(false);
@@ -310,7 +310,7 @@ export default function ProductGroup() {
         fetchProductGroups();
       } catch (error: any) {
         toast.error("Failed to delete product group", {
-          description: error.response?.data?.message || "Please try again",
+          description: error.message || "Please try again",
         });
       } finally {
         setGroupToDelete(null);
@@ -677,14 +677,14 @@ export default function ProductGroup() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
+                          // initial={{ opacity: 0 }}
+                          // animate={{ opacity: 1 }}
+                          // exit={{ opacity: 0 }}
+                          // transition={{ duration: 0.3 }}
                         >
                           <TableCell colSpan={6} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">

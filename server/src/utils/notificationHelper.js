@@ -55,11 +55,12 @@ export const sendNotificationToAll = (notification) => {
  * @param {string} params.message - Notification message
  * @param {string} params.type - Notification type (info, success, warning, error)
  * @param {Array<number>} params.userIds - Array of user IDs (empty = all users)
- 
+ * @param {string} params.section - Notification section (e.g., "product group")
+ * @param {string} params.page - Notification page (e.g., "master")
  * @param {Object} res - Express response object (optional, for Prisma init)
  */
 export const createNotification = async (
-  { title, message, type = "info", userIds = [] },
+  { title, message, type = "info", userIds = [], section, page },
   res = null,
 ) => {
   try {
@@ -77,7 +78,7 @@ export const createNotification = async (
     let targetUserIds = userIds;
     if (!targetUserIds || targetUserIds.length === 0) {
       const allUsers = await prisma.user.findMany({
-        select: { id: true }, // Removed where: { deleted: false }
+        select: { id: true },
       });
       targetUserIds = allUsers.map((u) => u.id);
     }
@@ -91,7 +92,8 @@ export const createNotification = async (
           title,
           message,
           type,
-        //   category,
+          section,
+          page,
           read: false,
         },
       });
@@ -104,7 +106,8 @@ export const createNotification = async (
       title,
       message,
       type,
-    //   category,
+      section,
+      page,
       read: false,
       createdAt: new Date().toISOString(),
     });
@@ -131,10 +134,7 @@ export const createNotificationForAll = async (
   { title, message, type = "info" },
   res = null,
 ) => {
-  return createNotification(
-    { title, message, type, userIds: [] },
-    res,
-  );
+  return createNotification({ title, message, type, userIds: [] }, res);
 };
 
 /**
@@ -183,55 +183,69 @@ export const getAllNotifications = async (page = 1, limit = 10, res = null) => {
 };
 
 /**
- * Get notifications for specific user
+ * Get notifications for specific user with filtering
  */
-export const getNotificationsForUser = async (
+// In src/utils/notificationHelper.js
+
+export const getNotificationsForUserHelper = async (
   userId,
   page = 1,
-  limit = 10,
+  limit = 20,
   unreadOnly = false,
-  res = null,
+  search,
+  title,
+  message,
+  pageName,
+  res = null  // ← add res parameter
 ) => {
-  try {
-    let prisma;
-    if (res) {
-      prisma = getPrismaOrFail(res);
-      if (!prisma) throw new Error("Prisma initialization failed");
-    } else {
-      const { prisma: prismaInstance } = await import("../db/database.js");
-      prisma = prismaInstance;
-    }
+  // Use getPrismaOrFail instead of dynamic import
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) throw new Error("Prisma initialization failed");
 
-    const skip = (page - 1) * limit;
+  const where = { userId };
 
-    const where = {
-      userId: parseInt(userId),
-      ...(unreadOnly && { read: false }),
-    };
-
-    const [notifications, total] = await Promise.all([
-      prisma.notification.findMany({
-        where,
-        skip,
-        take: parseInt(limit),
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.notification.count({ where }),
-    ]);
-
-    return {
-      notifications,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching user notifications:", error);
-    throw error;
+  if (unreadOnly) {
+    where.read = false;
   }
+
+  if (title) {
+    where.title = { contains: title };
+  }
+
+  if (message) {
+    where.message = { contains: message };
+  }
+
+  if (pageName && pageName !== 'all') {
+    where.page = pageName;
+  }
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search } },
+      { message: { contains: search } }
+    ];
+  }
+
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.notification.count({ where }),
+  ]);
+
+  return {
+    notifications,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 /**
@@ -324,11 +338,11 @@ export const getUnreadCount = async (userId, res = null) => {
   }
 };
 
+// Default export – removed the invalid reference to getNotificationsForUser
 export default {
   createNotification,
   createNotificationForAll,
   getAllNotifications,
-  getNotificationsForUser,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   getUnreadCount,

@@ -39,6 +39,14 @@ const formSchema = z.object({
   }),
   email: z.string().email().or(z.literal("")).optional(),
   address: z.string().optional(),
+  gstIN: z
+    .string()
+    .regex(
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+      "Invalid GSTIN format (e.g., 27AAPFU0939F1ZV)",
+    )
+    .or(z.literal(""))
+    .optional(),
   status: z.boolean().default(true),
 });
 
@@ -53,6 +61,7 @@ interface SupplierFormProps {
     phoneNo: string;
     email: string;
     address: string | null;
+    gstIN: string | null;
     status: boolean;
   } | null;
   onSave: (data: SupplierFormData, id?: number) => void;
@@ -73,6 +82,7 @@ export default function SupplierForm({
       phoneNo: "",
       email: "",
       address: "",
+      gstIN: "",
       status: true,
     },
   });
@@ -85,6 +95,7 @@ export default function SupplierForm({
         phoneNo: editingSupplier.phoneNo,
         email: editingSupplier.email || "",
         address: editingSupplier.address || "",
+        gstIN: editingSupplier.gstIN || "",
         status: editingSupplier.status,
       });
     } else {
@@ -93,6 +104,7 @@ export default function SupplierForm({
         phoneNo: "",
         email: "",
         address: "",
+        gstIN: "",
         status: true,
       });
     }
@@ -167,6 +179,25 @@ export default function SupplierForm({
                     <FormControl>
                       <Input
                         placeholder="supplier@example.com"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* GSTIN */}
+              <FormField
+                control={form.control}
+                name="gstIN"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GSTIN</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="27AAPFU0939F1ZV"
                         {...field}
                         disabled={isSubmitting}
                       />

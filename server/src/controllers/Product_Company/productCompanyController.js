@@ -5,7 +5,7 @@ import {
   getPrismaOrFail,
   validatePagination,
 } from "../../utils/index.js";
-
+import { createNotification } from "../../utils/notificationHelper.js";
 // Create Product Company
 export const createProductCompany = asyncHandler(async (req, res) => {
   const {
@@ -74,7 +74,13 @@ export const createProductCompany = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+  await createNotification({
+  title: "New Product Company Created",
+  message: `Product company "${name}" has been created by ${req.user?.username || 'Admin'}`,
+  type: "success",
+  section: "Product Company",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -369,7 +375,13 @@ export const updateProductCompany = asyncHandler(async (req, res) => {
       updatedAt: true,
     },
   });
-
+  await createNotification({
+  title: "Product Company Updated",
+  message: `Product company "${updatedCompany.name}" has been updated by ${req.user?.username || 'Admin'}`,
+  type: "info",
+  section: "Product Company",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,
@@ -433,7 +445,13 @@ export const deleteProductCompany = asyncHandler(async (req, res) => {
       status: false,
     },
   });
-
+  await createNotification({
+  title: "Product Company Deleted",
+  message: `Product company "${existingCompany.name}" has been deleted by ${req.user?.username || 'Admin'}`,
+  type: "warning",
+  section: "Product Company",
+  page: "master"
+}, res);
   return sendResponse(
     res,
     true,

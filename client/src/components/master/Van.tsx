@@ -811,22 +811,21 @@ export default function VanComponent() {
               "Loading..."
             ) :  */}
             (
-              <>
-                Showing {startIndex} to {endIndex} of {totalItems} vans
-                {filters.status !== "all" ||
-                filters.name ||
-                filters.vehicleNo ||
-                filters.model ||
-                filters.area ||
-                filters.city ||
-                filters.search ||
-                filters.showDeleted
-                  ? " (filtered)"
-                  : ""}
-                {filters.showDeleted && " (including deleted)"}
-              </>
-            )
-            {/* } */}
+            <>
+              Showing {startIndex} to {endIndex} of {totalItems} vans
+              {filters.status !== "all" ||
+              filters.name ||
+              filters.vehicleNo ||
+              filters.model ||
+              filters.area ||
+              filters.city ||
+              filters.search ||
+              filters.showDeleted
+                ? " (filtered)"
+                : ""}
+              {filters.showDeleted && " (including deleted)"}
+            </>
+            ){/* } */}
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
@@ -871,14 +870,14 @@ export default function VanComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
+                          // initial={{ opacity: 0 }}
+                          // animate={{ opacity: 1 }}
+                          // exit={{ opacity: 0 }}
+                          // transition={{ duration: 0.3 }}
                         >
                           <TableCell colSpan={6} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">

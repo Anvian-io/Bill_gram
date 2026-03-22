@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,6 +28,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useActiveLists } from "@/hooks/useActiveLists";
 
 // Customer type options
 const customerTypeOptions = [
@@ -57,10 +73,12 @@ const formSchema = z.object({
   email: z.string().email().or(z.literal("")).optional(),
   customerType: z.string().optional(),
   city: z.string().optional(),
+  areaId: z.number().nullable().optional(),
   address: z.string().min(5, {
     message: "Address must be at least 5 characters.",
   }),
   pincode: z.string().optional(),
+  gstIN: z.string().optional(),
   status: z.boolean(),
 });
 
@@ -77,8 +95,10 @@ interface CustomerFormProps {
     email: string;
     customerType: string | null;
     city: string | null;
+    areaId: number | null;
     address: string;
     pincode: string | null;
+    gstIN: string | null;
     status: boolean;
   } | null;
   onSave: (data: CustomerFormData, id?: number) => void;
@@ -92,6 +112,9 @@ export default function CustomerForm({
   onSave,
   isSubmitting = false,
 }: CustomerFormProps) {
+  const { areas } = useActiveLists();
+  const [areaOpen, setAreaOpen] = useState(false);
+
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -101,8 +124,10 @@ export default function CustomerForm({
       email: "",
       customerType: "",
       city: "",
+      areaId: null,
       address: "",
       pincode: "",
+      gstIN: "",
       status: true,
     },
   });
@@ -117,8 +142,10 @@ export default function CustomerForm({
         email: editingCustomer.email || "",
         customerType: editingCustomer.customerType || "",
         city: editingCustomer.city || "",
+        areaId: editingCustomer.areaId,
         address: editingCustomer.address,
         pincode: editingCustomer.pincode || "",
+        gstIN: editingCustomer.gstIN || "",
         status: editingCustomer.status,
       });
     } else {
@@ -129,12 +156,20 @@ export default function CustomerForm({
         email: "",
         customerType: "",
         city: "",
+        areaId: null,
         address: "",
         pincode: "",
+        gstIN: "",
         status: true,
       });
     }
   }, [editingCustomer, form]);
+
+  const getAreaName = (id: number | null | undefined) => {
+    if (!id) return "Select Area";
+    const area = areas.find((a) => a.id === id);
+    return area ? area.name : "Select Area";
+  };
 
   const onSubmit = (data: CustomerFormData) => {
     onSave(data, editingCustomer?.id);
@@ -233,7 +268,7 @@ export default function CustomerForm({
                 )}
               />
 
-              {/* Customer Type - FIXED */}
+              {/* Customer Type */}
               <FormField
                 control={form.control}
                 name="customerType"
@@ -282,6 +317,80 @@ export default function CustomerForm({
                 )}
               />
 
+              {/* Area - Command Dropdown */}
+              <FormField
+                control={form.control}
+                name="areaId"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Area</FormLabel>
+                    <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={areaOpen}
+                          className="w-full justify-between"
+                          disabled={isSubmitting}
+                        >
+                          {getAreaName(field.value)}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search area..." />
+                          <CommandList>
+                            <CommandEmpty>No area found.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="none"
+                                onSelect={() => {
+                                  field.onChange(null);
+                                  setAreaOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === null ||
+                                      field.value === undefined
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                None
+                              </CommandItem>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={area.id.toString()}
+                                  onSelect={() => {
+                                    field.onChange(area.id);
+                                    setAreaOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === area.id
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {area.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Pincode */}
               <FormField
                 control={form.control}
@@ -292,6 +401,25 @@ export default function CustomerForm({
                     <FormControl>
                       <Input
                         placeholder="110001"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* GSTIN */}
+              <FormField
+                control={form.control}
+                name="gstIN"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GSTIN</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., 27AAPFU0939F1ZV"
                         {...field}
                         disabled={isSubmitting}
                       />

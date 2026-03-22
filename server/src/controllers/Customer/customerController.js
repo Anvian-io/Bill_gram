@@ -15,8 +15,10 @@ export const createCustomer = asyncHandler(async (req, res) => {
     email,
     customerType,
     city,
+    areaId,
     address,
     pincode,
+    gstIN,
     status = true,
   } = req.body;
 
@@ -61,8 +63,10 @@ export const createCustomer = asyncHandler(async (req, res) => {
       email: email || "",
       customerType: customerType || null,
       city: city || null,
+      areaId: areaId ? parseInt(areaId) : null,
       address,
       pincode: pincode || null,
+      gstIN: gstIN || null,
       status,
     },
     select: {
@@ -73,8 +77,10 @@ export const createCustomer = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -103,6 +109,8 @@ export const getCustomers = asyncHandler(async (req, res) => {
     personName = "",
     phoneNo = "",
     city = "",
+    gstIN = "",
+    areaId,
     customerType,
     status,
     showDeleted = "false",
@@ -173,6 +181,22 @@ export const getCustomers = asyncHandler(async (req, res) => {
     });
   }
 
+  // GSTIN filter
+  if (gstIN) {
+    andConditions.push({
+      gstIN: {
+        contains: gstIN,
+      },
+    });
+  }
+
+  // Area filter
+  if (areaId) {
+    andConditions.push({
+      areaId: parseInt(areaId),
+    });
+  }
+
   // Customer Type filter
   if (customerType) {
     andConditions.push({
@@ -182,7 +206,7 @@ export const getCustomers = asyncHandler(async (req, res) => {
     });
   }
 
-  // Search in companyName + personName + phoneNo + city + email
+  // Search in companyName + personName + phoneNo + city + email + gstIN
   if (search) {
     andConditions.push({
       OR: [
@@ -211,6 +235,11 @@ export const getCustomers = asyncHandler(async (req, res) => {
             contains: search,
           },
         },
+        {
+          gstIN: {
+            contains: search,
+          },
+        },
       ],
     });
   }
@@ -225,6 +254,8 @@ export const getCustomers = asyncHandler(async (req, res) => {
     "personName",
     "phoneNo",
     "city",
+    "areaId",
+    "gstIN",
     "createdAt",
     "updatedAt",
   ];
@@ -254,8 +285,10 @@ export const getCustomers = asyncHandler(async (req, res) => {
         email: true,
         customerType: true,
         city: true,
+        areaId: true,
         address: true,
         pincode: true,
+        gstIN: true,
         status: true,
         deleted: true,
         createdAt: true,
@@ -306,8 +339,10 @@ export const getCustomerById = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -343,8 +378,10 @@ export const updateCustomer = asyncHandler(async (req, res) => {
     email,
     customerType,
     city,
+    areaId,
     address,
     pincode,
+    gstIN,
     status,
   } = req.body;
 
@@ -407,8 +444,15 @@ export const updateCustomer = asyncHandler(async (req, res) => {
           ? customerType
           : existingCustomer.customerType,
       city: city !== undefined ? city : existingCustomer.city,
+      areaId:
+        areaId !== undefined
+          ? areaId
+            ? parseInt(areaId)
+            : null
+          : existingCustomer.areaId,
       address: address || existingCustomer.address,
       pincode: pincode !== undefined ? pincode : existingCustomer.pincode,
+      gstIN: gstIN !== undefined ? gstIN : existingCustomer.gstIN,
       status: status !== undefined ? status : existingCustomer.status,
     },
     select: {
@@ -419,8 +463,10 @@ export const updateCustomer = asyncHandler(async (req, res) => {
       email: true,
       customerType: true,
       city: true,
+      areaId: true,
       address: true,
       pincode: true,
+      gstIN: true,
       status: true,
       createdAt: true,
       updatedAt: true,
@@ -516,6 +562,9 @@ export const getActiveCustomers = asyncHandler(async (req, res) => {
       companyName: true,
       personName: true,
       phoneNo: true,
+      areaId: true,
+      address: true,
+      gstIN: true,
     },
     orderBy: {
       companyName: "asc",

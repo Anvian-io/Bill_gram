@@ -39,13 +39,14 @@ import {
   ImageIcon,
   X,
   Save,
+  Signature, // added for signature icon
 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
 import type { User } from "@/types/user";
 import { getFullImageUrl } from "@/utils/imageUtils";
 
-// Validation schema
+// Validation schema (no change, signature is handled separately)
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email address"),
@@ -60,7 +61,7 @@ const profileSchema = z.object({
   upi_id: z.string().nullable().optional(),
   company_name: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
-  // company_logo is handled separately
+  // company_logo and signature are handled separately
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -70,6 +71,8 @@ const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null); // new
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null); // new
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get user from localStorage
@@ -79,17 +82,19 @@ const Profile: React.FC = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        // Set preview if existing logo
+        // Set logo preview
         if (parsedUser.company_logo) {
-          // Assuming images are served from /api/images/
           setLogoPreview(getFullImageUrl(parsedUser.company_logo));
+        }
+        // Set signature preview
+        if (parsedUser.signature) {
+          setSignaturePreview(getFullImageUrl(parsedUser.signature));
         }
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);
         toast.error("Failed to load user data");
       }
     } else {
-      // No user logged in, redirect to login
       toast.error("Please log in");
       // navigate("/login");
     }
@@ -128,6 +133,9 @@ const Profile: React.FC = () => {
       setLogoPreview(
         user.company_logo ? getFullImageUrl(user.company_logo) : null,
       );
+      setSignaturePreview(
+        user.signature ? getFullImageUrl(user.signature) : null, // new
+      );
     }
   }, [user, form]);
 
@@ -144,7 +152,21 @@ const Profile: React.FC = () => {
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    // If there was an existing logo, we'll set company_logo to null on submit
+  };
+
+  // Handle signature upload (new)
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSignatureFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setSignaturePreview(previewUrl);
+    }
+  };
+
+  const removeSignature = () => {
+    setSignatureFile(null);
+    setSignaturePreview(null);
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
@@ -162,7 +184,17 @@ const Profile: React.FC = () => {
         logoFilename = user.company_logo; // Keep existing
       }
 
-      // 2. Prepare update data (only changed fields)
+      // 2. Upload signature if changed (new)
+      let signatureFilename: string | null = null;
+      if (signatureFile) {
+        signatureFilename = await imageService.uploadImage(signatureFile);
+      } else if (signaturePreview === null) {
+        signatureFilename = null; // Signature was removed
+      } else {
+        signatureFilename = user.signature; // Keep existing
+      }
+
+      // 3. Prepare update data (only changed fields)
       const updateData: Record<string, any> = {};
       const fields = [
         "username",
@@ -189,15 +221,19 @@ const Profile: React.FC = () => {
         updateData.company_logo = logoFilename;
       }
 
-      // 👇 ADD THE USER ID TO THE PAYLOAD
-      updateData.userId = user.id; // or user._id, depending on your backend
+      // Add signature if changed (new)
+      if (signatureFilename !== user.signature) {
+        updateData.signature = signatureFilename;
+      }
 
-      // 3. Send update request (only if there are changes)
+      // Add user ID
+      updateData.userId = user.id; // or user._id
+
+      // 4. Send update request (only if there are changes)
       if (Object.keys(updateData).length > 1 || updateData.userId) {
-        // userId is always present now
         const updatedUser = await userService.updateProfile(updateData);
 
-        // 4. Update localStorage
+        // Update localStorage
         localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
 
@@ -337,7 +373,69 @@ const Profile: React.FC = () => {
                     </div>
                   </motion.div>
 
-                  {/* Form Fields Grid */}
+                  {/* NEW: Signature Upload Section */}
+                  <motion.div
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-gray-100 dark:border-gray-800"
+                  >
+                    <div className="relative">
+                      <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-800 shadow-lg">
+                        {signaturePreview ? (
+                          <AvatarImage src={signaturePreview} alt="Signature" />
+                        ) : (
+                          <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                            <Signature className="h-8 w-8" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      {signaturePreview && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          onClick={removeSignature}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-medium mb-2">Signature</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("signature-upload")?.click()
+                          }
+                          className="gap-2"
+                        >
+                          <Signature className="h-4 w-4" />
+                          {signaturePreview
+                            ? "Change Signature"
+                            : "Upload Signature"}
+                        </Button>
+                        <input
+                          id="signature-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleSignatureUpload}
+                          className="hidden"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Upload your signature image (PNG with transparent
+                        background recommended)
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  {/* Form Fields Grid (unchanged) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Column 1 */}
                     <div className="space-y-4">
@@ -515,7 +613,7 @@ const Profile: React.FC = () => {
 
                   <Separator className="my-6" />
 
-                  {/* Preferences */}
+                  {/* Preferences (unchanged) */}
                   <motion.div
                     initial={{ y: 10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}

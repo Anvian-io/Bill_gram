@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +54,7 @@ import {
   Shield,
   Tag,
   MapPin,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -68,9 +69,21 @@ import {
 import type { SalesFormData } from "@/types/sales";
 import BatchSelectionModal from "./BatchSelectionModal";
 import { useActiveLists } from "@/hooks/useActiveLists";
+import {
+  gst_details,
+  GST_DETAILS_DEFAULT_ID,
+  normalizeGstDetailsValue,
+} from "@/store/dropdown_data/gst_details";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 // ----------------------------------------------------------------------
-// Types & Interfaces
+// Types & Interfaces (Local to component for clarity)
 // ----------------------------------------------------------------------
 interface ProductWithFactors {
   id: number;
@@ -83,8 +96,25 @@ interface ProductWithFactors {
   productBrand: string;
 }
 
+interface Customer {
+  id: number;
+  companyName: string;
+  personName: string;
+  phoneNo: string;
+  email: string;
+  customerType: string | null;
+  city: string | null;
+  areaId: number | null;
+  address: string;
+  pincode: string | null;
+  status: boolean;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ----------------------------------------------------------------------
-// Schema Validation
+// Updated Schema – added "phoneNo" for UI state only
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
   invoiceDate: z.string().min(1, "Invoice date is required"),
@@ -94,6 +124,7 @@ const salesSchema = z.object({
   salesmanId: z.coerce.number().min(1, "Salesman is required"),
   address: z.string().min(1, "Address is required"),
   gstDetails: z.string().optional(),
+  phoneNo: z.string().optional(), // UI Only field
 
   items: z
     .array(
@@ -104,17 +135,19 @@ const salesSchema = z.object({
         rate: z.coerce.number().min(0, "Rate must be positive"),
         aQty: z.coerce.number().min(0, "A. Qty must be positive").default(0),
         mQty: z.coerce.number().min(0, "M. Qty must be positive").default(0),
+        unit: z.coerce.number().min(0, "Unit must be positive").default(0),
+        fQty: z.coerce.number().min(0).default(0),
+        DQty: z.coerce.number().min(0).default(0),
         totalAmount: z.coerce.number().min(0, "Total amount must be positive"),
+        finalAmount: z.coerce.number().min(0, "Final amount must be positive"),
         taxRate: z.coerce
           .number()
           .min(0)
           .max(100, "Tax rate cannot exceed 100%"),
         taxAmount: z.coerce.number().min(0, "Tax amount must be positive"),
-        sch1Percent: z.coerce.number().min(0).max(100).default(0),
-        sch1Amount: z.coerce.number().min(0).default(0),
-        sch2Percent: z.coerce.number().min(0).max(100).default(0),
-        sch2Amount: z.coerce.number().min(0).default(0),
-        batchId: z.coerce.number().optional(),
+        schPercent: z.coerce.number().min(0).max(100).default(0),
+        schAmount: z.coerce.number().min(0).default(0),
+        batchId: z.coerce.number().min(1, "Batch is required"),
         batchOpeningStock: z.coerce.number().optional(),
         cartonPack: z.coerce.number().optional(),
         conversionFactor: z.coerce.number().optional(),
@@ -155,8 +188,32 @@ const defaultValues: SalesFormData = {
   vanId: 0,
   salesmanId: 0,
   address: "",
-  gstDetails: "Against GST",
-  items: [],
+  gstDetails: GST_DETAILS_DEFAULT_ID,
+  phoneNo: "",
+  items: [
+    // <-- one default row
+    {
+      productId: 0,
+      productCode: "",
+      description: "",
+      rate: 0,
+      aQty: 0,
+      mQty: 0,
+      unit: 0,
+      fQty: 0,
+      DQty: 0,
+      totalAmount: 0,
+      finalAmount: 0,
+      taxRate: 5,
+      taxAmount: 0,
+      schPercent: 0,
+      schAmount: 0,
+      batchId: 0 as any, // will trigger validation until batch is selected
+      batchOpeningStock: 0,
+      cartonPack: 0,
+      conversionFactor: 0,
+    },
+  ],
   remarks: "",
   grossAmount: 0,
   boxUnit: 0,
@@ -182,13 +239,14 @@ export default function SalesForm({
   // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
-  console.log(editingSales);
+
   // State for batch selection modal
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingBatchSelection, setPendingBatchSelection] = useState<{
@@ -208,39 +266,143 @@ export default function SalesForm({
     defaultValues,
   });
 
-  // Watch items for UI updates
+  // Watch values for filtering logic
   const items = form.watch("items");
   const customerId = form.watch("customerId");
+  const areaId = form.watch("areaId");
+
+  // Watch summary fields that affect final amount calculation
+  const cessInsurance = useWatch({
+    control: form.control,
+    name: "cessInsurance",
+  });
+  const discountPercent = useWatch({
+    control: form.control,
+    name: "discountPercent",
+  });
+  const amountAdd = useWatch({ control: form.control, name: "amountAdd" });
+  const creditAmount = useWatch({
+    control: form.control,
+    name: "creditAmount",
+  });
+
+  // Filtered Lists based on Area
+  const filteredCustomers = useMemo(() => {
+    if (!areaId) return customers;
+    return customers.filter((c: Customer) => c.areaId === areaId);
+  }, [customers, areaId]);
+
+  const filteredSalesmen = useMemo(() => {
+    if (!areaId) return salesmen;
+    return salesmen.filter((s: any) => s.areaId === areaId);
+  }, [salesmen, areaId]);
+
+  // Helper to find entities
+  const findProduct = (productId: number) => {
+    return products.find((p) => p.id === productId) as
+      | ProductWithFactors
+      | undefined;
+  };
+
+  const findCustomer = (id: number) =>
+    customers.find((c: Customer) => c.id === id);
+  const findArea = (id: number) => areas.find((a) => a.id === id);
 
   // --------------------------------------------------------------------
-  // Calculations (with safe number handling)
+  // Logic: Handle Phone Number Selection
+  // --------------------------------------------------------------------
+  const handlePhoneSelect = (customerId: number) => {
+    const customer = findCustomer(customerId);
+    console.log(customer, "fewoihfioweh");
+    if (customer) {
+      // Update all related fields including address
+      form.setValue("phoneNo", customer.phoneNo);
+      form.setValue("customerId", customer.id);
+      form.setValue("areaId", customer.areaId || 0);
+      form.setValue("address", customer.address || ""); // ADDRESS AUTO-FILL
+
+      // Reset salesman if current one doesn't belong to new area
+      const currentSalesman = form.getValues("salesmanId");
+      const isSalesmanValid = salesmen.find(
+        (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
+      );
+      if (!isSalesmanValid) {
+        form.setValue("salesmanId", 0);
+      }
+
+      setPhoneOpen(false);
+      toast.success(`Customer ${customer.personName} selected`);
+    }
+  };
+
+  // --------------------------------------------------------------------
+  // Logic: Handle Area Selection
+  // --------------------------------------------------------------------
+  const handleAreaSelect = (selectedAreaId: number) => {
+    form.setValue("areaId", selectedAreaId);
+
+    // Reset dependent fields
+    form.setValue("customerId", 0);
+    form.setValue("salesmanId", 0);
+    form.setValue("phoneNo", "");
+    form.setValue("address", ""); // Clear address when area changes
+
+    setAreaOpen(false);
+  };
+
+  // --------------------------------------------------------------------
+  // Logic: Handle Customer Selection
+  // --------------------------------------------------------------------
+  const handleCustomerSelect = (selectedCustomerId: number) => {
+    const customer = findCustomer(selectedCustomerId);
+    console.log(customer, "fewoihfioweh");
+    if (customer) {
+      form.setValue("customerId", customer.id);
+      form.setValue("areaId", customer.areaId || 0);
+      form.setValue("address", customer.address || ""); // ADDRESS AUTO-FILL
+      form.setValue("phoneNo", customer.phoneNo || "");
+
+      // Reset salesman if invalid for this area
+      const currentSalesman = form.getValues("salesmanId");
+      const isSalesmanValid = salesmen.find(
+        (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
+      );
+      if (!isSalesmanValid) {
+        form.setValue("salesmanId", 0);
+      }
+    }
+    setCustomerOpen(false);
+  };
+
+  // --------------------------------------------------------------------
+  // Calculations
   // --------------------------------------------------------------------
   useEffect(() => {
     const calculateTotals = () => {
-      const grossAmount = items.reduce((sum, item) => {
-        return sum + (Number(item.totalAmount) || 0);
-      }, 0);
-      const tax = items.reduce((sum, item) => {
-        return sum + (Number(item.taxAmount) || 0);
-      }, 0);
+      const sumItemFinal = items.reduce(
+        (sum, item) => sum + (item.finalAmount || 0),
+        0,
+      );
+      const tax = items.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
+      const grossAmount = items.reduce(
+        (sum, item) => sum + ((item.totalAmount || 0) - (item.taxAmount || 0)),
+        0,
+      );
 
-      const boxUnit = Number(form.getValues("boxUnit")) || 0;
-      const cessInsurance = Number(form.getValues("cessInsurance")) || 0;
-      const scheme1 = Number(form.getValues("scheme1")) || 0;
-      const discountPercent = Number(form.getValues("discountPercent")) || 0;
-      const amountAdd = Number(form.getValues("amountAdd")) || 0;
-      const creditAmount = Number(form.getValues("creditAmount")) || 0;
+      const _cessInsurance = Number(cessInsurance) || 0;
+      const _discountPercent = Number(discountPercent) || 0;
+      const _amountAdd = Number(amountAdd) || 0;
+      const _creditAmount = Number(creditAmount) || 0;
 
-      const discountAmount = grossAmount * (discountPercent / 100);
+      const discountAmount =
+        (sumItemFinal + _cessInsurance + _amountAdd - _creditAmount) *
+        (_discountPercent / 100);
       const finalAmount =
-        grossAmount +
-        tax +
-        boxUnit +
-        cessInsurance +
-        amountAdd -
-        scheme1 -
+        sumItemFinal +
+        _cessInsurance +
+        _amountAdd -
         discountAmount -
-        creditAmount;
+        _creditAmount;
 
       form.setValue("grossAmount", parseFloat(grossAmount.toFixed(2)));
       form.setValue("tax", parseFloat(tax.toFixed(2)));
@@ -251,42 +413,52 @@ export default function SalesForm({
     };
 
     calculateTotals();
-  }, [items, form]);
+  }, [items, cessInsurance, discountPercent, amountAdd, creditAmount, form]);
 
   // Reset form when editingSales changes
   useEffect(() => {
-    console.log("Editing sales changed:", editingSales);
     if (editingSales) {
-      console.log(editingSales);
-      form.reset({
-        invoiceDate:
-          editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
-        areaId: editingSales.area?.id ?? 0,
-        customerId: editingSales.customer?.id ?? 0,
-        vanId: editingSales.van?.id ?? 0,
-        salesmanId: editingSales.salesman?.id ?? 0,
-        address: editingSales.address ?? "",
-        gstDetails: editingSales.gstDetails ?? "Against GST",
-        items: (editingSales.items ?? []).map((item: any) => ({
+      const mappedItems = (editingSales.items ?? []).map((item: any) => {
+        let cartonPack = item.cartonPack ?? 0;
+        if (!cartonPack && item.productId) {
+          const product = findProduct(item.productId);
+          cartonPack = product?.cartonPack ?? 0;
+        }
+        return {
           productId: item.productId ?? 0,
           productCode: item.product?.productCode ?? "",
           description: item.product?.description ?? "",
           rate: item.rate ?? 0,
           aQty: item.aQty ?? 0,
           mQty: item.mQty ?? 0,
+          unit: item.unit ?? 0,
+          fQty: item.fQty ?? 0,
+          DQty: item.DQty ?? 0,
           totalAmount: item.totalAmount ?? 0,
+          finalAmount:
+            item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
           taxRate: item.taxRate ?? 5,
           taxAmount: item.taxAmount ?? 0,
-          sch1Percent: item.sch1Percent ?? 0,
-          sch1Amount: item.sch1Amount ?? 0,
-          sch2Percent: item.sch2Percent ?? 0,
-          sch2Amount: item.sch2Amount ?? 0,
+          schPercent: item.schPercent ?? 0,
+          schAmount: item.schAmount ?? 0,
           batchId: item.batchId ?? undefined,
-          // Extract opening stock from the nested batch object
           batchOpeningStock: item.batch?.openingStock ?? undefined,
-          cartonPack: item.cartonPack ?? 0,
+          cartonPack,
           conversionFactor: item.conversionFactor ?? 1,
-        })),
+        };
+      });
+
+      form.reset({
+        invoiceDate:
+          editingSales.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
+        areaId: editingSales.area?.id ?? 0,
+        customerId: editingSales.customer?.id ?? 0,
+        phoneNo: editingSales.customer?.phoneNo ?? "",
+        vanId: editingSales.van?.id ?? 0,
+        salesmanId: editingSales.salesman?.id ?? 0,
+        address: editingSales.address ?? "",
+        gstDetails: normalizeGstDetailsValue(editingSales.gstDetails),
+        items: mappedItems,
         remarks: editingSales.remarks ?? "",
         grossAmount: editingSales.grossAmount ?? 0,
         boxUnit: editingSales.boxUnit ?? 0,
@@ -303,16 +475,6 @@ export default function SalesForm({
     }
   }, [editingSales, form]);
 
-  // Update address when customer changes
-  useEffect(() => {
-    if (customerId) {
-      const customer = customers.find((c) => c.id === customerId);
-      if (customer) {
-        form.setValue("address", customer.address || "");
-      }
-    }
-  }, [customerId, form, customers]);
-
   // --------------------------------------------------------------------
   // Helper functions
   // --------------------------------------------------------------------
@@ -324,7 +486,7 @@ export default function SalesForm({
   };
 
   const findCustomerName = (customerId: number) => {
-    const customer = customers.find((c) => c.id === customerId);
+    const customer = findCustomer(customerId);
     return customer
       ? `${customer.companyName || customer.personName}`
       : "Select customer";
@@ -340,12 +502,6 @@ export default function SalesForm({
     return salesman ? `${salesman.name}` : "Select salesman";
   };
 
-  const findProduct = (productId: number) => {
-    return products.find((p) => p.id === productId) as
-      | ProductWithFactors
-      | undefined;
-  };
-
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
@@ -353,16 +509,22 @@ export default function SalesForm({
       : "Select product";
   };
 
-  const calculateMQty = (
-    aQty: number,
-    product?: ProductWithFactors,
-  ): number => {
-    if (!product) return 0;
-    return aQty * (product.cartonPack || 0) * (product.conversionFactor || 0);
+  const calculateMQty = (aQty: number, cartonPack: number = 1): number => {
+    if (!cartonPack) return 0;
+    return Math.floor(aQty / cartonPack);
   };
 
+  const calculateUnit = (aQty: number, cartonPack: number = 1): number => {
+    if (!cartonPack) return 0;
+    return aQty % cartonPack;
+  };
+
+  const totalCartons = items.reduce((sum, item) => sum + item.mQty, 0);
+  const totalAQty = items.reduce((sum, item) => sum + (item.aQty || 0), 0);
+  const totalUnits = items.reduce((sum, item) => sum + (item.unit || 0), 0);
+
   // --------------------------------------------------------------------
-  // Item handlers (with stock validation)
+  // Item handlers
   // --------------------------------------------------------------------
   const handleItemChange = (
     index: number,
@@ -373,7 +535,6 @@ export default function SalesForm({
     const item = updatedItems[index];
     const numValue = value === "" ? 0 : Number(value) || 0;
 
-    // Special validation for aQty: cannot exceed batch opening stock
     if (field === "aQty" && item.batchId && item.batchOpeningStock) {
       if (numValue > item.batchOpeningStock) {
         toast.error(
@@ -382,7 +543,6 @@ export default function SalesForm({
             description: `Maximum A Qty allowed is ${item.batchOpeningStock}`,
           },
         );
-        // Clamp to max stock
         updatedItems[index] = { ...item, aQty: item.batchOpeningStock };
         form.setValue("items", updatedItems);
         return;
@@ -391,57 +551,103 @@ export default function SalesForm({
 
     updatedItems[index] = { ...item, [field]: numValue };
 
-    if (field === "rate" || field === "aQty" || field === "taxRate") {
+    if (["rate", "aQty", "taxRate", "schPercent"].includes(field)) {
       const rate = field === "rate" ? numValue : item.rate;
       const aQty = field === "aQty" ? numValue : item.aQty;
       const taxRate = field === "taxRate" ? numValue : item.taxRate;
+      const schPercent = field === "schPercent" ? numValue : item.schPercent;
 
       const totalAmount = rate * aQty;
       const taxAmount = totalAmount * (taxRate / 100);
+      const schAmount = totalAmount * (schPercent / 100);
+      const finalAmount = totalAmount - schAmount;
+
+      if (schAmount > totalAmount) {
+        toast.error("Scheme amount cannot exceed total amount for this item");
+        return;
+      }
 
       updatedItems[index].totalAmount = parseFloat(totalAmount.toFixed(2));
       updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
-    } else if (field === "totalAmount") {
-      const taxAmount = numValue * (item.taxRate / 100);
-      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+      updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
+      updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
+
+      if (field === "aQty") {
+        const product = findProduct(item.productId);
+        if (product) {
+          const mQty = calculateMQty(aQty, product.cartonPack);
+          const unit = calculateUnit(aQty, product.cartonPack);
+          updatedItems[index].mQty = mQty;
+          updatedItems[index].unit = unit;
+          updatedItems[index].cartonPack = product.cartonPack;
+        }
+      }
     }
 
-    if (field === "aQty") {
-      const product = findProduct(item.productId);
-      if (product) {
-        updatedItems[index].mQty = calculateMQty(numValue, product);
-        updatedItems[index].cartonPack = product.cartonPack;
-        updatedItems[index].conversionFactor = product.conversionFactor;
-      }
+    if (field === "totalAmount") {
+      const taxAmount = numValue * (item.taxRate / 100);
+      const schAmount = numValue * (item.schPercent / 100);
+      const finalAmount = numValue - schAmount;
+      updatedItems[index].taxAmount = parseFloat(taxAmount.toFixed(2));
+      updatedItems[index].schAmount = parseFloat(schAmount.toFixed(2));
+      updatedItems[index].finalAmount = parseFloat(finalAmount.toFixed(2));
     }
 
     form.setValue("items", updatedItems);
   };
 
   // --------------------------------------------------------------------
-  // Batch selection (now includes openingStock)
+  // Batch selection
   // --------------------------------------------------------------------
-  const handleBatchSelect = (batch: any, aQty: number, mQty: number) => {
+  const handleBatchSelect = (batch: any, aQty: number) => {
     if (pendingBatchSelection) {
-      const { index } = pendingBatchSelection;
-      const updatedItems = [...items];
-      const item = updatedItems[index];
+      const {
+        index,
+        productId,
+        productCode,
+        description,
+        cartonPack,
+        conversionFactor,
+      } = pendingBatchSelection;
 
+      const product = findProduct(productId);
+      const taxRate = product?.gstRate || 5;
+
+      const mQty = calculateMQty(aQty, cartonPack);
+      const unit = calculateUnit(aQty, cartonPack);
+      const rate = batch.saleRate ?? 0;
+      const schPercent = 0;
+      const totalAmount = rate * aQty;
+      const taxAmount = totalAmount * (taxRate / 100);
+      const schAmount = totalAmount * (schPercent / 100);
+      const finalAmount = totalAmount - schAmount;
+
+      const updatedItems = [...items];
       updatedItems[index] = {
-        ...item,
-        batchId: batch.id,
-        batchOpeningStock: batch.openingStock, // store opening stock
-        rate: batch.saleRate ?? 0,
+        ...updatedItems[index],
+        productId,
+        productCode,
+        description,
+        rate,
         aQty,
         mQty,
-        totalAmount: (batch.saleRate ?? 0) * aQty,
-        taxAmount: (batch.saleRate ?? 0) * aQty * ((item.taxRate ?? 5) / 100),
+        unit,
+        totalAmount,
+        taxRate,
+        taxAmount,
+        schPercent,
+        schAmount,
+        finalAmount,
+        cartonPack,
+        conversionFactor,
+        batchId: batch.id,
+        batchOpeningStock: batch.openingStock,
       };
 
       form.setValue("items", updatedItems);
 
-      toast.success(`Batch applied to ${item.productCode}`, {
-        description: `Rate: ₹${batch.saleRate} | A Qty: ${aQty} | M Qty: ${mQty} | Stock: ${batch.openingStock}`,
+      toast.success(`Batch applied to ${productCode}`, {
+        description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit} | Stock: ${batch.openingStock}`,
       });
 
       setPendingBatchSelection(null);
@@ -490,16 +696,19 @@ export default function SalesForm({
       rate: 0,
       aQty: 0,
       mQty: 0,
+      unit: 0,
+      fQty: 0,
+      DQty: 0,
       totalAmount: 0,
+      finalAmount: 0,
       taxRate: 5,
       taxAmount: 0,
-      sch1Percent: 0,
-      sch1Amount: 0,
-      sch2Percent: 0,
-      sch2Amount: 0,
+      schPercent: 0,
+      schAmount: 0,
+      batchId: undefined as any,
+      batchOpeningStock: 0,
       cartonPack: 0,
       conversionFactor: 0,
-      batchOpeningStock: 0,
     };
     form.setValue("items", [...items, newItem]);
   };
@@ -511,39 +720,9 @@ export default function SalesForm({
     }
   };
 
-  // --------------------------------------------------------------------
-  // Product selection (triggers batch modal)
-  // --------------------------------------------------------------------
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
-      const updatedItems = [...items];
-      const aQty = 1;
-      const mQty = calculateMQty(aQty, product);
-
-      updatedItems[index] = {
-        ...updatedItems[index],
-        productId: product.id,
-        productCode: product.productCode,
-        description: product.description,
-        rate: product.pricePerPcs || 0,
-        taxRate: product.gstRate || 5,
-        aQty,
-        mQty,
-        totalAmount: (product.pricePerPcs || 0) * aQty,
-        taxAmount:
-          (product.pricePerPcs || 0) * aQty * ((product.gstRate || 5) / 100),
-        cartonPack: product.cartonPack,
-        conversionFactor: product.conversionFactor,
-        batchId: undefined,
-        batchOpeningStock: undefined,
-      };
-      form.setValue("items", updatedItems);
-
-      setProductOpen(false);
-      setActiveProductIndex(null);
-
-      // Immediately open batch selection
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -552,38 +731,22 @@ export default function SalesForm({
         cartonPack: product.cartonPack,
         conversionFactor: product.conversionFactor,
       });
+      setProductOpen(false);
+      setActiveProductIndex(null);
       setBatchModalOpen(true);
     }
-  };
-
-  // --------------------------------------------------------------------
-  // Scheme handlers
-  // --------------------------------------------------------------------
-  const handleSchemeChange = (
-    index: number,
-    schemeType: "sch1Percent" | "sch2Percent",
-    value: number,
-  ) => {
-    const updatedItems = [...items];
-    const item = updatedItems[index];
-    const numValue = Number(value) || 0;
-
-    updatedItems[index] = {
-      ...item,
-      [schemeType]: numValue,
-      [schemeType === "sch1Percent" ? "sch1Amount" : "sch2Amount"]:
-        item.totalAmount * (numValue / 100),
-    };
-
-    form.setValue("items", updatedItems);
   };
 
   // --------------------------------------------------------------------
   // Form submission
   // --------------------------------------------------------------------
   const onSubmit = async (data: SalesFormData) => {
+    // Destructure to remove phoneNo before sending to backend
+    const { phoneNo, ...payloadData } = data;
+    const payload = { ...payloadData, boxUnit: 0 };
+
     try {
-      await onSave(data, editingSales?.id);
+      await onSave(payload as SalesFormData, editingSales?.id);
     } catch (error) {
       console.error("Error in form submission:", error);
       toast.error("Failed to save sales. Please try again.");
@@ -640,6 +803,84 @@ export default function SalesForm({
                   Invoice Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  {/* Phone Number Search */}
+                  <FormField
+                    control={form.control}
+                    name="phoneNo"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm">
+                          Search by Phone
+                        </FormLabel>
+                        <Popover open={phoneOpen} onOpenChange={setPhoneOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={phoneOpen}
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                                disabled={isSubmitting || isReadOnly}
+                              >
+                                {field.value
+                                  ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
+                                  : "Search phone number..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search phone numbers..." />
+                              <CommandList>
+                                <CommandEmpty>No customer found.</CommandEmpty>
+                                <CommandGroup>
+                                  {customers.map((customer: Customer) => (
+                                    <CommandItem
+                                      key={customer.id}
+                                      value={`${customer.phoneNo} ${customer.personName}`}
+                                      onSelect={() => {
+                                        if (!isReadOnly) {
+                                          handlePhoneSelect(customer.id);
+                                        }
+                                      }}
+                                    >
+                                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {customer.phoneNo}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {customer.personName}{" "}
+                                          {customer.companyName
+                                            ? `(${customer.companyName})`
+                                            : ""}
+                                        </span>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          customer.id ===
+                                            form.getValues("customerId")
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
@@ -705,8 +946,7 @@ export default function SalesForm({
                                       value={`${area.id} ${area.name} ${area.city || ""}`}
                                       onSelect={() => {
                                         if (!isReadOnly) {
-                                          field.onChange(area.id);
-                                          setAreaOpen(false);
+                                          handleAreaSelect(area.id);
                                         }
                                       }}
                                     >
@@ -741,7 +981,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Customer */}
+                  {/* Customer (Filtered by Area) */}
                   <FormField
                     control={form.control}
                     name="customerId"
@@ -762,7 +1002,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || isReadOnly}
+                                disabled={isSubmitting || isReadOnly || !areaId}
                               >
                                 {field.value
                                   ? findCustomerName(field.value)
@@ -775,40 +1015,46 @@ export default function SalesForm({
                             <Command>
                               <CommandInput placeholder="Search customers..." />
                               <CommandList>
-                                <CommandEmpty>No customer found.</CommandEmpty>
+                                <CommandEmpty>
+                                  {areaId
+                                    ? "No customer found in this area."
+                                    : "Please select an area first."}
+                                </CommandEmpty>
                                 <CommandGroup>
-                                  {customers.map((customer) => (
-                                    <CommandItem
-                                      key={customer.id}
-                                      value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          field.onChange(customer.id);
-                                          setCustomerOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {customer.companyName ||
-                                            customer.personName}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {customer.phoneNo &&
-                                            `${customer.phoneNo} • `}
-                                          {customer.city || customer.address}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          customer.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
+                                  {filteredCustomers.map(
+                                    (customer: Customer) => (
+                                      <CommandItem
+                                        key={customer.id}
+                                        value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
+                                        onSelect={() => {
+                                          if (!isReadOnly) {
+                                            handleCustomerSelect(customer.id);
+                                            setCustomerOpen(false);
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">
+                                            {customer.companyName ||
+                                              customer.personName}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {customer.phoneNo &&
+                                              `${customer.phoneNo} • `}
+                                            {customer.city || customer.address}
+                                          </span>
+                                        </div>
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            customer.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ),
+                                  )}
                                 </CommandGroup>
                               </CommandList>
                             </Command>
@@ -819,7 +1065,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Address */}
+                  {/* Address - Now properly auto-filled */}
                   <FormField
                     control={form.control}
                     name="address"
@@ -916,7 +1162,7 @@ export default function SalesForm({
                     )}
                   />
 
-                  {/* Salesman */}
+                  {/* Salesman (Filtered by Area) */}
                   <FormField
                     control={form.control}
                     name="salesmanId"
@@ -937,7 +1183,7 @@ export default function SalesForm({
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
-                                disabled={isSubmitting || isReadOnly}
+                                disabled={isSubmitting || isReadOnly || !areaId}
                               >
                                 {field.value
                                   ? findSalesmanName(field.value)
@@ -950,9 +1196,13 @@ export default function SalesForm({
                             <Command>
                               <CommandInput placeholder="Search salesmen..." />
                               <CommandList>
-                                <CommandEmpty>No salesman found.</CommandEmpty>
+                                <CommandEmpty>
+                                  {areaId
+                                    ? "No salesman found in this area."
+                                    : "Please select an area first."}
+                                </CommandEmpty>
                                 <CommandGroup>
-                                  {salesmen.map((salesman) => (
+                                  {filteredSalesmen.map((salesman: any) => (
                                     <CommandItem
                                       key={salesman.id}
                                       value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
@@ -972,7 +1222,7 @@ export default function SalesForm({
                                             `${salesman.phoneNo} • `}
                                           {salesman.email &&
                                             `${salesman.email} • `}
-                                          {salesman.area}
+                                          {salesman.areaId}
                                         </span>
                                       </div>
                                       <Check
@@ -1002,13 +1252,24 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm">GST Details</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., Against GST"
-                            {...field}
-                            disabled={isSubmitting || isReadOnly}
-                          />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? GST_DETAILS_DEFAULT_ID}
+                          disabled={isSubmitting || isReadOnly}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select GST type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {gst_details.map((gst) => (
+                              <SelectItem key={gst.id} value={String(gst.id)}>
+                                {gst.type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1058,341 +1319,391 @@ export default function SalesForm({
                     </Button>
                   )}
                 </div>
+                <div className="flex items-center justify-center overflow-x-auto w-full">
+                  <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-4xl xl:max-w-7.5xl 2xl:max-w-10xl">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-secondary/50">
+                          <TableHead className="font-semibold w-12">
+                            Sr
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Prod Code & Description
+                          </TableHead>
+                          <TableHead className="font-semibold">Rate</TableHead>
+                          <TableHead className="font-semibold">
+                            A. Qty
+                          </TableHead>
+                          <TableHead className="font-semibold">Fr</TableHead>
+                          <TableHead className="font-semibold">Dm</TableHead>
+                          <TableHead className="font-semibold">
+                            M. Qty *
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Unit *
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Amount
+                          </TableHead>
+                          <TableHead className="font-semibold">Sch%</TableHead>
+                          <TableHead className="font-semibold">
+                            Sch amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax (%)
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax Amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Final Amt
+                          </TableHead>
+                          <TableHead className="font-semibold w-20">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <AnimatePresence>
+                          {items.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={15}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                No products added.{" "}
+                                {!isReadOnly &&
+                                  'Click "Add Product" to get started.'}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            items.map((item, index) => (
+                              <motion.tr
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="hover:bg-secondary/30"
+                              >
+                                <TableCell>{index + 1}</TableCell>
 
-                <div className="overflow-x-auto border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold w-12">Sr</TableHead>
-                        <TableHead className="font-semibold">
-                          Prod Code & Description
-                        </TableHead>
-                        <TableHead className="font-semibold">Rate</TableHead>
-                        <TableHead className="font-semibold">A. Qty</TableHead>
-                        <TableHead className="font-semibold">
-                          M. Qty *
-                        </TableHead>
-                        <TableHead className="font-semibold">Amount</TableHead>
-                        <TableHead className="font-semibold">Sch1%</TableHead>
-                        <TableHead className="font-semibold">
-                          Sch1 amt
-                        </TableHead>
-                        <TableHead className="font-semibold">Sch2%</TableHead>
-                        <TableHead className="font-semibold">
-                          Sch2 amt
-                        </TableHead>
-                        <TableHead className="font-semibold">Tax (%)</TableHead>
-                        <TableHead className="font-semibold">Tax Amt</TableHead>
-                        <TableHead className="font-semibold w-20">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <AnimatePresence>
-                        {items.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={13}
-                              className="text-center py-8 text-muted-foreground"
-                            >
-                              No products added.{" "}
-                              {!isReadOnly &&
-                                'Click "Add Product" to get started.'}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          items.map((item, index) => (
-                            <motion.tr
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="hover:bg-secondary/30"
-                            >
-                              <TableCell>{index + 1}</TableCell>
-
-                              {/* Product Selection */}
-                              <TableCell>
-                                {isReadOnly ? (
-                                  <div className="py-2 px-3 text-sm">
-                                    {item.productCode} – {item.description}
-                                  </div>
-                                ) : (
-                                  <Popover
-                                    open={
-                                      productOpen &&
-                                      activeProductIndex === index
-                                    }
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        setActiveProductIndex(index);
-                                      } else {
-                                        setActiveProductIndex(null);
+                                {/* Product Selection */}
+                                <TableCell>
+                                  {isReadOnly ? (
+                                    <div className="py-2 px-3 text-sm">
+                                      {item.productCode} – {item.description}
+                                    </div>
+                                  ) : (
+                                    <Popover
+                                      open={
+                                        productOpen &&
+                                        activeProductIndex === index
                                       }
-                                      setProductOpen(open);
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className="w-full justify-between"
-                                        disabled={isSubmitting || isReadOnly}
-                                      >
-                                        {item.productId
-                                          ? findProductName(item.productId)
-                                          : "Select product"}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0">
-                                      <Command>
-                                        <CommandInput placeholder="Search products..." />
-                                        <CommandList>
-                                          <CommandEmpty>
-                                            No product found.
-                                          </CommandEmpty>
-                                          <CommandGroup>
-                                            {products.map((product) => (
-                                              <CommandItem
-                                                key={product.id}
-                                                value={`${product.id} ${product.productCode} ${product.description}`}
-                                                onSelect={() => {
-                                                  handleProductSelect(
-                                                    index,
-                                                    product.id,
-                                                  );
-                                                }}
-                                              >
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium">
-                                                    {product.productCode}
-                                                  </span>
-                                                  <span className="text-xs text-muted-foreground">
-                                                    {product.productBrand}
-                                                  </span>
-                                                </div>
-                                                <Check
-                                                  className={cn(
-                                                    "ml-auto h-4 w-4",
-                                                    product.id ===
-                                                      item.productId
-                                                      ? "opacity-100"
-                                                      : "opacity-0",
-                                                  )}
-                                                />
-                                              </CommandItem>
-                                            ))}
-                                          </CommandGroup>
-                                        </CommandList>
-                                      </Command>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </TableCell>
-
-                              {/* Rate */}
-                              <TableCell>
-                                <div className="relative">
-                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.rate ?? 0}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "rate",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-24 pl-7"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* A. Qty */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.aQty ?? 0}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "aQty",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-20"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* M. Qty (read-only) */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    value={item.mQty ?? 0}
-                                    readOnly
-                                    disabled
-                                    className="w-20 bg-muted cursor-not-allowed"
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Amount */}
-                              <TableCell>
-                                <div className="relative">
-                                  <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.totalAmount ?? 0}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "totalAmount",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-24 pl-7"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch1% */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.sch1Percent ?? 0}
-                                    onChange={(e) =>
-                                      handleSchemeChange(
-                                        index,
-                                        "sch1Percent",
-                                        Number(e.target.value),
-                                      )
-                                    }
-                                    className="w-20 pl-6"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch1 Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{(item.sch1Amount ?? 0).toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Sch2% */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.sch2Percent ?? 0}
-                                    onChange={(e) =>
-                                      handleSchemeChange(
-                                        index,
-                                        "sch2Percent",
-                                        Number(e.target.value),
-                                      )
-                                    }
-                                    className="w-20 pl-6"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Sch2 Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{(item.sch2Amount ?? 0).toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Tax Rate */}
-                              <TableCell>
-                                <div className="relative">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={item.taxRate ?? 5}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "taxRate",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-20 pl-6"
-                                    disabled={isSubmitting || isReadOnly}
-                                  />
-                                  <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                </div>
-                              </TableCell>
-
-                              {/* Tax Amount */}
-                              <TableCell>
-                                <div className="font-medium text-sm">
-                                  ₹{(item.taxAmount ?? 0).toFixed(2)}
-                                </div>
-                              </TableCell>
-
-                              {/* Actions */}
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  {!isReadOnly && (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openBatchModal(index)}
-                                        disabled={
-                                          !item.productId || isSubmitting
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          setActiveProductIndex(index);
+                                        } else {
+                                          setActiveProductIndex(null);
                                         }
-                                        className="h-7 w-7 p-0"
-                                        title="Select Batch"
-                                      >
-                                        <Layers className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => removeProductRow(index)}
-                                        disabled={isSubmitting}
-                                        className="h-7 w-7 p-0"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </>
+                                        setProductOpen(open);
+                                      }}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className="w-full justify-between"
+                                          disabled={isSubmitting || isReadOnly}
+                                        >
+                                          {item.productId
+                                            ? findProductName(item.productId)
+                                            : "Select product"}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-full p-0">
+                                        <Command>
+                                          <CommandInput placeholder="Search products..." />
+                                          <CommandList>
+                                            <CommandEmpty>
+                                              No product found.
+                                            </CommandEmpty>
+                                            <CommandGroup>
+                                              {products.map((product) => (
+                                                <CommandItem
+                                                  key={product.id}
+                                                  value={`${product.id} ${product.productCode} ${product.description}`}
+                                                  onSelect={() => {
+                                                    handleProductSelect(
+                                                      index,
+                                                      product.id,
+                                                    );
+                                                  }}
+                                                >
+                                                  <div className="flex flex-col">
+                                                    <span className="font-medium">
+                                                      {product.productCode}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                      {product.productBrand}
+                                                    </span>
+                                                  </div>
+                                                  <Check
+                                                    className={cn(
+                                                      "ml-auto h-4 w-4",
+                                                      product.id ===
+                                                        item.productId
+                                                        ? "opacity-100"
+                                                        : "opacity-0",
+                                                    )}
+                                                  />
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
                                   )}
-                                </div>
-                              </TableCell>
-                            </motion.tr>
-                          ))
-                        )}
-                      </AnimatePresence>
-                    </TableBody>
-                  </Table>
-                  <div className="p-2 text-xs text-muted-foreground border-t">
-                    * M Qty is automatically calculated as A Qty × Carton Pack ×
-                    Conversion Factor and cannot be edited.
+                                </TableCell>
+
+                                {/* Rate */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.rate ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "rate",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-24 pl-7"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* A. Qty */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.aQty ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "aQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Fr (Free Qty) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.fQty ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "fQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Dm (Damaged Qty) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.DQty ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "DQty",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* M. Qty - DISABLED */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.mQty.toFixed(0) ?? 0}
+                                      readOnly
+                                      disabled
+                                      className="w-20 bg-muted cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Unit - DISABLED */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={item.unit.toFixed(0) ?? 0}
+                                      readOnly
+                                      disabled
+                                      className="w-20 bg-muted cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Amount (inclusive) */}
+                                <TableCell>
+                                  <div className="relative">
+                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.totalAmount ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "totalAmount",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-24 pl-7"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                  </div>
+                                </TableCell>
+
+                                {/* Sch% */}
+                                <TableCell className="max-w-16">
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.schPercent ?? 0}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "schPercent",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-14 pl-6"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                    <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </TableCell>
+
+                                {/* Sch Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{(item.schAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Tax Rate */}
+                                <TableCell className="max-w-16">
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.taxRate ?? 5}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "taxRate",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-14 pl-6"
+                                      disabled={isSubmitting || isReadOnly}
+                                    />
+                                    <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </TableCell>
+
+                                {/* Tax Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{(item.taxAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Final Amount (item) */}
+                                <TableCell>
+                                  <div className="font-bold text-sm text-green-700">
+                                    ₹{(item.finalAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
+
+                                {/* Actions */}
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    {!isReadOnly && (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openBatchModal(index)}
+                                          disabled={
+                                            !item.productId || isSubmitting
+                                          }
+                                          className="h-7 w-7 p-0"
+                                          title="Select Batch"
+                                        >
+                                          <Layers className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            removeProductRow(index)
+                                          }
+                                          disabled={isSubmitting}
+                                          className="h-7 w-7 p-0"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </motion.tr>
+                            ))
+                          )}
+                        </AnimatePresence>
+                      </TableBody>
+                    </Table>
+                    <div className="p-2 text-xs text-muted-foreground border-t">
+                      * M Qty = floor(A Qty / Carton Pack), Unit = A Qty %
+                      Carton Pack (both auto‑calculated, cannot be edited).
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1400,7 +1711,7 @@ export default function SalesForm({
               {/* Summary Section */}
               <div className="border-t pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Remarks */}
+                  {/* Remarks - Left Side */}
                   <div className="lg:col-span-1">
                     <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
                       <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
@@ -1432,7 +1743,7 @@ export default function SalesForm({
                     </div>
                   </div>
 
-                  {/* Summary Grid */}
+                  {/* Summary - Right Side */}
                   <div className="lg:col-span-3">
                     <div className="bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm">
                       <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
@@ -1441,7 +1752,7 @@ export default function SalesForm({
                       </h4>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Gross Amount */}
+                        {/* Gross Amount (read‑only) */}
                         <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-1">
@@ -1472,35 +1783,26 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Box/Unit */}
+                        {/* Box/Unit Ratio */}
                         <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-2">
-                              Box/Unit
+                              Box/Unit Ratio
                             </span>
                             <Package className="h-3 w-3 text-summary-icon-2" />
                           </div>
-                          <FormField
-                            control={form.control}
-                            name="boxUnit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-2" />
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      readOnly
-                                      disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium"
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`}
+                              readOnly
+                              disabled
+                              className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Total units (remainder)
+                          </p>
                         </div>
 
                         {/* CESS/INS */}
@@ -1523,40 +1825,8 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {/* Scheme 1 */}
-                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-summary-text-4">
-                              Scheme 1
-                            </span>
-                            <Gift className="h-3 w-3 text-summary-icon-4" />
-                          </div>
-                          <FormField
-                            control={form.control}
-                            name="scheme1"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <div className="relative">
-                                    <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      {...field}
-                                      readOnly
-                                      disabled
-                                      className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
                                     />
                                   </div>
                                 </FormControl>
@@ -1584,8 +1854,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
                                     />
                                   </div>
@@ -1595,7 +1864,7 @@ export default function SalesForm({
                           />
                         </div>
 
-                        {/* Tax */}
+                        {/* Tax Amount */}
                         <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-summary-text-6">
@@ -1646,8 +1915,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
                                     />
                                   </div>
@@ -1677,8 +1945,7 @@ export default function SalesForm({
                                       type="number"
                                       step="0.01"
                                       {...field}
-                                      readOnly
-                                      disabled
+                                      disabled={isSubmitting || isReadOnly}
                                       className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
                                     />
                                   </div>
@@ -1686,6 +1953,32 @@ export default function SalesForm({
                               </FormItem>
                             )}
                           />
+                        </div>
+
+                        {/* Total Scheme (read‑only) */}
+                        <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-summary-text-4">
+                              Total Scheme
+                            </span>
+                            <Gift className="h-3 w-3 text-summary-icon-4" />
+                          </div>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={items
+                                .reduce(
+                                  (sum, item) => sum + (item.schAmount || 0),
+                                  0,
+                                )
+                                .toFixed(2)}
+                              readOnly
+                              disabled
+                              className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
+                            />
+                          </div>
                         </div>
 
                         {/* Final Amount */}
@@ -1736,6 +2029,22 @@ export default function SalesForm({
                 </div>
               </div>
 
+              {/* Hidden fields */}
+              <FormField
+                control={form.control}
+                name="boxUnit"
+                render={({ field }) => (
+                  <input type="hidden" {...field} value={0} />
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scheme1"
+                render={({ field }) => (
+                  <input type="hidden" {...field} value={0} />
+                )}
+              />
+
               <DialogFooter className="pt-4">
                 <Button
                   type="button"
@@ -1760,7 +2069,7 @@ export default function SalesForm({
         </DialogContent>
       </Dialog>
 
-      {/* Batch Selection Modal (Sales version) */}
+      {/* Batch Selection Modal */}
       {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}

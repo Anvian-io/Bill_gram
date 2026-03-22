@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Receipt,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -93,6 +94,7 @@ export default function SupplierComponent() {
     phoneNo: "",
     email: "",
     address: "",
+    gstIN: "",
     status: "all",
     showDeleted: false,
   });
@@ -110,6 +112,7 @@ export default function SupplierComponent() {
   const [phoneNoInput, setPhoneNoInput] = useState<string>("");
   const [emailInput, setEmailInput] = useState<string>("");
   const [addressInput, setAddressInput] = useState<string>("");
+  const [gstINInput, setGstINInput] = useState<string>("");
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -130,6 +133,10 @@ export default function SupplierComponent() {
 
   const debouncedSetAddress = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, address: value }));
+  }, 300);
+
+  const debouncedSetGstIN = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, gstIN: value }));
   }, 300);
 
   // Handle search input change with debounce
@@ -160,6 +167,12 @@ export default function SupplierComponent() {
   const handleAddressChange = (value: string) => {
     setAddressInput(value);
     debouncedSetAddress(value);
+  };
+
+  // Handle GSTIN input change with debounce
+  const handleGstINChange = (value: string) => {
+    setGstINInput(value);
+    debouncedSetGstIN(value);
   };
 
   // Safely handle suppliers data
@@ -194,6 +207,9 @@ export default function SupplierComponent() {
       }
       if (filters.address) {
         params.address = filters.address;
+      }
+      if (filters.gstIN) {
+        params.gstIN = filters.gstIN;
       }
       if (filters.status !== "all") {
         params.status = filters.status === "active";
@@ -263,6 +279,7 @@ export default function SupplierComponent() {
       phoneNo: "",
       email: "",
       address: "",
+      gstIN: "",
       status: "all",
       showDeleted: false,
     });
@@ -271,6 +288,7 @@ export default function SupplierComponent() {
     setPhoneNoInput("");
     setEmailInput("");
     setAddressInput("");
+    setGstINInput("");
   };
 
   // Clear specific filter
@@ -301,6 +319,9 @@ export default function SupplierComponent() {
         break;
       case "address":
         setAddressInput("");
+        break;
+      case "gstIN":
+        setGstINInput("");
         break;
     }
   };
@@ -453,11 +474,10 @@ export default function SupplierComponent() {
               <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search by name, phone, email, or address..."
+                placeholder="Search by name, phone, email, address, or GSTIN..."
                 className="pl-10 py-6 text-base"
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                // disabled={isLoading}
               />
               {searchInput && (
                 <Button
@@ -468,7 +488,6 @@ export default function SupplierComponent() {
                     setSearchInput("");
                     handleFilterChange("search", "");
                   }}
-                  // disabled={isLoading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -486,7 +505,6 @@ export default function SupplierComponent() {
                   variant="outline"
                   className="gap-2"
                   onClick={handleRefresh}
-                  // disabled={isLoading}
                 >
                   <RefreshCw
                     className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -566,7 +584,7 @@ export default function SupplierComponent() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                         {/* Name Filter */}
                         <div className="space-y-2">
                           <Label htmlFor="name" className="text-sm font-medium">
@@ -579,7 +597,6 @@ export default function SupplierComponent() {
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {nameInput && (
                               <Button
@@ -615,7 +632,6 @@ export default function SupplierComponent() {
                                 handlePhoneNoChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {phoneNoInput && (
                               <Button
@@ -651,7 +667,6 @@ export default function SupplierComponent() {
                                 handleEmailChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {emailInput && (
                               <Button
@@ -687,7 +702,6 @@ export default function SupplierComponent() {
                                 handleAddressChange(e.target.value)
                               }
                               className="flex-1"
-                              // disabled={isLoading}
                             />
                             {addressInput && (
                               <Button
@@ -697,6 +711,41 @@ export default function SupplierComponent() {
                                 onClick={() => {
                                   setAddressInput("");
                                   clearFilter("address");
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* GSTIN Filter */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="gstIN"
+                            className="text-sm font-medium"
+                          >
+                            GSTIN
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="gstIN"
+                              placeholder="Enter GSTIN"
+                              value={gstINInput}
+                              onChange={(e) =>
+                                handleGstINChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
+                            {gstINInput && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => {
+                                  setGstINInput("");
+                                  clearFilter("gstIN");
                                 }}
                                 disabled={isLoading}
                               >
@@ -794,6 +843,7 @@ export default function SupplierComponent() {
                   filters.phoneNo ||
                   filters.email ||
                   filters.address ||
+                  filters.gstIN ||
                   filters.search ||
                   filters.showDeleted
                     ? " (filtered)"
@@ -833,6 +883,7 @@ export default function SupplierComponent() {
                         Contact Info
                       </TableHead>
                       <TableHead className="font-semibold">Address</TableHead>
+                      <TableHead className="font-semibold">GSTIN</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Info</TableHead>
                       <TableHead className="font-semibold text-right">
@@ -841,16 +892,10 @@ export default function SupplierComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {isLoading ? (
-                        <motion.tr
-                          key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <TableCell colSpan={6} className="text-center py-12">
+                        <motion.tr key="loading">
+                          <TableCell colSpan={7} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -868,7 +913,7 @@ export default function SupplierComponent() {
                           transition={{ duration: 0.3 }}
                         >
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -963,6 +1008,14 @@ export default function SupplierComponent() {
                                     {supplier.address || "No address"}
                                   </span>
                                 </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <div className="flex items-center gap-2">
+                                <Receipt className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm font-mono">
+                                  {supplier.gstIN || "Not provided"}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell className="group-hover:bg-secondary/30 cursor-pointer">

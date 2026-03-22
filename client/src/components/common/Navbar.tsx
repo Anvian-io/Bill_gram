@@ -41,7 +41,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   // Set current page based on current route
   useEffect(() => {
     const currentItem = navItems.find(
-      (item) => item.href === location.pathname
+      (item) => item.href === location.pathname,
     );
 
     if (currentItem) {
@@ -111,8 +111,14 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   };
 
   const sortedNavItems = getSortedNavItems();
-  const handleMouseEnter = () => setIsExpanded(true);
-  const handleMouseLeave = () => setIsExpanded(false);
+  const handleMouseEnter = () => {
+    setIsExpanded(true);
+    localStorage.setItem("IsExpanded","true");
+  };
+  const handleMouseLeave = () => {
+    setIsExpanded(false);
+    localStorage.setItem("IsExpanded","false")
+  };
 
   return (
     <div className="h-screen bg-background text-foreground">
@@ -375,9 +381,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             bg-background`}
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
-          <div className="mt-16 flex-1 overflow-auto">
-            {children}
-          </div>
+          <div className="mt-16 flex-1 overflow-auto">{children}</div>
         </main>
       </div>
     </div>

@@ -14,10 +14,57 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Lock, User, Store, Phone, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  User,
+  Store,
+  Phone,
+  Eye,
+  EyeOff,
+  KeyRound,
+} from "lucide-react";
 import { toast } from "sonner";
 // Import Lottie JSON files
 import registerLottie from "@/assets/Register_lottie.json";
+
+const NEBULA_API_BASE = (
+  import.meta.env.VITE_NEBULA_API_BASE_URL ?? "http://localhost:5000/api"
+).replace(/\/$/, "");
+
+type NebulaRegisterResponse = {
+  message: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    phoneNumber: string;
+    createdAt: string;
+    registeredBy: string;
+    inviteToken: string;
+  };
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const formatExpiryDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const parseNebulaResponse = async (response: Response) => {
+  const data = (await response.json().catch(() => null)) as
+    | (NebulaRegisterResponse & { message?: string })
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.message ?? "Unable to register user");
+  }
+
+  return data as NebulaRegisterResponse;
+};
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -27,6 +74,7 @@ export default function Register() {
     confirmPassword: "",
     shop_name: "",
     phone: "",
+    token: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -45,31 +93,63 @@ export default function Register() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      console.error("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     setLoading(true);
 
-    const userData = {
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      shop_name: formData.shop_name,
-      phone: formData.phone,
-    };
+    try {
+      const normalizedEmail = normalizeEmail(formData.email);
+      const nebulaResponse = await parseNebulaResponse(
+        await fetch(`${NEBULA_API_BASE}/admin/users`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            name: formData.username.trim(),
+            phoneNumber: formData.phone.trim(),
+            password: formData.password,
+            token: formData.token.trim(),
+          }),
+        }),
+      );
 
-    const result = await register(userData);
+      const result = await register({
+        username: formData.username.trim(),
+        email: normalizedEmail,
+        password: formData.password,
+        shop_name: formData.shop_name.trim(),
+        phone: formData.phone.trim(),
+      });
 
-    if (result.success) {
-      toast.success("Registered Successfully!")
+      if (!result.success) {
+        throw new Error(
+          result.error ||
+            "Nebula registration succeeded, but local BillGram account setup failed",
+        );
+      }
+
+      const subscriptionExpiresAt = result.data?.user?.subscriptionExpiresAt;
+
+      toast.success(
+        subscriptionExpiresAt
+          ? `${nebulaResponse.message}. Access valid until ${formatExpiryDate(
+              subscriptionExpiresAt,
+            )}.`
+          : nebulaResponse.message,
+      );
       navigate("/login");
-    } else {
-      toast.error("Registeration Failed!");
-      console.error(result.error);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Registration failed",
+      );
     }
-
-    setLoading(false);
+    finally {
+      setLoading(false);
+    }
   };
 
   // Animation variants
@@ -296,6 +376,30 @@ export default function Register() {
                             value={formData.phone}
                             onChange={handleChange}
                             className="pl-10 bg-background/50 border-border/50 focus:border-primary"
+                            required
+                          />
+                        </motion.div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants}>
+                      <div>
+                        <Label htmlFor="token" className="text-sm font-medium">
+                          Invite Token
+                        </Label>
+                        <motion.div
+                          className="relative mt-1"
+                          whileFocus="focus"
+                          variants={inputFocusVariants}
+                        >
+                          <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="token"
+                            placeholder="Enter registration token"
+                            value={formData.token}
+                            onChange={handleChange}
+                            className="pl-10 bg-background/50 border-border/50 focus:border-primary"
+                            required
                           />
                         </motion.div>
                       </div>

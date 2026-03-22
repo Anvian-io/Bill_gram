@@ -15,7 +15,7 @@ datasource db {
 
 model User {
   id              Int              @id @default(autoincrement())
-  username        String           @unique
+  username        String           
   email           String           @unique
   password        String
   shop_name       String?
@@ -25,15 +25,21 @@ model User {
   notification    Boolean          @default(true)
   sound           Boolean          @default(true)
   company_logo    String?          // store logo URL or file path
+  signature       String?          // store logo URL or file path
   upi_id          String?
   company_name    String?
   address         String?
+  subscriptionExpiresAt DateTime?  @map("subscription_expires_at")
 
   products        Product[]
   Notification    Notification[]
   purchaseInvoices PurchaseInvoice[]
   salesInvoices    SalesInvoice[]
-
+  PurchaseReportHistory    PurchaseReportHistory[]
+  SalesReportHistory       SalesReportHistory[]
+  GstReportHistory         GstReportHistory[]
+  googleDriveToken GoogleDriveToken?
+  backupHistories  BackupHistory[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
 
@@ -205,7 +211,8 @@ model Salesman {
   name      String
   phoneNo   String
   email     String?
-  area      String
+  areaId    Int?      @map("area_id")
+  area      Area?     @relation(fields: [areaId], references: [id])
   status    Boolean   @default(true)
   deleted   Boolean   @default(false)
   createdAt DateTime  @default(now()) @map("created_at")
@@ -216,6 +223,7 @@ model Salesman {
 
   @@unique([phoneNo])
   @@map("salesmen")
+  @@index([areaId])   // 👈 add index
 }
 
 model Customer {
@@ -226,12 +234,15 @@ model Customer {
   email        String?
   customerType String?  @map("customer_type")
   city         String?
+  areaId       Int?     @map("area_id")
+  area         Area?    @relation(fields: [areaId], references: [id])
   address      String
   pincode      String?
   status       Boolean  @default(true)
   deleted      Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  gstIN        String?
 
   saleHistories     SalesHistory[]
   salesInvoices     SalesInvoice[]
@@ -240,6 +251,7 @@ model Customer {
   @@index([companyName])
   @@index([personName])
   @@map("customers")
+  @@index([areaId])   // 👈 add index for performance
 }
 
 model Area {
@@ -257,6 +269,8 @@ model Area {
 
   saleHistories     SalesHistory[]
   salesInvoices     SalesInvoice[]
+  customers   Customer[]
+  salesmen    Salesman[]
 
   @@unique([name])
   @@index([state])
@@ -310,6 +324,7 @@ model Supplier {
   phoneNo     String
   email       String?
   address     String?
+  gstIN        String?
 
   status      Boolean  @default(true)
   deleted     Boolean  @default(false)
@@ -339,6 +354,8 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  section   String?
+  page      String?
 
   @@index([userId])
   @@index([read])
@@ -405,15 +422,21 @@ model PurchaseInvoiceItem {
   rate               Float
   aQty               Int
   mQty               Int?    // auto‑calculated, stored for reference
+  unit               Int? 
   totalAmount        Float
 
   // Taxes & schemes
   taxRate            Float
   taxAmount          Float
-  sch1Percent        Float?  @default(0)
-  sch1Amount         Float?  @default(0)
-  sch2Percent        Float?  @default(0)
-  sch2Amount         Float?  @default(0)
+  // sch1Percent        Float?  @default(0)
+  // sch1Amount         Float?  @default(0)
+  // sch2Percent        Float?  @default(0)
+  // sch2Amount         Float?  @default(0)
+  fQty          Int?    @default(0)      // free quantity
+  DQty          Int?    @default(0)      //damaged quantity
+  schPercent    Float?  @default(0)      // single scheme percent
+  schAmount     Float?  @default(0)      // single scheme amount
+  finalAmount   Float?                   // item final amount (rate * aQty - schAmount)
 
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -523,15 +546,22 @@ model SalesInvoiceItem {
   rate             Float
   aQty             Int
   mQty             Int?    // auto‑calculated, stored for reference
+  unit             Int?
   totalAmount      Float
 
   // Taxes & schemes
   taxRate          Float
   taxAmount        Float
-  sch1Percent      Float?  @default(0)
-  sch1Amount       Float?  @default(0)
-  sch2Percent      Float?  @default(0)
-  sch2Amount       Float?  @default(0)
+  // sch1Percent      Float?  @default(0)
+  // sch1Amount       Float?  @default(0)
+  // sch2Percent      Float?  @default(0)
+  // sch2Amount       Float?  @default(0)
+
+  fQty          Int?    @default(0)      // free quantity
+  DQty          Int?    @default(0)      //damaged quantity
+  schPercent    Float?  @default(0)      // single scheme percent
+  schAmount     Float?  @default(0)      // single scheme amount
+  finalAmount   Float?                   // item final amount (rate * aQty - schAmount)
 
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
@@ -576,4 +606,86 @@ model SalesHistory {
   @@index([salesInvoiceId])
   @@index([invoiceDate])
   @@map("sales_histories")
+}
+
+model PurchaseReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  template  String   // name of the EJS template file used (e.g., 'purchaseSummaryReport.ejs')
+  fileName  String?  // stored filename, e.g. 'purchase-summary-2025-01-01-2025-01-31.pdf'
+  data      String   // stores the complete report data used for generation
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("purchase_report_histories")
+}
+
+model SalesReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  tab       String   // 'summary', 'register', 'area-wise', 'salesman-wise', etc.
+  template  String   // name of the EJS template file used
+  fileName  String?  // stored filename
+  data      String   // stores the complete report data used for generation
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sales_report_histories")
+}
+
+model GstReportHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'pdf' or 'excel'
+  source    String   // 'sales' or 'purchase'
+  reportKey String   @map("report_key") // gst, gstr1, gstr2, b2b, b2c, etc.
+  template  String
+  fileName  String?  @map("file_name")
+  data      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([source])
+  @@index([reportKey])
+  @@index([type])
+  @@map("gst_report_histories")
+}
+
+// ========== BACKUP & RESTORE MODULES ==========
+
+model GoogleDriveToken {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String    @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  tokenExpiry  DateTime? @map("token_expiry")
+  email        String?   // Google account email connected
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("google_drive_tokens")
+}
+
+model BackupHistory {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   // 'success' | 'failed' | 'skipped'
+  trigger     String   // 'auto' | 'manual' | 'restore'
+  fileName    String?  @map("file_name")     // zip file name
+  driveFileId String?  @map("drive_file_id") // Google Drive file ID
+  driveLink   String?  @map("drive_link")    // viewable Drive link
+  errorMsg    String?  @map("error_msg")     // error detail if failed/skipped
+  fileSizeKb  Float?   @map("file_size_kb")  // size in KB
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([trigger])
+  @@index([createdAt])
+  @@map("backup_histories")
 }

@@ -1,11 +1,10 @@
-
 // src/types/salesman.ts
 export interface Salesman {
   id: number;
   name: string;
   phoneNo: string;
   email: string;
-  area: string;
+  areaId: number | null;
   status: boolean;
   deleted: boolean;
   createdAt: string;
@@ -15,7 +14,7 @@ export interface SalesmanFormData {
   name: string;
   phoneNo: string;
   email?: string;
-  area: string;
+  areaId?: number | null;
   status: boolean;
 }
 
@@ -42,7 +41,7 @@ export interface PaginatedResponse<T> {
 export interface SalesmanFilters {
   search?: string;
   name?: string;
-  area?: string;
+  areaId?: string;
   status?: "all" | "active" | "inactive";
   showDeleted?: boolean;
 }
