@@ -226,9 +226,9 @@ export const purchaseService = {
           params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-summary-report/pdf?${params.toString()}`,
-        { responseType: "blob" }, // important for binary data
+        { responseType: "blob" },
       );
       return response.data;
     } catch (error) {
@@ -255,7 +255,7 @@ export const purchaseService = {
           params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-summary-report/excel?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -315,7 +315,7 @@ export const purchaseService = {
           params.append("supplierId", filters.supplierId.toString());
         appendGstDetailsParam(params, filters.gstDetails);
       }
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-register-report/pdf?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -342,7 +342,7 @@ export const purchaseService = {
           params.append("supplierId", filters.supplierId.toString());
         appendGstDetailsParam(params, filters.gstDetails);
       }
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-register-report/excel?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -383,9 +383,12 @@ export const purchaseService = {
 
   async downloadPurchaseReportHistoryPDF(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/purchases/history/${id}/pdf`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/purchases/history/${id}/pdf`,
+        {
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -396,9 +399,12 @@ export const purchaseService = {
 
   async downloadPurchaseReportHistoryExcel(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/purchases/history/${id}/excel`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/purchases/history/${id}/excel`,
+        {
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -456,7 +462,7 @@ export const purchaseService = {
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-gst/excel?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -518,7 +524,7 @@ export const purchaseService = {
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/gstr2/excel?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -547,9 +553,12 @@ export const purchaseService = {
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(`/purchases/b2b/excel?${params.toString()}`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/purchases/b2b/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -597,7 +606,7 @@ export const purchaseService = {
         appendGstDetailsParam(params, filters.gstDetails);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/purchases/purchase-gst-monthly/excel?${params.toString()}`,
         { responseType: "blob" },
       );
@@ -611,9 +620,12 @@ export const purchaseService = {
 
   async downloadPurchaseBillPreviewPDF(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/purchases/${id}/bill-preview/pdf`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/purchases/${id}/bill-preview/pdf`,
+        {
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -624,9 +636,9 @@ export const purchaseService = {
 
   async getPurchaseBillPreview(id: number): Promise<PurchaseBillPreviewData> {
     try {
-      const response = await apiClient.get<ApiResponse<PurchaseBillPreviewData>>(
-        `/purchases/${id}/bill-preview`,
-      );
+      const response = await apiClient.get<
+        ApiResponse<PurchaseBillPreviewData>
+      >(`/purchases/${id}/bill-preview`);
       return response.data.data;
     } catch (error) {
       const message = getApiErrorMessage(error);

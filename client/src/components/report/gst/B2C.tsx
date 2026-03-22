@@ -228,16 +228,28 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
             : "max-w-9xl lg:max-w-xl xl:max-w-4xl 2xl:max-w-6xl"
         }`}
       >
-        <motion.div className="flex flex-col gap-6 mb-6 w-full" variants={headerVariants}>
+        <motion.div
+          className="flex flex-col gap-6 mb-6 w-full"
+          variants={headerVariants}
+        >
           <div className="flex justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-heading">B2C Report</h1>
-              <motion.p className="text-muted-foreground mt-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              <motion.p
+                className="text-muted-foreground mt-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
                 Summary B2CS report grouped by place and tax rate
               </motion.p>
             </div>
             <motion.div className="flex items-center gap-3">
-              <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
                 <Button
                   variant="outline"
                   className="gap-2 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
@@ -248,9 +260,20 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                   {isDownloading ? "Downloading..." : "Download Excel"}
                 </Button>
               </motion.div>
-              <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-                <Button variant="outline" className="gap-2" onClick={fetchReport} disabled={isLoading}>
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={fetchReport}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
                   Refresh
                 </Button>
               </motion.div>
@@ -268,10 +291,22 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                     <h3 className="font-semibold">Filters</h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-muted-foreground" disabled={isLoading}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-8 text-muted-foreground"
+                      disabled={isLoading}
+                    >
                       Reset to Default
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setShowFilters(!showFilters)} className="h-8" disabled={isLoading}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="h-8"
+                      disabled={isLoading}
+                    >
                       {showFilters ? "Hide" : "Show"} Filters
                     </Button>
                   </div>
@@ -297,7 +332,13 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Sort By</Label>
-                          <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange("sortBy", value)} disabled={isLoading}>
+                          <Select
+                            value={filters.sortBy}
+                            onValueChange={(value) =>
+                              handleFilterChange("sortBy", value)
+                            }
+                            disabled={isLoading}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Sort by..." />
                             </SelectTrigger>
@@ -313,7 +354,16 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Order</Label>
-                          <Select value={filters.sortOrder} onValueChange={(value) => handleFilterChange("sortOrder", value)} disabled={isLoading}>
+                          <Select
+                            value={filters.sortOrder}
+                            onValueChange={(value) =>
+                              handleFilterChange(
+                                "sortOrder",
+                                value as "asc" | "desc",
+                              )
+                            }
+                            disabled={isLoading}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Order..." />
                             </SelectTrigger>
@@ -325,23 +375,49 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">From Date</Label>
+                          <Label className="text-sm font-medium">
+                            From Date
+                          </Label>
                           <div className="flex gap-2">
                             <div className="relative flex-1">
-                              <Input value={fromDateInput} onChange={(e) => handleFromDateInputChange(e.target.value)} placeholder="dd/mm/yyyy or select" className="pr-10" />
+                              <Input
+                                value={fromDateInput}
+                                onChange={(e) =>
+                                  handleFromDateInputChange(e.target.value)
+                                }
+                                placeholder="dd/mm/yyyy or select"
+                                className="pr-10"
+                              />
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-full w-10 hover:bg-transparent">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                  >
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                  <CalendarComponent mode="single" selected={filters.fromDate} onSelect={handleFromDateSelect} initialFocus />
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="end"
+                                >
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.fromDate}
+                                    onSelect={handleFromDateSelect}
+                                    initialFocus
+                                  />
                                 </PopoverContent>
                               </Popover>
                             </div>
                             {fromDateInput && (
-                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => clearFilter("fromDate")}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => clearFilter("fromDate")}
+                              >
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
@@ -352,20 +428,44 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                           <Label className="text-sm font-medium">To Date</Label>
                           <div className="flex gap-2">
                             <div className="relative flex-1">
-                              <Input value={toDateInput} onChange={(e) => handleToDateInputChange(e.target.value)} placeholder="dd/mm/yyyy or select" className="pr-10" />
+                              <Input
+                                value={toDateInput}
+                                onChange={(e) =>
+                                  handleToDateInputChange(e.target.value)
+                                }
+                                placeholder="dd/mm/yyyy or select"
+                                className="pr-10"
+                              />
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-full w-10 hover:bg-transparent">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                                  >
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                  <CalendarComponent mode="single" selected={filters.toDate} onSelect={handleToDateSelect} initialFocus />
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="end"
+                                >
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={filters.toDate}
+                                    onSelect={handleToDateSelect}
+                                    initialFocus
+                                  />
                                 </PopoverContent>
                               </Popover>
                             </div>
                             {toDateInput && (
-                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => clearFilter("toDate")}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => clearFilter("toDate")}
+                              >
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
@@ -389,12 +489,24 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">TYPE</TableHead>
                       <TableHead className="font-semibold">PLACE</TableHead>
-                      <TableHead className="font-semibold text-right">RATE</TableHead>
-                      <TableHead className="font-semibold text-right">TAXABLE</TableHead>
-                      <TableHead className="font-semibold text-right">TAX AMT</TableHead>
-                      <TableHead className="font-semibold text-right">CESS</TableHead>
-                      <TableHead className="font-semibold text-right">ADD_CESS</TableHead>
-                      <TableHead className="font-semibold text-right">APMC</TableHead>
+                      <TableHead className="font-semibold text-right">
+                        RATE
+                      </TableHead>
+                      <TableHead className="font-semibold text-right">
+                        TAXABLE
+                      </TableHead>
+                      <TableHead className="font-semibold text-right">
+                        TAX AMT
+                      </TableHead>
+                      <TableHead className="font-semibold text-right">
+                        CESS
+                      </TableHead>
+                      <TableHead className="font-semibold text-right">
+                        ADD_CESS
+                      </TableHead>
+                      <TableHead className="font-semibold text-right">
+                        APMC
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -404,13 +516,23 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                           <TableCell colSpan={8} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-                              <p className="text-muted-foreground">Loading B2C data...</p>
+                              <p className="text-muted-foreground">
+                                Loading B2C data...
+                              </p>
                             </div>
                           </TableCell>
                         </motion.tr>
                       ) : rows.length === 0 ? (
-                        <motion.tr key="no-data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <motion.tr
+                          key="no-data"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-8 text-muted-foreground"
+                          >
                             <div className="flex flex-col items-center justify-center">
                               <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50 mb-2" />
                               <p>No B2C rows found for selected period.</p>
@@ -436,12 +558,24 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                             >
                               <TableCell>{row.type}</TableCell>
                               <TableCell>{row.place}</TableCell>
-                              <TableCell className="text-right">{row.rate.toFixed(2)}%</TableCell>
-                              <TableCell className="text-right">{formatCurrency(row.taxable)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(row.taxAmt)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(row.cess)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(row.addCess)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(row.apmc)}</TableCell>
+                              <TableCell className="text-right">
+                                {row.rate.toFixed(2)}%
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(row.taxable)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(row.taxAmt)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(row.cess)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(row.addCess)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(row.apmc)}
+                              </TableCell>
                             </motion.tr>
                           ))}
 
@@ -450,11 +584,21 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                               <TableCell className="font-bold">Total</TableCell>
                               <TableCell />
                               <TableCell />
-                              <TableCell className="text-right">{formatCurrency(summary.taxable)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(summary.taxAmt)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(summary.cess)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(summary.addCess)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(summary.apmc)}</TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(summary.taxable)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(summary.taxAmt)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(summary.cess)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(summary.addCess)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(summary.apmc)}
+                              </TableCell>
                             </TableRow>
                           )}
                         </>
@@ -468,11 +612,16 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
         </motion.div>
 
         {summary && (
-          <motion.div className="mb-4 bg-muted/40 p-3 rounded-lg" variants={itemVariants}>
+          <motion.div
+            className="mb-4 bg-muted/40 p-3 rounded-lg"
+            variants={itemVariants}
+          >
             <p className="text-sm text-muted-foreground">
               Summary B2CS for period{" "}
               <span className="font-medium">
-                {filters.fromDate ? format(filters.fromDate, "dd/MM/yyyy") : "-"}
+                {filters.fromDate
+                  ? format(filters.fromDate, "dd/MM/yyyy")
+                  : "-"}
               </span>{" "}
               to{" "}
               <span className="font-medium">

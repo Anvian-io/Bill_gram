@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BarChart,
   Bar,
@@ -8,7 +7,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import type { SalesmanPerformanceItem } from "@/types/dashboard";
 
 interface SalesmanChartProps {
@@ -17,7 +22,11 @@ interface SalesmanChartProps {
 }
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 
 export function SalesmanChart({ data, loading }: SalesmanChartProps) {
   if (loading) {
@@ -56,20 +65,32 @@ export function SalesmanChart({ data, loading }: SalesmanChartProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Salesman Performance</CardTitle>
-        <CardDescription>Total sales amount per salesman this year</CardDescription>
+        <CardDescription>
+          Total sales amount per salesman this year
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="shortName" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
+            <XAxis
+              dataKey="shortName"
+              tick={{ fontSize: 10 }}
+              stroke="var(--muted-foreground)"
+            />
             <YAxis
               tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
               tick={{ fontSize: 10 }}
               stroke="var(--muted-foreground)"
             />
             <Tooltip
-              formatter={(value: number) => [formatCurrency(value), "Sales"]}
+              formatter={(value: number | undefined) => {
+                if (value === undefined) return ["₹0", "Sales"];
+                return [formatCurrency(value), "Sales"];
+              }}
               contentStyle={{
                 background: "var(--popover)",
                 border: "1px solid var(--border)",
@@ -77,7 +98,12 @@ export function SalesmanChart({ data, loading }: SalesmanChartProps) {
                 fontSize: "12px",
               }}
             />
-            <Bar dataKey="totalAmount" fill="#a855f7" radius={[4, 4, 0, 0]} name="Sales Amount" />
+            <Bar
+              dataKey="totalAmount"
+              fill="#a855f7"
+              radius={[4, 4, 0, 0]}
+              name="Sales Amount"
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

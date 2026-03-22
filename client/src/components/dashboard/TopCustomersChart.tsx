@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BarChart,
   Bar,
@@ -9,7 +8,13 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import type { TopCustomerItem } from "@/types/dashboard";
 
 interface TopCustomersChartProps {
@@ -18,9 +23,13 @@ interface TopCustomersChartProps {
 }
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 
-const COLORS = ["#3b82f6","#60a5fa","#93c5fd","#bfdbfe","#dbeafe"];
+const COLORS = ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"];
 
 export function TopCustomersChart({ data, loading }: TopCustomersChartProps) {
   if (loading) {
@@ -69,7 +78,11 @@ export function TopCustomersChart({ data, loading }: TopCustomersChartProps) {
             data={chartData}
             margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              horizontal={false}
+            />
             <XAxis
               type="number"
               tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
@@ -84,7 +97,10 @@ export function TopCustomersChart({ data, loading }: TopCustomersChartProps) {
               width={95}
             />
             <Tooltip
-              formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+              formatter={(value: number | undefined) => {
+                if (value === undefined) return ["₹0", "Revenue"];
+                return [formatCurrency(value), "Revenue"];
+              }}
               contentStyle={{
                 background: "var(--popover)",
                 border: "1px solid var(--border)",

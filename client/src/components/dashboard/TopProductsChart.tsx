@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BarChart,
   Bar,
@@ -9,7 +8,13 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import type { TopProductItem } from "@/types/dashboard";
 
 interface TopProductsChartProps {
@@ -17,7 +22,7 @@ interface TopProductsChartProps {
   loading: boolean;
 }
 
-const COLORS = ["#10b981","#34d399","#6ee7b7","#a7f3d0","#d1fae5"];
+const COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#d1fae5"];
 
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   if (loading) {
@@ -65,7 +70,11 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
             data={chartData}
             margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              horizontal={false}
+            />
             <XAxis
               type="number"
               tick={{ fontSize: 11 }}
@@ -79,7 +88,10 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
               width={100}
             />
             <Tooltip
-              formatter={(value: number) => [value.toLocaleString("en-IN") + " units", "Qty Sold"]}
+              formatter={(value: number | undefined) => {
+                if (value === undefined) return ["0 units", "Qty Sold"];
+                return [value.toLocaleString("en-IN") + " units", "Qty Sold"];
+              }}
               contentStyle={{
                 background: "var(--popover)",
                 border: "1px solid var(--border)",

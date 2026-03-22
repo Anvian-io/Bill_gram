@@ -1,4 +1,4 @@
-import React from "react";
+// import React from "react";
 import {
   BarChart,
   Bar,
@@ -9,7 +9,13 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import type { InventoryGroupItem } from "@/types/dashboard";
 
 interface InventoryChartProps {
@@ -17,7 +23,18 @@ interface InventoryChartProps {
   loading: boolean;
 }
 
-const COLORS = ["#3b82f6","#f97316","#10b981","#a855f7","#f59e0b","#ef4444","#0ea5e9","#22c55e","#ec4899","#6366f1"];
+const COLORS = [
+  "#3b82f6",
+  "#f97316",
+  "#10b981",
+  "#a855f7",
+  "#f59e0b",
+  "#ef4444",
+  "#0ea5e9",
+  "#22c55e",
+  "#ec4899",
+  "#6366f1",
+];
 
 export function InventoryChart({ data, loading }: InventoryChartProps) {
   if (loading) {
@@ -38,7 +55,9 @@ export function InventoryChart({ data, loading }: InventoryChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Inventory by Product Group</CardTitle>
+          <CardTitle className="text-base">
+            Inventory by Product Group
+          </CardTitle>
           <CardDescription>Current stock levels</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-52 text-muted-foreground text-sm">
@@ -61,8 +80,16 @@ export function InventoryChart({ data, loading }: InventoryChartProps) {
             data={data}
             margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tick={{ fontSize: 11 }}
+              stroke="var(--muted-foreground)"
+            />
             <YAxis
               type="category"
               dataKey="name"
@@ -71,7 +98,10 @@ export function InventoryChart({ data, loading }: InventoryChartProps) {
               width={90}
             />
             <Tooltip
-              formatter={(value: number) => [value.toLocaleString("en-IN") + " units", "Stock"]}
+              formatter={(value: number | undefined) => {
+                if (value === undefined) return ["0 units", "Stock"];
+                return [value.toLocaleString("en-IN") + " units", "Stock"];
+              }}
               contentStyle={{
                 background: "var(--popover)",
                 border: "1px solid var(--border)",

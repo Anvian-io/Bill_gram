@@ -1,10 +1,10 @@
 import { apiClient } from "../api/api-client";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 import type {
-  ApiResponse,
   GSTReportHistoryFilters,
   PaginatedGSTHistoryResponse,
 } from "@/types/sales-report";
+import type { ApiResponse } from "@/types/sales";
 
 export const gstHistoryService = {
   async getGSTReportHistory(

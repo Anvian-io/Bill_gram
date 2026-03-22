@@ -436,7 +436,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/sales-summary-report/pdf?${params.toString()}`,
         {
           responseType: "blob",
@@ -480,7 +480,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/sales-summary-report/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -567,7 +567,7 @@ export const salesService = {
       }
       appendGstDetailsParam(params, filters.gstDetails);
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/sales-register-report/pdf?${params.toString()}`,
         {
           responseType: "blob",
@@ -609,7 +609,7 @@ export const salesService = {
       }
       appendGstDetailsParam(params, filters.gstDetails);
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/sales-register-report/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -651,7 +651,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/area-wise-report/pdf?${params.toString()}`,
         {
           responseType: "blob",
@@ -693,7 +693,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/area-wise-report/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -735,7 +735,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/salesman-wise-report/pdf?${params.toString()}`,
         {
           responseType: "blob",
@@ -777,7 +777,7 @@ export const salesService = {
         params.append("productGroupId", filters.productGroupId.toString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/salesman-wise-report/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -854,7 +854,7 @@ export const salesService = {
         params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/gst/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -922,7 +922,7 @@ export const salesService = {
         params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/gstr1/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -955,7 +955,7 @@ export const salesService = {
         params.append("sortOrder", filters.sortOrder);
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/b2c/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -1006,7 +1006,7 @@ export const salesService = {
         params.append("toDate", filters.toDate.toISOString());
       }
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/hsn-summary/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -1061,7 +1061,7 @@ export const salesService = {
       params.append("toDate", filters.toDate.toISOString());
       appendGstDetailsParam(params, filters.gstDetails);
 
-      const response = await apiClient.get(
+      const response = await apiClient.get<Blob>(
         `/sales/gst-monthly/excel?${params.toString()}`,
         {
           responseType: "blob",
@@ -1121,7 +1121,7 @@ export const salesService = {
   // Download specific sales report history as PDF
   async downloadSalesReportHistoryPDF(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/sales/history/${id}/pdf`, {
+      const response = await apiClient.get<Blob>(`/sales/history/${id}/pdf`, {
         responseType: "blob",
       });
       return response.data;
@@ -1135,7 +1135,7 @@ export const salesService = {
   // Download specific sales report history as Excel
   async downloadSalesReportHistoryExcel(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/sales/history/${id}/excel`, {
+      const response = await apiClient.get<Blob>(`/sales/history/${id}/excel`, {
         responseType: "blob",
       });
       return response.data;
@@ -1148,9 +1148,12 @@ export const salesService = {
 
   async downloadSalesBillPreviewPDF(id: number): Promise<Blob> {
     try {
-      const response = await apiClient.get(`/sales/${id}/bill-preview/pdf`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/sales/${id}/bill-preview/pdf`,
+        {
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error) {
       const message = getApiErrorMessage(error);

@@ -22,7 +22,7 @@ export const backupService = {
   async getConnectivityStatus(): Promise<ConnectivityStatus> {
     try {
       const response = await apiClient.get<ApiResponse<ConnectivityStatus>>(
-        "/backup/connectivity"
+        "/backup/connectivity",
       );
       return response.data.data;
     } catch {
@@ -37,7 +37,7 @@ export const backupService = {
   async getDriveStatus(): Promise<GoogleDriveStatus> {
     try {
       const response = await apiClient.get<ApiResponse<GoogleDriveStatus>>(
-        "/backup/drive-status"
+        "/backup/drive-status",
       );
       return response.data.data;
     } catch (error) {
@@ -51,9 +51,8 @@ export const backupService = {
    */
   async getAuthUrl(): Promise<string> {
     try {
-      const response = await apiClient.get<ApiResponse<{ url: string }>>(
-        "/backup/auth-url"
-      );
+      const response =
+        await apiClient.get<ApiResponse<{ url: string }>>("/backup/auth-url");
       return response.data.data.url;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -78,9 +77,10 @@ export const backupService = {
    */
   async triggerBackup(): Promise<TriggerBackupResult> {
     try {
-      const response = await apiClient.post<ApiResponse<TriggerBackupResult>>(
-        "/backup/trigger"
-      );
+      const response =
+        await apiClient.post<ApiResponse<TriggerBackupResult>>(
+          "/backup/trigger",
+        );
       return response.data.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -93,9 +93,9 @@ export const backupService = {
    */
   async ensureDailyBackup(): Promise<EnsureDailyBackupResult> {
     try {
-      const response = await apiClient.post<ApiResponse<EnsureDailyBackupResult>>(
-        "/backup/ensure-daily"
-      );
+      const response = await apiClient.post<
+        ApiResponse<EnsureDailyBackupResult>
+      >("/backup/ensure-daily");
       return response.data.data;
     } catch (error) {
       const message = getApiErrorMessage(error);
@@ -141,7 +141,7 @@ export const backupService = {
   async getHistory(page = 1, limit = 10): Promise<BackupHistoryResponse> {
     try {
       const response = await apiClient.get<ApiResponse<BackupHistoryResponse>>(
-        `/backup/history?page=${page}&limit=${limit}`
+        `/backup/history?page=${page}&limit=${limit}`,
       );
       return response.data.data;
     } catch (error) {
@@ -155,7 +155,7 @@ export const backupService = {
    */
   async restoreFromUpload(
     file: File,
-    options?: { publicRoute?: boolean }
+    options?: { publicRoute?: boolean },
   ): Promise<RestoreResult> {
     try {
       const formData = new FormData();
@@ -165,10 +165,12 @@ export const backupService = {
       const route = options?.publicRoute
         ? "http://localhost:3001/api/backup/restore-public"
         : "http://localhost:3001/api/backup/restore";
-      const headers =
-        token && !options?.publicRoute
-          ? { Authorization: `Bearer ${token}` }
-          : {};
+
+      // Use Headers object to avoid TypeScript union issues
+      const headers = new Headers();
+      if (token && !options?.publicRoute) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
 
       const response = await fetch(route, {
         method: "POST",
