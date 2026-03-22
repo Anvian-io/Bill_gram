@@ -45,80 +45,82 @@ export default function Sales() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-9xl mx-auto">
-        <div className="flex flex-col">
-          {/* Sticky tab navigation with sliding indicator */}
-          <div
-            ref={tabsContainerRef}
-            className="sticky top-0 z-10 bg-background border-b border-gray-200 relative"
-          >
-            {/* Sliding indicator (border + background) */}
+    <div className="h-[calc(100vh-4rem)] bg-background">
+      <div className="h-full overflow-y-auto">
+        <div className="max-w-9xl mx-auto">
+          <div className="flex flex-col">
+            {/* Sticky tab navigation with sliding indicator */}
             <div
-              className="absolute bottom-0 h-full bg-primary/10 border-b-2 border-primary transition-all duration-300 ease-in-out"
-              style={{
-                left: `${indicatorStyle.left}px`,
-                width: `${indicatorStyle.width}px`,
-              }}
-            />
-
-            {/* Add Sales Tab */}
-            <button
-              ref={addTabRef}
-              onClick={() => setActiveTab("add")}
-              className={`
-                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
-                focus:outline-none
-                ${
-                  activeTab === "add"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              `}
+              ref={tabsContainerRef}
+              className="sticky top-0 z-10 bg-background border-b border-gray-200 relative"
             >
-              Add Sales
-            </button>
+              {/* Sliding indicator (border + background) */}
+              <div
+                className="absolute bottom-0 h-full bg-primary/10 border-b-2 border-primary transition-all duration-300 ease-in-out"
+                style={{
+                  left: `${indicatorStyle.left}px`,
+                  width: `${indicatorStyle.width}px`,
+                }}
+              />
 
-            {/* Sales Tab */}
-            <button
-              ref={salesTabRef}
-              onClick={() => setActiveTab("sales")}
-              className={`
-                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
-                focus:outline-none
-                ${
-                  activeTab === "sales"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              `}
-            >
-              Sales
-            </button>
+              {/* Add Sales Tab */}
+              <button
+                ref={addTabRef}
+                onClick={() => setActiveTab("add")}
+                className={`
+                  relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                  focus:outline-none
+                  ${
+                    activeTab === "add"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                Add Sales
+              </button>
 
-            {/* Sales History Tab */}
-            <button
-              ref={historyTabRef}
-              onClick={() => setActiveTab("history")}
-              className={`
-                relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
-                focus:outline-none
-                ${
-                  activeTab === "history"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              `}
-            >
-              Sales History
-            </button>
-          </div>
+              {/* Sales Tab */}
+              <button
+                ref={salesTabRef}
+                onClick={() => setActiveTab("sales")}
+                className={`
+                  relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                  focus:outline-none
+                  ${
+                    activeTab === "sales"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                Sales
+              </button>
 
-          {/* Tab content */}
-          <div>
-            {activeTab === "add" && <AddSales />}
-            {activeTab === "sales" && <SalesList />}
-            {activeTab === "history" && <SalesHistory />}
+              {/* Sales History Tab */}
+              <button
+                ref={historyTabRef}
+                onClick={() => setActiveTab("history")}
+                className={`
+                  relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                  focus:outline-none
+                  ${
+                    activeTab === "history"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                Sales History
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div>
+              {activeTab === "add" && <AddSales />}
+              {activeTab === "sales" && <SalesList />}
+              {activeTab === "history" && <SalesHistory />}
+            </div>
           </div>
         </div>
       </div>
