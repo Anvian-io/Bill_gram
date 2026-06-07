@@ -34,7 +34,19 @@ const server = createServer(app);
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin(origin, callback) {
+      const allowedOrigins = new Set([
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+      ]);
+
+      if (!origin || origin === "null" || origin.startsWith("file://")) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, allowedOrigins.has(origin));
+    },
     credentials: true,
   }),
 );
@@ -58,6 +70,17 @@ const startServer = async () => {
     app.use("/api/images", imageRoutes);
     // Public backup route (Google OAuth callback — no JWT needed)
     app.use("/api/backup", backupRoutes);
+
+    // Public health check used by Electron before showing the login UI.
+    app.get("/api/health", (req, res) => {
+      res.json({
+        status: "Backend running",
+        database: "Connected",
+        location: dbLocation,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
     app.use(verifyUser);
     app.use("/api/product-groups", productGroupRoutes);
     app.use("/api/units", unitRoutes);
@@ -74,16 +97,6 @@ const startServer = async () => {
     app.use("/api/sales", salesRoutes);
     app.use("/api/dashboard", dashboardRoutes);
     app.use("/api/gst-history", gstHistoryRoutes);
-
-    // Health check
-    app.get("/api/health", (req, res) => {
-      res.json({
-        status: "Backend running",
-        database: "Connected",
-        location: dbLocation,
-        timestamp: new Date().toISOString(),
-      });
-    });
 
     // Setup WebSocket server
     notificationController.setupWebSocketServer(server);

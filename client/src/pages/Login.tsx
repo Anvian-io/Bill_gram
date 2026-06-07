@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Database,
   FileArchive,
+  CircleCheck,
   RefreshCw,
   Upload,
 } from "lucide-react";
@@ -127,7 +128,11 @@ export default function Login() {
         publicRoute: true,
       });
       toast.success(
-        `Database restored from ${result.fileName}. Please sign in again after restarting if needed.`
+        `Database restored from ${result.fileName}. Please sign in again after restarting if needed.`,
+        {
+          closeButton: false,
+          icon: <CircleCheck className="size-4 text-emerald-500" />,
+        }
       );
       clearRestoreFile();
       setShowBackupUpload(false);

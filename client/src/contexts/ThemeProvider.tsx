@@ -27,10 +27,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme | undefined>(undefined);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
-  // Read from localStorage on initial mount
+  // Read from localStorage on initial mount. Default to light so the app does
+  // not inherit a dark OS/browser theme unexpectedly.
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as Theme;
-    setTheme(savedTheme || "system");
+    setTheme(savedTheme || "light");
   }, []);
 
   // Apply theme to DOM

@@ -21,7 +21,9 @@ const allowedEmailsRaw =
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: parseNumber(process.env.PORT, 5000),
-  clientOrigin: process.env.CLIENT_ORIGIN.split(",") ?? "http://localhost:3000",
+  clientOrigin: process.env.CLIENT_ORIGIN?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? [
+    "http://localhost:3000",
+  ],
   mongodbUri: process.env.MONGODB_URI ?? "",
   allowedAdminEmails: allowedEmailsRaw
     .split(",")

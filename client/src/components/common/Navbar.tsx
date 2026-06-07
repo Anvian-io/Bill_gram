@@ -14,7 +14,7 @@ interface NavbarProps {
 
 export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [currentPage, setCurrentPage] = useState<
     { label: string; path?: string }[]
   >([]);
@@ -62,9 +62,8 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   }, [location.pathname]);
 
   const handleThemeChange = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
+    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
   };
 
   const toggleMobileMenu = () => {
@@ -225,7 +224,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                 size="sm"
                 className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
               >
-                {theme === "dark" ? (
+                {resolvedTheme === "dark" ? (
                   <Sun className="w-5 h-5" />
                 ) : (
                   <Moon className="w-5 h-5" />
@@ -237,7 +236,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                       : "opacity-0 -translate-x-2"
                   }`}
                 >
-                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
                 </span>
               </Button>
             </div>
@@ -347,13 +346,13 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                   size="sm"
                   className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
                 >
-                  {theme === "dark" ? (
+                  {resolvedTheme === "dark" ? (
                     <Sun className="w-5 h-5" />
                   ) : (
                     <Moon className="w-5 h-5" />
                   )}
                   <span className="ml-3 whitespace-nowrap">
-                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                    {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
                   </span>
                 </Button>
               </div>
