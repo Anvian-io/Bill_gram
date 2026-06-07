@@ -7,7 +7,7 @@
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:electron\"",
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
-    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron electron/main.js",
+    "dev:electron": "wait-on http://localhost:5173 http://localhost:3001/api/health && cross-env NODE_ENV=development electron electron/main.js",
     "start": "npm run dev",
     "build": "npm run build:client && npm run build:server && npm run build:electron",
     "build:client": "cd client && npm run build",

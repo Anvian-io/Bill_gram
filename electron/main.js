@@ -3,9 +3,14 @@ const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
+const http = require("http");
 
 let mainWindow;
 let backendProcess;
+
+const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
+const BACKEND_START_TIMEOUT_MS = 180000;
+const BACKEND_POLL_INTERVAL_MS = 1000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -125,6 +130,42 @@ function writeCredentialStore(store) {
   return storePath;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function checkBackendHealth() {
+  return new Promise((resolve) => {
+    const request = http.get(BACKEND_HEALTH_URL, (response) => {
+      response.resume();
+      resolve(response.statusCode >= 200 && response.statusCode < 300);
+    });
+
+    request.setTimeout(3000, () => {
+      request.destroy();
+      resolve(false);
+    });
+
+    request.on("error", () => {
+      resolve(false);
+    });
+  });
+}
+
+async function waitForBackendReady(timeoutMs = BACKEND_START_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (await checkBackendHealth()) {
+      return true;
+    }
+
+    await delay(BACKEND_POLL_INTERVAL_MS);
+  }
+
+  return false;
+}
+
 function startBackend() {
   let backendPath;
 
@@ -142,7 +183,7 @@ function startBackend() {
       "Backend Error",
       `Backend server file not found at: ${backendPath}`,
     );
-    return;
+    return false;
   }
 
   const dbDir = getDatabaseDirectory();
@@ -169,11 +210,33 @@ function startBackend() {
       console.error(`Backend exited with code ${code}`);
     }
   });
+
+  return true;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (process.env.NODE_ENV !== "development") {
-    startBackend();
+    const alreadyReady = await waitForBackendReady(1000);
+
+    if (!alreadyReady) {
+      const backendStarted = startBackend();
+
+      if (!backendStarted) {
+        app.quit();
+        return;
+      }
+    }
+
+    const backendReady = await waitForBackendReady();
+
+    if (!backendReady) {
+      dialog.showErrorBox(
+        "Backend Error",
+        "The backend server did not finish starting. Please restart the app.",
+      );
+      app.quit();
+      return;
+    }
   }
 
   createWindow();
