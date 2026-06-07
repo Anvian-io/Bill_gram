@@ -29,7 +29,8 @@ import { toast } from "sonner";
 import registerLottie from "@/assets/Register_lottie.json";
 
 const NEBULA_API_BASE = (
-  import.meta.env.VITE_NEBULA_API_BASE_URL ?? "http://localhost:5000/api"
+  import.meta.env.VITE_NEBULA_API_BASE_URL ??
+  "https://bill-gram.onrender.com/api"
 ).replace(/\/$/, "");
 
 type NebulaRegisterResponse = {
