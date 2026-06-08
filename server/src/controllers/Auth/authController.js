@@ -10,9 +10,9 @@ import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
 import { createNotification as createNotificationHelper } from "../../utils/notificationHelper.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-const SUBSCRIPTION_TEST_DURATION_DAYS = 1;
+const SUBSCRIPTION_TEST_DURATION_DAYS = 0;
 const SUBSCRIPTION_WARNING_WINDOW_MS =
-  SUBSCRIPTION_TEST_DURATION_DAYS * 24 * 60 * 60 * 1000;
+  30 * 24 * 60 * 60 * 1000;
 const SUBSCRIPTION_NOTIFICATION_SECTION = "subscription";
 const SUBSCRIPTION_NOTIFICATION_PAGE = "notifications";
 
@@ -55,6 +55,15 @@ const calculateSubscriptionExpiryDate = (registrationDate = new Date()) => {
 
 const getFixedExistingUserSubscriptionExpiry = () =>
   new Date(2027, 2, 31, 23, 59, 59, 999);
+
+const getSessionMaxAgeFromSubscription = (subscriptionExpiresAt) => {
+  const expiryDate =
+    subscriptionExpiresAt instanceof Date
+      ? subscriptionExpiresAt
+      : new Date(subscriptionExpiresAt);
+
+  return Math.max(0, expiryDate.getTime() - Date.now());
+};
 
 async function setUserSubscriptionExpiry(prisma, userId, expiryDate) {
   await prisma.$executeRawUnsafe(
@@ -312,10 +321,13 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   user.subscriptionExpiresAt = subscriptionStatus.expiryDate || null;
+  const sessionMaxAge = getSessionMaxAgeFromSubscription(
+    user.subscriptionExpiresAt
+  );
 
-  // Create token
+  // Create token that expires with the active subscription.
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-    expiresIn: "24h",
+    expiresIn: Math.ceil(sessionMaxAge / 1000),
   });
 
   // Set cookie
@@ -323,7 +335,7 @@ export const login = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // HTTPS only in production
     sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: sessionMaxAge,
   });
 
   // Remove password from response
