@@ -19,10 +19,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          success: "group-[.toaster]:bg-[var(--toast-success-bg)] group-[.toaster]:text-[var(--toast-success-text)] group-[.toaster]:border-[var(--toast-success-border)]",
-          error: "group-[.toaster]:bg-[var(--toast-error-bg)] group-[.toaster]:text-[var(--toast-error-text)] group-[.toaster]:border-[var(--toast-error-border)]",
-          warning: "group-[.toaster]:bg-[var(--toast-warning-bg)] group-[.toaster]:text-[var(--toast-warning-text)] group-[.toaster]:border-[var(--toast-warning-border)]",
-          info: "group-[.toaster]:bg-[var(--toast-info-bg)] group-[.toaster]:text-[var(--toast-info-text)] group-[.toaster]:border-[var(--toast-info-border)]",
+          success: "group-[.toaster]:!bg-[var(--toast-success-bg)] group-[.toaster]:!text-[var(--toast-success-text)] group-[.toaster]:!border-[var(--toast-success-border)]",
+          error: "group-[.toaster]:!bg-[var(--toast-error-bg)] group-[.toaster]:!text-[var(--toast-error-text)] group-[.toaster]:!border-[var(--toast-error-border)]",
+          warning: "group-[.toaster]:!bg-[var(--toast-warning-bg)] group-[.toaster]:!text-[var(--toast-warning-text)] group-[.toaster]:!border-[var(--toast-warning-border)]",
+          info: "group-[.toaster]:!bg-[var(--toast-info-bg)] group-[.toaster]:!text-[var(--toast-info-text)] group-[.toaster]:!border-[var(--toast-info-border)]",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
