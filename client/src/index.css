@@ -304,6 +304,85 @@
   --toast-border-radius: var(--radius);
 }
 
+.classic-mode {
+  /* Classic Theme - Dense Data Entry Mode */
+  --classic-header-bg: #3b4b59;
+  --classic-table-header: #528399;
+  --classic-footer-yellow: #ffeb3b;
+  --classic-footer-gray: #e5e7eb;
+
+  /* Global Sidebar/Header Override */
+  --sidebar: #3b4b59;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: #2c3944;
+  --sidebar-accent: #528399;
+  --sidebar-accent-foreground: #ffffff;
+}
+
+.classic-mode .classic-input {
+  border: none;
+  border-bottom: 2px solid var(--border);
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+  height: 2rem;
+}
+.classic-mode .classic-input:focus {
+  border-bottom-color: var(--ring);
+  outline: none;
+  box-shadow: none;
+}
+.classic-mode .classic-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-bottom: 0;
+}
+.classic-mode .classic-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.classic-mode .classic-table th {
+  background-color: var(--classic-table-header) !important;
+  color: white !important;
+  font-size: var(--table-font-size) !important;
+  padding: var(--table-header-padding) !important;
+  height: auto !important;
+  border: 1px solid #457083 !important;
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: center;
+}
+.classic-mode .classic-table tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+.classic-mode .classic-table td {
+  padding: 0 !important;
+  font-size: var(--table-font-size);
+  border: 1px solid #d1d5db !important;
+  height: var(--table-cell-height) !important;
+}
+.classic-mode .classic-table td input,
+.classic-mode .classic-table td button {
+  border: none !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: var(--table-cell-padding) !important;
+  background: transparent;
+  box-shadow: none !important;
+  min-height: var(--table-input-min-height);
+}
+.classic-mode .classic-table td input:focus,
+.classic-mode .classic-table td button:focus {
+  background-color: #fff9c4 !important;
+  outline: 2px solid #1976d2 !important;
+  outline-offset: -2px;
+}
+.classic-mode 
+
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -449,6 +528,12 @@
   --color-hover-text: var(--hover-text);
   --color-secondary-bg: var(--secondary-bg);
   --color-button-bg: var(--button-bg);
+
+  /* Classic Theme Colors */
+  --color-classic-header-bg: var(--classic-header-bg);
+  --color-classic-table-header: var(--classic-table-header);
+  --color-classic-footer-yellow: var(--classic-footer-yellow);
+  --color-classic-footer-gray: var(--classic-footer-gray);
 }
 
 @layer base {
@@ -513,6 +598,41 @@
   }
 }
 
+/* Classic Table Internal Formatting */
+.classic-table input:not([type="checkbox"]),
+.classic-table button[role="combobox"],
+.classic-table select {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  height: 100% !important;
+  min-height: 24px;
+  width: 100%;
+}
+
+/* Strip left paddings that were meant for icons */
+.classic-table input.pl-7,
+.classic-table input.pl-6,
+.classic-table input.pl-10 {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+/* Hide decorative icons inside classic table cells */
+.classic-table .relative > svg.text-muted-foreground {
+  display: none !important;
+}
+
+.classic-table th, .classic-table td {
+  padding: 0px !important; /* Let input handle its own padding if any, or strictly tight */
+}
+
+.classic-table th {
+  padding: 4px !important;
+}
+
 /* Optional: Smooth scrolling for the entire page */
 html {
   scroll-behavior: smooth;
@@ -527,4 +647,127 @@ html {
 .scrollbar-thin::-webkit-scrollbar {
   width: 2px;
   height: 8px;
+}
+
+/* Table Sizing Variables */
+:root {
+  --table-cell-height: 36px;
+  --table-input-min-height: 36px;
+  --table-header-padding: 0.5rem 0.75rem;
+  --table-cell-padding: 0.25rem 0.5rem;
+  --table-font-size: 0.85rem;
+}
+
+[data-table-size="compact"] {
+  --table-cell-height: 26px;
+  --table-input-min-height: 26px;
+  --table-header-padding: 0.2rem 0.4rem;
+  --table-cell-padding: 0.1rem 0.25rem;
+  --table-font-size: 0.75rem;
+}
+
+[data-table-size="large"] {
+  --table-cell-height: 48px;
+  --table-input-min-height: 48px;
+  --table-header-padding: 0.75rem 1rem;
+  --table-cell-padding: 0.5rem 0.75rem;
+  --table-font-size: 0.95rem;
+}
+/* Report Checkbox Highlight */
+.report-checkbox[data-state=checked] {
+  background-color: #3ae043 !important;
+  border-color: #3ae043 !important;
+  color: white !important;
+}
+.report-row-selected {
+  background-color: rgba(58, 224, 67, 0.1) !important;
+}
+
+
+.classic-mode .classic-summary-container {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  background-color: #f1f5f9;
+  width: 100%;
+}
+.classic-mode .remarks-section {
+  flex: 0 0 200px;
+  padding: 8px;
+  border-right: 1px solid #cbd5e1;
+  background-color: #f1f5f9;
+}
+.classic-summary {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 1;
+  overflow-x: auto;
+}
+.classic-mode .classic-summary > div {
+  background: #f1f5f9 !important;
+  border: none !important;
+  border-right: 1px solid #cbd5e1 !important;
+  padding: 4px 8px !important;
+  flex: 1 1 0;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.classic-mode .classic-summary > div:last-child {
+  border-right: none !important;
+}
+.classic-mode .classic-summary > div.yellow-block {
+  background-color: #fef08a !important;
+}
+.classic-mode .classic-summary > div.grey-block {
+  background-color: #f1f5f9 !important;
+}
+.classic-mode .classic-summary span.text-xs,
+.classic-mode .classic-summary label,
+.classic-mode .classic-summary p.text-sm {
+  font-size: 10px !important;
+  font-weight: 700;
+  color: #1e293b !important;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  display: block;
+}
+.classic-mode .classic-summary input {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  color: #0f172a !important;
+  font-weight: 600;
+  font-size: 13px !important;
+  text-align: left;
+}
+.classic-mode .classic-summary input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.classic-mode .classic-summary svg {
+  display: none !important;
+}
+/* Specific fix for final amount */
+.classic-mode .classic-summary .final-amount-block {
+  background-color: #fde047 !important; /* Slightly darker yellow */
+  justify-content: center;
+  align-items: center;
+  min-width: 120px;
+}
+.classic-mode .classic-summary .final-amount-block input,
+.classic-mode .classic-summary .final-amount-block p.text-2xl {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  text-align: center;
+  width: 100%;
+}
+.classic-mode .classic-summary .final-amount-block p.text-\[10px\] {
+  display: none !important;
 }

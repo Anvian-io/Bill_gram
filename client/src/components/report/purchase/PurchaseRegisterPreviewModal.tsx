@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -46,6 +48,7 @@ export default function PurchaseRegisterPreviewModal({
   onGeneratePDF,
   filters,
 }: PurchaseRegisterPreviewModalProps) {
+  const { layoutMode } = useTheme();
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
 
@@ -214,7 +217,7 @@ export default function PurchaseRegisterPreviewModal({
 
           {/* Table container */}
           <div className="flex-1 overflow-auto rounded-md border max-h-88 mb-2">
-            <Table>
+            <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
               <TableHeader className="bg-secondary/50 sticky top-0 z-10">
                 <TableRow>
                   {/* <TableHead className="w-12 text-center">Sr.</TableHead> */}

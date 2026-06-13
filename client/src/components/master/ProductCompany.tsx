@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -76,6 +78,7 @@ interface ProductCompaniesResponse {
 }
 
 export default function ProductCompanyComponent() {
+  const { layoutMode } = useTheme();
   // State for product companies
   const [companies, setCompanies] = useState<ProductCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -784,7 +787,7 @@ export default function ProductCompanyComponent() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">Company</TableHead>

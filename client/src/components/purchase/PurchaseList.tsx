@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -110,6 +111,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 // Main Component
 // ----------------------------------------------------------------------
 export default function Purchase() {
+  const { layoutMode } = useTheme();
   // State
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -897,7 +899,7 @@ export default function Purchase() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
                         <TableHead className="font-semibold">

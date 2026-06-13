@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useEffect, useMemo, useState } from "react";
 import {
   Table,
@@ -163,6 +164,7 @@ const invoiceToRows = (invoice: PurchaseGSTInvoice): GSTR2Row[] =>
   }));
 
 export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
+  const { layoutMode } = useTheme();
   const [invoices, setInvoices] = useState<PurchaseGSTInvoice[]>([]);
   const [summaryData, setSummaryData] = useState<
     PurchaseGSTResponse["summary"] | null
@@ -633,7 +635,7 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto w-full transition-normal">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead>INVOICE_NO</TableHead>

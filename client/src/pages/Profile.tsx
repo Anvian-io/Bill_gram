@@ -42,6 +42,7 @@ import {
   Signature, // added for signature icon
   Palette,
   Type,
+  LayoutDashboard,
 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
@@ -92,6 +93,10 @@ const Profile: React.FC = () => {
     setFontFamily,
     fontSize,
     setFontSize,
+    layoutMode,
+    setLayoutMode,
+    tableSize,
+    setTableSize,
   } = useTheme();
 
   // Get user from localStorage
@@ -794,6 +799,60 @@ const Profile: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Layout Mode */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Layout Mode
+                </h3>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant={layoutMode === "classic" ? "default" : "outline"}
+                    onClick={() => setLayoutMode("classic")}
+                    className="flex-1 justify-center"
+                  >
+                    Old Layout (Classic)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={layoutMode === "modern" ? "default" : "outline"}
+                    onClick={() => setLayoutMode("modern")}
+                    className="flex-1 justify-center"
+                  >
+                    New Layout (Modern)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Choose between the dense, grid-based Old Layout or the spaced-out, card-based New Layout.
+                </p>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Table Density */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Table Density (Sizing)
+                </h3>
+                <Select value={tableSize} onValueChange={(v: any) => setTableSize(v)}>
+                  <SelectTrigger className="w-full sm:w-1/2">
+                    <SelectValue placeholder="Select table density" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">Compact (Dense)</SelectItem>
+                    <SelectItem value="standard">Standard (Default)</SelectItem>
+                    <SelectItem value="large">Comfortable (Spaced)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Adjust the height and padding of table rows to fit more or less data on your screen.
+                </p>
               </div>
 
             </CardContent>

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useEffect, useMemo, useState } from "react";
 import {
   Table,
@@ -71,6 +73,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 };
 
 export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
+  const { layoutMode } = useTheme();
   const [rows, setRows] = useState<HSNSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -432,7 +435,7 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto w-full transition-normal">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead>Goods / Service</TableHead>

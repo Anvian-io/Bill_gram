@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -148,6 +149,9 @@ export default function SalesmanWise() {
   // Pagination (client-side on groups)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Selection
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
 
   // Hooks
   const { customers, areas, vans, salesmen, groups } = useActiveLists();
@@ -372,7 +376,24 @@ export default function SalesmanWise() {
       : "Select Customer";
   };
 
-  // --------------------------------------------------------------------
+  // Selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRowIds(paginatedData.map(item => item.salesmanId));
+    } else {
+      setSelectedRowIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedRowIds(prev => [...prev, id]);
+    } else {
+      setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+
+    // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
   return (
@@ -431,9 +452,8 @@ export default function SalesmanWise() {
 
         {/* Filter Section */}
         <motion.div className="mb-2" variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardContent className="p-1">
-              <div className="flex flex-col gap-4 p-1">
+          <div className="bg-white dark:bg-gray-900 border rounded-none p-2">
+              <div className="flex flex-col gap-2">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -479,17 +499,16 @@ export default function SalesmanWise() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="flex flex-wrap items-end gap-3 pt-2">
                         {/* Invoice No */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Invoice No
                           </Label>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Search by invoice no..."
-                              className="pl-10"
+                            <Input className="h-8 text-xs rounded-sm" placeholder="Search by invoice no..."
+                              className="pl-8 h-8 text-xs rounded-sm"
                               value={invoiceNoInput}
                               onChange={(e) =>
                                 handleInvoiceNoChange(e.target.value)
@@ -509,8 +528,8 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* Customer */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Customer
                           </Label>
                           <Popover
@@ -522,7 +541,7 @@ export default function SalesmanWise() {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={customerOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getCustomerName(filters.customerId)}
@@ -598,15 +617,15 @@ export default function SalesmanWise() {
                         />
 
                         {/* Area */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Area</Label>
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">Area</Label>
                           <Popover open={areaOpen} onOpenChange={setAreaOpen}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={areaOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getDisplayName(areas, filters.areaId, "Area")}
@@ -664,15 +683,15 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* Van */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Van</Label>
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">Van</Label>
                           <Popover open={vanOpen} onOpenChange={setVanOpen}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={vanOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getDisplayName(vans, filters.vanId, "Van")}
@@ -730,8 +749,8 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* Salesman */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Salesman
                           </Label>
                           <Popover
@@ -743,7 +762,7 @@ export default function SalesmanWise() {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={salesmanOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getDisplayName(
@@ -813,8 +832,8 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* Product Group */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Product Group
                           </Label>
                           <Popover
@@ -826,7 +845,7 @@ export default function SalesmanWise() {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={productGroupOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getDisplayName(
@@ -896,8 +915,8 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* From Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             From Date
                           </Label>
                           <div className="flex gap-2">
@@ -947,8 +966,8 @@ export default function SalesmanWise() {
                         </div>
 
                         {/* To Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">To Date</Label>
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">To Date</Label>
                           <div className="flex gap-2">
                             <div className="relative flex-1">
                               <Input
@@ -999,8 +1018,7 @@ export default function SalesmanWise() {
                   )}
                 </AnimatePresence>
               </div>
-            </CardContent>
-          </Card>
+            </div>
         </motion.div>
 
         {/* Results Count and Pagination Controls */}
@@ -1041,6 +1059,13 @@ export default function SalesmanWise() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
+                      <TableHead className="w-10 text-center">
+                        <Checkbox
+                          className="report-checkbox"
+                          checked={selectedRowIds.length === paginatedData.length && paginatedData.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead className="w-10"></TableHead>
                       <TableHead className="font-semibold">
                         Salesman Name
@@ -1059,7 +1084,7 @@ export default function SalesmanWise() {
                           // animate={{ opacity: 1 }}
                           // exit={{ opacity: 0 }}
                         >
-                          <TableCell colSpan={3} className="text-center py-12">
+                          <TableCell colSpan={4} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -1076,7 +1101,7 @@ export default function SalesmanWise() {
                           exit={{ opacity: 0 }}
                         >
                           <TableCell
-                            colSpan={3}
+                            colSpan={4}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -1109,9 +1134,16 @@ export default function SalesmanWise() {
                                 visible: { opacity: 1, y: 0 },
                                 hover: { backgroundColor: "rgba(0,0,0,0.02)" },
                               }}
-                              className="group border cursor-pointer"
+                              className={cn("group border cursor-pointer", selectedRowIds.includes(item.salesmanId) && "report-row-selected")}
                               onClick={() => toggleRow(item.salesmanId)}
                             >
+                              <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  className="report-checkbox"
+                                  checked={selectedRowIds.includes(item.salesmanId)}
+                                  onCheckedChange={(checked) => handleSelectRow(item.salesmanId, checked as boolean)}
+                                />
+                              </TableCell>
                               <TableCell className="w-10">
                                 <Button
                                   variant="ghost"
@@ -1140,7 +1172,7 @@ export default function SalesmanWise() {
                                 transition={{ duration: 0.2 }}
                               >
                                 <TableCell
-                                  colSpan={3}
+                                  colSpan={4}
                                   className="p-0 bg-muted/20"
                                 >
                                   <div className="p-4">
@@ -1220,3 +1252,5 @@ export default function SalesmanWise() {
     </motion.div>
   );
 }
+
+// colSpanFixed

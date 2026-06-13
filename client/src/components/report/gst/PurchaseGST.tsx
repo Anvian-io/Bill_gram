@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -93,6 +94,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 // Main Component
 // ----------------------------------------------------------------------
 export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
+  const { layoutMode } = useTheme();
   // State
   const [reportData, setReportData] = useState<PurchaseGSTInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);

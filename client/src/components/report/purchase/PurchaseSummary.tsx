@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -128,6 +129,9 @@ export default function PurchaseSummary() {
   // Pagination (client-side)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Selection
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
 
   // Hooks
   const { suppliers, groups } = useActiveLists(); // assuming groups is available
@@ -336,7 +340,24 @@ export default function PurchaseSummary() {
     fetchSummary(newPage);
   };
 
-  // --------------------------------------------------------------------
+  // Selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRowIds(paginatedData.map(item => item.id));
+    } else {
+      setSelectedRowIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedRowIds(prev => [...prev, id]);
+    } else {
+      setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+
+    // --------------------------------------------------------------------
   // Render
   // --------------------------------------------------------------------
   return (
@@ -397,9 +418,8 @@ export default function PurchaseSummary() {
 
         {/* Filter Section */}
         <motion.div className="mb-2" variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardContent className="p-1">
-              <div className="flex flex-col gap-4 p-1">
+          <div className="bg-white dark:bg-gray-900 border rounded-none p-2">
+              <div className="flex flex-col gap-2">
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -445,17 +465,16 @@ export default function PurchaseSummary() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="flex flex-wrap items-end gap-3 pt-2">
                         {/* Invoice No */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Invoice No
                           </Label>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Search by invoice no..."
-                              className="pl-10"
+                            <Input className="h-8 text-xs rounded-sm" placeholder="Search by invoice no..."
+                              className="pl-8 h-8 text-xs rounded-sm"
                               value={invoiceNoInput}
                               onChange={(e) =>
                                 handleInvoiceNoChange(e.target.value)
@@ -475,8 +494,8 @@ export default function PurchaseSummary() {
                         </div>
 
                         {/* Supplier */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Supplier
                           </Label>
                           <Popover
@@ -488,7 +507,7 @@ export default function PurchaseSummary() {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={supplierOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getSupplierName(filters.supplierId)}
@@ -562,8 +581,8 @@ export default function PurchaseSummary() {
                         />
 
                         {/* Product Group */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Product Group
                           </Label>
                           <Popover
@@ -575,7 +594,7 @@ export default function PurchaseSummary() {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={productGroupOpen}
-                                className="w-full justify-between"
+                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
                                 disabled={isLoading}
                               >
                                 {getProductGroupName(filters.productGroupId)}
@@ -641,8 +660,8 @@ export default function PurchaseSummary() {
                         </div>
 
                         {/* From Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             From Date
                           </Label>
                           <div className="flex gap-2">
@@ -692,8 +711,8 @@ export default function PurchaseSummary() {
                         </div>
 
                         {/* To Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">To Date</Label>
+                        <div className="flex-1 min-w-[150px] max-w-[200px]">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">To Date</Label>
                           <div className="flex gap-2">
                             <div className="relative flex-1">
                               <Input
@@ -744,8 +763,7 @@ export default function PurchaseSummary() {
                   )}
                 </AnimatePresence>
               </div>
-            </CardContent>
-          </Card>
+            </div>
         </motion.div>
 
         {/* Results Count and Pagination Controls */}
@@ -786,6 +804,13 @@ export default function PurchaseSummary() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
+                      <TableHead className="w-10 text-center">
+                        <Checkbox
+                          className="report-checkbox"
+                          checked={selectedRowIds.length === paginatedData.length && paginatedData.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead className="font-semibold">
                         Invoice No
                       </TableHead>
@@ -857,9 +882,16 @@ export default function PurchaseSummary() {
                               visible: { opacity: 1, y: 0 },
                               hover: { backgroundColor: "rgba(0,0,0,0.02)" },
                             }}
-                            className="group border"
+                            className={cn("group border", selectedRowIds.includes(item.id) && "report-row-selected")}
                             layout
                           >
+                            <TableCell className="text-center">
+                              <Checkbox
+                                className="report-checkbox"
+                                checked={selectedRowIds.includes(item.id)}
+                                onCheckedChange={(checked) => handleSelectRow(item.id, checked as boolean)}
+                              />
+                            </TableCell>
                             <TableCell className="font-mono font-medium text-primary">
                               {item.invoiceNo}
                             </TableCell>

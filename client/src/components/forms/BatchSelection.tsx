@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -112,6 +114,7 @@ export default function BatchSelectionModal({
   conversionFactor,
   onBatchSelect,
 }: BatchSelectionModalProps) {
+  const { layoutMode } = useTheme();
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [aQty, setAQty] = useState<number>(1);
   const [mQty, setMQty] = useState<number>(0);
@@ -374,7 +377,7 @@ export default function BatchSelectionModal({
 
             {/* Batch Selection Table */}
             <div className="rounded-md border max-h-50 overflow-y-auto">
-              <Table>
+              <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                 <TableHeader>
                   <TableRow className="bg-secondary/50">
                     <TableHead className="font-semibold">Select</TableHead>
@@ -525,7 +528,7 @@ export default function BatchSelectionModal({
             </div>
 
             <div className="rounded-md border max-h-50 overflow-y-auto">
-              <Table>
+              <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                 <TableHeader>
                   <TableRow className="bg-secondary/50">
                     <TableHead className="font-semibold">Batch</TableHead>

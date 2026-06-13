@@ -39,9 +39,9 @@ function Combobox({
     <ComboboxHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
       <ComboboxPrimitive.Root 
         open={props.open !== undefined ? props.open : open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          props.onOpenChange?.(o);
+        onOpenChange={(open, event: any) => {
+          setOpen(open);
+          (props as any).onOpenChange?.(open, event);
         }}
         {...props} 
       />

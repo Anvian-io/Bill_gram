@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -49,6 +51,7 @@ import type {
 import { format } from "date-fns";
 
 export default function SalesHistory() {
+  const { layoutMode } = useTheme();
   // State
   const [histories, setHistories] = useState<SalesReportHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -567,7 +570,7 @@ export default function SalesHistory() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold w-16">ID</TableHead>

@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -89,6 +90,7 @@ interface CustomersResponse {
 }
 
 export default function CustomerComponent() {
+  const { layoutMode } = useTheme();
   // State for customers
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1063,7 +1065,7 @@ export default function CustomerComponent() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">Customer</TableHead>

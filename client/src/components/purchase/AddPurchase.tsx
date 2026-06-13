@@ -62,6 +62,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTheme } from "@/contexts/ThemeProvider";
 import {
   Select,
   SelectContent,
@@ -252,6 +253,7 @@ export default function AddPurchase() {
 
   // Watch items and summary fields
   const items = form.watch("items");
+  const { layoutMode } = useTheme();
   const cessInsurance = useWatch({
     control: form.control,
     name: "cessInsurance",
@@ -846,11 +848,11 @@ export default function AddPurchase() {
         <Card>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
+              <div className={cn("lg:col-span-1", layoutMode === "classic" && "remarks-section")}>
                 <Skeleton className="h-6 w-32 mb-3" />
                 <Skeleton className="h-32 w-full" />
               </div>
-              <div className="lg:col-span-3">
+              <div className={cn("lg:col-span-3", layoutMode === "classic" && "classic-summary")}>
                 <Skeleton className="h-6 w-32 mb-4" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {Array.from({ length: 8 }).map((_, i) => (
@@ -892,14 +894,21 @@ export default function AddPurchase() {
       >
         {/* Header */}
         <motion.div
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"
+          className={cn(
+            "flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6",
+            layoutMode === "classic" && "bg-[var(--classic-header-bg)] text-white p-2 rounded-t-md mb-2"
+          )}
           variants={itemVariants}
         >
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-heading">
-                {isEditMode ? "Edit Purchase Invoice" : "Add New Purchase"}
+              <h1 className={cn("font-bold", layoutMode === "classic" ? "text-lg text-white" : "text-3xl text-heading")}>
+                {layoutMode === "classic" 
+                  ? "Data Entry > Purchase Entry" 
+                  : (isEditMode ? "Edit Purchase Invoice" : "Add New Purchase")
+                }
               </h1>
+              {layoutMode !== "classic" && (
               <p className="text-muted-foreground mt-1">
                 {isEditMode
                   ? `Editing Invoice ${generatedInvoiceNo || ""}`
@@ -907,6 +916,7 @@ export default function AddPurchase() {
                     ? `Invoice ${generatedInvoiceNo} - Saved`
                     : "Create a new purchase invoice"}
               </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -963,25 +973,32 @@ export default function AddPurchase() {
           >
             {/* Invoice Details Card */}
             <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Invoice Details
-                    {generatedInvoiceNo && (
-                      <Badge variant="secondary" className="ml-2">
-                        {generatedInvoiceNo}
-                      </Badge>
-                    )}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className={cn(layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
+                <CardContent className={cn(layoutMode === "classic" ? "p-0 pb-2" : "p-6")}>
+                  {layoutMode !== "classic" && (
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Invoice Details
+                      {generatedInvoiceNo && (
+                        <Badge variant="secondary" className="ml-2">
+                          {generatedInvoiceNo}
+                        </Badge>
+                      )}
+                    </h3>
+                  )}
+                  <div className={cn(
+                    "grid gap-4",
+                    layoutMode === "classic" 
+                      ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 items-end" 
+                      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+                  )}>
                     {/* Invoice Date */}
                     <FormField
                       control={form.control}
                       name="invoiceDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
+                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
                             Invoice Date *
                           </FormLabel>
                           <FormControl>
@@ -991,7 +1008,7 @@ export default function AddPurchase() {
                                 type="date"
                                 value={field.value}
                                 onChange={field.onChange}
-                                className="pl-10"
+                                className={cn("pl-10", layoutMode === "classic" && "classic-input")}
                                 disabled={isSubmitting}
                               />
                             </div>
@@ -1007,7 +1024,7 @@ export default function AddPurchase() {
                       name="supplierId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className="text-sm">
+                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
                             Supplier Name *
                           </FormLabel>
                           <Popover
@@ -1023,6 +1040,7 @@ export default function AddPurchase() {
                                   className={cn(
                                     "w-full justify-between",
                                     !field.value && "text-muted-foreground",
+                                    layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent"
                                   )}
                                   disabled={isSubmitting}
                                 >
@@ -1088,14 +1106,14 @@ export default function AddPurchase() {
                       name="gstDetails"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">GST Details</FormLabel>
+                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>GST Details</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value ?? GST_DETAILS_DEFAULT_ID}
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className={cn(layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent")}>
                                 <SelectValue placeholder="Select GST type" />
                               </SelectTrigger>
                             </FormControl>
@@ -1118,8 +1136,8 @@ export default function AddPurchase() {
 
             {/* Products Table */}
             <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-2">
+              <Card className={cn(layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
+                <CardContent className={cn("p-2", layoutMode === "classic" && "p-0")}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                       <h3 className="text-lg font-semibold">Products</h3>
@@ -1140,8 +1158,11 @@ export default function AddPurchase() {
                   </div>
 
                   <div className="flex items-center justify-center overflow-x-auto w-full">
-                    <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl">
-                      <Table>
+                    <div className={cn(
+                      "overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl",
+                      layoutMode === "classic" && "rounded-none border-none"
+                    )}>
+                      <Table className={cn(layoutMode === "classic" && "classic-table")}>
                         <TableHeader>
                           <TableRow className="bg-secondary/50">
                             <TableHead className="font-semibold w-12">
@@ -1530,7 +1551,7 @@ export default function AddPurchase() {
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     {/* Remarks - Left Side */}
-                    <div className="lg:col-span-1">
+                    <div className={cn("lg:col-span-1", layoutMode === "classic" && "remarks-section")}>
                       <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
                         <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
                           <FileText className="h-4 w-4" />
@@ -1561,16 +1582,21 @@ export default function AddPurchase() {
                     </div>
 
                     {/* Summary - Right Side */}
-                    <div className="lg:col-span-3">
-                      <div className="bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm">
-                        <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          Invoice Summary
-                        </h4>
+                    <div className={cn("lg:col-span-3", layoutMode === "classic" && "classic-summary")}>
+                      <div className={cn(
+                        "bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm",
+                        layoutMode === "classic" && "rounded-none shadow-none border-none p-0 bg-transparent"
+                      )}>
+                        {layoutMode !== "classic" && (
+                          <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Invoice Summary
+                          </h4>
+                        )}
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4", layoutMode === "classic" && "flex flex-nowrap w-max")}>
                           {/* Gross Amount */}
-                          <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
+                          <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1 grey-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-1">
                                 Gross Amount
@@ -1601,7 +1627,7 @@ export default function AddPurchase() {
                           </div>
 
                           {/* Box/Unit Ratio */}
-                          <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
+                          <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2 yellow-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-2">
                                 Box/Unit Ratio
@@ -1623,7 +1649,7 @@ export default function AddPurchase() {
                           </div>
 
                           {/* CESS/INS */}
-                          <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3">
+                          <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3 yellow-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-3">
                                 CESS/INS
@@ -1653,7 +1679,7 @@ export default function AddPurchase() {
                           </div>
 
                           {/* Discount % */}
-                          <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5">
+                          <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5 yellow-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-5">
                                 Discount %
@@ -1682,7 +1708,7 @@ export default function AddPurchase() {
                           </div>
 
                           {/* Tax */}
-                          <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
+                          <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6 grey-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-6">
                                 Tax Amount
@@ -1773,7 +1799,7 @@ export default function AddPurchase() {
                           </div>
 
                           {/* Total Scheme */}
-                          <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
+                          <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4 grey-block">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-summary-text-4">
                                 Total Scheme

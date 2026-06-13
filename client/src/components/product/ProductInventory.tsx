@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -114,6 +116,7 @@ interface ProductsResponse {
 }
 
 export default function ProductInventory() {
+  const { layoutMode } = useTheme();
   // Remove ?id from query params on mount
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -1229,7 +1232,7 @@ export default function ProductInventory() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
-                  <Table>
+                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
                         <TableHead className="font-semibold">Product</TableHead>

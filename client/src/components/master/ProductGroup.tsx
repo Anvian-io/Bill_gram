@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
@@ -69,6 +71,7 @@ interface ProductGroupsResponse {
 }
 
 export default function ProductGroup() {
+  const { layoutMode } = useTheme();
   // State for product groups
   const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -657,7 +660,7 @@ export default function ProductGroup() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">

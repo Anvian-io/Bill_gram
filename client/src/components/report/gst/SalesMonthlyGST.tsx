@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -72,6 +74,7 @@ export default function SalesMonthlyGST({
 }: {
   isCollapsed: boolean;
 }) {
+  const { layoutMode } = useTheme();
   // Get default dates - January 1st of current year to today
   const getDefaultFromDate = () => {
     const now = new Date();

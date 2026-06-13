@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -69,6 +71,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 };
 
 export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
+  const { layoutMode } = useTheme();
   const getDefaultFromDate = () => startOfYear(new Date());
   const getDefaultToDate = () => new Date();
 
@@ -474,7 +477,7 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto w-full transition-normal">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">TYPE</TableHead>

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useEffect, useState } from "react";
 import {
   Table,
@@ -73,6 +75,7 @@ const parseHistoryFilters = (data: string) => {
 };
 
 export default function GSTHistory() {
+  const { layoutMode } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [rows, setRows] = useState<GSTReportHistory[]>([]);
@@ -372,7 +375,7 @@ export default function GSTHistory() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="w-16">ID</TableHead>

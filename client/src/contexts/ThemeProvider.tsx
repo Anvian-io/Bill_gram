@@ -9,6 +9,8 @@ import {
 } from "react";
 
 type Theme = "light" | "dark" | "system";
+type LayoutMode = "modern" | "classic";
+type TableSize = "compact" | "standard" | "large";
 
 export const DEFAULT_PRIMARY_COLOR = "#3b82f6";
 export const DEFAULT_FONT_FAMILY = "system-ui, Avenir, Helvetica, Arial, sans-serif";
@@ -24,6 +26,10 @@ interface ThemeContextType {
   setFontFamily: (font: string) => void;
   fontSize: string;
   setFontSize: (size: string) => void;
+  layoutMode: LayoutMode;
+  setLayoutMode: (mode: LayoutMode) => void;
+  tableSize: TableSize;
+  setTableSize: (size: TableSize) => void;
 }
 
 interface ThemeProviderProps {
@@ -39,6 +45,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_PRIMARY_COLOR);
   const [fontFamily, setFontFamily] = useState<string>(DEFAULT_FONT_FAMILY);
   const [fontSize, setFontSize] = useState<string>(DEFAULT_FONT_SIZE);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("modern");
+  const [tableSize, setTableSize] = useState<TableSize>("standard");
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Read from localStorage on initial mount
@@ -54,6 +62,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     
     const savedFontSize = localStorage.getItem("fontSize");
     if (savedFontSize) setFontSize(savedFontSize);
+
+    const savedLayoutMode = localStorage.getItem("layoutMode") as LayoutMode;
+    if (savedLayoutMode) setLayoutMode(savedLayoutMode);
+
+    const savedTableSize = localStorage.getItem("tableSize") as TableSize;
+    if (savedTableSize) setTableSize(savedTableSize);
     
     setIsLoaded(true);
   }, []);
@@ -101,11 +115,23 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // Setting font-family and font-size
     root.style.setProperty("font-family", fontFamily);
     root.style.setProperty("font-size", fontSize);
+
+    // Apply classic-mode class
+    if (layoutMode === "classic") {
+      root.classList.add("classic-mode");
+    } else {
+      root.classList.remove("classic-mode");
+    }
+    
+    // Apply table size data attribute
+    root.setAttribute("data-table-size", tableSize);
     
     localStorage.setItem("primaryColor", primaryColor);
     localStorage.setItem("fontFamily", fontFamily);
     localStorage.setItem("fontSize", fontSize);
-  }, [primaryColor, fontFamily, fontSize, isLoaded]);
+    localStorage.setItem("layoutMode", layoutMode);
+    localStorage.setItem("tableSize", tableSize);
+  }, [primaryColor, fontFamily, fontSize, layoutMode, tableSize, isLoaded]);
 
   // Update localStorage when theme changes
   useEffect(() => {
@@ -128,6 +154,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setFontFamily,
     fontSize,
     setFontSize,
+    layoutMode,
+    setLayoutMode,
+    tableSize,
+    setTableSize,
   };
 
   return (

@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -316,6 +317,7 @@ function SalesFormSkeleton() {
 // Component
 // ----------------------------------------------------------------------
 export default function AddSales() {
+  const { layoutMode } = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -1608,7 +1610,7 @@ export default function AddSales() {
               <CardContent>
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl">
-                    <Table>
+                    <Table className={cn(layoutMode === "classic" && "classic-table")}>
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">
@@ -2028,7 +2030,7 @@ export default function AddSales() {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {/* Gross Amount (read-only) */}
-                    <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
+                    <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-1">
                           Gross Amount
@@ -2059,7 +2061,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Box/Unit Ratio */}
-                    <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
+                    <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-2">
                           Box/Unit Ratio
@@ -2081,7 +2083,7 @@ export default function AddSales() {
                     </div>
 
                     {/* CESS/INS */}
-                    <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3">
+                    <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-3">
                           CESS/INS
@@ -2119,7 +2121,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Discount % */}
-                    <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5">
+                    <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-5">
                           Discount %
@@ -2156,7 +2158,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Tax Amount */}
-                    <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
+                    <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-6">
                           Tax Amount
@@ -2263,7 +2265,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Total Scheme (read-only) */}
-                    <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
+                    <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-4">
                           Total Scheme
