@@ -117,9 +117,15 @@ export default function ProductInventory() {
 
             {/* Tab content */}
             <div>
-              {activeTab === "add" && <AddProduct />}
-              {activeTab === "inventory" && <ProductInventoryList />}
-              {activeTab === "history" && <ProductHistory />}
+              <div className={activeTab === "add" ? "block" : "hidden"}>
+                <AddProduct />
+              </div>
+              <div className={activeTab === "inventory" ? "block" : "hidden"}>
+                <ProductInventoryList />
+              </div>
+              <div className={activeTab === "history" ? "block" : "hidden"}>
+                <ProductHistory />
+              </div>
             </div>
           </div>
         </div>

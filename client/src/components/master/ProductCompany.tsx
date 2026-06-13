@@ -108,7 +108,7 @@ export default function ProductCompanyComponent() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(true);
 
   // Local state for immediate input values (before debounce)
   const [searchInput, setSearchInput] = useState<string>("");

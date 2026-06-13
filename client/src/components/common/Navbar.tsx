@@ -374,13 +374,13 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
 
         {/* Main Content */}
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out h-full 
-            ${isExpanded ? "sm:ml-64" : "sm:ml-16"} 
-            ml-0 
+          className={`flex flex-col flex-1 transition-all duration-300 ease-in-out h-full min-w-0
+            ${isExpanded ? "sm:pl-64" : "sm:pl-16"} 
+            pl-0 
             bg-background`}
         >
           <Header isExpanded={isExpanded} pages={currentPage} />
-          <div className="mt-16 flex-1 overflow-auto">{children}</div>
+          <div className="mt-16 flex-1 overflow-auto w-full">{children}</div>
         </main>
       </div>
     </div>

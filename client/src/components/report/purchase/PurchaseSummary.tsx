@@ -102,7 +102,7 @@ export default function PurchaseSummary() {
   const [isLoading, setIsLoading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [summaryData, setSummaryData] =
     useState<PurchaseSummaryReportData | null>(null);
@@ -353,19 +353,7 @@ export default function PurchaseSummary() {
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Purchase Summary Report
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                View and export purchase invoices with product group filtering
-              </motion.p>
-            </div>
+            
 
             {/* Export Buttons */}
             <motion.div className="flex items-center gap-3">

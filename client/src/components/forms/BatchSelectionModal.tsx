@@ -320,6 +320,12 @@ export default function BatchSelectionModal({
                       }
                     }}
                     className="w-24"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        document.getElementById("searchBatch")?.focus();
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -389,10 +395,21 @@ export default function BatchSelectionModal({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="searchBatch"
                   placeholder="Search by batch number or barcode..."
                   className="pl-10"
                   value={searchBatch}
                   onChange={(e) => setSearchBatch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && selectedBatch) {
+                      e.preventDefault();
+                      document.getElementById("applyBatchBtn")?.click();
+                    } else if (e.key === "Enter" && filteredBatches.length > 0) {
+                      e.preventDefault();
+                      // If no batch selected but user pressed enter on search, maybe select the first one
+                      // handleBatchSelect(filteredBatches[0]);
+                    }
+                  }}
                 />
                 {searchBatch && (
                   <Button
@@ -679,6 +696,7 @@ export default function BatchSelectionModal({
                 Cancel
               </Button>
               <Button
+                id="applyBatchBtn"
                 onClick={handleApplyBatch}
                 disabled={!selectedBatch}
                 className="gap-2"

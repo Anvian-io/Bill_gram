@@ -93,7 +93,7 @@ export default function PurchaseMonthlyGST({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Filters state with default dates
   const [filters, setFilters] = useState<PurchaseMonthlyFilters>({
@@ -301,20 +301,7 @@ export default function PurchaseMonthlyGST({
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Purchase Monthly GST Report
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                Monthly aggregated view of purchase GST data for tax filing and
-                analysis
-              </motion.p>
-            </div>
+            
 
             {/* Action Buttons */}
             <motion.div className="flex items-center gap-3">

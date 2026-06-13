@@ -117,9 +117,15 @@ export default function Sales() {
 
             {/* Tab content */}
             <div>
-              {activeTab === "add" && <AddSales />}
-              {activeTab === "sales" && <SalesList />}
-              {activeTab === "history" && <SalesHistory />}
+              <div className={activeTab === "add" ? "block" : "hidden"}>
+                <AddSales />
+              </div>
+              <div className={activeTab === "sales" ? "block" : "hidden"}>
+                <SalesList />
+              </div>
+              <div className={activeTab === "history" ? "block" : "hidden"}>
+                <SalesHistory />
+              </div>
             </div>
           </div>
         </div>

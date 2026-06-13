@@ -98,7 +98,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Filters state
   const [filters, setFilters] = useState<SalesGSTFilters>({
@@ -318,20 +318,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Sales GST Report
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                View and export sales invoices with GST details for tax
-                reporting
-              </motion.p>
-            </div>
+            
 
             {/* Action Buttons */}
             <motion.div className="flex items-center gap-3">

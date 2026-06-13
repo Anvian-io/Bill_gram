@@ -390,19 +390,7 @@ export default function AreaWise() {
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Area Wise Sales Report
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                View sales totals grouped by area with invoice details
-              </motion.p>
-            </div>
+            
 
             {/* Action Buttons */}
             <motion.div className="flex items-center gap-3">

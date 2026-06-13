@@ -577,7 +577,49 @@ export default function AddPurchase() {
       sch2Percent: 0,
       sch2Amount: 0,
     };
-    form.setValue("items", [...items, newItem]);
+    form.setValue("items", [newItem, ...items]);
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+    field: string,
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      let nextFieldId = "";
+      if (field === "rate") nextFieldId = `aQty-${index}`;
+      else if (field === "aQty") nextFieldId = `fQty-${index}`;
+      else if (field === "fQty") nextFieldId = `DQty-${index}`;
+      else if (field === "DQty") {
+        if (index === 0) {
+          addProductRow();
+          nextFieldId = `productSearch-0`;
+        } else {
+          nextFieldId = `productSearch-${index - 1}`;
+        }
+      }
+      else if (field === "schPercent") nextFieldId = `taxRate-${index}`;
+      else if (field === "taxRate") {
+        if (index === 0) {
+          addProductRow();
+          nextFieldId = `productSearch-0`;
+        } else {
+          nextFieldId = `productSearch-${index - 1}`;
+        }
+      }
+      if (nextFieldId) {
+        setTimeout(() => {
+          const nextElement = document.getElementById(nextFieldId) as HTMLElement;
+          if (nextElement) {
+            nextElement.focus();
+            if (nextElement instanceof HTMLInputElement) {
+              nextElement.select();
+            }
+          }
+        }, 100);
+      }
+    }
   };
 
   const removeProductRow = (index: number) => {
@@ -1186,6 +1228,7 @@ export default function AddPurchase() {
                                     >
                                       <PopoverTrigger asChild>
                                         <Button
+                                          id={`productSearch-${index}`}
                                           variant="outline"
                                           role="combobox"
                                           className="w-full justify-between"
@@ -1247,6 +1290,7 @@ export default function AddPurchase() {
                                     <div className="relative">
                                       <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                       <Input
+                                        id={`rate-${index}`}
                                         type="number"
                                         step="0.01"
                                         value={item.rate}
@@ -1257,6 +1301,7 @@ export default function AddPurchase() {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        onKeyDown={(e) => handleKeyDown(e, index, "rate")}
                                         className="w-24 pl-7"
                                         disabled={isSubmitting}
                                       />
@@ -1266,6 +1311,7 @@ export default function AddPurchase() {
                                   {/* A. Qty */}
                                   <TableCell>
                                     <Input
+                                      id={`aQty-${index}`}
                                       type="number"
                                       step="1"
                                       value={item.aQty}
@@ -1276,6 +1322,7 @@ export default function AddPurchase() {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
+                                      onKeyDown={(e) => handleKeyDown(e, index, "aQty")}
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
@@ -1284,6 +1331,7 @@ export default function AddPurchase() {
                                   {/* Fr */}
                                   <TableCell>
                                     <Input
+                                      id={`fQty-${index}`}
                                       type="number"
                                       step="1"
                                       value={item.fQty}
@@ -1294,6 +1342,7 @@ export default function AddPurchase() {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
+                                      onKeyDown={(e) => handleKeyDown(e, index, "fQty")}
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
@@ -1302,6 +1351,7 @@ export default function AddPurchase() {
                                   {/* Dm */}
                                   <TableCell>
                                     <Input
+                                      id={`DQty-${index}`}
                                       type="number"
                                       step="1"
                                       value={item.DQty}
@@ -1312,6 +1362,7 @@ export default function AddPurchase() {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
+                                      onKeyDown={(e) => handleKeyDown(e, index, "DQty")}
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
@@ -1366,6 +1417,7 @@ export default function AddPurchase() {
                                   <TableCell>
                                     <div className="relative">
                                       <Input
+                                        id={`schPercent-${index}`}
                                         type="number"
                                         step="0.01"
                                         value={item.schPercent}
@@ -1376,6 +1428,7 @@ export default function AddPurchase() {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        onKeyDown={(e) => handleKeyDown(e, index, "schPercent")}
                                         className="w-16 pl-5"
                                         disabled={isSubmitting}
                                       />
@@ -1394,6 +1447,7 @@ export default function AddPurchase() {
                                   <TableCell>
                                     <div className="relative">
                                       <Input
+                                        id={`taxRate-${index}`}
                                         type="number"
                                         step="0.01"
                                         value={item.taxRate}
@@ -1404,6 +1458,7 @@ export default function AddPurchase() {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        onKeyDown={(e) => handleKeyDown(e, index, "taxRate")}
                                         className="w-16 pl-5"
                                         disabled={isSubmitting}
                                       />
@@ -1804,7 +1859,7 @@ export default function AddPurchase() {
 
             {/* Bottom Actions */}
             <motion.div
-              className="flex justify-end gap-3 pt-4 border-t"
+              className="flex justify-end gap-3 pt-4 border-t mt-4"
               variants={itemVariants}
             >
               {/* Bill Preview Button - Also shown at bottom for convenience */}
@@ -1831,10 +1886,10 @@ export default function AddPurchase() {
               <Button
                 type="submit"
                 disabled={isSubmitting || (isEditMode && !isDirty)}
-                className="gap-2"
+                className="gap-2 fixed bottom-6 right-6 z-50 shadow-xl rounded-full px-6 py-6 text-base font-semibold"
                 size="lg"
               >
-                <Save className="h-4 w-4" />
+                <Save className="h-5 w-5" />
                 {isSubmitting
                   ? "Saving..."
                   : isEditMode

@@ -71,7 +71,7 @@ export default function NotificationHistoryPanel({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingVisible, setIsMarkingVisible] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [filters, setFilters] = useState({
     search: "",
     title: "",

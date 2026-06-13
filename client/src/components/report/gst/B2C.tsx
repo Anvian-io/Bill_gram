@@ -78,7 +78,7 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   const [filters, setFilters] = useState<SalesB2CFilters>({
     fromDate: getDefaultFromDate(),
@@ -233,17 +233,7 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">B2C Report</h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                Summary B2CS report grouped by place and tax rate
-              </motion.p>
-            </div>
+            
             <motion.div className="flex items-center gap-3">
               <motion.div
                 variants={buttonVariants}

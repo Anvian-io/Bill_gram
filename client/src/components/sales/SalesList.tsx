@@ -167,7 +167,7 @@ export default function Sales() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Local input values (before debounce)
   const [searchInput, setSearchInput] = useState("");
@@ -595,19 +595,7 @@ export default function Sales() {
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-heading">
-                  Sales Management
-                </h1>
-                <motion.p
-                  className="text-muted-foreground mt-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  Manage and track your sales invoices
-                </motion.p>
-              </div>
+              
 
               {/* Search Bar */}
               <motion.div

@@ -176,7 +176,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [fromDateInput, setFromDateInput] = useState("");
   const [toDateInput, setToDateInput] = useState("");
   const [filters, setFilters] = useState<SalesGSTFilters>({
@@ -353,17 +353,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
       >
         <motion.div className="flex flex-col gap-6 mb-6 w-full" variants={headerVariants}>
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">GSTR1</h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                Item-wise sales GST rows as per GSTR1 report columns
-              </motion.p>
-            </div>
+            
             <motion.div className="flex items-center gap-3">
               <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
                 <Button

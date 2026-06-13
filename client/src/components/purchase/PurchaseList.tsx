@@ -131,7 +131,7 @@ export default function Purchase() {
     null,
   );
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
@@ -475,19 +475,7 @@ export default function Purchase() {
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-heading">
-                  Purchase Management
-                </h1>
-                <motion.p
-                  className="text-muted-foreground mt-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  Manage and track your purchase invoices
-                </motion.p>
-              </div>
+              
 
               {/* Search Bar */}
               <motion.div

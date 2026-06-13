@@ -283,21 +283,20 @@ export default function MasterInventory() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto">
-        <AnimatePresence>
-          <motion.div
-            key={activeSection}
-            variants={contentVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="h-full p-1"
-          >
-            {/* Content Area */}
-            <Card className="border-none shadow-sm">
-              <CardContent className="">{activeItem?.component}</CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
+        <div className="h-full p-1">
+          <Card className="border-none shadow-sm h-full">
+            <CardContent className="h-full p-0">
+              {sidebarItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`h-full ${activeSection === item.id ? "block" : "hidden"}`}
+                >
+                  {item.component}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
