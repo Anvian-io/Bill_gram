@@ -461,10 +461,8 @@ export const getAllSales = asyncHandler(async (req, res) => {
     andConditions.push({ finalAmount: amountFilter });
   }
 
-  if (status) {
+  if (status && status !== "all") {
     andConditions.push({ status });
-  } else {
-    andConditions.push({ status: { not: "Return" } });
   }
 
   // Global search: invoiceNo, customer.name, remarks, area.name, van.name, salesman.name

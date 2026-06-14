@@ -32,66 +32,12 @@ import {
   Filter,
   AlertCircle,
   Loader2,
-  Download,
   Eye,
   Hash,
 } from "lucide-react";
 import { toast } from "sonner";
-import { productService } from "@/services/productService";
+import { productService, type ProductBatchHistoryEntry } from "@/services/productService";
 import type { Batch } from "@/types/product";
-
-// Mock purchase history (same for all products)
-interface PurchaseHistory {
-  batch: string;
-  invoiceNo: string;
-  date: string;
-  quantity: number;
-  rate: number;
-  amount: number;
-}
-
-const mockPurchaseHistory: PurchaseHistory[] = [
-  {
-    batch: "250712182734",
-    invoiceNo: "INV001234",
-    date: "2024-01-15",
-    quantity: 100,
-    rate: 6.5,
-    amount: 650,
-  },
-  {
-    batch: "250712182734",
-    invoiceNo: "INV001235",
-    date: "2024-01-10",
-    quantity: 200,
-    rate: 6.48,
-    amount: 1296,
-  },
-  {
-    batch: "250712182734",
-    invoiceNo: "INV001236",
-    date: "2024-01-05",
-    quantity: 150,
-    rate: 6.45,
-    amount: 967.5,
-  },
-  {
-    batch: "250712182735",
-    invoiceNo: "INV001237",
-    date: "2024-01-20",
-    quantity: 300,
-    rate: 12.3,
-    amount: 3690,
-  },
-  {
-    batch: "250712182736",
-    invoiceNo: "INV001238",
-    date: "2024-01-18",
-    quantity: 500,
-    rate: 3.15,
-    amount: 1575,
-  },
-];
 
 interface BatchSelectionModalProps {
   open: boolean;
@@ -123,6 +69,10 @@ export default function BatchSelectionModal({
   const [showBatchError, setShowBatchError] = useState<boolean>(false);
 
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [salesHistory, setSalesHistory] = useState<ProductBatchHistoryEntry[]>(
+    [],
+  );
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,8 +80,22 @@ export default function BatchSelectionModal({
   useEffect(() => {
     if (open && productId) {
       fetchBatches();
+      fetchSalesHistory();
     }
   }, [open, productId]);
+
+  const fetchSalesHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const response = await productService.getProductSalesHistory(productId);
+      setSalesHistory(response.histories ?? []);
+    } catch (err) {
+      console.error("Failed to fetch sales history:", err);
+      setSalesHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const fetchBatches = async () => {
     try {
@@ -388,7 +352,7 @@ export default function BatchSelectionModal({
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <Eye className="h-4 w-4" />
-              PURCHASE HISTORY
+              SALES HISTORY
             </TabsTrigger>
           </TabsList>
 
@@ -566,16 +530,12 @@ export default function BatchSelectionModal({
             </div>
           </TabsContent>
 
-          {/* PURCHASE HISTORY TAB */}
+          {/* SALES HISTORY TAB */}
           <TabsContent value="history" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">
-                Purchase History for {productCode}
+                Sales History for {productCode} (active batches only)
               </h3>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export History
-              </Button>
             </div>
 
             <div className="rounded-md border max-h-50 overflow-y-auto">
@@ -586,77 +546,105 @@ export default function BatchSelectionModal({
                     <TableHead className="font-semibold">Invoice No</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
                     <TableHead className="font-semibold">Quantity</TableHead>
-                    <TableHead className="font-semibold">Rate</TableHead>
+                    <TableHead className="font-semibold">Hist. Rate</TableHead>
+                    <TableHead className="font-semibold">Curr. Rate</TableHead>
                     <TableHead className="font-semibold">Amount</TableHead>
                     <TableHead className="font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockPurchaseHistory.map((history, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-mono">
-                        <Badge variant="outline">{history.batch}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Hash className="h-3 w-3 text-muted-foreground" />
-                          {history.invoiceNo}
+                  {historyLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Loading sales history...</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {history.date}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-1">
-                          <Package className="h-3 w-3 text-muted-foreground" />
-                          {history.quantity.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <IndianRupee className="h-3 w-3 mr-1" />
-                          {history.rate.toFixed(2)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <IndianRupee className="h-3 w-3 mr-1" />
-                          <span className="font-medium">
-                            {history.amount.toFixed(2)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const batch = batches.find(
-                              (b) => b.batchNo === history.batch,
-                            );
-                            if (batch) {
-                              setSelectedBatch(batch);
-                              setActiveTab("batch");
-                              setAQty(history.quantity);
-                              setShowBatchError(false);
-                              toast.info("Batch selected from history", {
-                                description: `Batch ${batch.batchNo} loaded with quantity ${history.quantity}`,
-                              });
-                            } else {
-                              toast.error("Batch not available", {
-                                description: `Batch ${history.batch} is not currently in stock`,
-                              });
-                            }
-                          }}
-                        >
-                          Use
-                        </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : salesHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No sales history found for active batches
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    salesHistory.map((history) => (
+                      <TableRow key={history.id}>
+                        <TableCell className="font-mono">
+                          <Badge variant="outline">{history.batchNo}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Hash className="h-3 w-3 text-muted-foreground" />
+                            {history.invoiceNo}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            {new Date(history.invoiceDate).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-1">
+                            <Package className="h-3 w-3 text-muted-foreground" />
+                            {history.quantity.toLocaleString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <IndianRupee className="h-3 w-3 mr-1" />
+                            {history.rate.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-green-700 font-medium">
+                            <IndianRupee className="h-3 w-3 mr-1" />
+                            {history.currentRate.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <IndianRupee className="h-3 w-3 mr-1" />
+                            <span className="font-medium">
+                              {history.amount.toFixed(2)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const batch = batches.find(
+                                (b) => b.id === history.batchId,
+                              );
+                              if (batch) {
+                                setSelectedBatch(batch);
+                                setActiveTab("batch");
+                                const qty = Math.min(
+                                  history.quantity,
+                                  batch.openingStock ?? history.quantity,
+                                );
+                                setAQty(Math.max(1, qty));
+                                setShowBatchError(false);
+                                toast.info("Batch selected from history", {
+                                  description: `Batch ${batch.batchNo} loaded with qty ${Math.max(1, qty)} at current rate ₹${(batch.saleRate || 0).toFixed(2)}`,
+                                });
+                              } else {
+                                toast.error("Batch not available", {
+                                  description: `Batch ${history.batchNo} is not in active stock`,
+                                });
+                              }
+                            }}
+                          >
+                            Use
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

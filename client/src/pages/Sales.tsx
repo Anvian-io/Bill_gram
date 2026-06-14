@@ -1,26 +1,35 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AddSales from "@/components/sales/AddSales";
 import SalesList from "@/components/sales/SalesList";
 import SalesHistory from "@/components/sales/SalesHistory";
 
-export default function Sales() {
-  const [activeTab, setActiveTab] = useState<"add" | "return" | "sales" | "history">(
-    "add",
-  );
+type SalesTab = "add" | "return" | "sales" | "history";
 
-  // Refs for measuring tab positions
+export default function Sales() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<SalesTab>("add");
+
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const addTabRef = useRef<HTMLButtonElement>(null);
   const returnTabRef = useRef<HTMLButtonElement>(null);
   const salesTabRef = useRef<HTMLButtonElement>(null);
   const historyTabRef = useRef<HTMLButtonElement>(null);
 
-  // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
-  // Update indicator position based on active tab
+  const handleTabChange = (tab: SalesTab) => {
+    setActiveTab(tab);
+    if (tab === "add") {
+      setSearchParams({ id: "new" }, { replace: true });
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const updateIndicator = () => {
-    // Determine which ref is active
     let activeRef;
     if (activeTab === "add") activeRef = addTabRef;
     else if (activeTab === "return") activeRef = returnTabRef;
@@ -30,16 +39,13 @@ export default function Sales() {
     if (activeRef?.current && tabsContainerRef.current) {
       const containerRect = tabsContainerRef.current.getBoundingClientRect();
       const activeRect = activeRef.current.getBoundingClientRect();
-
-      // Calculate left offset relative to the container
-      const left = activeRect.left - containerRect.left;
-      const width = activeRect.width;
-
-      setIndicatorStyle({ left, width });
+      setIndicatorStyle({
+        left: activeRect.left - containerRect.left,
+        width: activeRect.width,
+      });
     }
   };
 
-  // Run on mount, activeTab change, and window resize
   useEffect(() => {
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
@@ -51,12 +57,10 @@ export default function Sales() {
       <div className="h-full overflow-y-auto">
         <div className="max-w-9xl mx-auto">
           <div className="flex flex-col">
-            {/* Sticky tab navigation with sliding indicator */}
             <div
               ref={tabsContainerRef}
               className="sticky top-0 z-10 bg-background border-b border-gray-200 relative"
             >
-              {/* Sliding indicator (border + background) */}
               <div
                 className="absolute bottom-0 h-full bg-primary/10 border-b-2 border-primary transition-all duration-300 ease-in-out"
                 style={{
@@ -65,10 +69,9 @@ export default function Sales() {
                 }}
               />
 
-              {/* Add Sales Tab */}
               <button
                 ref={addTabRef}
-                onClick={() => setActiveTab("add")}
+                onClick={() => handleTabChange("add")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -84,7 +87,7 @@ export default function Sales() {
 
               <button
                 ref={returnTabRef}
-                onClick={() => setActiveTab("return")}
+                onClick={() => handleTabChange("return")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -98,10 +101,9 @@ export default function Sales() {
                 Sales Return
               </button>
 
-              {/* Sales Tab */}
               <button
                 ref={salesTabRef}
-                onClick={() => setActiveTab("sales")}
+                onClick={() => handleTabChange("sales")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -115,10 +117,9 @@ export default function Sales() {
                 Sales
               </button>
 
-              {/* Sales History Tab */}
               <button
                 ref={historyTabRef}
-                onClick={() => setActiveTab("history")}
+                onClick={() => handleTabChange("history")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -133,20 +134,11 @@ export default function Sales() {
               </button>
             </div>
 
-            {/* Tab content */}
             <div>
-              <div className={activeTab === "add" ? "block" : "hidden"}>
-                <AddSales />
-              </div>
-              <div className={activeTab === "return" ? "block" : "hidden"}>
-                <AddSales mode="return" />
-              </div>
-              <div className={activeTab === "sales" ? "block" : "hidden"}>
-                <SalesList />
-              </div>
-              <div className={activeTab === "history" ? "block" : "hidden"}>
-                <SalesHistory />
-              </div>
+              {activeTab === "add" && <AddSales />}
+              {activeTab === "return" && <AddSales mode="return" />}
+              {activeTab === "sales" && <SalesList />}
+              {activeTab === "history" && <SalesHistory />}
             </div>
           </div>
         </div>

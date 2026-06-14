@@ -1199,6 +1199,205 @@ export const getProductBatches = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get purchase history for a product (only entries linked to active batches)
+ */
+export const getProductPurchaseHistory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const productId = parseInt(id);
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, status: true, deleted: false },
+    select: { id: true, productCode: true },
+  });
+
+  if (!product) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Active product not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const activeBatches = await prisma.batch.findMany({
+    where: { productId, openingStock: { gt: 0 } },
+    select: {
+      id: true,
+      batchNo: true,
+      purchaseRate: true,
+      saleRate: true,
+      openingStock: true,
+      mrp: true,
+    },
+  });
+
+  const activeBatchIds = activeBatches.map((b) => b.id);
+
+  if (activeBatchIds.length === 0) {
+    return sendResponse(
+      res,
+      true,
+      { histories: [], activeBatches: [] },
+      "No active batches for this product",
+      statusType.OK,
+    );
+  }
+
+  const histories = await prisma.purchaseHistory.findMany({
+    where: {
+      productId,
+      batchId: { in: activeBatchIds },
+      purchaseInvoice: {
+        deleted: false,
+        status: { not: "Return" },
+      },
+    },
+    include: {
+      batch: {
+        select: {
+          id: true,
+          batchNo: true,
+          purchaseRate: true,
+          saleRate: true,
+          openingStock: true,
+          mrp: true,
+        },
+      },
+      purchaseInvoice: { select: { id: true, invoiceNo: true } },
+      supplier: { select: { name: true } },
+    },
+    orderBy: { invoiceDate: "desc" },
+    take: 100,
+  });
+
+  const formatted = histories.map((h) => ({
+    id: h.id,
+    batchId: h.batchId,
+    batchNo: h.batch?.batchNo ?? "",
+    invoiceNo:
+      h.purchaseInvoice?.invoiceNo ?? h.invoiceNo ?? "",
+    invoiceDate: h.invoiceDate,
+    quantity: h.aQty,
+    rate: h.rate,
+    amount: h.totalAmount,
+    currentRate: h.batch?.purchaseRate ?? h.rate,
+    currentStock: h.batch?.openingStock ?? 0,
+    supplierName: h.supplier?.name ?? "",
+  }));
+
+  return sendResponse(
+    res,
+    true,
+    { histories: formatted, activeBatches },
+    "Product purchase history retrieved successfully",
+    statusType.OK,
+  );
+});
+
+/**
+ * Get sales history for a product (only entries linked to active batches)
+ */
+export const getProductSalesHistory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const productId = parseInt(id);
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, status: true, deleted: false },
+    select: { id: true, productCode: true },
+  });
+
+  if (!product) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Active product not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const activeBatches = await prisma.batch.findMany({
+    where: { productId, openingStock: { gt: 0 } },
+    select: {
+      id: true,
+      batchNo: true,
+      purchaseRate: true,
+      saleRate: true,
+      openingStock: true,
+      mrp: true,
+    },
+  });
+
+  const activeBatchIds = activeBatches.map((b) => b.id);
+
+  if (activeBatchIds.length === 0) {
+    return sendResponse(
+      res,
+      true,
+      { histories: [], activeBatches: [] },
+      "No active batches for this product",
+      statusType.OK,
+    );
+  }
+
+  const histories = await prisma.salesHistory.findMany({
+    where: {
+      productId,
+      batchId: { in: activeBatchIds },
+      salesInvoice: {
+        deleted: false,
+        status: { not: "Return" },
+      },
+    },
+    include: {
+      batch: {
+        select: {
+          id: true,
+          batchNo: true,
+          purchaseRate: true,
+          saleRate: true,
+          openingStock: true,
+          mrp: true,
+        },
+      },
+      salesInvoice: { select: { id: true, invoiceNo: true } },
+      customer: { select: { personName: true, companyName: true } },
+    },
+    orderBy: { invoiceDate: "desc" },
+    take: 100,
+  });
+
+  const formatted = histories.map((h) => ({
+    id: h.id,
+    batchId: h.batchId,
+    batchNo: h.batch?.batchNo ?? "",
+    invoiceNo: h.salesInvoice?.invoiceNo ?? h.invoiceNo ?? "",
+    invoiceDate: h.invoiceDate,
+    quantity: h.aQty,
+    rate: h.rate,
+    amount: h.totalAmount,
+    currentRate: h.batch?.saleRate ?? h.rate,
+    currentStock: h.batch?.openingStock ?? 0,
+    customerName: h.customer?.personName ?? h.customer?.companyName ?? "",
+  }));
+
+  return sendResponse(
+    res,
+    true,
+    { histories: formatted, activeBatches },
+    "Product sales history retrieved successfully",
+    statusType.OK,
+  );
+});
+
 // Export all functions
 export const productController = {
   createProduct,
@@ -1208,4 +1407,6 @@ export const productController = {
   updateProduct,
   deleteProduct,
   getProductBatches,
+  getProductPurchaseHistory,
+  getProductSalesHistory,
 };

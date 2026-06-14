@@ -80,6 +80,9 @@ import {
   normalizeGstDetailsValue,
 } from "@/store/dropdown_data/gst_details";
 import { purchaseService } from "@/services/purchaseService";
+import { productService } from "@/services/productService";
+import type { Purchase } from "@/types/purchase";
+import { useHoverOpen } from "@/hooks/useHoverOpen";
 import { containerVariants, itemVariants } from "@/components/FramerVariants";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
@@ -228,8 +231,16 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
-  const [supplierOpen, setSupplierOpen] = useState(false);
+  const supplierHover = useHoverOpen();
+  const productHover = useHoverOpen();
+  const gstHover = useHoverOpen();
+  const invoiceSearchHover = useHoverOpen();
   const [productOpen, setProductOpen] = useState(false);
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState("");
+  const [invoiceSearchResults, setInvoiceSearchResults] = useState<Purchase[]>(
+    [],
+  );
+  const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
@@ -252,6 +263,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema) as any,
     defaultValues,
+    mode: "onChange",
   });
 
   // Watch form state for dirty checking
@@ -280,6 +292,28 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       setSearchParams({ id: "new" }, { replace: true });
     }
   }, [isReturnMode, purchaseId, setSearchParams]);
+
+  // Search existing invoices by number
+  useEffect(() => {
+    if (!invoiceSearchQuery.trim()) {
+      setInvoiceSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingInvoice(true);
+      try {
+        const result = await purchaseService.getPurchases(1, 15, {
+          search: invoiceSearchQuery.trim(),
+        } as Parameters<typeof purchaseService.getPurchases>[2]);
+        setInvoiceSearchResults(result.purchases ?? []);
+      } catch {
+        setInvoiceSearchResults([]);
+      } finally {
+        setIsSearchingInvoice(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [invoiceSearchQuery]);
 
   // Effect 2: Load purchase data if editing
   useEffect(() => {
@@ -775,6 +809,66 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     navigate("/purchases");
   };
 
+  const handleLoadPurchaseInvoice = async (summary: Purchase) => {
+    try {
+      setIsLoading(true);
+      const full = await purchaseService.getPurchase(summary.id);
+      const issues: string[] = [];
+
+      for (const item of full.items ?? []) {
+        const code =
+          item.productCode ||
+          (item as { product?: { productCode?: string } }).product
+            ?.productCode ||
+          `Product #${item.productId}`;
+
+        if (!item.batchId) {
+          issues.push(`${code}: batch information is missing`);
+          continue;
+        }
+
+        try {
+          const product = await productService.getProduct(item.productId);
+          const batchExists = product.batches?.some(
+            (b) => b.id === item.batchId,
+          );
+          if (!batchExists) {
+            issues.push(`${code}: batch no longer exists in product master`);
+          }
+        } catch {
+          issues.push(`${code}: product not found or inactive`);
+        }
+      }
+
+      if (issues.length > 0) {
+        toast.error("Cannot load this invoice", {
+          description:
+            issues.slice(0, 4).join(". ") +
+            (issues.length > 4 ? ` (+${issues.length - 4} more issues)` : ""),
+        });
+        return;
+      }
+
+      populateFormWithPurchaseData(full);
+      setGeneratedPurchaseId(null);
+      setGeneratedInvoiceNo(null);
+      if (!isReturnMode) {
+        setSearchParams({ id: "new" }, { replace: true });
+      }
+      form.clearErrors();
+      form.reset(form.getValues(), { keepDirty: false });
+      invoiceSearchHover.setOpen(false);
+      setInvoiceSearchQuery("");
+      toast.success(
+        `Invoice ${full.invoiceNo} loaded. Saving will create a new invoice.`,
+      );
+    } catch {
+      toast.error("Failed to load invoice data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Determine if bill preview should be visible
   const canShowBillPreview = isReturnMode
     ? !!generatedPurchaseId
@@ -1006,6 +1100,84 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 items-end" 
                       : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
                   )}>
+                    {/* Load from existing invoice */}
+                    {!isReturnMode && (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
+                          Search Invoice
+                        </FormLabel>
+                        <Popover
+                          open={invoiceSearchHover.open}
+                          onOpenChange={invoiceSearchHover.setOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={invoiceSearchHover.open}
+                              className={cn(
+                                "w-full justify-between font-normal",
+                                layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent",
+                              )}
+                              disabled={isSubmitting}
+                              onMouseEnter={invoiceSearchHover.onMouseEnter}
+                              onMouseLeave={invoiceSearchHover.onMouseLeave}
+                            >
+                              {invoiceSearchQuery || "Search by invoice number..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={invoiceSearchHover.onMouseEnter}
+                            onMouseLeave={invoiceSearchHover.onMouseLeave}
+                          >
+                            <Command shouldFilter={false}>
+                              <CommandInput
+                                placeholder="Type invoice number..."
+                                value={invoiceSearchQuery}
+                                onValueChange={setInvoiceSearchQuery}
+                              />
+                              <CommandList>
+                                {isSearchingInvoice ? (
+                                  <div className="py-6 text-center text-sm text-muted-foreground">
+                                    Searching...
+                                  </div>
+                                ) : invoiceSearchResults.length === 0 ? (
+                                  <CommandEmpty>No invoice found.</CommandEmpty>
+                                ) : (
+                                  <CommandGroup>
+                                    {invoiceSearchResults.map((purchase) => (
+                                      <CommandItem
+                                        key={purchase.id}
+                                        value={purchase.invoiceNo}
+                                        onSelect={() =>
+                                          handleLoadPurchaseInvoice(purchase)
+                                        }
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">
+                                            {purchase.invoiceNo}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {purchase.supplier?.name} •{" "}
+                                            {new Date(
+                                              purchase.invoiceDate,
+                                            ).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                )}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+
                     {/* Invoice Date */}
                     <FormField
                       control={form.control}
@@ -1042,21 +1214,23 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             Supplier Name *
                           </FormLabel>
                           <Popover
-                            open={supplierOpen}
-                            onOpenChange={setSupplierOpen}
+                            open={supplierHover.open}
+                            onOpenChange={supplierHover.setOpen}
                           >
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
                                   variant="outline"
                                   role="combobox"
-                                  aria-expanded={supplierOpen}
+                                  aria-expanded={supplierHover.open}
                                   className={cn(
                                     "w-full justify-between",
                                     !field.value && "text-muted-foreground",
                                     layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent"
                                   )}
                                   disabled={isSubmitting}
+                                  onMouseEnter={supplierHover.onMouseEnter}
+                                  onMouseLeave={supplierHover.onMouseLeave}
                                 >
                                   {field.value
                                     ? findSupplierName(field.value)
@@ -1065,7 +1239,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
+                            <PopoverContent
+                              className="w-full p-0"
+                              onMouseEnter={supplierHover.onMouseEnter}
+                              onMouseLeave={supplierHover.onMouseLeave}
+                            >
                               <Command>
                                 <CommandInput placeholder="Search suppliers..." />
                                 <CommandList>
@@ -1079,7 +1257,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                         value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
                                         onSelect={() => {
                                           field.onChange(supplier.id);
-                                          setSupplierOpen(false);
+                                          supplierHover.setOpen(false);
                                         }}
                                       >
                                         <div className="flex flex-col">
@@ -1122,16 +1300,25 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                         <FormItem>
                           <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>GST Details</FormLabel>
                           <Select
+                            open={gstHover.open}
+                            onOpenChange={gstHover.setOpen}
                             onValueChange={field.onChange}
                             value={field.value ?? GST_DETAILS_DEFAULT_ID}
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className={cn(layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent")}>
+                              <SelectTrigger
+                                className={cn(layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent")}
+                                onMouseEnter={gstHover.onMouseEnter}
+                                onMouseLeave={gstHover.onMouseLeave}
+                              >
                                 <SelectValue placeholder="Select GST type" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent
+                              onMouseEnter={gstHover.onMouseEnter}
+                              onMouseLeave={gstHover.onMouseLeave}
+                            >
                               {gst_details.map((gst) => (
                                 <SelectItem key={gst.id} value={String(gst.id)}>
                                   {gst.type}

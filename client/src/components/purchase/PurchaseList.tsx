@@ -28,7 +28,7 @@ import {
   Calendar,
   FileText,
 } from "lucide-react";
-import { CustomPagination } from "@/components/custom_ui";
+import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
@@ -46,8 +46,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parse, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   containerVariants,
@@ -80,34 +78,6 @@ import { CheckIsExpanded } from "@/utils/commonHelper";
 import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
 
 // ----------------------------------------------------------------------
-// Date Utilities
-// ----------------------------------------------------------------------
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) return parsed;
-    } catch {
-      // continue
-    }
-  }
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};
-
-// ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
 export default function Purchase() {
@@ -115,14 +85,6 @@ export default function Purchase() {
   // State
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  // Remove ?id from URL if present on mount
-  useEffect(() => {
-    if (searchParams.has("id")) {
-      searchParams.delete("id");
-      // Use setSearchParams to update the URL without the id param
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, []); // Run only on mount
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,8 +124,8 @@ export default function Purchase() {
   const [searchInput, setSearchInput] = useState("");
   const [minAmountInput, setMinAmountInput] = useState("");
   const [maxAmountInput, setMaxAmountInput] = useState("");
-  const [fromDateInput, setFromDateInput] = useState("");
-  const [toDateInput, setToDateInput] = useState("");
+  const [fromDateValue, setFromDateValue] = useState<string | null>(null);
+  const [toDateValue, setToDateValue] = useState<string | null>(null);
 
   // Hooks
   const { suppliers } = useActiveLists();
@@ -197,34 +159,21 @@ export default function Purchase() {
     debouncedSetMaxAmount(value);
   };
 
-  // From Date
-  const handleFromDateInputChange = (value: string) => {
-    setFromDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, fromDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, fromDate: undefined }));
-    }
-  };
-  const handleFromDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, fromDate: date }));
-    setFromDateInput(date ? formatDateToDisplay(date) : "");
+  // From / To date synced with filter state
+  const handleFromDateChange = (value: string | null) => {
+    setFromDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      fromDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
-  // To Date
-  const handleToDateInputChange = (value: string) => {
-    setToDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, toDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, toDate: undefined }));
-    }
-  };
-  const handleToDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, toDate: date }));
-    setToDateInput(date ? formatDateToDisplay(date) : "");
+  const handleToDateChange = (value: string | null) => {
+    setToDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      toDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
   // Generic filter change
@@ -250,8 +199,8 @@ export default function Purchase() {
     setSearchInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
-    setFromDateInput("");
-    setToDateInput("");
+    setFromDateValue(null);
+    setToDateValue(null);
   };
 
   // Clear a single filter
@@ -281,10 +230,10 @@ export default function Purchase() {
         setMaxAmountInput("");
         break;
       case "fromDate":
-        setFromDateInput("");
+        setFromDateValue(null);
         break;
       case "toDate":
-        setToDateInput("");
+        setToDateValue(null);
         break;
     }
   };
@@ -750,110 +699,26 @@ export default function Purchase() {
                                 <SelectItem value="Cancelled">
                                   Cancelled
                                 </SelectItem>
+                                <SelectItem value="Return">Return</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
-                          {/* Invoice Date Range */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Invoice Date From
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={fromDateInput}
-                                  onChange={(e) =>
-                                    handleFromDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy or select"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.fromDate}
-                                      onSelect={handleFromDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {fromDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("fromDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Invoice Date From"
+                            value={fromDateValue}
+                            onChange={handleFromDateChange}
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
 
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Invoice Date To
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={toDateInput}
-                                  onChange={(e) =>
-                                    handleToDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy or select"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.toDate}
-                                      onSelect={handleToDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {toDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("toDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Invoice Date To"
+                            value={toDateValue}
+                            onChange={handleToDateChange}
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
                         </div>
                       </motion.div>
                     )}

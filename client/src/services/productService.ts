@@ -130,4 +130,51 @@ export const productService = {
       throw new Error(message);
     }
   },
+
+  async getProductPurchaseHistory(productId: number) {
+    try {
+      const response = await apiClient.get<
+        ApiResponse<{
+          histories: ProductBatchHistoryEntry[];
+          activeBatches: unknown[];
+        }>
+      >(`/products/${productId}/purchase-history`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching product purchase history:", message);
+      throw new Error(message);
+    }
+  },
+
+  async getProductSalesHistory(productId: number) {
+    try {
+      const response = await apiClient.get<
+        ApiResponse<{
+          histories: ProductBatchHistoryEntry[];
+          activeBatches: unknown[];
+        }>
+      >(`/products/${productId}/sales-history`);
+      return response.data.data;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching product sales history:", message);
+      throw new Error(message);
+    }
+  },
 };
+
+export interface ProductBatchHistoryEntry {
+  id: number;
+  batchId: number | null;
+  batchNo: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  currentRate: number;
+  currentStock: number;
+  supplierName?: string;
+  customerName?: string;
+}

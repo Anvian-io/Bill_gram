@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -20,7 +20,6 @@ import {
   Trash2,
   Search,
   X,
-  Calendar,
   Plus,
   Package,
   RefreshCw,
@@ -40,13 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parse, isValid } from "date-fns";
+import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
 import {
   containerVariants,
   itemVariants,
@@ -65,41 +58,6 @@ import { useDebounce } from "@/utils/debounce";
 import { getFullImageUrl } from "@/utils/imageUtils";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 
-// Date utility functions
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    } catch {
-      // continue
-    }
-  }
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};
-
-const formatDateForAPI = (date: Date | undefined): string | undefined => {
-  if (!date) return undefined;
-  return format(date, "yyyy-MM-dd");
-};
-
 // Define the API response structure
 interface ProductsResponse {
   data: {
@@ -117,17 +75,7 @@ interface ProductsResponse {
 
 export default function ProductInventory() {
   const { layoutMode } = useTheme();
-  // Remove ?id from query params on mount
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  // Remove ?id from URL if present on mount
-  useEffect(() => {
-    if (searchParams.has("id")) {
-      searchParams.delete("id");
-      // Use setSearchParams to update the URL without the id param
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, []); // Run only on mount
   // State for products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,10 +100,10 @@ export default function ProductInventory() {
     productGroup: "all" as string | "all",
     minStock: "",
     maxStock: "",
-    mfgFromDate: undefined as Date | undefined,
-    mfgToDate: undefined as Date | undefined,
-    expFromDate: undefined as Date | undefined,
-    expToDate: undefined as Date | undefined,
+    mfgFromDate: null as string | null,
+    mfgToDate: null as string | null,
+    expFromDate: null as string | null,
+    expToDate: null as string | null,
     status: "all" as "all" | "active" | "inactive",
     showDeleted: false,
   });
@@ -173,14 +121,6 @@ export default function ProductInventory() {
   const [productBrandInput, setProductBrandInput] = useState<string>("");
   const [minStockInput, setMinStockInput] = useState<string>("");
   const [maxStockInput, setMaxStockInput] = useState<string>("");
-
-  // Manufacturing date inputs
-  const [mfgFromDateInput, setMfgFromDateInput] = useState<string>("");
-  const [mfgToDateInput, setMfgToDateInput] = useState<string>("");
-
-  // Expiry date inputs
-  const [expFromDateInput, setExpFromDateInput] = useState<string>("");
-  const [expToDateInput, setExpToDateInput] = useState<string>("");
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -227,48 +167,6 @@ export default function ProductInventory() {
   const handleMaxStockChange = (value: string) => {
     setMaxStockInput(value);
     debouncedSetMaxStock(value);
-  };
-
-  // Manufacturing date handlers
-  const handleMfgFromDateInputChange = (value: string) => {
-    setMfgFromDateInput(value);
-    const parsed = parseDateFromString(value);
-    setFilters((prev) => ({ ...prev, mfgFromDate: parsed }));
-  };
-  const handleMfgFromDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, mfgFromDate: date }));
-    setMfgFromDateInput(date ? formatDateToDisplay(date) : "");
-  };
-
-  const handleMfgToDateInputChange = (value: string) => {
-    setMfgToDateInput(value);
-    const parsed = parseDateFromString(value);
-    setFilters((prev) => ({ ...prev, mfgToDate: parsed }));
-  };
-  const handleMfgToDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, mfgToDate: date }));
-    setMfgToDateInput(date ? formatDateToDisplay(date) : "");
-  };
-
-  // Expiry date handlers
-  const handleExpFromDateInputChange = (value: string) => {
-    setExpFromDateInput(value);
-    const parsed = parseDateFromString(value);
-    setFilters((prev) => ({ ...prev, expFromDate: parsed }));
-  };
-  const handleExpFromDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, expFromDate: date }));
-    setExpFromDateInput(date ? formatDateToDisplay(date) : "");
-  };
-
-  const handleExpToDateInputChange = (value: string) => {
-    setExpToDateInput(value);
-    const parsed = parseDateFromString(value);
-    setFilters((prev) => ({ ...prev, expToDate: parsed }));
-  };
-  const handleExpToDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, expToDate: date }));
-    setExpToDateInput(date ? formatDateToDisplay(date) : "");
   };
 
   const { productCompanies, groups } = useActiveLists();
@@ -342,18 +240,18 @@ export default function ProductInventory() {
 
       // Manufacturing date range
       if (filters.mfgFromDate) {
-        params.mfgFromDate = formatDateForAPI(filters.mfgFromDate);
+        params.mfgFromDate = filters.mfgFromDate;
       }
       if (filters.mfgToDate) {
-        params.mfgToDate = formatDateForAPI(filters.mfgToDate);
+        params.mfgToDate = filters.mfgToDate;
       }
 
       // Expiry date range
       if (filters.expFromDate) {
-        params.expFromDate = formatDateForAPI(filters.expFromDate);
+        params.expFromDate = filters.expFromDate;
       }
       if (filters.expToDate) {
-        params.expToDate = formatDateForAPI(filters.expToDate);
+        params.expToDate = filters.expToDate;
       }
 
       const response = await productService.getProducts(
@@ -437,10 +335,10 @@ export default function ProductInventory() {
       productGroup: "all",
       minStock: "",
       maxStock: "",
-      mfgFromDate: undefined,
-      mfgToDate: undefined,
-      expFromDate: undefined,
-      expToDate: undefined,
+      mfgFromDate: null,
+      mfgToDate: null,
+      expFromDate: null,
+      expToDate: null,
       status: "all",
       showDeleted: false,
     });
@@ -449,10 +347,6 @@ export default function ProductInventory() {
     setProductBrandInput("");
     setMinStockInput("");
     setMaxStockInput("");
-    setMfgFromDateInput("");
-    setMfgToDateInput("");
-    setExpFromDateInput("");
-    setExpToDateInput("");
   };
 
   // Clear specific filter
@@ -470,7 +364,7 @@ export default function ProductInventory() {
                 filterName === "mfgToDate" ||
                 filterName === "expFromDate" ||
                 filterName === "expToDate"
-              ? undefined
+              ? null
               : "",
     }));
 
@@ -490,18 +384,6 @@ export default function ProductInventory() {
         break;
       case "maxStock":
         setMaxStockInput("");
-        break;
-      case "mfgFromDate":
-        setMfgFromDateInput("");
-        break;
-      case "mfgToDate":
-        setMfgToDateInput("");
-        break;
-      case "expFromDate":
-        setExpFromDateInput("");
-        break;
-      case "expToDate":
-        setExpToDateInput("");
         break;
     }
   };
@@ -613,8 +495,7 @@ export default function ProductInventory() {
           key === "mfgToDate" ||
           key === "expFromDate" ||
           key === "expToDate"
-        ) &&
-        !(value instanceof Date),
+        ),
     ).length +
     (filters.mfgFromDate ? 1 : 0) +
     (filters.mfgToDate ? 1 : 0) +
@@ -950,207 +831,57 @@ export default function ProductInventory() {
                             </div>
                           </div>
 
-                          {/* Manufacturing Date Range */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Mfg Date From
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={mfgFromDateInput}
-                                  onChange={(e) =>
-                                    handleMfgFromDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.mfgFromDate}
-                                      onSelect={handleMfgFromDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {mfgFromDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("mfgFromDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Mfg Date From"
+                            value={filters.mfgFromDate}
+                            onChange={(value) =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                mfgFromDate: value,
+                              }))
+                            }
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
 
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Mfg Date To
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={mfgToDateInput}
-                                  onChange={(e) =>
-                                    handleMfgToDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.mfgToDate}
-                                      onSelect={handleMfgToDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {mfgToDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("mfgToDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Mfg Date To"
+                            value={filters.mfgToDate}
+                            onChange={(value) =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                mfgToDate: value,
+                              }))
+                            }
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
 
-                          {/* Expiry Date Range */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Exp Date From
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={expFromDateInput}
-                                  onChange={(e) =>
-                                    handleExpFromDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.expFromDate}
-                                      onSelect={handleExpFromDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {expFromDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("expFromDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Exp Date From"
+                            value={filters.expFromDate}
+                            onChange={(value) =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                expFromDate: value,
+                              }))
+                            }
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
 
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Exp Date To
-                            </Label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Input
-                                  value={expToDateInput}
-                                  onChange={(e) =>
-                                    handleExpToDateInputChange(e.target.value)
-                                  }
-                                  placeholder="dd/mm/yyyy"
-                                  className="pr-10"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                    >
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="end"
-                                  >
-                                    <CalendarComponent
-                                      mode="single"
-                                      selected={filters.expToDate}
-                                      onSelect={handleExpToDateSelect}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              {expToDateInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("expToDate")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          <CustomDateInput
+                            label="Exp Date To"
+                            value={filters.expToDate}
+                            onChange={(value) =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                expToDate: value,
+                              }))
+                            }
+                            placeholder="dd/mm/yyyy"
+                            disabled={isLoading}
+                          />
 
                           {/* Show Deleted Filter */}
                           <div className="space-y-2">

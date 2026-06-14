@@ -1,25 +1,34 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AddProduct from "@/components/product/AddProduct";
 import ProductInventoryList from "@/components/product/ProductInventory";
 import ProductHistory from "@/components/product/ProductHistory";
 
-export default function ProductInventory() {
-  const [activeTab, setActiveTab] = useState<"add" | "inventory" | "history">(
-    "inventory",
-  );
+type ProductTab = "add" | "inventory" | "history";
 
-  // Refs for measuring tab positions
+export default function ProductInventory() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<ProductTab>("inventory");
+
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const addTabRef = useRef<HTMLButtonElement>(null);
   const inventoryTabRef = useRef<HTMLButtonElement>(null);
   const historyTabRef = useRef<HTMLButtonElement>(null);
 
-  // State for the sliding indicator
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
-  // Update indicator position based on active tab
+  const handleTabChange = (tab: ProductTab) => {
+    setActiveTab(tab);
+    if (tab === "add") {
+      setSearchParams({ id: "new" }, { replace: true });
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const updateIndicator = () => {
-    // Determine which ref is active
     let activeRef;
     if (activeTab === "add") activeRef = addTabRef;
     else if (activeTab === "inventory") activeRef = inventoryTabRef;
@@ -28,16 +37,13 @@ export default function ProductInventory() {
     if (activeRef?.current && tabsContainerRef.current) {
       const containerRect = tabsContainerRef.current.getBoundingClientRect();
       const activeRect = activeRef.current.getBoundingClientRect();
-
-      // Calculate left offset relative to the container
-      const left = activeRect.left - containerRect.left;
-      const width = activeRect.width;
-
-      setIndicatorStyle({ left, width });
+      setIndicatorStyle({
+        left: activeRect.left - containerRect.left,
+        width: activeRect.width,
+      });
     }
   };
 
-  // Run on mount, activeTab change, and window resize
   useEffect(() => {
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
@@ -49,12 +55,10 @@ export default function ProductInventory() {
       <div className="h-full overflow-y-auto">
         <div className="max-w-9xl mx-auto">
           <div className="flex flex-col">
-            {/* Sticky tab navigation with sliding indicator */}
             <div
               ref={tabsContainerRef}
               className="sticky top-0 z-10 bg-background border-b border-gray-200 relative"
             >
-              {/* Sliding indicator (border + background) */}
               <div
                 className="absolute bottom-0 h-full bg-primary/10 border-b-2 border-primary transition-all duration-300 ease-in-out"
                 style={{
@@ -63,10 +67,9 @@ export default function ProductInventory() {
                 }}
               />
 
-              {/* Add Product Tab */}
               <button
                 ref={addTabRef}
-                onClick={() => setActiveTab("add")}
+                onClick={() => handleTabChange("add")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -80,10 +83,9 @@ export default function ProductInventory() {
                 Add Product
               </button>
 
-              {/* Product Inventory Tab */}
               <button
                 ref={inventoryTabRef}
-                onClick={() => setActiveTab("inventory")}
+                onClick={() => handleTabChange("inventory")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -97,10 +99,9 @@ export default function ProductInventory() {
                 Product Inventory
               </button>
 
-              {/* History Tab */}
               <button
                 ref={historyTabRef}
-                onClick={() => setActiveTab("history")}
+                onClick={() => handleTabChange("history")}
                 className={`
                   relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
                   focus:outline-none
@@ -115,17 +116,10 @@ export default function ProductInventory() {
               </button>
             </div>
 
-            {/* Tab content */}
             <div>
-              <div className={activeTab === "add" ? "block" : "hidden"}>
-                <AddProduct />
-              </div>
-              <div className={activeTab === "inventory" ? "block" : "hidden"}>
-                <ProductInventoryList />
-              </div>
-              <div className={activeTab === "history" ? "block" : "hidden"}>
-                <ProductHistory />
-              </div>
+              {activeTab === "add" && <AddProduct />}
+              {activeTab === "inventory" && <ProductInventoryList />}
+              {activeTab === "history" && <ProductHistory />}
             </div>
           </div>
         </div>

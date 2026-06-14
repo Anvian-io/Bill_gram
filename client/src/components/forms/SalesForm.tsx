@@ -341,14 +341,12 @@ export default function SalesForm({
   // Logic: Handle Area Selection
   // --------------------------------------------------------------------
   const handleAreaSelect = (selectedAreaId: number) => {
-    form.setValue("areaId", selectedAreaId);
-
-    // Reset dependent fields
-    form.setValue("customerId", 0);
-    form.setValue("salesmanId", 0);
+    form.setValue("areaId", selectedAreaId, { shouldValidate: true });
+    form.setValue("customerId", 0, { shouldValidate: true });
+    form.setValue("salesmanId", 0, { shouldValidate: true });
     form.setValue("phoneNo", "");
-    form.setValue("address", ""); // Clear address when area changes
-
+    form.setValue("address", "", { shouldValidate: true });
+    form.clearErrors(["areaId"]);
     setAreaOpen(false);
   };
 
@@ -357,20 +355,19 @@ export default function SalesForm({
   // --------------------------------------------------------------------
   const handleCustomerSelect = (selectedCustomerId: number) => {
     const customer = findCustomer(selectedCustomerId);
-    console.log(customer, "fewoihfioweh");
     if (customer) {
-      form.setValue("customerId", customer.id);
-      form.setValue("areaId", customer.areaId || 0);
-      form.setValue("address", customer.address || ""); // ADDRESS AUTO-FILL
+      form.setValue("customerId", customer.id, { shouldValidate: true });
+      form.setValue("areaId", customer.areaId || 0, { shouldValidate: true });
+      form.setValue("address", customer.address || "", { shouldValidate: true });
       form.setValue("phoneNo", customer.phoneNo || "");
+      form.clearErrors(["customerId", "areaId", "address"]);
 
-      // Reset salesman if invalid for this area
       const currentSalesman = form.getValues("salesmanId");
       const isSalesmanValid = salesmen.find(
         (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
       );
       if (!isSalesmanValid) {
-        form.setValue("salesmanId", 0);
+        form.setValue("salesmanId", 0, { shouldValidate: true });
       }
     }
     setCustomerOpen(false);

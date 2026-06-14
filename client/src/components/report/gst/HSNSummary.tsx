@@ -16,8 +16,6 @@ import {
   Filter,
   RefreshCw,
   FileSpreadsheet,
-  Calendar,
-  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -27,15 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parse, isValid } from "date-fns";
+import { format } from "date-fns";
+import { CustomDateInput } from "@/components/custom_ui";
 import {
   containerVariants,
   itemVariants,
@@ -46,31 +38,6 @@ import { toast } from "sonner";
 import { salesService } from "@/services/salesService";
 import type { HSNSummaryFilters, HSNSummaryRow } from "@/types/sales-report";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
-
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) return parsed;
-    } catch {
-      // continue
-    }
-  }
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};
 
 export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
   const { layoutMode } = useTheme();
@@ -85,8 +52,8 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
     fromDate: undefined,
     toDate: undefined,
   });
-  const [fromDateInput, setFromDateInput] = useState("");
-  const [toDateInput, setToDateInput] = useState("");
+  const [fromDateValue, setFromDateValue] = useState<string | null>(null);
+  const [toDateValue, setToDateValue] = useState<string | null>(null);
 
   const activeFiltersCount = [
     filters.gstDetails,
@@ -126,34 +93,20 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
     [rows],
   );
 
-  const handleFromDateInputChange = (value: string) => {
-    setFromDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, fromDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, fromDate: undefined }));
-    }
+  const handleFromDateChange = (value: string | null) => {
+    setFromDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      fromDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
-  const handleToDateInputChange = (value: string) => {
-    setToDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, toDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, toDate: undefined }));
-    }
-  };
-
-  const handleFromDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, fromDate: date }));
-    setFromDateInput(date ? formatDateToDisplay(date) : "");
-  };
-
-  const handleToDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, toDate: date }));
-    setToDateInput(date ? formatDateToDisplay(date) : "");
+  const handleToDateChange = (value: string | null) => {
+    setToDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      toDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
   const clearFilters = () => {
@@ -163,8 +116,8 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
       fromDate: undefined,
       toDate: undefined,
     }));
-    setFromDateInput("");
-    setToDateInput("");
+    setFromDateValue(null);
+    setToDateValue(null);
   };
 
   const fetchReport = async () => {
@@ -327,97 +280,21 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">From Date</Label>
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Input
-                                value={fromDateInput}
-                                onChange={(e) => handleFromDateInputChange(e.target.value)}
-                                placeholder="dd/mm/yyyy or select"
-                                className="pr-10"
-                              />
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                  >
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.fromDate}
-                                    onSelect={handleFromDateSelect}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            {fromDateInput && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => {
-                                  setFromDateInput("");
-                                  setFilters((prev) => ({ ...prev, fromDate: undefined }));
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                        <CustomDateInput
+                          label="From Date"
+                          value={fromDateValue}
+                          onChange={handleFromDateChange}
+                          placeholder="dd/mm/yyyy"
+                          disabled={isLoading}
+                        />
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">To Date</Label>
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Input
-                                value={toDateInput}
-                                onChange={(e) => handleToDateInputChange(e.target.value)}
-                                placeholder="dd/mm/yyyy or select"
-                                className="pr-10"
-                              />
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                  >
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.toDate}
-                                    onSelect={handleToDateSelect}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            {toDateInput && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => {
-                                  setToDateInput("");
-                                  setFilters((prev) => ({ ...prev, toDate: undefined }));
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                        <CustomDateInput
+                          label="To Date"
+                          value={toDateValue}
+                          onChange={handleToDateChange}
+                          placeholder="dd/mm/yyyy"
+                          disabled={isLoading}
+                        />
                       </div>
                     </motion.div>
                   )}

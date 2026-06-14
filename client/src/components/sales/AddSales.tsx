@@ -90,6 +90,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { salesService } from "@/services/salesService";
+import { productService } from "@/services/productService";
+import type { Sales } from "@/types/sales";
+import { useHoverOpen } from "@/hooks/useHoverOpen";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 import SalesInvoicePreview from "./SalesInvoicePreview";
 
@@ -342,12 +345,17 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const [previewSaleId, setPreviewSaleId] = useState<number>(0);
 
   // State for dropdowns
-  const [areaOpen, setAreaOpen] = useState(false);
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const [phoneOpen, setPhoneOpen] = useState(false);
-  const [vanOpen, setVanOpen] = useState(false);
-  const [salesmanOpen, setSalesmanOpen] = useState(false);
+  const areaHover = useHoverOpen();
+  const customerHover = useHoverOpen();
+  const phoneHover = useHoverOpen();
+  const vanHover = useHoverOpen();
+  const salesmanHover = useHoverOpen();
+  const gstHover = useHoverOpen();
+  const invoiceSearchHover = useHoverOpen();
   const [productOpen, setProductOpen] = useState(false);
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState("");
+  const [invoiceSearchResults, setInvoiceSearchResults] = useState<Sales[]>([]);
+  const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
@@ -425,10 +433,30 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     }
   }, [idParam, isReturnMode, setSearchParams]);
 
+  useEffect(() => {
+    if (!invoiceSearchQuery.trim()) {
+      setInvoiceSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingInvoice(true);
+      try {
+        const result = await salesService.getSales(1, 15, {
+          search: invoiceSearchQuery.trim(),
+        } as Parameters<typeof salesService.getSales>[2]);
+        setInvoiceSearchResults(result.sales ?? []);
+      } catch {
+        setInvoiceSearchResults([]);
+      } finally {
+        setIsSearchingInvoice(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [invoiceSearchQuery]);
+
   // Load sale data if editing
   useEffect(() => {
     const loadSaleData = async () => {
-      console.log("bigboy",areas);
       if (!isReturnMode && saleId && !isNew) {
         setIsLoading(true);
         try {
@@ -516,20 +544,36 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const handlePhoneSelect = (customerId: number) => {
     const customer = findCustomer(customerId);
     if (customer) {
-      form.setValue("phoneNo", customer.phoneNo, { shouldDirty: true });
-      form.setValue("customerId", customer.id, { shouldDirty: true });
-      form.setValue("areaId", customer.areaId || 0, { shouldDirty: true });
-      form.setValue("address", customer.address || "", { shouldDirty: true });
+      form.setValue("phoneNo", customer.phoneNo, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("customerId", customer.id, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("areaId", customer.areaId || 0, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("address", customer.address || "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.clearErrors(["phoneNo", "customerId", "areaId", "address"]);
 
       const currentSalesman = form.getValues("salesmanId");
       const isSalesmanValid = salesmen.find(
         (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
       );
       if (!isSalesmanValid) {
-        form.setValue("salesmanId", 0, { shouldDirty: true });
+        form.setValue("salesmanId", 0, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
       }
 
-      setPhoneOpen(false);
+      phoneHover.setOpen(false);
       toast.success(`Customer ${customer.personName} selected`);
     }
   };
@@ -538,12 +582,16 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   // Logic: Handle Area Selection
   // --------------------------------------------------------------------
   const handleAreaSelect = (selectedAreaId: number) => {
-    form.setValue("areaId", selectedAreaId, { shouldDirty: true });
-    form.setValue("customerId", 0, { shouldDirty: true });
-    form.setValue("salesmanId", 0, { shouldDirty: true });
+    form.setValue("areaId", selectedAreaId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("customerId", 0, { shouldDirty: true, shouldValidate: true });
+    form.setValue("salesmanId", 0, { shouldDirty: true, shouldValidate: true });
     form.setValue("phoneNo", "", { shouldDirty: true });
-    form.setValue("address", "", { shouldDirty: true });
-    setAreaOpen(false);
+    form.setValue("address", "", { shouldDirty: true, shouldValidate: true });
+    form.clearErrors(["areaId"]);
+    areaHover.setOpen(false);
   };
 
   // --------------------------------------------------------------------
@@ -552,20 +600,33 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const handleCustomerSelect = (selectedCustomerId: number) => {
     const customer = findCustomer(selectedCustomerId);
     if (customer) {
-      form.setValue("customerId", customer.id, { shouldDirty: true });
-      form.setValue("areaId", customer.areaId || 0, { shouldDirty: true });
-      form.setValue("address", customer.address || "", { shouldDirty: true });
+      form.setValue("customerId", customer.id, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("areaId", customer.areaId || 0, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("address", customer.address || "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
       form.setValue("phoneNo", customer.phoneNo || "", { shouldDirty: true });
+      form.clearErrors(["customerId", "areaId", "address"]);
 
       const currentSalesman = form.getValues("salesmanId");
       const isSalesmanValid = salesmen.find(
         (s: any) => s.id === currentSalesman && s.areaId === customer.areaId,
       );
       if (!isSalesmanValid) {
-        form.setValue("salesmanId", 0, { shouldDirty: true });
+        form.setValue("salesmanId", 0, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
       }
     }
-    setCustomerOpen(false);
+    customerHover.setOpen(false);
   };
 
   // --------------------------------------------------------------------
@@ -993,6 +1054,70 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     navigate("/sales");
   };
 
+  const handleLoadSalesInvoice = async (summary: Sales) => {
+    try {
+      setIsLoading(true);
+      const full = await salesService.getSale(summary.id);
+      const issues: string[] = [];
+
+      for (const item of full.items ?? []) {
+        const code =
+          item.productCode ||
+          (item as { product?: { productCode?: string } }).product
+            ?.productCode ||
+          `Product #${item.productId}`;
+
+        if (!item.batchId) {
+          issues.push(`${code}: batch information is missing`);
+          continue;
+        }
+
+        try {
+          const batchData = await productService.getProductBatches(
+            item.productId,
+          );
+          const batch = batchData.batches.find((b) => b.id === item.batchId);
+          if (!batch) {
+            issues.push(`${code}: batch is not in active stock`);
+          } else if ((batch.openingStock ?? 0) < item.aQty) {
+            issues.push(
+              `${code}: insufficient stock in batch ${batch.batchNo} (need ${item.aQty}, available ${batch.openingStock})`,
+            );
+          }
+        } catch {
+          issues.push(`${code}: could not verify batch stock`);
+        }
+      }
+
+      if (issues.length > 0) {
+        toast.error("Cannot load this invoice", {
+          description:
+            issues.slice(0, 4).join(". ") +
+            (issues.length > 4 ? ` (+${issues.length - 4} more issues)` : ""),
+        });
+        return;
+      }
+
+      populateFormWithSaleData(full);
+      setGeneratedSaleId(null);
+      setGeneratedInvoiceNo(null);
+      if (!isReturnMode) {
+        setSearchParams({ id: "new" }, { replace: true });
+      }
+      form.clearErrors();
+      form.reset(form.getValues(), { keepDirty: false });
+      invoiceSearchHover.setOpen(false);
+      setInvoiceSearchQuery("");
+      toast.success(
+        `Invoice ${full.invoiceNo} loaded. Saving will create a new invoice.`,
+      );
+    } catch {
+      toast.error("Failed to load invoice data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Determine if bill preview should be visible
   const canShowBillPreview = isReturnMode ? !!generatedSaleId : !!saleId || !!generatedSaleId;
   const isEditMode = !isReturnMode && !!saleId && !isNew;
@@ -1110,6 +1235,76 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {!isReturnMode && (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm">Search Invoice</FormLabel>
+                      <Popover
+                        open={invoiceSearchHover.open}
+                        onOpenChange={invoiceSearchHover.setOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={invoiceSearchHover.open}
+                            className="w-full justify-between font-normal"
+                            disabled={isSubmitting}
+                            onMouseEnter={invoiceSearchHover.onMouseEnter}
+                            onMouseLeave={invoiceSearchHover.onMouseLeave}
+                          >
+                            {invoiceSearchQuery || "Search by invoice number..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-full p-0"
+                          onMouseEnter={invoiceSearchHover.onMouseEnter}
+                          onMouseLeave={invoiceSearchHover.onMouseLeave}
+                        >
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="Type invoice number..."
+                              value={invoiceSearchQuery}
+                              onValueChange={setInvoiceSearchQuery}
+                            />
+                            <CommandList>
+                              {isSearchingInvoice ? (
+                                <div className="py-6 text-center text-sm text-muted-foreground">
+                                  Searching...
+                                </div>
+                              ) : invoiceSearchResults.length === 0 ? (
+                                <CommandEmpty>No invoice found.</CommandEmpty>
+                              ) : (
+                                <CommandGroup>
+                                  {invoiceSearchResults.map((sale) => (
+                                    <CommandItem
+                                      key={sale.id}
+                                      value={sale.invoiceNo}
+                                      onSelect={() => handleLoadSalesInvoice(sale)}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {sale.invoiceNo}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {sale.customer?.personName} •{" "}
+                                          {new Date(
+                                            sale.invoiceDate,
+                                          ).toLocaleDateString()}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
+
                   {/* Phone Number Search */}
                   <FormField
                     control={form.control}
@@ -1119,18 +1314,20 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                         <FormLabel className="text-sm">
                           Search by Phone
                         </FormLabel>
-                        <Popover open={phoneOpen} onOpenChange={setPhoneOpen}>
+                        <Popover open={phoneHover.open} onOpenChange={phoneHover.setOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={phoneOpen}
+                                aria-expanded={phoneHover.open}
                                 className={cn(
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting}
+                                onMouseEnter={phoneHover.onMouseEnter}
+                                onMouseLeave={phoneHover.onMouseLeave}
                               >
                                 {field.value
                                   ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
@@ -1139,7 +1336,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={phoneHover.onMouseEnter}
+                            onMouseLeave={phoneHover.onMouseLeave}
+                          >
                             <Command>
                               <CommandInput placeholder="Search phone numbers..." />
                               <CommandList>
@@ -1224,18 +1425,20 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Area *</FormLabel>
-                        <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                        <Popover open={areaHover.open} onOpenChange={areaHover.setOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={areaOpen}
+                                aria-expanded={areaHover.open}
                                 className={cn(
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting}
+                                onMouseEnter={areaHover.onMouseEnter}
+                                onMouseLeave={areaHover.onMouseLeave}
                               >
                                 {field.value
                                   ? findAreaName(field.value)
@@ -1244,7 +1447,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={areaHover.onMouseEnter}
+                            onMouseLeave={areaHover.onMouseLeave}
+                          >
                             <Command>
                               <CommandInput placeholder="Search areas..." />
                               <CommandList>
@@ -1297,20 +1504,22 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Customer *</FormLabel>
                         <Popover
-                          open={customerOpen}
-                          onOpenChange={setCustomerOpen}
+                          open={customerHover.open}
+                          onOpenChange={customerHover.setOpen}
                         >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={customerOpen}
+                                aria-expanded={customerHover.open}
                                 className={cn(
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting || !areaId}
+                                onMouseEnter={customerHover.onMouseEnter}
+                                onMouseLeave={customerHover.onMouseLeave}
                               >
                                 {field.value
                                   ? findCustomerName(field.value)
@@ -1319,7 +1528,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={customerHover.onMouseEnter}
+                            onMouseLeave={customerHover.onMouseLeave}
+                          >
                             <Command>
                               <CommandInput placeholder="Search customers..." />
                               <CommandList>
@@ -1336,7 +1549,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
                                         onSelect={() => {
                                           handleCustomerSelect(customer.id);
-                                          setCustomerOpen(false);
+                                          customerHover.setOpen(false);
                                         }}
                                       >
                                         <div className="flex flex-col">
@@ -1389,6 +1602,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                 field.onChange(e);
                                 form.setValue("address", e.target.value, {
                                   shouldDirty: true,
+                                  shouldValidate: true,
                                 });
                               }}
                               disabled={isSubmitting}
@@ -1407,18 +1621,20 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Van *</FormLabel>
-                        <Popover open={vanOpen} onOpenChange={setVanOpen}>
+                        <Popover open={vanHover.open} onOpenChange={vanHover.setOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={vanOpen}
+                                aria-expanded={vanHover.open}
                                 className={cn(
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting}
+                                onMouseEnter={vanHover.onMouseEnter}
+                                onMouseLeave={vanHover.onMouseLeave}
                                 onClick={() => field.onChange(field.value)}
                               >
                                 {field.value
@@ -1428,7 +1644,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={vanHover.onMouseEnter}
+                            onMouseLeave={vanHover.onMouseLeave}
+                          >
                             <Command>
                               <CommandInput placeholder="Search vans..." />
                               <CommandList>
@@ -1439,10 +1659,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       key={van.id}
                                       value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
                                       onSelect={() => {
-                                        form.setValue("vanId", van.id, {
-                                          shouldDirty: true,
-                                        });
-                                        setVanOpen(false);
+                                        field.onChange(van.id);
+                                        form.clearErrors(["vanId"]);
+                                        vanHover.setOpen(false);
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -1483,20 +1702,22 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Salesman *</FormLabel>
                         <Popover
-                          open={salesmanOpen}
-                          onOpenChange={setSalesmanOpen}
+                          open={salesmanHover.open}
+                          onOpenChange={salesmanHover.setOpen}
                         >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={salesmanOpen}
+                                aria-expanded={salesmanHover.open}
                                 className={cn(
                                   "w-full justify-between",
                                   !field.value && "text-muted-foreground",
                                 )}
                                 disabled={isSubmitting || !areaId}
+                                onMouseEnter={salesmanHover.onMouseEnter}
+                                onMouseLeave={salesmanHover.onMouseLeave}
                               >
                                 {field.value
                                   ? findSalesmanName(field.value)
@@ -1505,7 +1726,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent
+                            className="w-full p-0"
+                            onMouseEnter={salesmanHover.onMouseEnter}
+                            onMouseLeave={salesmanHover.onMouseLeave}
+                          >
                             <Command>
                               <CommandInput placeholder="Search salesmen..." />
                               <CommandList>
@@ -1520,12 +1745,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       key={salesman.id}
                                       value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
                                       onSelect={() => {
-                                        form.setValue(
-                                          "salesmanId",
-                                          salesman.id,
-                                          { shouldDirty: true },
-                                        );
-                                        setSalesmanOpen(false);
+                                        field.onChange(salesman.id);
+                                        form.clearErrors(["salesmanId"]);
+                                        salesmanHover.setOpen(false);
                                       }}
                                     >
                                       <div className="flex flex-col">
@@ -1568,6 +1790,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <FormItem>
                         <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
+                          open={gstHover.open}
+                          onOpenChange={gstHover.setOpen}
                           onValueChange={(value) => {
                             field.onChange(value);
                             form.setValue("gstDetails", value, {
@@ -1578,11 +1802,17 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                           disabled={isSubmitting}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger
+                              onMouseEnter={gstHover.onMouseEnter}
+                              onMouseLeave={gstHover.onMouseLeave}
+                            >
                               <SelectValue placeholder="Select GST type" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent
+                            onMouseEnter={gstHover.onMouseEnter}
+                            onMouseLeave={gstHover.onMouseLeave}
+                          >
                             {gst_details.map((gst) => (
                               <SelectItem key={gst.id} value={String(gst.id)}>
                                 {gst.type}

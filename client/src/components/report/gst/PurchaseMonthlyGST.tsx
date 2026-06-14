@@ -12,17 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Filter, RefreshCw, FileSpreadsheet, Calendar, X } from "lucide-react";
+import { Filter, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parse, isValid, startOfYear } from "date-fns";
+import { format, startOfYear } from "date-fns";
+import { CustomDateInput } from "@/components/custom_ui";
 import {
   containerVariants,
   itemVariants,
@@ -37,34 +30,6 @@ import type {
   PurchaseMonthlyFilters,
 } from "@/types/purchase";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
-
-// ----------------------------------------------------------------------
-// Date Utilities (Copied from PurchaseGST)
-// ----------------------------------------------------------------------
-const parseDateFromString = (dateString: string): Date | undefined => {
-  if (!dateString) return undefined;
-  const formats = [
-    "dd/MM/yyyy",
-    "dd-MM-yyyy",
-    "dd.MM.yyyy",
-    "dd/MM/yy",
-    "yyyy-MM-dd",
-  ];
-  for (const fmt of formats) {
-    try {
-      const parsed = parse(dateString, fmt, new Date());
-      if (isValid(parsed)) return parsed;
-    } catch {
-      // continue
-    }
-  }
-  return undefined;
-};
-
-const formatDateToDisplay = (date: Date | undefined): string => {
-  if (!date) return "";
-  return format(date, "dd/MM/yyyy");
-};
 
 // ----------------------------------------------------------------------
 // Main Component
@@ -105,49 +70,30 @@ export default function PurchaseMonthlyGST({
     gstDetails: undefined,
   });
 
-  // Local inputs for debounced fields - initialized with default dates
-  const [fromDateInput, setFromDateInput] = useState(
-    formatDateToDisplay(getDefaultFromDate()),
+  const [fromDateValue, setFromDateValue] = useState<string | null>(
+    format(getDefaultFromDate(), "yyyy-MM-dd"),
   );
-  const [toDateInput, setToDateInput] = useState(
-    formatDateToDisplay(getDefaultToDate()),
+  const [toDateValue, setToDateValue] = useState<string | null>(
+    format(getDefaultToDate(), "yyyy-MM-dd"),
   );
 
-  // ----------------------------------------------------------------------
-  // Input handlers (Copied & Adapted)
-  // ----------------------------------------------------------------------
-  const handleFromDateInputChange = (value: string) => {
-    setFromDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, fromDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, fromDate: undefined }));
-    }
+  const handleFromDateChange = (value: string | null) => {
+    setFromDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      fromDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
-  const handleFromDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, fromDate: date }));
-    setFromDateInput(date ? formatDateToDisplay(date) : "");
-  };
-
-  const handleToDateInputChange = (value: string) => {
-    setToDateInput(value);
-    const parsed = parseDateFromString(value);
-    if (parsed) {
-      setFilters((prev) => ({ ...prev, toDate: parsed }));
-    } else if (value === "") {
-      setFilters((prev) => ({ ...prev, toDate: undefined }));
-    }
-  };
-
-  const handleToDateSelect = (date: Date | undefined) => {
-    setFilters((prev) => ({ ...prev, toDate: date }));
-    setToDateInput(date ? formatDateToDisplay(date) : "");
+  const handleToDateChange = (value: string | null) => {
+    setToDateValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      toDate: value ? new Date(`${value}T00:00:00`) : undefined,
+    }));
   };
 
   const clearFilters = () => {
-    // Reset to default dates instead of undefined
     const defaultFrom = getDefaultFromDate();
     const defaultTo = getDefaultToDate();
 
@@ -156,8 +102,8 @@ export default function PurchaseMonthlyGST({
       toDate: defaultTo,
       gstDetails: undefined,
     });
-    setFromDateInput(formatDateToDisplay(defaultFrom));
-    setToDateInput(formatDateToDisplay(defaultTo));
+    setFromDateValue(format(defaultFrom, "yyyy-MM-dd"));
+    setToDateValue(format(defaultTo, "yyyy-MM-dd"));
   };
 
   const clearFilter = (filterName: keyof PurchaseMonthlyFilters) => {
@@ -167,14 +113,14 @@ export default function PurchaseMonthlyGST({
         ...prev,
         fromDate: defaultFrom,
       }));
-      setFromDateInput(formatDateToDisplay(defaultFrom));
+      setFromDateValue(format(defaultFrom, "yyyy-MM-dd"));
     } else if (filterName === "toDate") {
       const defaultTo = getDefaultToDate();
       setFilters((prev) => ({
         ...prev,
         toDate: defaultTo,
       }));
-      setToDateInput(formatDateToDisplay(defaultTo));
+      setToDateValue(format(defaultTo, "yyyy-MM-dd"));
     } else if (filterName === "gstDetails") {
       setFilters((prev) => ({
         ...prev,
@@ -403,107 +349,21 @@ export default function PurchaseMonthlyGST({
                           disabled={isLoading}
                         />
 
-                        {/* From Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            From Date
-                          </Label>
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Input
-                                value={fromDateInput}
-                                onChange={(e) =>
-                                  handleFromDateInputChange(e.target.value)
-                                }
-                                placeholder="dd/mm/yyyy or select"
-                                className="pr-10"
-                              />
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                  >
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="end"
-                                >
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.fromDate}
-                                    onSelect={handleFromDateSelect}
-                                    initialFocus
-                                    defaultMonth={filters.fromDate}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            {fromDateInput && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("fromDate")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                        <CustomDateInput
+                          label="From Date"
+                          value={fromDateValue}
+                          onChange={handleFromDateChange}
+                          placeholder="dd/mm/yyyy"
+                          disabled={isLoading}
+                        />
 
-                        {/* To Date */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">To Date</Label>
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Input
-                                value={toDateInput}
-                                onChange={(e) =>
-                                  handleToDateInputChange(e.target.value)
-                                }
-                                placeholder="dd/mm/yyyy or select"
-                                className="pr-10"
-                              />
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
-                                  >
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="end"
-                                >
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={filters.toDate}
-                                    onSelect={handleToDateSelect}
-                                    initialFocus
-                                    defaultMonth={filters.toDate}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            {toDateInput && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                onClick={() => clearFilter("toDate")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                        <CustomDateInput
+                          label="To Date"
+                          value={toDateValue}
+                          onChange={handleToDateChange}
+                          placeholder="dd/mm/yyyy"
+                          disabled={isLoading}
+                        />
                       </div>
                     </motion.div>
                   )}
