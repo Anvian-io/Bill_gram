@@ -96,6 +96,19 @@ export const purchaseService = {
     }
   },
 
+  async createPurchaseReturn(data: PurchaseFormData): Promise<Purchase> {
+    try {
+      const response = await apiClient.post<
+        ApiResponse<{ purchase: Purchase }>
+      >("/purchases/returns", data);
+      return response.data.data.purchase;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error creating purchase return:", message);
+      throw new Error(message);
+    }
+  },
+
   // Update purchase invoice
   async updatePurchase(id: number, data: PurchaseFormData): Promise<Purchase> {
     try {

@@ -4,13 +4,14 @@ import SalesList from "@/components/sales/SalesList";
 import SalesHistory from "@/components/sales/SalesHistory";
 
 export default function Sales() {
-  const [activeTab, setActiveTab] = useState<"add" | "sales" | "history">(
+  const [activeTab, setActiveTab] = useState<"add" | "return" | "sales" | "history">(
     "add",
   );
 
   // Refs for measuring tab positions
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const addTabRef = useRef<HTMLButtonElement>(null);
+  const returnTabRef = useRef<HTMLButtonElement>(null);
   const salesTabRef = useRef<HTMLButtonElement>(null);
   const historyTabRef = useRef<HTMLButtonElement>(null);
 
@@ -22,6 +23,7 @@ export default function Sales() {
     // Determine which ref is active
     let activeRef;
     if (activeTab === "add") activeRef = addTabRef;
+    else if (activeTab === "return") activeRef = returnTabRef;
     else if (activeTab === "sales") activeRef = salesTabRef;
     else activeRef = historyTabRef;
 
@@ -80,6 +82,22 @@ export default function Sales() {
                 Add Sales
               </button>
 
+              <button
+                ref={returnTabRef}
+                onClick={() => setActiveTab("return")}
+                className={`
+                  relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                  focus:outline-none
+                  ${
+                    activeTab === "return"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                Sales Return
+              </button>
+
               {/* Sales Tab */}
               <button
                 ref={salesTabRef}
@@ -119,6 +137,9 @@ export default function Sales() {
             <div>
               <div className={activeTab === "add" ? "block" : "hidden"}>
                 <AddSales />
+              </div>
+              <div className={activeTab === "return" ? "block" : "hidden"}>
+                <AddSales mode="return" />
               </div>
               <div className={activeTab === "sales" ? "block" : "hidden"}>
                 <SalesList />

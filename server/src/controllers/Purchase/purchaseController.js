@@ -120,6 +120,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
     finalAmount,
     status = "Pending",
   } = req.body;
+  const isReturn = status === "Return";
 
   // --- Validation ---
   if (!invoiceDate || !supplierId || !items?.length) {
@@ -206,6 +207,15 @@ export const createPurchase = asyncHandler(async (req, res) => {
         statusType.NOT_FOUND,
       );
     }
+    if (isReturn && batch.openingStock < item.aQty) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Insufficient stock for purchase return batch ${item.batchId}. Available: ${batch.openingStock}`,
+        statusType.BAD_REQUEST,
+      );
+    }
   }
 
   // --- Transaction ---
@@ -259,8 +269,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
           },
         });
 
-        // Increase batch stock
-        await updateBatchStock(tx, item.batchId, item.aQty);
+        await updateBatchStock(tx, item.batchId, isReturn ? -item.aQty : item.aQty);
       }
 
       // 3. Create purchase history entries
@@ -270,14 +279,15 @@ export const createPurchase = asyncHandler(async (req, res) => {
     });
 
     const paddedId = result.id.toString().padStart(4, "0");
+    const invoicePrefix = isReturn ? "PRET" : "INV";
 
     const updated = await prisma.purchaseInvoice.update({
       where: { id: result.id },
-      data: { invoiceNo: `INV-${paddedId}` }, // e.g. "INV-1"
+      data: { invoiceNo: `${invoicePrefix}-${paddedId}` },
     });
     await createNotification({
-  title: "New Purchase Invoice Created",
-  message: `Purchase invoice "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
+  title: isReturn ? "New Purchase Return Created" : "New Purchase Invoice Created",
+  message: `${isReturn ? "Purchase return" : "Purchase invoice"} "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
   type: "success",
   section: null,
   page: "Purchase"
@@ -285,8 +295,8 @@ export const createPurchase = asyncHandler(async (req, res) => {
     return sendResponse(
       res,
       true,
-      { purchase: result },
-      "Purchase invoice created successfully",
+      { purchase: updated },
+      isReturn ? "Purchase return created successfully" : "Purchase invoice created successfully",
       statusType.CREATED,
     );
   } catch (error) {
@@ -299,6 +309,11 @@ export const createPurchase = asyncHandler(async (req, res) => {
       statusType.INTERNAL_SERVER_ERROR,
     );
   }
+});
+
+export const createPurchaseReturn = asyncHandler(async (req, res, next) => {
+  req.body = { ...req.body, status: "Return" };
+  return createPurchase(req, res, next);
 });
 
 // --------------------------------------------------------------------
@@ -380,6 +395,8 @@ export const getAllPurchases = asyncHandler(async (req, res) => {
 
   if (status) {
     andConditions.push({ status });
+  } else {
+    andConditions.push({ status: { not: "Return" } });
   }
 
   // Global search: invoiceNo, supplier.name, remarks
@@ -5017,6 +5034,7 @@ export const downloadPurchaseBillPreviewPDF = asyncHandler(async (req, res) => {
 // --------------------------------------------------------------------
 export const purchaseController = {
   createPurchase,
+  createPurchaseReturn,
   getAllPurchases,
   downloadPurchaseRegisterPDF,   
   downloadPurchaseRegisterExcel, 

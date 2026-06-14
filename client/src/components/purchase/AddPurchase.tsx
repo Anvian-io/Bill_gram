@@ -104,6 +104,10 @@ interface PurchaseResponse {
   [key: string]: any;
 }
 
+interface AddPurchaseProps {
+  mode?: "purchase" | "return";
+}
+
 // ----------------------------------------------------------------------
 // Schema
 // ----------------------------------------------------------------------
@@ -200,7 +204,9 @@ const defaultValues: PurchaseFormData = {
 // ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
-export default function AddPurchase() {
+export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
+  const isReturnMode = mode === "return";
+  const purchaseLabel = isReturnMode ? "Purchase Return" : "Purchase";
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -209,7 +215,7 @@ export default function AddPurchase() {
 
   // Determine mode
   const isNew = purchaseId === "new" || !purchaseId;
-  const isEditMode = purchaseId && purchaseId !== "new" ? true : false;
+  const isEditMode = Boolean(!isReturnMode && purchaseId && purchaseId !== "new");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -270,10 +276,10 @@ export default function AddPurchase() {
 
   // Effect 1: Redirect to ?id=new if no ID is present
   useEffect(() => {
-    if (!purchaseId) {
+    if (!isReturnMode && !purchaseId) {
       setSearchParams({ id: "new" }, { replace: true });
     }
-  }, [purchaseId, setSearchParams]);
+  }, [isReturnMode, purchaseId, setSearchParams]);
 
   // Effect 2: Load purchase data if editing
   useEffect(() => {
@@ -709,23 +715,26 @@ export default function AddPurchase() {
         toast.success("Purchase updated successfully");
       } else {
         // Create new purchase
-        response = await purchaseService.createPurchase(payload);
-        toast.success("Purchase created successfully");
+        response = isReturnMode
+          ? await purchaseService.createPurchaseReturn(payload)
+          : await purchaseService.createPurchase(payload);
+        toast.success(`${purchaseLabel} created successfully`);
 
         // Set generated purchase ID and update URL
         if (response?.id) {
           setGeneratedPurchaseId(response.id);
           setGeneratedInvoiceNo(response.invoiceNo);
 
-          // Update URL with the new purchase ID without navigation
-          setSearchParams({ id: response.id.toString() }, { replace: true });
+          if (!isReturnMode) {
+            setSearchParams({ id: response.id.toString() }, { replace: true });
+          }
         }
       }
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast.error(
         error.response?.data?.message ||
-          "Failed to save purchase. Please try again.",
+          `Failed to save ${purchaseLabel.toLowerCase()}. Please try again.`,
       );
     } finally {
       setIsSubmitting(false);
@@ -745,12 +754,16 @@ export default function AddPurchase() {
     form.reset(defaultValues);
     setGeneratedPurchaseId(null);
     setGeneratedInvoiceNo(null);
-    setSearchParams({ id: "new" }, { replace: true });
+    if (!isReturnMode) {
+      setSearchParams({ id: "new" }, { replace: true });
+    }
   };
 
   const handleBillPreview = () => {
     const idToPreview = Number(
-      purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId || 0,
+      isReturnMode
+        ? generatedPurchaseId || 0
+        : purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId || 0,
     );
     if (idToPreview > 0) {
       setPreviewPurchaseId(idToPreview);
@@ -763,8 +776,9 @@ export default function AddPurchase() {
   };
 
   // Determine if bill preview should be visible
-  const canShowBillPreview =
-    (!!purchaseId && purchaseId !== "new") || !!generatedPurchaseId;
+  const canShowBillPreview = isReturnMode
+    ? !!generatedPurchaseId
+    : (!!purchaseId && purchaseId !== "new") || !!generatedPurchaseId;
 
   // ----------------------------------------------------------------------
   // Skeleton Loader Component
@@ -904,8 +918,8 @@ export default function AddPurchase() {
             <div>
               <h1 className={cn("font-bold", layoutMode === "classic" ? "text-lg text-white" : "text-3xl text-heading")}>
                 {layoutMode === "classic" 
-                  ? "Data Entry > Purchase Entry" 
-                  : (isEditMode ? "Edit Purchase Invoice" : "Add New Purchase")
+                  ? `Data Entry > ${purchaseLabel} Entry` 
+                  : (isEditMode ? "Edit Purchase Invoice" : `Add New ${purchaseLabel}`)
                 }
               </h1>
               {layoutMode !== "classic" && (
@@ -914,7 +928,7 @@ export default function AddPurchase() {
                   ? `Editing Invoice ${generatedInvoiceNo || ""}`
                   : generatedInvoiceNo
                     ? `Invoice ${generatedInvoiceNo} - Saved`
-                    : "Create a new purchase invoice"}
+                    : `Create a new ${purchaseLabel.toLowerCase()} entry`}
               </p>
               )}
             </div>
@@ -940,7 +954,7 @@ export default function AddPurchase() {
                 className="gap-2"
               >
                 <FilePlus className="h-4 w-4" />
-                New Purchase
+                New {purchaseLabel}
               </Button>
             )}
 
@@ -961,7 +975,7 @@ export default function AddPurchase() {
                 ? "Saving..."
                 : isEditMode
                   ? "Update Purchase"
-                  : "Create Purchase"}
+                  : `Create ${purchaseLabel}`}
             </Button>
           </div>
         </motion.div>
@@ -978,7 +992,7 @@ export default function AddPurchase() {
                   {layoutMode !== "classic" && (
                     <h3 className="font-semibold mb-4 flex items-center gap-2">
                       <FileText className="h-4 w-4" />
-                      Invoice Details
+                      {isReturnMode ? "Return Details" : "Invoice Details"}
                       {generatedInvoiceNo && (
                         <Badge variant="secondary" className="ml-2">
                           {generatedInvoiceNo}
@@ -1920,7 +1934,7 @@ export default function AddPurchase() {
                   ? "Saving..."
                   : isEditMode
                     ? "Update Purchase"
-                    : "Create Purchase"}
+                    : `Create ${purchaseLabel}`}
               </Button>
             </motion.div>
           </form>

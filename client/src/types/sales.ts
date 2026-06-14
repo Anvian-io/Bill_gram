@@ -35,7 +35,8 @@ export interface SalesFilters {
     | "Paid"
     | "Partially Paid"
     | "Cancelled"
-    | "Delivered";
+    | "Delivered"
+    | "Return";
   page?: number;
   limit?: number;
   sortBy?: string;
@@ -147,7 +148,13 @@ export interface Sales {
   amountAdd: number;
   creditAmount: number;
   finalAmount: number;
-  status: "Pending" | "Paid" | "Partially Paid" | "Cancelled" | "Delivered";
+  status:
+    | "Pending"
+    | "Paid"
+    | "Partially Paid"
+    | "Cancelled"
+    | "Delivered"
+    | "Return";
   deleted: boolean;
   createdAt: string;
   updatedAt: string;

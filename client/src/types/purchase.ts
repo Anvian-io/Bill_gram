@@ -27,7 +27,7 @@ export interface PurchaseFilters {
   toDate?: Date;
   minAmount?: number | string;
   maxAmount?: number | string;
-  status?: "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled";
+  status?: "all" | "Pending" | "Paid" | "Partially Paid" | "Cancelled" | "Return";
   page?: number;
   limit?: number;
   sortBy?: string;
@@ -80,7 +80,7 @@ export interface Purchase {
   amountAdd: number;
   creditAmount: number;
   finalAmount: number;
-  status: "Pending" | "Paid" | "Partially Paid" | "Cancelled";
+  status: "Pending" | "Paid" | "Partially Paid" | "Cancelled" | "Return";
   deleted: boolean;
   createdAt: string;
   updatedAt: string;

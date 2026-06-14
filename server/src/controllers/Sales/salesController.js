@@ -127,6 +127,7 @@ export const createSale = asyncHandler(async (req, res) => {
     finalAmount,
     status = "Pending",
   } = req.body;
+  const isReturn = status === "Return";
 
   // --- Validation ---
   if (!invoiceDate || !customerId || !items?.length) {
@@ -257,8 +258,7 @@ export const createSale = asyncHandler(async (req, res) => {
         statusType.NOT_FOUND,
       );
     }
-    // Ensure sufficient stock (optional, can be enforced later)
-    if (batch.openingStock < item.aQty) {
+    if (!isReturn && batch.openingStock < item.aQty) {
       return sendResponse(
         res,
         false,
@@ -298,7 +298,7 @@ export const createSale = asyncHandler(async (req, res) => {
         },
       });
 
-      // 2. Create invoice items & decrease batch stock
+      // 2. Create invoice items & update batch stock
       for (const item of items) {
         await tx.salesInvoiceItem.create({
           data: {
@@ -324,8 +324,7 @@ export const createSale = asyncHandler(async (req, res) => {
           },
         });
 
-        // Decrease batch stock (negative delta)
-        await updateBatchStock(tx, item.batchId, -item.aQty);
+        await updateBatchStock(tx, item.batchId, isReturn ? item.aQty : -item.aQty);
       }
 
       // 3. Create sales history entries
@@ -342,16 +341,16 @@ export const createSale = asyncHandler(async (req, res) => {
       return invoice;
     });
 
-    // Optional: update invoiceNo with prefix (like purchase controller does)
     const paddedId = result.id.toString().padStart(4, "0");
+    const invoicePrefix = isReturn ? "SRET" : "SINV";
 
     const updated = await prisma.salesInvoice.update({
       where: { id: result.id },
-      data: { invoiceNo: `SINV-${paddedId}` },
+      data: { invoiceNo: `${invoicePrefix}-${paddedId}` },
     });
     await createNotification({
-  title: "New Sales Invoice Created",
-  message: `Sales invoice "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
+  title: isReturn ? "New Sales Return Created" : "New Sales Invoice Created",
+  message: `${isReturn ? "Sales return" : "Sales invoice"} "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
   type: "success",
   section: null,
   page: "Sales"
@@ -360,7 +359,7 @@ export const createSale = asyncHandler(async (req, res) => {
       res,
       true,
       { sale: updated },
-      "Sales invoice created successfully",
+      isReturn ? "Sales return created successfully" : "Sales invoice created successfully",
       statusType.CREATED,
     );
   } catch (error) {
@@ -373,6 +372,11 @@ export const createSale = asyncHandler(async (req, res) => {
       statusType.INTERNAL_SERVER_ERROR,
     );
   }
+});
+
+export const createSalesReturn = asyncHandler(async (req, res, next) => {
+  req.body = { ...req.body, status: "Return" };
+  return createSale(req, res, next);
 });
 
 // --------------------------------------------------------------------
@@ -459,6 +463,8 @@ export const getAllSales = asyncHandler(async (req, res) => {
 
   if (status) {
     andConditions.push({ status });
+  } else {
+    andConditions.push({ status: { not: "Return" } });
   }
 
   // Global search: invoiceNo, customer.name, remarks, area.name, van.name, salesman.name
@@ -7886,6 +7892,7 @@ export const downloadSalesBillPreviewPDF = asyncHandler(async (req, res) => {
 // --------------------------------------------------------------------
 export const salesController = {
   createSale,
+  createSalesReturn,
   getAllSales,
   getSaleById,
   updateSale,

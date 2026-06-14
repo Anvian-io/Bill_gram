@@ -58,6 +58,9 @@ router.get("/history/all", purchaseController.getAllPurchaseReportHistory);
 router.get("/history/:id/pdf", purchaseController.downloadPurchaseReportHistoryPDF);
 router.get("/history/:id/excel", purchaseController.downloadPurchaseReportHistoryExcel);
 
+// Create a purchase return invoice
+router.post("/returns", purchaseController.createPurchaseReturn);
+
 router.get("/:id/bill-preview", purchaseController.getPurchaseBillPreview);
 router.get("/:id/bill-preview/pdf", purchaseController.downloadPurchaseBillPreviewPDF);
 

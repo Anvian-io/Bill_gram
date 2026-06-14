@@ -4,13 +4,14 @@ import PurchaseList from "@/components/purchase/PurchaseList";
 import PurchaseHistory from "@/components/purchase/PurchaseHistory";
 
 export default function Purchase() {
-  const [activeTab, setActiveTab] = useState<"add" | "purchase" | "history">(
+  const [activeTab, setActiveTab] = useState<"add" | "return" | "purchase" | "history">(
     "add",
   );
 
   // Refs for measuring tab positions
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const addTabRef = useRef<HTMLButtonElement>(null);
+  const returnTabRef = useRef<HTMLButtonElement>(null);
   const purchaseTabRef = useRef<HTMLButtonElement>(null);
   const historyTabRef = useRef<HTMLButtonElement>(null);
 
@@ -22,6 +23,7 @@ export default function Purchase() {
     // Determine which ref is active
     let activeRef;
     if (activeTab === "add") activeRef = addTabRef;
+    else if (activeTab === "return") activeRef = returnTabRef;
     else if (activeTab === "purchase") activeRef = purchaseTabRef;
     else activeRef = historyTabRef;
 
@@ -80,6 +82,22 @@ export default function Purchase() {
                 Add Purchase
               </button>
 
+              <button
+                ref={returnTabRef}
+                onClick={() => setActiveTab("return")}
+                className={`
+                  relative z-10 py-2 px-4 font-medium text-sm transition-colors duration-200
+                  focus:outline-none
+                  ${
+                    activeTab === "return"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                Purchase Return
+              </button>
+
               {/* Purchase Tab */}
               <button
                 ref={purchaseTabRef}
@@ -119,6 +137,9 @@ export default function Purchase() {
             <div>
               <div className={activeTab === "add" ? "block" : "hidden"}>
                 <AddPurchase />
+              </div>
+              <div className={activeTab === "return" ? "block" : "hidden"}>
+                <AddPurchase mode="return" />
               </div>
               <div className={activeTab === "purchase" ? "block" : "hidden"}>
                 <PurchaseList />

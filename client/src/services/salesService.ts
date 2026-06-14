@@ -102,6 +102,20 @@ export const salesService = {
     }
   },
 
+  async createSalesReturn(data: SalesFormData): Promise<Sales> {
+    try {
+      const response = await apiClient.post<ApiResponse<{ sale: Sales }>>(
+        "/sales/returns",
+        data,
+      );
+      return response.data.data.sale;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error creating sales return:", message);
+      throw new Error(message);
+    }
+  },
+
   async updateSale(id: number, data: SalesFormData): Promise<Sales> {
     try {
       const response = await apiClient.put<ApiResponse<{ sales: Sales }>>(

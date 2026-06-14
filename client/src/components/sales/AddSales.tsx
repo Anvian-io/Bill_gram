@@ -130,6 +130,10 @@ interface SalesResponse {
   [key: string]: any;
 }
 
+interface AddSalesProps {
+  mode?: "sale" | "return";
+}
+
 // ----------------------------------------------------------------------
 // Schema
 // ----------------------------------------------------------------------
@@ -316,8 +320,10 @@ function SalesFormSkeleton() {
 // ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
-export default function AddSales() {
+export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const { layoutMode } = useTheme();
+  const isReturnMode = mode === "return";
+  const saleLabel = isReturnMode ? "Sales Return" : "Sales";
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -414,16 +420,16 @@ export default function AddSales() {
 
   // Redirect to ?id=new if no id param is present
   useEffect(() => {
-    if (!idParam) {
+    if (!isReturnMode && !idParam) {
       setSearchParams({ id: "new" }, { replace: true });
     }
-  }, [idParam, setSearchParams]);
+  }, [idParam, isReturnMode, setSearchParams]);
 
   // Load sale data if editing
   useEffect(() => {
     const loadSaleData = async () => {
       console.log("bigboy",areas);
-      if (saleId && !isNew) {
+      if (!isReturnMode && saleId && !isNew) {
         setIsLoading(true);
         try {
           const saleData = await salesService.getSale(Number(saleId));
@@ -931,16 +937,19 @@ export default function AddSales() {
         setGeneratedInvoiceNo(response.invoiceNo);
       } else {
         // Create new sale
-        response = await salesService.createSale(payload);
-        toast.success("Sales created successfully");
+        response = isReturnMode
+          ? await salesService.createSalesReturn(payload)
+          : await salesService.createSale(payload);
+        toast.success(`${saleLabel} created successfully`);
 
         // Set generated sale ID and update URL
         if (response?.id) {
           setGeneratedSaleId(response.id);
           setGeneratedInvoiceNo(response.invoiceNo);
 
-          // Update URL with the new sale ID without navigation
-          setSearchParams({ id: response.id.toString() }, { replace: true });
+          if (!isReturnMode) {
+            setSearchParams({ id: response.id.toString() }, { replace: true });
+          }
 
           // Reset dirty state after successful creation
           form.reset(data, { keepDirty: false });
@@ -948,7 +957,7 @@ export default function AddSales() {
       }
     } catch (error: any) {
       console.error("Error in form submission:", error);
-      toast.error(error.message || "Failed to save sales. Please try again.");
+      toast.error(error.message || `Failed to save ${saleLabel.toLowerCase()}. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -967,11 +976,13 @@ export default function AddSales() {
     form.reset(defaultValues);
     setGeneratedSaleId(null);
     setGeneratedInvoiceNo(null);
-    setSearchParams({ id: "new" }, { replace: true });
+    if (!isReturnMode) {
+      setSearchParams({ id: "new" }, { replace: true });
+    }
   };
 
   const handleBillPreview = () => {
-    const idToPreview = Number(saleId || generatedSaleId || 0);
+    const idToPreview = Number(isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0);
     if (idToPreview > 0) {
       setPreviewSaleId(idToPreview);
       setIsPreviewOpen(true);
@@ -983,8 +994,8 @@ export default function AddSales() {
   };
 
   // Determine if bill preview should be visible
-  const canShowBillPreview = !!saleId || !!generatedSaleId;
-  const isEditMode = !!saleId && !isNew;
+  const canShowBillPreview = isReturnMode ? !!generatedSaleId : !!saleId || !!generatedSaleId;
+  const isEditMode = !isReturnMode && !!saleId && !isNew;
 
   // Determine if update button should be enabled (only in edit mode when dirty)
   const isUpdateEnabled = isEditMode && isDirty && isValid;
@@ -1011,14 +1022,14 @@ export default function AddSales() {
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-heading">
-                {isEditMode ? "Edit Sales Invoice" : "Add New Sales"}
+                {isEditMode ? "Edit Sales Invoice" : `Add New ${saleLabel}`}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {isEditMode
                   ? `Editing Invoice ${generatedInvoiceNo || saleId || ""}`
                   : generatedInvoiceNo
                     ? `Invoice ${generatedInvoiceNo} - Saved`
-                    : "Create a new sales invoice"}
+                    : `Create a new ${saleLabel.toLowerCase()} entry`}
               </p>
             </div>
           </div>
@@ -1043,7 +1054,7 @@ export default function AddSales() {
                 className="gap-2"
               >
                 <FilePlus className="h-4 w-4" />
-                New Sales
+                New {saleLabel}
               </Button>
             )}
 
@@ -1066,7 +1077,7 @@ export default function AddSales() {
                 ? "Saving..."
                 : isEditMode
                   ? "Update Sales"
-                  : "Create Sales"}
+                  : `Create ${saleLabel}`}
             </Button>
           </div>
         </div>
@@ -1089,7 +1100,7 @@ export default function AddSales() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Invoice Details
+                  {isReturnMode ? "Return Details" : "Invoice Details"}
                   {generatedInvoiceNo && (
                     <Badge variant="secondary" className="ml-2">
                       {generatedInvoiceNo}
@@ -2388,7 +2399,7 @@ export default function AddSales() {
                   ? "Saving..."
                   : isEditMode
                     ? "Update Sales"
-                    : "Create Sales"}
+                    : `Create ${saleLabel}`}
               </Button>
             </div>
           </form>

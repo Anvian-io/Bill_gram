@@ -77,6 +77,9 @@ router.get("/history/:id/pdf", salesController.downloadSalesReportHistoryPDF);
 // Download specific history record as Excel
 router.get("/history/:id/excel", salesController.downloadSalesReportHistoryExcel);
 
+// Create a sales return invoice
+router.post("/returns", salesController.createSalesReturn);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 
