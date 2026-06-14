@@ -143,13 +143,6 @@ router.post(
     const password =
       providedPassword || generateRandomToken("PWD", 12).replace("PWD-", "");
 
-    await sendRegistrationEmail({
-      email,
-      name,
-      password,
-      expiresAt,
-    });
-
     const user = await ManagedUser.create({
       email,
       name,
@@ -163,8 +156,26 @@ router.post(
     inviteToken.usedByEmail = email;
     await inviteToken.save();
 
+    let deliveryWarning = null;
+
+    try {
+      await sendRegistrationEmail({
+        email,
+        name,
+        password,
+        expiresAt,
+      });
+    } catch (error) {
+      deliveryWarning =
+        error instanceof Error ? error.message : "Failed to send registration email";
+      console.error(`Failed to send registration email to ${email}`, error);
+    }
+
     return res.status(201).json({
-      message: "User registered successfully",
+      message: deliveryWarning
+        ? "User registered successfully, but credential email could not be sent"
+        : "User registered successfully",
+      ...(deliveryWarning ? { deliveryWarning } : {}),
       user: {
         id: user._id.toString(),
         email: user.email,
