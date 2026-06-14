@@ -11,7 +11,7 @@
     "start": "npm run dev",
     "build": "npm run build:client && npm run build:server && npm run build:electron",
     "build:client": "cd client && npm run build",
-    "build:server": "cd server && npm run build",
+    "build:server": "cd server && npm run prisma:generate && npm run build",
     "build:electron": "electron-builder --win --x64",
     "dist": "npm run build",
     "package": "electron-builder --dir",

@@ -11,6 +11,7 @@ let backendProcess;
 const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
 const BACKEND_START_TIMEOUT_MS = 180000;
 const BACKEND_POLL_INTERVAL_MS = 1000;
+const BACKEND_LOG_FILE = "backend-startup.log";
 
 function getLoadingHtml(message = "Starting your workspace...") {
   return `
@@ -232,6 +233,24 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getBackendLogPath() {
+  return path.join(app.getPath("userData"), BACKEND_LOG_FILE);
+}
+
+function appendBackendLog(message) {
+  try {
+    const logPath = getBackendLogPath();
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.appendFileSync(
+      logPath,
+      `[${new Date().toISOString()}] ${message}${os.EOL}`,
+      "utf-8",
+    );
+  } catch (error) {
+    console.error("Failed to write backend startup log:", error);
+  }
+}
+
 function checkBackendHealth() {
   return new Promise((resolve) => {
     const request = http.get(BACKEND_HEALTH_URL, (response) => {
@@ -267,8 +286,10 @@ function loadFrontend() {
 }
 
 function showStartupError(message) {
+  const fullMessage = `${message}\n\nStartup log:\n${getBackendLogPath()}`;
+
   if (!mainWindow || mainWindow.isDestroyed()) {
-    dialog.showErrorBox("Backend Error", message);
+    dialog.showErrorBox("Backend Error", fullMessage);
     return;
   }
 
@@ -277,7 +298,7 @@ function showStartupError(message) {
       getLoadingHtml(`${message} Please restart the app.`),
     )}`,
   );
-  dialog.showErrorBox("Backend Error", message);
+  dialog.showErrorBox("Backend Error", fullMessage);
 }
 
 async function waitForBackendReady(timeoutMs = BACKEND_START_TIMEOUT_MS) {
@@ -296,17 +317,31 @@ async function waitForBackendReady(timeoutMs = BACKEND_START_TIMEOUT_MS) {
 
 function startBackend() {
   let backendPath;
+  let backendCwd;
+  let command;
+  let args;
+  const production = process.env.NODE_ENV !== "development";
 
-  if (process.env.NODE_ENV === "development") {
+  if (!production) {
     backendPath = path.join(__dirname, "../server/src/server.js");
+    backendCwd = path.join(__dirname, "../server");
+    command = "node";
+    args = [backendPath];
   } else {
-    backendPath = path.join(process.resourcesPath, "server/src/server.js");
+    const bundledServerDir = path.join(process.resourcesPath, "server");
+    backendPath = path.join(bundledServerDir, "src/server.js");
+    backendCwd = bundledServerDir;
+    command = process.execPath;
+    args = [backendPath];
   }
 
   console.log("Starting backend from:", backendPath);
+  appendBackendLog(`Starting backend from: ${backendPath}`);
+  appendBackendLog(`Backend working directory: ${backendCwd}`);
 
   if (!fs.existsSync(backendPath)) {
     console.error("Backend file not found at:", backendPath);
+    appendBackendLog(`Backend file not found at: ${backendPath}`);
     dialog.showErrorBox(
       "Backend Error",
       `Backend server file not found at: ${backendPath}`,
@@ -316,24 +351,45 @@ function startBackend() {
 
   const dbDir = getDatabaseDirectory();
   console.log("Database directory:", dbDir);
+  appendBackendLog(`Database directory: ${dbDir}`);
 
-  backendProcess = spawn("node", [backendPath], {
-    stdio: "ignore", // 👈 important
-    windowsHide: true, // 👈 VERY important (removes black window)
-    env: {
-      ...process.env,
-      NODE_ENV: process.env.NODE_ENV || "production",
-    },
+  const backendEnv = {
+    ...process.env,
+    NODE_ENV: process.env.NODE_ENV || "production",
+  };
+
+  if (production) {
+    backendEnv.ELECTRON_RUN_AS_NODE = "1";
+  }
+
+  backendProcess = spawn(command, args, {
+    cwd: backendCwd,
+    windowsHide: true,
+    env: backendEnv,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   backendProcess.unref();
 
-  backendProcess.on("error", (err) => {
-    console.error("Failed to start backend:", err);
-    dialog.showErrorBox("Backend Error", "Failed to start backend server");
+  backendProcess.stdout?.on("data", (data) => {
+    appendBackendLog(data.toString().trimEnd());
   });
 
-  backendProcess.on("exit", (code) => {
+  backendProcess.stderr?.on("data", (data) => {
+    appendBackendLog(data.toString().trimEnd());
+  });
+
+  backendProcess.on("error", (err) => {
+    console.error("Failed to start backend:", err);
+    appendBackendLog(`Failed to start backend: ${err.stack || err.message}`);
+    dialog.showErrorBox(
+      "Backend Error",
+      `Failed to start backend server.\n\nStartup log:\n${getBackendLogPath()}`,
+    );
+  });
+
+  backendProcess.on("exit", (code, signal) => {
+    appendBackendLog(`Backend exited with code ${code}, signal ${signal}`);
     if (code !== 0) {
       console.error(`Backend exited with code ${code}`);
     }
