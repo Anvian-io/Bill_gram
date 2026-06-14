@@ -23,6 +23,10 @@ export function getOAuth2Client() {
     );
   }
 
+  if (clientId === "dummy_client_id") {
+    throw new Error("dummy_client_id detected. Google OAuth is disabled.");
+  }
+
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
