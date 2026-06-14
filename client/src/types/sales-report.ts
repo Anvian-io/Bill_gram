@@ -10,6 +10,7 @@ export interface SalesReportFilters {
   salesmanId?: number;
   gstDetails?: string;
   productGroupId?: number;
+  summaryType?: "sales_summary" | "loading_summary";
 }
 
 // For SalesSummary (invoice level)
