@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { spawnSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -6,8 +7,43 @@ import os from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const SERVER_ROOT = path.join(__dirname, "..", "..");
 
 let prisma = null;
+
+function runPrismaMigrations() {
+  const prismaCli = path.join(SERVER_ROOT, "node_modules", "prisma", "build", "index.js");
+
+  if (!fs.existsSync(prismaCli)) {
+    throw new Error(
+      `Prisma CLI not found at ${prismaCli}. Ensure server dependencies are installed.`,
+    );
+  }
+
+  console.log("🔄 Applying database migrations...");
+
+  const result = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+    cwd: SERVER_ROOT,
+    env: process.env,
+    encoding: "utf-8",
+  });
+
+  if (result.stdout) {
+    console.log(result.stdout.trimEnd());
+  }
+
+  if (result.stderr) {
+    console.error(result.stderr.trimEnd());
+  }
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Prisma migrate deploy failed with exit code ${result.status ?? "unknown"}`,
+    );
+  }
+
+  console.log("✅ Database migrations applied");
+}
 
 async function ensureSubscriptionExpiryColumn(client) {
   const columns = await client.$queryRawUnsafe(`PRAGMA table_info("users")`);
@@ -74,6 +110,9 @@ export async function initializeDatabase() {
     process.env.DATABASE_URL = databaseUrl;
     console.log(`🔗 DATABASE_URL: ${databaseUrl}`);
 
+    // Apply pending Prisma migrations (creates schema on first run)
+    runPrismaMigrations();
+
     // Initialize Prisma Client
     prisma = new PrismaClient({
       datasourceUrl: databaseUrl,
@@ -85,17 +124,10 @@ export async function initializeDatabase() {
     await prisma.$connect();
     console.log("✅ Prisma connected successfully");
 
-    // Test connection by making a simple query
-    try {
-      // This will create tables if they don't exist on first query
-      await prisma.$queryRaw`SELECT 1 as test`;
-      await ensureSubscriptionExpiryColumn(prisma);
-      console.log("✅ Database connection verified");
-    } catch (error) {
-      console.log(
-        "⚠️  First connection attempt failed, tables will be created on first use",
-      );
-    }
+    // Verify connection after migrations
+    await prisma.$queryRaw`SELECT 1 as test`;
+    await ensureSubscriptionExpiryColumn(prisma);
+    console.log("✅ Database connection verified");
 
     console.log("✅ Database initialization completed!");
     console.log(`💾 Database ready at: ${dbPath}`);
