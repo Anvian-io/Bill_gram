@@ -5,6 +5,9 @@ const fs = require("fs");
 const os = require("os");
 const http = require("http");
 
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch("disable-gpu");
+
 let mainWindow;
 let backendProcess;
 

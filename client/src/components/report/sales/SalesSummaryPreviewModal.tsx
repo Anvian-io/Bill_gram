@@ -142,7 +142,7 @@ export default function SalesSummaryPreviewModal({
       <DialogContent className="min-w-[85vw] max-h-[95vh] p-0 flex flex-col">
         <DialogHeader className="relative p-6 pb-2 flex flex-col items-center justify-center space-y-1">
           <DialogTitle className="text-2xl font-bold text-center">
-            {filters?.summaryType === "loading_summary" ? "Loading Summary" : "Sales Summary"}
+            Sales Summary
           </DialogTitle>
           <div className="text-sm font-medium">
             From : {formatDate(dateRange.from)} &nbsp;&nbsp;&nbsp; To : {formatDate(dateRange.to)}
