@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -46,10 +48,11 @@ import type {
 import { format } from "date-fns";
 
 export default function PurchaseHistory() {
+  const { layoutMode } = useTheme();
   // State
   const [histories, setHistories] = useState<PurchaseReportHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -247,19 +250,7 @@ export default function PurchaseHistory() {
           variants={headerVariants}
         >
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                Purchase Report History
-              </h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                View previously generated purchase reports
-              </motion.p>
-            </div>
+            
 
             {/* Refresh Button */}
             <motion.div
@@ -465,7 +456,7 @@ export default function PurchaseHistory() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold w-16">ID</TableHead>

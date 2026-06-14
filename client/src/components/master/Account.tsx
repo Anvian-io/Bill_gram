@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import {
   Table,
@@ -70,6 +72,7 @@ interface AccountsResponse {
 }
 
 export default function AccountComponent() {
+  const { layoutMode } = useTheme();
   // State for accounts
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +101,7 @@ export default function AccountComponent() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(true);
 
   // Local state for immediate input values (before debounce)
   const [searchInput, setSearchInput] = useState<string>("");
@@ -476,10 +479,10 @@ export default function AccountComponent() {
         </motion.div>
 
         {/* Filter Section */}
-        <motion.div className="mb-2" variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardContent className="p-1">
-              <div className="flex flex-col gap-4 p-1">
+        <motion.div className={cn("mb-2", layoutMode === "classic" && "mb-0")} variants={itemVariants}>
+          <Card className={cn("overflow-hidden", layoutMode === "classic" && "rounded-none border-none shadow-none bg-transparent")}>
+            <CardContent className={cn("p-1", layoutMode === "classic" && "p-0")}>
+              <div className={cn("flex flex-col gap-4 p-1", layoutMode === "classic" && "gap-1 p-0")}>
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap=2">
@@ -497,7 +500,7 @@ export default function AccountComponent() {
                         variant="ghost"
                         size="sm"
                         onClick={clearFilters}
-                        className="h-8 text-muted-foreground"
+                        className={cn("h-8 text-muted-foreground", layoutMode === "classic" && "h-6 text-xs")}
                         disabled={isLoading}
                       >
                         Clear all
@@ -507,7 +510,7 @@ export default function AccountComponent() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowFilters(!showFilters)}
-                      className="h-8"
+                      className={cn("h-8", layoutMode === "classic" && "h-6 text-xs")}
                       disabled={isLoading}
                     >
                       {showFilters ? "Hide" : "Show"} Filters
@@ -527,10 +530,10 @@ export default function AccountComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Account Holder Filter */}
-                        <div className="space-y-2">
+                        <div className={cn("space-y-2", layoutMode === "classic" && "space-y-0.5")}>
                           <Label
                             htmlFor="accountHolder"
-                            className="text-sm font-medium"
+                            className={cn("text-sm font-medium", layoutMode === "classic" && "text-xs text-muted-foreground")}
                           >
                             Account Holder
                           </Label>
@@ -563,10 +566,10 @@ export default function AccountComponent() {
                         </div>
 
                         {/* Bank Name Filter */}
-                        <div className="space-y-2">
+                        <div className={cn("space-y-2", layoutMode === "classic" && "space-y-0.5")}>
                           <Label
                             htmlFor="bankName"
-                            className="text-sm font-medium"
+                            className={cn("text-sm font-medium", layoutMode === "classic" && "text-xs text-muted-foreground")}
                           >
                             Bank Name
                           </Label>
@@ -754,10 +757,10 @@ export default function AccountComponent() {
 
         {/* Accounts Table */}
         <motion.div variants={itemVariants}>
-          <Card className="mb-6 overflow-hidden">
+          <Card className={cn("mb-6 overflow-hidden", layoutMode === "classic" && "mb-0 rounded-none border-none shadow-none")}>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="font-semibold">

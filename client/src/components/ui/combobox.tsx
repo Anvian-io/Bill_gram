@@ -13,7 +13,41 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 
-const Combobox = ComboboxPrimitive.Root
+const ComboboxHoverContext = React.createContext<{
+  handleMouseEnter: () => void;
+  handleMouseLeave: () => void;
+} | null>(null);
+
+function Combobox({
+  ...props
+}: React.ComponentProps<typeof ComboboxPrimitive.Root>) {
+  const [open, setOpen] = React.useState(false);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const handleMouseEnter = React.useCallback(() => {
+    clearTimeout(timeoutRef.current);
+    setOpen(true);
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => {
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 150);
+  }, []);
+
+  return (
+    <ComboboxHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
+      <ComboboxPrimitive.Root 
+        open={props.open !== undefined ? props.open : open}
+        onOpenChange={(open, event: any) => {
+          setOpen(open);
+          (props as any).onOpenChange?.(open, event);
+        }}
+        {...props} 
+      />
+    </ComboboxHoverContext.Provider>
+  )
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />
@@ -24,9 +58,12 @@ function ComboboxTrigger({
   children,
   ...props
 }: ComboboxPrimitive.Trigger.Props) {
+  const hoverCtx = React.useContext(ComboboxHoverContext);
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
+      onMouseEnter={hoverCtx?.handleMouseEnter}
+      onMouseLeave={hoverCtx?.handleMouseLeave}
       className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       {...props}
     >
@@ -63,8 +100,9 @@ function ComboboxInput({
   showTrigger?: boolean
   showClear?: boolean
 }) {
+  const hoverCtx = React.useContext(ComboboxHoverContext);
   return (
-    <InputGroup className={cn("w-auto", className)}>
+    <InputGroup className={cn("w-auto", className)} onMouseEnter={hoverCtx?.handleMouseEnter} onMouseLeave={hoverCtx?.handleMouseLeave}>
       <ComboboxPrimitive.Input
         render={<InputGroupInput disabled={disabled} />}
         {...props}
@@ -102,6 +140,7 @@ function ComboboxContent({
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
+  const hoverCtx = React.useContext(ComboboxHoverContext);
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
@@ -115,6 +154,8 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
+          onMouseEnter={hoverCtx?.handleMouseEnter}
+          onMouseLeave={hoverCtx?.handleMouseLeave}
           className={cn(
             "bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:border-input/30 group/combobox-content relative max-h-96 w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-md shadow-md ring-1 duration-100 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none",
             className

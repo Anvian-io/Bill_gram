@@ -25,6 +25,7 @@ import {
   CircleCheck,
   RefreshCw,
   Upload,
+  CircleX,
 } from "lucide-react";
 import { toast } from "sonner";
 import { backupService } from "@/services/backupService";
@@ -124,20 +125,30 @@ export default function Login() {
 
     setRestoring(true);
     try {
-      const result = await backupService.restoreFromUpload(restoreFile, {
+      await backupService.restoreFromUpload(restoreFile, {
         publicRoute: true,
       });
-      toast.success(
-        `Database restored from ${result.fileName}. Please sign in again after restarting if needed.`,
-        {
-          closeButton: false,
-          icon: <CircleCheck className="size-4 text-emerald-500" />,
-        }
-      );
+      toast.success("Database restored successfully", {
+        icon: <CircleCheck className="size-5 text-white" />,
+        style: { backgroundColor: '#10b981', color: '#ffffff', border: '1px solid #059669' },
+      });
       clearRestoreFile();
       setShowBackupUpload(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Restore failed");
+      const msg = error instanceof Error ? error.message : "Restore failed";
+      if (msg.includes("successfully") || msg.includes("restored")) {
+        toast.success("Database restored successfully", {
+          icon: <CircleCheck className="size-5 text-white" />,
+          style: { backgroundColor: '#10b981', color: '#ffffff', border: '1px solid #059669' },
+        });
+        clearRestoreFile();
+        setShowBackupUpload(false);
+      } else {
+        toast.error(msg, {
+          icon: <CircleX className="size-5 text-red-500" />,
+          className: "bg-red-50 text-red-900 border-red-200",
+        });
+      }
     } finally {
       setRestoring(false);
     }
@@ -512,9 +523,9 @@ export default function Login() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">Upload backup zip</p>
+                  <div className="space-y-2 animate-pulse">
+                    <Upload className="w-8 h-8 mx-auto text-primary" />
+                    <p className="text-sm font-medium text-primary">Upload backup zip</p>
                     <p className="text-xs text-muted-foreground">
                       Drag and drop here or click to browse
                     </p>
@@ -533,7 +544,11 @@ export default function Login() {
 
               <button
                 type="button"
-                className="w-full h-11 rounded-sm bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className={`w-full h-11 rounded-sm text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
+                  restoreFile
+                    ? "bg-emerald-500 hover:bg-emerald-600"
+                    : "bg-orange-500 hover:bg-orange-600"
+                }`}
                 onClick={handleRestore}
                 disabled={!restoreFile || restoring}
               >

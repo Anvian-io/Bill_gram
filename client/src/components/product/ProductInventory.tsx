@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -114,6 +116,7 @@ interface ProductsResponse {
 }
 
 export default function ProductInventory() {
+  const { layoutMode } = useTheme();
   // Remove ?id from query params on mount
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -162,7 +165,7 @@ export default function ProductInventory() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(true);
 
   // Local state for immediate input values (before debounce)
   const [searchInput, setSearchInput] = useState<string>("");
@@ -639,19 +642,7 @@ export default function ProductInventory() {
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-heading">
-                  Product Inventory
-                </h1>
-                <motion.p
-                  className="text-muted-foreground mt-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  Manage and track your product inventory
-                </motion.p>
-              </div>
+              
 
               {/* Search Bar */}
               <motion.div
@@ -1241,7 +1232,7 @@ export default function ProductInventory() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
-                  <Table>
+                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
                         <TableHead className="font-semibold">Product</TableHead>

@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -316,6 +317,7 @@ function SalesFormSkeleton() {
 // Component
 // ----------------------------------------------------------------------
 export default function AddSales() {
+  const { layoutMode } = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -839,7 +841,49 @@ export default function AddSales() {
       cartonPack: 0,
       conversionFactor: 0,
     };
-    form.setValue("items", [...items, newItem], { shouldDirty: true });
+    form.setValue("items", [newItem, ...items], { shouldDirty: true });
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+    field: string,
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      let nextFieldId = "";
+      if (field === "rate") nextFieldId = `aQty-${index}`;
+      else if (field === "aQty") nextFieldId = `fQty-${index}`;
+      else if (field === "fQty") nextFieldId = `DQty-${index}`;
+      else if (field === "DQty") {
+        if (index === 0) {
+          addProductRow();
+          nextFieldId = `productSearch-0`;
+        } else {
+          nextFieldId = `productSearch-${index - 1}`;
+        }
+      }
+      else if (field === "schPercent") nextFieldId = `taxRate-${index}`;
+      else if (field === "taxRate") {
+        if (index === 0) {
+          addProductRow();
+          nextFieldId = `productSearch-0`;
+        } else {
+          nextFieldId = `productSearch-${index - 1}`;
+        }
+      }
+      if (nextFieldId) {
+        setTimeout(() => {
+          const nextElement = document.getElementById(nextFieldId) as HTMLElement;
+          if (nextElement) {
+            nextElement.focus();
+            if (nextElement instanceof HTMLInputElement) {
+              nextElement.select();
+            }
+          }
+        }, 100);
+      }
+    }
   };
 
   const removeProductRow = (index: number) => {
@@ -1566,7 +1610,7 @@ export default function AddSales() {
               <CardContent>
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl">
-                    <Table>
+                    <Table className={cn(layoutMode === "classic" && "classic-table")}>
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">
@@ -1649,6 +1693,7 @@ export default function AddSales() {
                                   >
                                     <PopoverTrigger asChild>
                                       <Button
+                                        id={`productSearch-${index}`}
                                         variant="outline"
                                         role="combobox"
                                         className="w-full justify-between"
@@ -1710,6 +1755,7 @@ export default function AddSales() {
                                   <div className="relative">
                                     <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                     <Input
+                                      id={`rate-${index}`}
                                       type="number"
                                       step="0.01"
                                       value={item.rate ?? 0}
@@ -1720,6 +1766,7 @@ export default function AddSales() {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
+                                      onKeyDown={(e) => handleKeyDown(e, index, "rate")}
                                       className="w-24 pl-7"
                                       disabled={isSubmitting}
                                     />
@@ -1729,6 +1776,7 @@ export default function AddSales() {
                                 {/* A. Qty */}
                                 <TableCell>
                                   <Input
+                                    id={`aQty-${index}`}
                                     type="number"
                                     step="1"
                                     value={item.aQty ?? 0}
@@ -1739,6 +1787,7 @@ export default function AddSales() {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
+                                    onKeyDown={(e) => handleKeyDown(e, index, "aQty")}
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />
@@ -1747,6 +1796,7 @@ export default function AddSales() {
                                 {/* Fr (Free Qty) */}
                                 <TableCell>
                                   <Input
+                                    id={`fQty-${index}`}
                                     type="number"
                                     step="1"
                                     value={item.fQty ?? 0}
@@ -1757,6 +1807,7 @@ export default function AddSales() {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
+                                    onKeyDown={(e) => handleKeyDown(e, index, "fQty")}
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />
@@ -1765,6 +1816,7 @@ export default function AddSales() {
                                 {/* Dm (Damaged Qty) */}
                                 <TableCell>
                                   <Input
+                                    id={`DQty-${index}`}
                                     type="number"
                                     step="1"
                                     value={item.DQty ?? 0}
@@ -1775,6 +1827,7 @@ export default function AddSales() {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
+                                    onKeyDown={(e) => handleKeyDown(e, index, "DQty")}
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />
@@ -1977,7 +2030,7 @@ export default function AddSales() {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {/* Gross Amount (read-only) */}
-                    <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1">
+                    <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-1">
                           Gross Amount
@@ -2008,7 +2061,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Box/Unit Ratio */}
-                    <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2">
+                    <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-2">
                           Box/Unit Ratio
@@ -2030,7 +2083,7 @@ export default function AddSales() {
                     </div>
 
                     {/* CESS/INS */}
-                    <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3">
+                    <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-3">
                           CESS/INS
@@ -2068,7 +2121,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Discount % */}
-                    <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5">
+                    <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5 yellow-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-5">
                           Discount %
@@ -2105,7 +2158,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Tax Amount */}
-                    <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6">
+                    <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-6">
                           Tax Amount
@@ -2212,7 +2265,7 @@ export default function AddSales() {
                     </div>
 
                     {/* Total Scheme (read-only) */}
-                    <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4">
+                    <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4 grey-block">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-summary-text-4">
                           Total Scheme
@@ -2301,7 +2354,7 @@ export default function AddSales() {
             />
 
             {/* Submit Buttons */}
-            <div className="flex justify-end gap-4 pt-4 border-t">
+            <div className="flex justify-end gap-4 pt-4 border-t mt-4">
               {/* Bill Preview Button - Also shown at bottom for convenience */}
               {canShowBillPreview && (
                 <Button
@@ -2327,10 +2380,10 @@ export default function AddSales() {
               <Button
                 type="submit"
                 disabled={isSubmitting || (isEditMode && !isDirty)}
-                className="gap-2"
+                className="gap-2 fixed bottom-6 right-6 z-50 shadow-xl rounded-full px-6 py-6 text-base font-semibold"
                 title={isEditMode && !isDirty ? "No changes made" : ""}
               >
-                <Save className="h-4 w-4" />
+                <Save className="h-5 w-5" />
                 {isSubmitting
                   ? "Saving..."
                   : isEditMode

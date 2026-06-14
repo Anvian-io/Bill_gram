@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useEffect, useMemo, useState } from "react";
 import {
   Table,
@@ -71,6 +73,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 };
 
 export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
+  const { layoutMode } = useTheme();
   const [rows, setRows] = useState<HSNSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -225,17 +228,7 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
       >
         <motion.div className="flex flex-col gap-6 mb-6 w-full" variants={headerVariants}>
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">HSN Summary</h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                HSN summary report for Sales, Purchase or combined data
-              </motion.p>
-            </div>
+            
             <motion.div className="flex items-center gap-3">
               <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
                 <Button
@@ -442,7 +435,7 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto w-full transition-normal">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead>Goods / Service</TableHead>

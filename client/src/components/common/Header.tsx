@@ -251,8 +251,12 @@ export function Header({ isExpanded, pages }: HeaderProps) {
         isExpanded ? "sm:left-64" : "sm:left-16"
       } left-0 right-0`}
     >
-      {/* Left - Breadcrumb */}
-      <BreadcrumbWrapper items={pages} />
+      {/* Left - Heading */}
+      <div className="flex items-center">
+        <h1 className="text-xl font-bold text-heading hidden md:block pr-4">
+          {pages.length > 0 ? pages[pages.length - 1].label : "Dashboard"}
+        </h1>
+      </div>
 
       {/* Right - Icons & Time */}
       <div className="flex items-center gap-4">

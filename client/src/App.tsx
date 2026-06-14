@@ -29,6 +29,8 @@ import AppInitializer from "./components/AppInitializer";
 import BackupSessionGuard from "./components/BackupSessionGuard";
 
 
+import { useEnterToNextField } from "./hooks/useEnterToNextField";
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -46,6 +48,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
+  useEnterToNextField();
 
   return (
     <AuthProvider>

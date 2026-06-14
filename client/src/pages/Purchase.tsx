@@ -117,9 +117,15 @@ export default function Purchase() {
 
             {/* Tab content */}
             <div>
-              {activeTab === "add" && <AddPurchase />}
-              {activeTab === "purchase" && <PurchaseList />}
-              {activeTab === "history" && <PurchaseHistory />}
+              <div className={activeTab === "add" ? "block" : "hidden"}>
+                <AddPurchase />
+              </div>
+              <div className={activeTab === "purchase" ? "block" : "hidden"}>
+                <PurchaseList />
+              </div>
+              <div className={activeTab === "history" ? "block" : "hidden"}>
+                <PurchaseHistory />
+              </div>
             </div>
           </div>
         </div>

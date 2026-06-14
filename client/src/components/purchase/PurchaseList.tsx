@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -110,6 +111,7 @@ const formatDateToDisplay = (date: Date | undefined): string => {
 // Main Component
 // ----------------------------------------------------------------------
 export default function Purchase() {
+  const { layoutMode } = useTheme();
   // State
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -131,7 +133,7 @@ export default function Purchase() {
     null,
   );
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
@@ -475,19 +477,7 @@ export default function Purchase() {
             variants={headerVariants}
           >
             <div className="flex justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-heading">
-                  Purchase Management
-                </h1>
-                <motion.p
-                  className="text-muted-foreground mt-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  Manage and track your purchase invoices
-                </motion.p>
-              </div>
+              
 
               {/* Search Bar */}
               <motion.div
@@ -909,7 +899,7 @@ export default function Purchase() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
                         <TableHead className="font-semibold">

@@ -24,6 +24,8 @@ import type {
 } from "@/types/sales-report";
 import { salesService } from "@/services/salesService";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 
 interface SalesSummaryPreviewModalProps {
   isOpen: boolean;
@@ -48,6 +50,7 @@ export default function SalesSummaryPreviewModal({
 }: SalesSummaryPreviewModalProps) {
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
+  const { layoutMode } = useTheme();
 
   if (!data) return null;
 
@@ -136,14 +139,17 @@ export default function SalesSummaryPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[65vw] max-h-[95vh] p-0 flex flex-col">
-        <DialogHeader className="relative p-6 pb-2 flex items-center justify-center">
-          <DialogTitle className="text-2xl font-bold">
+      <DialogContent className="min-w-[85vw] max-h-[95vh] p-0 flex flex-col">
+        <DialogHeader className="relative p-6 pb-2 flex flex-col items-center justify-center space-y-1">
+          <DialogTitle className="text-2xl font-bold text-center">
             Sales Summary
           </DialogTitle>
+          <div className="text-sm font-medium">
+            From : {formatDate(dateRange.from)} &nbsp;&nbsp;&nbsp; To : {formatDate(dateRange.to)}
+          </div>
 
           {/* PDF button */}
-          <div className="absolute right-6 flex items-center gap-2 mr-8">
+          <div className="absolute right-6 flex items-center gap-2 mr-8 top-6">
             <Button
               variant="outline"
               size="sm"
@@ -164,7 +170,7 @@ export default function SalesSummaryPreviewModal({
           </div>
 
           {/* Excel button */}
-          <div className="absolute right-32 flex items-center gap-2 mr-8">
+          <div className="absolute right-32 flex items-center gap-2 mr-8 top-6">
             <Button
               variant="outline"
               size="sm"
@@ -191,30 +197,18 @@ export default function SalesSummaryPreviewModal({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4 mb-6"
+            className="mb-4 mt-2"
           >
-            <div className="flex justify-center text-sm">
+            <div className="flex flex-col gap-1 text-sm font-medium">
               <div>
-                <span className="text-muted-foreground text-[16px]">
-                  Date:{" "}
-                </span>
-                <span className="font-medium text-[16px]">
-                  {formatDate(dateRange.from)} to {formatDate(dateRange.to)}
+                <span>Invoice no : </span>
+                <span>
+                  {invoiceRange.start || "—"}-{invoiceRange.end || "—"}
                 </span>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-2 text-sm">
               <div>
-                <span className="text-muted-foreground">INVOICE : </span>
-                <span className="font-medium">
-                  {invoiceRange.start || "—"} to {invoiceRange.end || "—"}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-muted-foreground">AREA : </span>
-                <span className="font-medium">
+                <span>Area : </span>
+                <span>
                   {areas.length > 0 ? areas.join(", ") : "All"}
                 </span>
               </div>
@@ -223,28 +217,33 @@ export default function SalesSummaryPreviewModal({
 
           {/* Table container */}
           <div className="flex-1 overflow-auto rounded-md border max-h-88 mb-2">
-            <Table>
+            {/* @ts-ignore */}
+            <Table className={cn(layoutMode === "classic" && "classic-table")}>
               <TableHeader className="bg-secondary/50 sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="w-12 text-center">Sr.</TableHead>
-                  <TableHead>P.Code</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">MRP</TableHead>
-                  <TableHead className="text-right">BOX</TableHead>
-                  <TableHead className="text-right">UNIT</TableHead>
-                  <TableHead className="text-right">QTY</TableHead>
-                  <TableHead className="text-right">FR</TableHead>
-                  <TableHead className="text-right">REP</TableHead>
-                  <TableHead className="text-right">DMG</TableHead>
-                  <TableHead className="text-right">RATE</TableHead>
-                  <TableHead className="text-right">AMT</TableHead>
+                  <TableHead className="w-12 text-center text-xs font-semibold px-2">Sr No</TableHead>
+                  <TableHead className="text-xs font-semibold px-2">P.Code</TableHead>
+                  <TableHead className="text-xs font-semibold px-2">DISCRIPTION</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">MRP</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">BOX</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">UNIT</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">QTY</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">FREE</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">REP</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">DMG</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">SCH</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">RATE</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">AMT</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">RET</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">MRP Value</TableHead>
+                  <TableHead className="text-right text-xs font-semibold px-2">FREE X RATE</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={12}
+                      colSpan={16}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No products found for the selected filters.
@@ -257,86 +256,56 @@ export default function SalesSummaryPreviewModal({
                         (currentPage - 1) * pagination.limit + idx + 1;
                       return (
                         <TableRow key={`${product.productCode}-${idx}`}>
-                          <TableCell className="text-center">
-                            {serial}
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {product.productCode}
-                          </TableCell>
-                          <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-[160px]">
-                            <div className="text-sm text-muted-foreground h-6 overflow-y-auto prose prose-sm text-wrap w-[155px]">
-                              {product.description
-                                ? product.description.slice(0, 20) +
-                                  (product.description.length > 20 ? "…" : "")
-                                : "No description"}
+                          <TableCell className="text-center px-2 py-1 text-sm">{serial}</TableCell>
+                          <TableCell className="font-mono px-2 py-1 text-sm">{product.productCode}</TableCell>
+                          <TableCell className="group-hover:bg-secondary/30 cursor-pointer px-2 py-1">
+                            <div className="text-sm font-medium h-6 overflow-hidden text-ellipsis whitespace-nowrap w-[155px]" title={product.description || "No description"}>
+                              {product.description || "No description"}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
-                            {product.mrp.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {product.totalMqty}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {product.totalUnit}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {product.totalUnitsSold}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {product.fQty}
-                          </TableCell>
-                          <TableCell className="text-right">0</TableCell>
-                          <TableCell className="text-right">
-                            {product.dQty}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {product.saleRate.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{product.finalAmount.toFixed(2)}
-                          </TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.mrp.toFixed(2)}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.totalMqty} <span className="text-[10px] text-muted-foreground">(BOX)</span></TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.totalUnit}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.totalUnitsSold} <span className="text-[10px] text-muted-foreground">(PCS)</span></TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.fQty}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">0</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.dQty}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">0.00</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.saleRate.toFixed(2)}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">{product.finalAmount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">0</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">0</TableCell>
+                          <TableCell className="text-right px-2 py-1 text-sm">0</TableCell>
                         </TableRow>
                       );
                     })}
-                    {/* Total Row – only on the last page */}
-                    {isLastPage && totals && (
-                      <TableRow className="font-bold border-t-2 bg-secondary/10">
-                        <TableCell className="text-center">
-                          Total {pagination.total} products
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell className="text-right">
-                          {totals.totalMqty}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {totals.totalUnit}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {totals.totalUnitsSold}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {totals.fQty}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {totals.rep}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {totals.dQty}
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell className="text-right">
-                          ₹{totals.finalAmount.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </>
                 )}
               </TableBody>
             </Table>
           </div>
+          {/* Detailed Footer Summary Panel */}
+          {isLastPage && totals && (
+            <div className="grid grid-cols-3 gap-8 py-4 px-2 border-t border-b mb-4 text-sm font-medium">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                <div>Total :</div><div className="text-right">{totals.finalAmount.toFixed(2)}</div>
+                <div>Scheme :</div><div className="text-right">0.00</div>
+                <div>Total Disc :</div><div className="text-right">0.00</div>
+                <div>Dmg/Disp :</div><div className="text-right">0.00/0.00</div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                <div>Total Cash/ Bank :</div><div className="text-right">0.00/0.00</div>
+                <div>Total Pending/RetValue :</div><div className="text-right">{(totals.finalAmount).toFixed(2)}/-0.00</div>
+                <div>TCS TAX :</div><div className="text-right">0.00</div>
+                <div>Round Off :</div><div className="text-right">0.00</div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-muted-foreground">
+                <div>Total BOX :</div><div className="text-right">{totals.totalMqty}</div>
+                <div>Total UNIT :</div><div className="text-right">{totals.totalUnit}</div>
+                <div>Total QTY :</div><div className="text-right">{totals.totalUnitsSold}</div>
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           {pagination.totalPages > 1 && !isLastPage && (

@@ -40,11 +40,22 @@ import {
   X,
   Save,
   Signature, // added for signature icon
+  Palette,
+  Type,
+  LayoutDashboard,
 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
 import type { User } from "@/types/user";
 import { getFullImageUrl } from "@/utils/imageUtils";
+import { useTheme } from "@/contexts/ThemeProvider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Validation schema (no change, signature is handled separately)
 const profileSchema = z.object({
@@ -74,6 +85,19 @@ const Profile: React.FC = () => {
   const [signatureFile, setSignatureFile] = useState<File | null>(null); // new
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null); // new
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    primaryColor,
+    setPrimaryColor,
+    fontFamily,
+    setFontFamily,
+    fontSize,
+    setFontSize,
+    layoutMode,
+    setLayoutMode,
+    tableSize,
+    setTableSize,
+  } = useTheme();
 
   // Get user from localStorage
   useEffect(() => {
@@ -676,6 +700,161 @@ const Profile: React.FC = () => {
                   </motion.div>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Appearance Settings Card */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-6"
+        >
+          <Card className="border p-4 border-gray-200 dark:border-gray-800 shadow-xl backdrop-blur-sm bg-white/95 dark:bg-gray-900/95">
+            <CardHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Appearance Settings
+              </CardTitle>
+              <CardDescription>
+                Customize the look and feel of the application
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              
+              {/* Primary Color */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Palette className="h-4 w-4" />
+                  Primary Color
+                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  {[
+                    { name: 'Blue', value: '#3b82f6' },
+                    { name: 'Green', value: '#10b981' },
+                    { name: 'Purple', value: '#8b5cf6' },
+                    { name: 'Rose', value: '#f43f5e' },
+                    { name: 'Amber', value: '#f59e0b' },
+                  ].map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => setPrimaryColor(color.value)}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${primaryColor === color.value ? 'border-foreground scale-110 shadow-md' : 'border-transparent'}`}
+                      style={{ backgroundColor: color.value }}
+                      title={color.name}
+                      type="button"
+                    />
+                  ))}
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className="text-sm text-muted-foreground">Custom:</span>
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Typography */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Type className="h-4 w-4" />
+                    Font Family
+                  </h3>
+                  <Select value={fontFamily} onValueChange={setFontFamily}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a font" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system-ui, Avenir, Helvetica, Arial, sans-serif">System Default</SelectItem>
+                      <SelectItem value="'Inter', sans-serif">Inter</SelectItem>
+                      <SelectItem value="'Roboto', sans-serif">Roboto</SelectItem>
+                      <SelectItem value="'Outfit', sans-serif">Outfit</SelectItem>
+                      <SelectItem value="monospace">Monospace</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Type className="h-4 w-4" />
+                    Font Size
+                  </h3>
+                  <Select value={fontSize} onValueChange={setFontSize}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12px">Small</SelectItem>
+                      <SelectItem value="14px">Medium</SelectItem>
+                      <SelectItem value="16px">Default</SelectItem>
+                      <SelectItem value="18px">Large</SelectItem>
+                      <SelectItem value="20px">Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Layout Mode */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Layout Mode
+                </h3>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant={layoutMode === "classic" ? "default" : "outline"}
+                    onClick={() => setLayoutMode("classic")}
+                    className="flex-1 justify-center"
+                  >
+                    Old Layout (Classic)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={layoutMode === "modern" ? "default" : "outline"}
+                    onClick={() => setLayoutMode("modern")}
+                    className="flex-1 justify-center"
+                  >
+                    New Layout (Modern)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Choose between the dense, grid-based Old Layout or the spaced-out, card-based New Layout.
+                </p>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Table Density */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Table Density (Sizing)
+                </h3>
+                <Select value={tableSize} onValueChange={(v: any) => setTableSize(v)}>
+                  <SelectTrigger className="w-full sm:w-1/2">
+                    <SelectValue placeholder="Select table density" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">Compact (Dense)</SelectItem>
+                    <SelectItem value="standard">Standard (Default)</SelectItem>
+                    <SelectItem value="large">Comfortable (Spaced)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Adjust the height and padding of table rows to fit more or less data on your screen.
+                </p>
+              </div>
+
             </CardContent>
           </Card>
         </motion.div>

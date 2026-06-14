@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useEffect, useState } from "react";
 import {
   Table,
@@ -73,8 +75,9 @@ const parseHistoryFilters = (data: string) => {
 };
 
 export default function GSTHistory() {
+  const { layoutMode } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [rows, setRows] = useState<GSTReportHistory[]>([]);
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | "sales" | "purchase">("all");
@@ -222,17 +225,7 @@ export default function GSTHistory() {
       <div className="max-w-8xl mx-auto">
         <motion.div className="flex flex-col gap-6 mb-6 w-full" variants={headerVariants}>
           <div className="flex justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">GST Report History</h1>
-              <motion.p
-                className="text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                View and download previously generated GST reports
-              </motion.p>
-            </div>
+            
             <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
               <Button variant="outline" className="gap-2" onClick={fetchHistory} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -382,7 +375,7 @@ export default function GSTHistory() {
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
                       <TableHead className="w-16">ID</TableHead>

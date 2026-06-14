@@ -73,11 +73,16 @@ async function getAuthClientForUser(prisma, userId) {
   });
   if (!tokenRecord) return null;
 
-  const oAuth2Client = buildAuthenticatedClient(
-    tokenRecord.accessToken,
-    tokenRecord.refreshToken,
-    tokenRecord.tokenExpiry
-  );
+  let oAuth2Client;
+  try {
+    oAuth2Client = buildAuthenticatedClient(
+      tokenRecord.accessToken,
+      tokenRecord.refreshToken,
+      tokenRecord.tokenExpiry
+    );
+  } catch (err) {
+    return null;
+  }
 
   // Handle token refresh and update DB
   oAuth2Client.on("tokens", async (tokens) => {
@@ -213,7 +218,13 @@ export async function performBackup(prisma, userId, trigger = "manual") {
 
     return { success: true, fileName, driveLink, fileSizeKb };
   } catch (error) {
-    console.error("Backup error:", error);
+    if (error.message === "invalid_client" || error.response?.data?.error === "invalid_client") {
+      console.warn("Backup skipped: Invalid OAuth client. Please configure real Google Drive credentials in .env.");
+    } else if (error.message?.includes("dummy_client_id")) {
+      console.warn("Backup skipped: Google Drive credentials are not configured (dummy_client_id).");
+    } else {
+      console.error("Backup error:", error);
+    }
     await prisma.backupHistory.create({
       data: {
         userId,

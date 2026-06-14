@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -236,6 +237,7 @@ export default function SalesForm({
   onSave,
   isSubmitting = false,
 }: SalesFormModalProps) {
+  const { layoutMode } = useTheme();
   // State for dropdowns
   const [areaOpen, setAreaOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -1321,7 +1323,7 @@ export default function SalesForm({
                 </div>
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-4xl xl:max-w-7.5xl 2xl:max-w-10xl">
-                    <Table>
+                    <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">

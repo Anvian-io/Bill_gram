@@ -182,21 +182,17 @@ export default function Report() {
 
       {/* Main Content Area - Fixed layout with internal scrolling */}
       <div className="flex-1 overflow-hidden h-full flex flex-col">
-        <AnimatePresence>
-          <motion.div
-            key={activeSection}
-            // variants={contentVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="flex-1 flex flex-col min-h-0"
+        {sidebarItems.map((item) => (
+          <div
+            key={item.id}
+            className={`flex-1 flex flex-col min-h-0 ${activeSection === item.id ? "block" : "hidden"}`}
           >
             {/* Content - Scrollable area */}
             <div className="flex-1 overflow-y-auto min-h-0 bg-background">
-              {activeItem?.component}
+              {item.component}
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ))}
       </div>
     </div>
   );

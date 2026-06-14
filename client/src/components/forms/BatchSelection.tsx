@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -112,6 +114,7 @@ export default function BatchSelectionModal({
   conversionFactor,
   onBatchSelect,
 }: BatchSelectionModalProps) {
+  const { layoutMode } = useTheme();
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [aQty, setAQty] = useState<number>(1);
   const [mQty, setMQty] = useState<number>(0);
@@ -274,6 +277,12 @@ export default function BatchSelectionModal({
                       setAQty(Math.max(1, parseInt(e.target.value) || 1))
                     }
                     className="w-24"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        document.getElementById("searchBatch")?.focus();
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -341,10 +350,17 @@ export default function BatchSelectionModal({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="searchBatch"
                   placeholder="Search by batch number or barcode..."
                   className="pl-10"
                   value={searchBatch}
                   onChange={(e) => setSearchBatch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && selectedBatch) {
+                      e.preventDefault();
+                      document.getElementById("applyBatchBtn")?.click();
+                    }
+                  }}
                 />
                 {searchBatch && (
                   <Button
@@ -361,7 +377,7 @@ export default function BatchSelectionModal({
 
             {/* Batch Selection Table */}
             <div className="rounded-md border max-h-50 overflow-y-auto">
-              <Table>
+              <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                 <TableHeader>
                   <TableRow className="bg-secondary/50">
                     <TableHead className="font-semibold">Select</TableHead>
@@ -512,7 +528,7 @@ export default function BatchSelectionModal({
             </div>
 
             <div className="rounded-md border max-h-50 overflow-y-auto">
-              <Table>
+              <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
                 <TableHeader>
                   <TableRow className="bg-secondary/50">
                     <TableHead className="font-semibold">Batch</TableHead>
@@ -630,6 +646,7 @@ export default function BatchSelectionModal({
                 Cancel
               </Button>
               <Button
+                id="applyBatchBtn"
                 onClick={handleApplyBatch}
                 disabled={!selectedBatch}
                 className="gap-2"

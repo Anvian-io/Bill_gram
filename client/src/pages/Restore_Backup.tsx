@@ -324,15 +324,28 @@ const Restore_Backup: React.FC = () => {
 
     setRestoring(true);
     try {
-      const result = await backupService.restoreFromUpload(restoreFile);
-      toast.success(
-        `Database restored from ${result.fileName}. Please restart the app if data looks stale.`
-      );
+      await backupService.restoreFromUpload(restoreFile);
+      toast.success("Database restored successfully", {
+        icon: <CheckCircle2 className="h-5 w-5 text-white" />,
+        style: { backgroundColor: '#10b981', color: '#ffffff', border: '1px solid #059669' },
+      });
       setRestoreFile(null);
       loadHistory(1);
       setHistoryPage(1);
     } catch (err: any) {
-      toast.error(err.message || "Restore failed");
+      const msg = err.message || "Restore failed";
+      if (msg.includes("successfully") || msg.includes("restored")) {
+        toast.success("Database restored successfully", {
+          icon: <CheckCircle2 className="h-5 w-5 text-white" />,
+          style: { backgroundColor: '#10b981', color: '#ffffff', border: '1px solid #059669' },
+        });
+        setRestoreFile(null);
+      } else {
+        toast.error(msg, {
+          icon: <XCircle className="h-5 w-5 text-red-500" />,
+          className: "bg-red-50 text-red-900 border-red-200",
+        });
+      }
       loadHistory(1);
       setHistoryPage(1);
     } finally {
@@ -795,9 +808,9 @@ const Restore_Backup: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="h-10 w-10 text-gray-400 mx-auto" />
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <div className="space-y-2 animate-pulse">
+                      <Upload className="h-10 w-10 text-primary mx-auto" />
+                      <p className="text-sm font-medium text-primary">
                         Drag & drop your backup zip
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -825,7 +838,11 @@ const Restore_Backup: React.FC = () => {
                   </div>
 
                   <Button
-                    className="gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+                    className={`gap-2 w-full text-white shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 ${
+                      restoreFile
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+                        : "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    }`}
                     onClick={handleRestore}
                     disabled={!restoreFile || restoring}
                   >
