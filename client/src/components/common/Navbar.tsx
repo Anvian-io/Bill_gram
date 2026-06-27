@@ -137,7 +137,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             {/* Header */}
             <div className="flex-shrink-0 flex items-center justify-start h-16 px-4 border-b border-border">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
                   <Menu className="w-5 h-5 text-sidebar-foreground" />
                 </div>
                 <span
@@ -169,7 +169,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                             ${
                               isActive
                                 ? "text-primary bg-primary/10 border border-primary/20"
-                                : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                                : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
                             }
                           `}
                         >
@@ -195,7 +195,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                               ${
                                 isPinned
                                   ? "text-primary bg-primary/10"
-                                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                                  : "text-sidebar-foreground/60 hover:text-primary hover:bg-primary/10"
                               }
                               opacity-100 group-hover:opacity-100
                               ${isExpanded ? "" : "hidden"}
@@ -222,7 +222,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                 onClick={handleThemeChange}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-primary hover:bg-primary/10"
               >
                 {resolvedTheme === "dark" ? (
                   <Sun className="w-5 h-5" />
@@ -265,7 +265,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
               {/* Header with Close Button */}
               <div className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b border-border">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
                     <Menu className="w-5 h-5 text-sidebar-foreground" />
                   </div>
                   <span className="font-semibold text-lg text-sidebar-foreground">
@@ -276,7 +276,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                   onClick={toggleMobileMenu}
                   variant="ghost"
                   size="sm"
-                  className="p-2 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
+                  className="p-2 hover:bg-primary/10 text-sidebar-foreground hover:text-primary"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -301,7 +301,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                               ${
                                 isActive
                                   ? "text-primary bg-primary/10 border border-primary/20"
-                                  : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                                  : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
                               }
                             `}
                           >
@@ -320,7 +320,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                               ${
                                 isPinned
                                   ? "text-primary bg-primary/10"
-                                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                                  : "text-sidebar-foreground/60 hover:text-primary hover:bg-primary/10"
                               }
                             `}
                             title={isPinned ? "Unpin item" : "Pin item"}
@@ -344,7 +344,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                   onClick={handleThemeChange}
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                  className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-primary hover:bg-primary/10"
                 >
                   {resolvedTheme === "dark" ? (
                     <Sun className="w-5 h-5" />
@@ -363,11 +363,11 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
         {/* Mobile Menu Button - only visible on mobile */}
         <Button
           onClick={toggleMobileMenu}
-          className="h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-sidebar-border bg-sidebar text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-sidebar-border bg-sidebar text-sidebar-foreground hover:bg-primary/10 hover:text-primary"
           variant="ghost"
           size="sm"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
             <Menu className="w-5 h-5" />
           </div>
         </Button>

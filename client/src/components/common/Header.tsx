@@ -275,11 +275,11 @@ export function Header({ isExpanded, pages }: HeaderProps) {
         {/* Profile with Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <Avatar
-            className="w-10 h-10 rounded-lg flex items-center justify-center bg-sidebar-accent cursor-pointer border border-sidebar-border"
+            className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/15 cursor-pointer border border-sidebar-border"
             onClick={handleAvatarClick}
           >
             <AvatarImage src="/profile.jpg" alt="@user" />
-            <AvatarFallback className="text-sm font-medium text-sidebar-foreground bg-sidebar-accent">
+            <AvatarFallback className="text-sm font-medium text-sidebar-foreground bg-primary/15">
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </AvatarFallback>
           </Avatar>
@@ -298,14 +298,14 @@ export function Header({ isExpanded, pages }: HeaderProps) {
               <div className="p-1">
                 <button
                   onClick={handleProfile}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground hover:bg-primary/10 hover:text-primary rounded-md transition-colors"
                 >
                   <User size={16} />
                   Profile
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-sidebar-accent rounded-md transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-primary/10 rounded-md transition-colors"
                 >
                   <LogOut size={16} />
                   Logout

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { applyPrimaryTheme } from "@/utils/themeColors";
 
 type Theme = "light" | "dark" | "system";
 type LayoutMode = "modern" | "classic";
@@ -107,31 +108,37 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     if (!isLoaded) return;
     const root = window.document.documentElement;
-    
-    // Override CSS variables
-    root.style.setProperty("--primary", primaryColor);
-    root.style.setProperty("--ring", primaryColor);
-    root.style.setProperty("--sidebar-primary", primaryColor);
-    // Setting font-family and font-size
+
+    applyPrimaryTheme(root, primaryColor, {
+      isDark: resolvedTheme === "dark",
+      isClassic: layoutMode === "classic",
+    });
+
     root.style.setProperty("font-family", fontFamily);
     root.style.setProperty("font-size", fontSize);
 
-    // Apply classic-mode class
     if (layoutMode === "classic") {
       root.classList.add("classic-mode");
     } else {
       root.classList.remove("classic-mode");
     }
-    
-    // Apply table size data attribute
+
     root.setAttribute("data-table-size", tableSize);
-    
+
     localStorage.setItem("primaryColor", primaryColor);
     localStorage.setItem("fontFamily", fontFamily);
     localStorage.setItem("fontSize", fontSize);
     localStorage.setItem("layoutMode", layoutMode);
     localStorage.setItem("tableSize", tableSize);
-  }, [primaryColor, fontFamily, fontSize, layoutMode, tableSize, isLoaded]);
+  }, [
+    primaryColor,
+    fontFamily,
+    fontSize,
+    layoutMode,
+    tableSize,
+    resolvedTheme,
+    isLoaded,
+  ]);
 
   // Update localStorage when theme changes
   useEffect(() => {

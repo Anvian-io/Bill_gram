@@ -377,7 +377,7 @@
 .classic-mode .classic-table td input:focus,
 .classic-mode .classic-table td button:focus {
   background-color: #fff9c4 !important;
-  outline: 2px solid #1976d2 !important;
+  outline: 2px solid var(--ring) !important;
   outline-offset: -2px;
 }
 
