@@ -1,0 +1,201 @@
+"use client";
+
+import * as React from "react";
+import { createPortal } from "react-dom";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandList,
+} from "@/components/ui/command";
+import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
+
+export interface InlineSearchFieldProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  displayValue?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  inputClassName?: string;
+  emptyMessage?: string;
+  shouldFilter?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  children: React.ReactNode;
+}
+
+export function InlineSearchField({
+  open: openProp,
+  onOpenChange,
+  displayValue = "",
+  searchValue: searchValueProp,
+  onSearchChange,
+  placeholder = "Search...",
+  disabled = false,
+  className,
+  inputClassName,
+  emptyMessage = "No results found.",
+  shouldFilter = true,
+  onMouseEnter,
+  onMouseLeave,
+  children,
+}: InlineSearchFieldProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const [internalSearch, setInternalSearch] = React.useState("");
+  const anchorRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const leaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+  const searchValue = searchValueProp ?? internalSearch;
+  const setSearchValue = onSearchChange ?? setInternalSearch;
+  const panelStyle = useFloatingPanelPosition(open, anchorRef);
+
+  const focusInput = React.useCallback(() => {
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      const length = inputRef.current?.value.length ?? 0;
+      inputRef.current?.setSelectionRange(length, length);
+    });
+  }, []);
+
+  const closeDropdown = React.useCallback(() => {
+    setOpen(false);
+    setSearchValue("");
+  }, [setOpen, setSearchValue]);
+
+  const handleMouseEnter = React.useCallback(() => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    onMouseEnter?.();
+    if (!disabled) {
+      setOpen(true);
+      focusInput();
+    }
+  }, [disabled, focusInput, onMouseEnter, setOpen]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    onMouseLeave?.();
+    leaveTimeoutRef.current = setTimeout(() => {
+      const active = document.activeElement;
+      const insideAnchor = anchorRef.current?.contains(active);
+      const insidePanel = panelRef.current?.contains(active);
+      if (!insideAnchor && !insidePanel) {
+        closeDropdown();
+      }
+    }, 200);
+  }, [closeDropdown, onMouseLeave]);
+
+  React.useEffect(() => {
+    if (open) focusInput();
+  }, [open, focusInput]);
+
+  React.useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        anchorRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      closeDropdown();
+    };
+
+    const handleCloseRequest = () => {
+      closeDropdown();
+    };
+
+    if (open) {
+      document.addEventListener("mousedown", handlePointerDown);
+    }
+    anchorRef.current?.addEventListener(
+      "inline-search-close",
+      handleCloseRequest,
+    );
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      anchorRef.current?.removeEventListener(
+        "inline-search-close",
+        handleCloseRequest,
+      );
+    };
+  }, [open, closeDropdown]);
+
+  const closedValue =
+    displayValue && displayValue !== placeholder ? displayValue : "";
+  const inputValue = open ? searchValue : closedValue;
+
+  const panel = open ? (
+    <div
+      ref={panelRef}
+      style={panelStyle}
+      className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg ring-1 ring-border/50"
+      data-inline-search-panel
+      data-floating-panel
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <Command shouldFilter={shouldFilter}>
+        <CommandList className="max-h-[240px]">
+          {children}
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+        </CommandList>
+      </Command>
+    </div>
+  ) : null;
+
+  return (
+    <div
+      className={cn("relative w-full", className)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      data-inline-search
+    >
+      <div ref={anchorRef} className="relative">
+        <Input
+          ref={inputRef}
+          alwaysEditable
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          data-inline-search-input
+          value={inputValue}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={cn("pr-8", inputClassName)}
+          onChange={(event) => {
+            setSearchValue(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              closeDropdown();
+              inputRef.current?.blur();
+            }
+          }}
+        />
+        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0 opacity-50" />
+      </div>
+
+      {typeof document !== "undefined" && panel
+        ? createPortal(panel, document.body)
+        : null}
+    </div>
+  );
+}

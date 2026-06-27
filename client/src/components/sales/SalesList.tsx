@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import {
   Popover,
   PopoverContent,
@@ -700,25 +701,15 @@ export default function Sales() {
                           {/* Area Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">Area</Label>
-                            <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={areaOpen}
-                                  className="w-full justify-between"
-                                  disabled={isLoading}
-                                >
-                                  {getAreaName(filters.areaId as string)}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search area..." />
-                                  <CommandList>
-                                    <CommandEmpty>No area found.</CommandEmpty>
-                                    <CommandGroup>
+                            <InlineSearchField
+                            open={areaOpen}
+                            onOpenChange={setAreaOpen}
+                            displayValue={getAreaName(filters.areaId as string)}
+                            placeholder="Search area..."
+                            emptyMessage="No area found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
@@ -761,10 +752,7 @@ export default function Sales() {
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
                           </div>
 
                           {/* Customer Filter */}
@@ -772,32 +760,17 @@ export default function Sales() {
                             <Label className="text-sm font-medium">
                               Customer
                             </Label>
-                            <Popover
-                              open={customerOpen}
-                              onOpenChange={setCustomerOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={customerOpen}
-                                  className="w-full justify-between"
-                                  disabled={isLoading}
-                                >
-                                  {getCustomerName(
+                            <InlineSearchField
+                            open={customerOpen}
+                            onOpenChange={setCustomerOpen}
+                            displayValue={getCustomerName(
                                     filters.customerId as string,
                                   )}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search customer..." />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      No customer found.
-                                    </CommandEmpty>
-                                    <CommandGroup>
+                            placeholder="Search customer..."
+                            emptyMessage="No customer found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
@@ -849,10 +822,7 @@ export default function Sales() {
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
                           </div>
 
                           <GstDetailsFilter
@@ -866,25 +836,15 @@ export default function Sales() {
                           {/* Van Filter */}
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">Van</Label>
-                            <Popover open={vanOpen} onOpenChange={setVanOpen}>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={vanOpen}
-                                  className="w-full justify-between"
-                                  disabled={isLoading}
-                                >
-                                  {getVanName(filters.vanId as string)}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search van..." />
-                                  <CommandList>
-                                    <CommandEmpty>No van found.</CommandEmpty>
-                                    <CommandGroup>
+                            <InlineSearchField
+                            open={vanOpen}
+                            onOpenChange={setVanOpen}
+                            displayValue={getVanName(filters.vanId as string)}
+                            placeholder="Search van..."
+                            emptyMessage="No van found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
@@ -932,10 +892,7 @@ export default function Sales() {
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
                           </div>
 
                           {/* Salesman Filter */}
@@ -943,32 +900,17 @@ export default function Sales() {
                             <Label className="text-sm font-medium">
                               Salesman
                             </Label>
-                            <Popover
-                              open={salesmanOpen}
-                              onOpenChange={setSalesmanOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={salesmanOpen}
-                                  className="w-full justify-between"
-                                  disabled={isLoading}
-                                >
-                                  {getSalesmanName(
+                            <InlineSearchField
+                            open={salesmanOpen}
+                            onOpenChange={setSalesmanOpen}
+                            displayValue={getSalesmanName(
                                     filters.salesmanId as string,
                                   )}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search salesman..." />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      No salesman found.
-                                    </CommandEmpty>
-                                    <CommandGroup>
+                            placeholder="Search salesman..."
+                            emptyMessage="No salesman found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                       <CommandItem
                                         value="all"
                                         onSelect={() => {
@@ -1019,10 +961,7 @@ export default function Sales() {
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
                           </div>
 
                           {/* Amount Range */}

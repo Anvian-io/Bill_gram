@@ -58,6 +58,8 @@ import {
   Phone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -792,6 +794,7 @@ export default function SalesForm({
 
           <Form {...form}>
             <form
+              data-entry-form
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
@@ -811,32 +814,18 @@ export default function SalesForm({
                         <FormLabel className="text-sm">
                           Search by Phone
                         </FormLabel>
-                        <Popover open={phoneOpen} onOpenChange={setPhoneOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={phoneOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={phoneOpen}
+                            onOpenChange={setPhoneOpen}
+                            displayValue={field.value
                                   ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
                                   : "Search phone number..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search phone numbers..." />
-                              <CommandList>
-                                <CommandEmpty>No customer found.</CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search phone numbers..."
+                            emptyMessage="No customer found."
+                            disabled={isSubmitting || isReadOnly}
+                          >
+                            <CommandGroup>
                                   {customers.map((customer: Customer) => (
                                     <CommandItem
                                       key={customer.id}
@@ -871,10 +860,8 @@ export default function SalesForm({
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -890,16 +877,12 @@ export default function SalesForm({
                           Invoice Date *
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              type="date"
-                              value={field.value ?? ""}
-                              onChange={field.onChange}
-                              className="pl-10"
-                              disabled={isSubmitting || isReadOnly}
-                            />
-                          </div>
+                          <HoverDateInput
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            inputClassName="pl-10"
+                            disabled={isSubmitting || isReadOnly}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -913,32 +896,18 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Area *</FormLabel>
-                        <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={areaOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={areaOpen}
+                            onOpenChange={setAreaOpen}
+                            displayValue={field.value
                                   ? findAreaName(field.value)
                                   : "Select area"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search areas..." />
-                              <CommandList>
-                                <CommandEmpty>No area found.</CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search areas..."
+                            emptyMessage="No area found."
+                            disabled={isSubmitting || isReadOnly}
+                          >
+                            <CommandGroup>
                                   {areas.map((area) => (
                                     <CommandItem
                                       key={area.id}
@@ -971,10 +940,8 @@ export default function SalesForm({
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -987,39 +954,22 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Customer *</FormLabel>
-                        <Popover
-                          open={customerOpen}
-                          onOpenChange={setCustomerOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={customerOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly || !areaId}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={customerOpen}
+                            onOpenChange={setCustomerOpen}
+                            displayValue={field.value
                                   ? findCustomerName(field.value)
                                   : "Select customer"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search customers..." />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {areaId
-                                    ? "No customer found in this area."
-                                    : "Please select an area first."}
-                                </CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search customers..."
+                            emptyMessage={
+                              areaId
+                                ? "No customer found in this area."
+                                : "Please select an area first."
+                            }
+                            disabled={isSubmitting || isReadOnly || !areaId}
+                          >
+                            <CommandGroup>
                                   {filteredCustomers.map(
                                     (customer: Customer) => (
                                       <CommandItem
@@ -1055,10 +1005,8 @@ export default function SalesForm({
                                     ),
                                   )}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1094,32 +1042,18 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Van *</FormLabel>
-                        <Popover open={vanOpen} onOpenChange={setVanOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={vanOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={vanOpen}
+                            onOpenChange={setVanOpen}
+                            displayValue={field.value
                                   ? findVanName(field.value)
                                   : "Select van"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search vans..." />
-                              <CommandList>
-                                <CommandEmpty>No van found.</CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search vans..."
+                            emptyMessage="No van found."
+                            disabled={isSubmitting || isReadOnly}
+                          >
+                            <CommandGroup>
                                   {vans.map((van) => (
                                     <CommandItem
                                       key={van.id}
@@ -1152,10 +1086,8 @@ export default function SalesForm({
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1168,39 +1100,22 @@ export default function SalesForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Salesman *</FormLabel>
-                        <Popover
-                          open={salesmanOpen}
-                          onOpenChange={setSalesmanOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={salesmanOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly || !areaId}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={salesmanOpen}
+                            onOpenChange={setSalesmanOpen}
+                            displayValue={field.value
                                   ? findSalesmanName(field.value)
                                   : "Select salesman"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search salesmen..." />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {areaId
-                                    ? "No salesman found in this area."
-                                    : "Please select an area first."}
-                                </CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search salesmen..."
+                            emptyMessage={
+                              areaId
+                                ? "No salesman found in this area."
+                                : "Please select an area first."
+                            }
+                            disabled={isSubmitting || isReadOnly || !areaId}
+                          >
+                            <CommandGroup>
                                   {filteredSalesmen.map((salesman: any) => (
                                     <CommandItem
                                       key={salesman.id}
@@ -1235,10 +1150,8 @@ export default function SalesForm({
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1393,41 +1306,24 @@ export default function SalesForm({
                                       {item.productCode} – {item.description}
                                     </div>
                                   ) : (
-                                    <Popover
-                                      open={
-                                        productOpen &&
-                                        activeProductIndex === index
+                                    <InlineSearchField
+                                    open={productOpen && activeProductIndex === index}
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setActiveProductIndex(index);
+                                      } else {
+                                        setActiveProductIndex(null);
                                       }
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          setActiveProductIndex(index);
-                                        } else {
-                                          setActiveProductIndex(null);
-                                        }
-                                        setProductOpen(open);
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className="w-full justify-between"
-                                          disabled={isSubmitting || isReadOnly}
-                                        >
-                                          {item.productId
+                                      setProductOpen(open);
+                                    }}
+                                    displayValue={item.productId
                                             ? findProductName(item.productId)
                                             : "Select product"}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-full p-0">
-                                        <Command>
-                                          <CommandInput placeholder="Search products..." />
-                                          <CommandList>
-                                            <CommandEmpty>
-                                              No product found.
-                                            </CommandEmpty>
-                                            <CommandGroup>
+                                    placeholder="Search products..."
+                                    emptyMessage="No product found."
+                                    disabled={isSubmitting}
+                                  >
+                                    <CommandGroup>
                                               {products.map((product) => (
                                                 <CommandItem
                                                   key={product.id}
@@ -1459,10 +1355,7 @@ export default function SalesForm({
                                                 </CommandItem>
                                               ))}
                                             </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
+                                  </InlineSearchField>
                                   )}
                                 </TableCell>
 

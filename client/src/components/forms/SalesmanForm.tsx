@@ -27,20 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useActiveLists } from "@/hooks/useActiveLists";
 
@@ -143,7 +132,11 @@ export default function SalesmanForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            data-entry-form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -188,50 +181,37 @@ export default function SalesmanForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Area *</FormLabel>
-                    <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={areaOpen}
-                          className="w-full justify-between"
-                          disabled={isSubmitting}
-                        >
-                          {getAreaName(field.value)}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Search area..." />
-                          <CommandList>
-                            <CommandEmpty>No area found.</CommandEmpty>
-                            <CommandGroup>
-                              {areas.map((area) => (
-                                <CommandItem
-                                  key={area.id}
-                                  value={area.id.toString()}
-                                  onSelect={() => {
-                                    field.onChange(area.id);
-                                    setAreaOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      field.value === area.id
-                                        ? "opacity-100"
-                                        : "opacity-0",
-                                    )}
-                                  />
-                                  {area.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <InlineSearchField
+                      open={areaOpen}
+                      onOpenChange={setAreaOpen}
+                      displayValue={getAreaName(field.value)}
+                      placeholder="Search area..."
+                      emptyMessage="No area found."
+                      disabled={isSubmitting}
+                    >
+                      <CommandGroup>
+                        {areas.map((area) => (
+                          <CommandItem
+                            key={area.id}
+                            value={area.id.toString()}
+                            onSelect={() => {
+                              field.onChange(area.id);
+                              setAreaOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value === area.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {area.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </InlineSearchField>
                     <FormMessage />
                   </FormItem>
                 )}

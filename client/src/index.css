@@ -672,7 +672,10 @@ html {
   --table-cell-padding: 0.5rem 0.75rem;
   --table-font-size: 0.95rem;
 }
-/* Report Checkbox Highlight */
+/* Floating dropdown/calendar panels portaled to body */
+[data-floating-panel] {
+  z-index: 200;
+}
 .report-checkbox[data-state=checked] {
   background-color: #3ae043 !important;
   border-color: #3ae043 !important;

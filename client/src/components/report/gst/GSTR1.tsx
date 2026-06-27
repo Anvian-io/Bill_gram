@@ -15,11 +15,11 @@ import {
   Filter,
   RefreshCw,
   FileSpreadsheet,
-  ChevronsUpDown,
   Check,
   X,
 } from "lucide-react";
 import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -30,11 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -46,14 +42,6 @@ import {
 import { toast } from "sonner";
 import { salesService } from "@/services/salesService";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import type {
   SalesGSTFilters,
   SalesGSTInvoice,
@@ -389,65 +377,52 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Customer</Label>
-                          <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={customerOpen}
-                                className="w-full justify-between"
-                                disabled={isLoading}
+                          <InlineSearchField
+                            open={customerOpen}
+                            onOpenChange={setCustomerOpen}
+                            displayValue={getCustomerName(filters.customerId)}
+                            placeholder="Search customers..."
+                            emptyMessage="No customer found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("customerId", undefined);
+                                  setCustomerOpen(false);
+                                }}
                               >
-                                {getCustomerName(filters.customerId)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search customers..." />
-                                <CommandList>
-                                  <CommandEmpty>No customer found.</CommandEmpty>
-                                  <CommandGroup>
-                                    <CommandItem
-                                      value="all"
-                                      onSelect={() => {
-                                        handleFilterChange("customerId", undefined);
-                                        setCustomerOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          !filters.customerId ? "opacity-100" : "opacity-0",
-                                        )}
-                                      />
-                                      All Customers
-                                    </CommandItem>
-                                    {customers.map((customer) => (
-                                      <CommandItem
-                                        key={customer.id}
-                                        value={customer.id.toString()}
-                                        onSelect={() => {
-                                          handleFilterChange("customerId", customer.id);
-                                          setCustomerOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.customerId === customer.id
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        {customer.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    !filters.customerId ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                All Customers
+                              </CommandItem>
+                              {customers.map((customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange("customerId", customer.id);
+                                    setCustomerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.customerId === customer.id
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {customer.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
                         <GstDetailsFilter

@@ -37,6 +37,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
@@ -121,6 +123,9 @@ export default function ProductInventory() {
   const [productBrandInput, setProductBrandInput] = useState<string>("");
   const [minStockInput, setMinStockInput] = useState<string>("");
   const [maxStockInput, setMaxStockInput] = useState<string>("");
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [productGroupOpen, setProductGroupOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -397,6 +402,21 @@ export default function ProductInventory() {
   // Get unique values for dropdown filters
   const uniqueBrands = productCompanies;
   const uniqueGroups = groups;
+
+  const getBrandLabel = (brandId: string) => {
+    if (brandId === "all") return "";
+    return uniqueBrands.find((b) => b.id.toString() === brandId)?.name || "";
+  };
+
+  const getGroupLabel = (groupId: string) => {
+    if (groupId === "all") return "";
+    return uniqueGroups.find((g) => g.id.toString() === groupId)?.name || "";
+  };
+
+  const getStatusLabel = (status: "all" | "active" | "inactive") => {
+    if (status === "all") return "";
+    return status === "active" ? "Active" : "Inactive";
+  };
 
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
@@ -720,28 +740,41 @@ export default function ProductInventory() {
                             >
                               Brand
                             </Label>
-                            <Select
-                              value={filters.brand}
-                              onValueChange={(value) =>
-                                handleFilterChange("brand", value)
-                              }
+                            <InlineSearchField
+                              open={brandOpen}
+                              onOpenChange={setBrandOpen}
+                              displayValue={getBrandLabel(filters.brand)}
+                              placeholder="Search brands..."
+                              emptyMessage="No brand found."
                               disabled={isLoading}
                             >
-                              <SelectTrigger id="brand">
-                                <SelectValue placeholder="Select brand" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Brands</SelectItem>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all brands"
+                                  onSelect={() => {
+                                    handleFilterChange("brand", "all");
+                                    setBrandOpen(false);
+                                  }}
+                                >
+                                  All Brands
+                                </CommandItem>
                                 {uniqueBrands.map((company) => (
-                                  <SelectItem
+                                  <CommandItem
                                     key={company.id}
-                                    value={company.id.toString()}
+                                    value={`${company.id} ${company.name}`}
+                                    onSelect={() => {
+                                      handleFilterChange(
+                                        "brand",
+                                        company.id.toString(),
+                                      );
+                                      setBrandOpen(false);
+                                    }}
                                   >
                                     {company.name}
-                                  </SelectItem>
+                                  </CommandItem>
                                 ))}
-                              </SelectContent>
-                            </Select>
+                              </CommandGroup>
+                            </InlineSearchField>
                           </div>
 
                           {/* Product Group Filter */}
@@ -752,28 +785,41 @@ export default function ProductInventory() {
                             >
                               Product Group
                             </Label>
-                            <Select
-                              value={filters.productGroup}
-                              onValueChange={(value) =>
-                                handleFilterChange("productGroup", value)
-                              }
+                            <InlineSearchField
+                              open={productGroupOpen}
+                              onOpenChange={setProductGroupOpen}
+                              displayValue={getGroupLabel(filters.productGroup)}
+                              placeholder="Search groups..."
+                              emptyMessage="No group found."
                               disabled={isLoading}
                             >
-                              <SelectTrigger id="productGroup">
-                                <SelectValue placeholder="Select group" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Groups</SelectItem>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all groups"
+                                  onSelect={() => {
+                                    handleFilterChange("productGroup", "all");
+                                    setProductGroupOpen(false);
+                                  }}
+                                >
+                                  All Groups
+                                </CommandItem>
                                 {uniqueGroups.map((group) => (
-                                  <SelectItem
+                                  <CommandItem
                                     key={group.id}
-                                    value={group.id.toString()}
+                                    value={`${group.id} ${group.name}`}
+                                    onSelect={() => {
+                                      handleFilterChange(
+                                        "productGroup",
+                                        group.id.toString(),
+                                      );
+                                      setProductGroupOpen(false);
+                                    }}
                                   >
                                     {group.name}
-                                  </SelectItem>
+                                  </CommandItem>
                                 ))}
-                              </SelectContent>
-                            </Select>
+                              </CommandGroup>
+                            </InlineSearchField>
                           </div>
 
                           {/* Status Filter */}
@@ -784,24 +830,44 @@ export default function ProductInventory() {
                             >
                               Status
                             </Label>
-                            <Select
-                              value={filters.status}
-                              onValueChange={(
-                                value: "all" | "active" | "inactive",
-                              ) => handleFilterChange("status", value)}
+                            <InlineSearchField
+                              open={statusOpen}
+                              onOpenChange={setStatusOpen}
+                              displayValue={getStatusLabel(filters.status)}
+                              placeholder="Search status..."
+                              emptyMessage="No status found."
                               disabled={isLoading}
                             >
-                              <SelectTrigger id="status">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="inactive">
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all status"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "all");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  All Status
+                                </CommandItem>
+                                <CommandItem
+                                  value="active"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "active");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Active
+                                </CommandItem>
+                                <CommandItem
+                                  value="inactive"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "inactive");
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Inactive
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                                </CommandItem>
+                              </CommandGroup>
+                            </InlineSearchField>
                           </div>
 
                           {/* Stock Range Filter */}

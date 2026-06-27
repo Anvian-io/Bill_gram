@@ -62,6 +62,7 @@ import {
   type Product,
 } from "@/types/product";
 import { getFullImageUrl, extractFilename } from "@/utils/imageUtils";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { cn } from "@/lib/utils";
 import { CustomDateInput } from "../custom_ui/CustomDateInput";
 
@@ -626,6 +627,7 @@ export default function ProductFormModal({
 
         <Form {...form}>
           <form
+            data-entry-form
             onSubmit={form.handleSubmit(onSubmit, onError)}
             className="space-y-6"
           >
@@ -791,35 +793,18 @@ export default function ProductFormModal({
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel className="text-sm">Unit *</FormLabel>
-                            <Popover
-                              open={unitIdOpen}
-                              onOpenChange={setUnitIdOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={unitIdOpen}
-                                    className={cn(
-                                      "w-full justify-between",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                    disabled={isSubmitting}
-                                  >
-                                    {field.value
+                            <FormControl>
+                          <InlineSearchField
+                            open={unitIdOpen}
+                            onOpenChange={setUnitIdOpen}
+                            displayValue={field.value
                                       ? findUnitName(field.value)
                                       : "Select unit"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search units..." />
-                                  <CommandList>
-                                    <CommandEmpty>No unit found.</CommandEmpty>
-                                    <CommandGroup>
+                            placeholder="Search units..."
+                            emptyMessage="No unit found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                       {units.map((unit) => (
                                         <CommandItem
                                           key={unit.id}
@@ -850,10 +835,8 @@ export default function ProductFormModal({
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -869,35 +852,18 @@ export default function ProductFormModal({
                           <FormLabel className="text-sm">
                             Product Group *
                           </FormLabel>
-                          <Popover
+                          <FormControl>
+                          <InlineSearchField
                             open={productGroupIdOpen}
                             onOpenChange={setProductGroupIdOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={productGroupIdOpen}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                  disabled={isSubmitting}
-                                >
-                                  {field.value
+                            displayValue={field.value
                                     ? findGroupName(field.value)
                                     : "Select group"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search groups..." />
-                                <CommandList>
-                                  <CommandEmpty>No group found.</CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search groups..."
+                            emptyMessage="No group found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                     {groups.map((group) => (
                                       <CommandItem
                                         key={group.id}
@@ -919,10 +885,8 @@ export default function ProductFormModal({
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1063,35 +1027,18 @@ export default function ProductFormModal({
                           <FormLabel className="text-sm">
                             Product Company *
                           </FormLabel>
-                          <Popover
+                          <FormControl>
+                          <InlineSearchField
                             open={productCompanyIdOpen}
                             onOpenChange={setProductCompanyIdOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={productCompanyIdOpen}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                  disabled={isSubmitting}
-                                >
-                                  {field.value
+                            displayValue={field.value
                                     ? findCompanyName(field.value)
                                     : "Select company"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search companies..." />
-                                <CommandList>
-                                  <CommandEmpty>No company found.</CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search companies..."
+                            emptyMessage="No company found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                     {productCompanies.map((company) => (
                                       <CommandItem
                                         key={company.id}
@@ -1113,10 +1060,8 @@ export default function ProductFormModal({
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1132,35 +1077,18 @@ export default function ProductFormModal({
                             <FormLabel className="text-sm">
                               Purchase Unit *
                             </FormLabel>
-                            <Popover
-                              open={purchaseUnitOpen}
-                              onOpenChange={setPurchaseUnitOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={purchaseUnitOpen}
-                                    className={cn(
-                                      "w-full justify-between",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                    disabled={isSubmitting}
-                                  >
-                                    {field.value
+                            <FormControl>
+                          <InlineSearchField
+                            open={purchaseUnitOpen}
+                            onOpenChange={setPurchaseUnitOpen}
+                            displayValue={field.value
                                       ? findUnitName(parseInt(field.value))
                                       : "Select unit"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-full p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search units..." />
-                                  <CommandList>
-                                    <CommandEmpty>No unit found.</CommandEmpty>
-                                    <CommandGroup>
+                            placeholder="Search units..."
+                            emptyMessage="No unit found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                       {units.map((unit) => (
                                         <CommandItem
                                           key={unit.id}
@@ -1191,10 +1119,8 @@ export default function ProductFormModal({
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1256,35 +1182,18 @@ export default function ProductFormModal({
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel className="text-sm">Sale Unit *</FormLabel>
-                          <Popover
+                          <FormControl>
+                          <InlineSearchField
                             open={saleUnitOpen}
                             onOpenChange={setSaleUnitOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={saleUnitOpen}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                  disabled={isSubmitting}
-                                >
-                                  {field.value
+                            displayValue={field.value
                                     ? findUnitName(parseInt(field.value))
                                     : "Select unit"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search units..." />
-                                <CommandList>
-                                  <CommandEmpty>No unit found.</CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search units..."
+                            emptyMessage="No unit found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                     {units.map((unit) => (
                                       <CommandItem
                                         key={unit.id}
@@ -1306,10 +1215,8 @@ export default function ProductFormModal({
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1537,35 +1444,18 @@ export default function ProductFormModal({
                           <FormLabel className="text-sm">
                             GST Applicability *
                           </FormLabel>
-                          <Popover
+                          <FormControl>
+                          <InlineSearchField
                             open={gstApplicabilityOpen}
                             onOpenChange={setGstApplicabilityOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={gstApplicabilityOpen}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                  disabled={isSubmitting}
-                                >
-                                  {field.value
+                            displayValue={field.value
                                     ? findGstApplicabilityLabel(field.value)
                                     : "Select applicability"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search GST applicability..." />
-                                <CommandList>
-                                  <CommandEmpty>No option found.</CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search GST applicability..."
+                            emptyMessage="No option found."
+                            disabled={isSubmitting}
+                          >
+                            <CommandGroup>
                                     {gstApplicabilityOptions.map((option) => (
                                       <CommandItem
                                         key={option.value}
@@ -1587,10 +1477,8 @@ export default function ProductFormModal({
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

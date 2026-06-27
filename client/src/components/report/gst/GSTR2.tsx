@@ -15,7 +15,6 @@ import {
   Filter,
   RefreshCw,
   FileSpreadsheet,
-  ChevronsUpDown,
   Check,
   X,
 } from "lucide-react";
@@ -30,11 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -46,14 +42,6 @@ import {
 import { toast } from "sonner";
 import { purchaseService } from "@/services/purchaseService";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import type {
   PurchaseGSTFilters,
   PurchaseGSTInvoice,
@@ -383,25 +371,15 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Supplier</Label>
-                          <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={supplierOpen}
-                                className="w-full justify-between"
-                                disabled={isLoading}
-                              >
-                                {getSupplierName(filters.supplierId)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search suppliers..." />
-                                <CommandList>
-                                  <CommandEmpty>No supplier found.</CommandEmpty>
-                                  <CommandGroup>
+                          <InlineSearchField
+                            open={supplierOpen}
+                            onOpenChange={setSupplierOpen}
+                            displayValue={getSupplierName(filters.supplierId)}
+                            placeholder="Search suppliers..."
+                            emptyMessage="No supplier found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -438,10 +416,7 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         <GstDetailsFilter

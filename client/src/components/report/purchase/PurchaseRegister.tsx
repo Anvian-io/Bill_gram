@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
@@ -444,30 +445,15 @@ export default function PurchaseRegister() {
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Supplier
                           </Label>
-                          <Popover
+                          <InlineSearchField
                             open={supplierOpen}
                             onOpenChange={setSupplierOpen}
+                            displayValue={getSupplierName(filters.supplierId)}
+                            placeholder="Search suppliers..."
+                            emptyMessage="No supplier found."
+                            disabled={isLoading}
                           >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={supplierOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getSupplierName(filters.supplierId)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search suppliers..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No supplier found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -512,10 +498,7 @@ export default function PurchaseRegister() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         <GstDetailsFilter

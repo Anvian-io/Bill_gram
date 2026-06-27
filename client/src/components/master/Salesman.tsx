@@ -26,7 +26,6 @@ import {
   Eye,
   EyeOff,
   Check,
-  ChevronsUpDown,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,19 +57,8 @@ import { salesmanService } from "@/services/salesmanService";
 import { type Salesman, type SalesmanFilters } from "@/types/salesman";
 import { useDebounce } from "@/utils/debounce";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { cn } from "@/lib/utils";
 
 // Define the API response structure
@@ -590,71 +578,57 @@ export default function SalesmanComponent() {
                         {/* Area Filter - Command Dropdown */}
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Area</Label>
-                          <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={areaOpen}
-                                className="w-full justify-between"
-                                disabled={isLoading}
+                          <InlineSearchField
+                            open={areaOpen}
+                            onOpenChange={setAreaOpen}
+                            displayValue={getAreaName(filters.areaId as string)}
+                            placeholder="Search area..."
+                            emptyMessage="No area found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("areaId", "all");
+                                  setAreaOpen(false);
+                                }}
                               >
-                                {getAreaName(filters.areaId as string)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search area..." />
-                                <CommandList>
-                                  <CommandEmpty>No area found.</CommandEmpty>
-                                  <CommandGroup>
-                                    <CommandItem
-                                      value="all"
-                                      onSelect={() => {
-                                        handleFilterChange("areaId", "all");
-                                        setAreaOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          filters.areaId === "all"
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                      All Areas
-                                    </CommandItem>
-                                    {areas.map((area) => (
-                                      <CommandItem
-                                        key={area.id}
-                                        value={area.id.toString()}
-                                        onSelect={() => {
-                                          handleFilterChange(
-                                            "areaId",
-                                            area.id.toString(),
-                                          );
-                                          setAreaOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.areaId ===
-                                              area.id.toString()
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        {area.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.areaId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Areas
+                              </CommandItem>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={area.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "areaId",
+                                      area.id.toString(),
+                                    );
+                                    setAreaOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.areaId === area.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {area.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
                         {/* Status Filter */}

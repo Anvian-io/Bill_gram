@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import {
   Popover,
   PopoverContent,
@@ -372,30 +373,15 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
                           <Label className="text-sm font-medium">
                             Customer
                           </Label>
-                          <Popover
+                          <InlineSearchField
                             open={customerOpen}
                             onOpenChange={setCustomerOpen}
+                            displayValue={getCustomerName(filters.customerId)}
+                            placeholder="Search customers..."
+                            emptyMessage="No customer found."
+                            disabled={isLoading}
                           >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={customerOpen}
-                                className="w-full justify-between"
-                                disabled={isLoading}
-                              >
-                                {getCustomerName(filters.customerId)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search customers..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No customer found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -440,10 +426,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         <GstDetailsFilter

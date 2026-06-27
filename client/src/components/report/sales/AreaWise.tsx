@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
@@ -493,30 +494,15 @@ export default function AreaWise() {
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Customer
                           </Label>
-                          <Popover
+                          <InlineSearchField
                             open={customerOpen}
                             onOpenChange={setCustomerOpen}
+                            displayValue={getCustomerName(filters.customerId)}
+                            placeholder="Search customers..."
+                            emptyMessage="No customer found."
+                            disabled={isLoading}
                           >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={customerOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getCustomerName(filters.customerId)}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search customers..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No customer found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -563,10 +549,7 @@ export default function AreaWise() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         <GstDetailsFilter
@@ -582,25 +565,15 @@ export default function AreaWise() {
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Area (Filter)
                           </Label>
-                          <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={areaOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getDisplayName(areas, filters.areaId, "Area")}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search areas..." />
-                                <CommandList>
-                                  <CommandEmpty>No area found.</CommandEmpty>
-                                  <CommandGroup>
+                          <InlineSearchField
+                            open={areaOpen}
+                            onOpenChange={setAreaOpen}
+                            displayValue={getDisplayName(areas, filters.areaId, "Area")}
+                            placeholder="Search areas..."
+                            emptyMessage="No area found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -639,34 +612,21 @@ export default function AreaWise() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         {/* Van */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">Van</Label>
-                          <Popover open={vanOpen} onOpenChange={setVanOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={vanOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getDisplayName(vans, filters.vanId, "Van")}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search vans..." />
-                                <CommandList>
-                                  <CommandEmpty>No van found.</CommandEmpty>
-                                  <CommandGroup>
+                          <InlineSearchField
+                            open={vanOpen}
+                            onOpenChange={setVanOpen}
+                            displayValue={getDisplayName(vans, filters.vanId, "Van")}
+                            placeholder="Search vans..."
+                            emptyMessage="No van found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -705,10 +665,7 @@ export default function AreaWise() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         {/* Salesman */}
@@ -716,34 +673,19 @@ export default function AreaWise() {
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Salesman
                           </Label>
-                          <Popover
+                          <InlineSearchField
                             open={salesmanOpen}
                             onOpenChange={setSalesmanOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={salesmanOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getDisplayName(
+                            displayValue={getDisplayName(
                                   salesmen,
                                   filters.salesmanId,
                                   "Salesman",
                                 )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search salesmen..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No salesman found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search salesmen..."
+                            emptyMessage="No salesman found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -788,10 +730,7 @@ export default function AreaWise() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         {/* Product Group */}
@@ -799,34 +738,19 @@ export default function AreaWise() {
                           <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
                             Product Group
                           </Label>
-                          <Popover
+                          <InlineSearchField
                             open={productGroupOpen}
                             onOpenChange={setProductGroupOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={productGroupOpen}
-                                className="w-full justify-between h-8 text-xs rounded-sm px-2"
-                                disabled={isLoading}
-                              >
-                                {getDisplayName(
+                            displayValue={getDisplayName(
                                   groups,
                                   filters.productGroupId,
                                   "Product Group",
                                 )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search product groups..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No product group found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
+                            placeholder="Search product groups..."
+                            emptyMessage="No product group found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
                                     <CommandItem
                                       value="all"
                                       onSelect={() => {
@@ -871,10 +795,7 @@ export default function AreaWise() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          </InlineSearchField>
                         </div>
 
                         <div className="flex-1 min-w-[150px] max-w-[200px]">

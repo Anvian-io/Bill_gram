@@ -19,6 +19,7 @@ const ComboboxHoverContext = React.createContext<{
 } | null>(null);
 
 function Combobox({
+  children,
   ...props
 }: React.ComponentProps<typeof ComboboxPrimitive.Root>) {
   const [open, setOpen] = React.useState(false);
@@ -44,7 +45,9 @@ function Combobox({
           (props as any).onOpenChange?.(open, event);
         }}
         {...props} 
-      />
+      >
+        <div className="relative w-full">{children}</div>
+      </ComboboxPrimitive.Root>
     </ComboboxHoverContext.Provider>
   )
 }
@@ -134,37 +137,52 @@ function ComboboxContent({
   align = "start",
   alignOffset = 0,
   anchor,
+  portalled = false,
   ...props
 }: ComboboxPrimitive.Popup.Props &
   Pick<
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
-  >) {
+  > & {
+    portalled?: boolean;
+  }) {
   const hoverCtx = React.useContext(ComboboxHoverContext);
-  return (
-    <ComboboxPrimitive.Portal>
-      <ComboboxPrimitive.Positioner
-        side={side}
-        sideOffset={sideOffset}
-        align={align}
-        alignOffset={alignOffset}
-        anchor={anchor}
-        className="isolate z-50"
-      >
-        <ComboboxPrimitive.Popup
-          data-slot="combobox-content"
-          data-chips={!!anchor}
-          onMouseEnter={hoverCtx?.handleMouseEnter}
-          onMouseLeave={hoverCtx?.handleMouseLeave}
-          className={cn(
-            "bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:border-input/30 group/combobox-content relative max-h-96 w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-md shadow-md ring-1 duration-100 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none",
-            className
-          )}
-          {...props}
-        />
-      </ComboboxPrimitive.Positioner>
-    </ComboboxPrimitive.Portal>
-  )
+
+  const popup = (
+    <ComboboxPrimitive.Popup
+      data-slot="combobox-content"
+      data-chips={!!anchor}
+      onMouseEnter={hoverCtx?.handleMouseEnter}
+      onMouseLeave={hoverCtx?.handleMouseLeave}
+      className={cn(
+        "bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:border-input/30 group/combobox-content relative max-h-96 origin-(--transform-origin) overflow-hidden rounded-md shadow-md ring-1 duration-100 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none",
+        portalled
+          ? "w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))]"
+          : "absolute top-full left-0 z-50 mt-1 w-full",
+        className
+      )}
+      {...props}
+    />
+  );
+
+  if (portalled) {
+    return (
+      <ComboboxPrimitive.Portal>
+        <ComboboxPrimitive.Positioner
+          side={side}
+          sideOffset={sideOffset}
+          align={align}
+          alignOffset={alignOffset}
+          anchor={anchor}
+          className="isolate z-50"
+        >
+          {popup}
+        </ComboboxPrimitive.Positioner>
+      </ComboboxPrimitive.Portal>
+    );
+  }
+
+  return popup;
 }
 
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {

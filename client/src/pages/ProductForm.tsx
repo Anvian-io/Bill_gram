@@ -21,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -204,6 +206,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [relatedImages, setRelatedImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [unitOpen, setUnitOpen] = useState(false);
+  const [productGroupOpen, setProductGroupOpen] = useState(false);
+  const [productCompanyOpen, setProductCompanyOpen] = useState(false);
+  const [gstApplicabilityOpen, setGstApplicabilityOpen] = useState(false);
 
   // Determine if we're in edit mode based on productId
   const isEdit = isEditMode || !!productId;
@@ -342,6 +348,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   // Units options
   const unitOptions = ["GM", "KG", "PCS", "L", "ML", "M", "CM", "MM"];
   const productGroupOptions = ["ELITE", "PREMIUM", "STANDARD", "BASIC"];
+  const productCompanyOptions = [
+    "Parle Agro Private Limited",
+    "Britannia Industries Limited",
+    "ITC Limited",
+    "Nestle India Limited",
+    "Hindustan Unilever Limited",
+  ];
   const purchaseSaleUnitOptions = ["PCS", "BOX", "CARTON", "KG", "GM", "L"];
   const gstApplicabilityOptions = ["Regular", "Composition", "Exempt"];
 
@@ -597,27 +610,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                     <FormLabel className="text-xs font-medium">
                                       Unit *
                                     </FormLabel>
-                                    <Select
-                                      onValueChange={field.onChange}
-                                      defaultValue={field.value}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                          <SelectValue placeholder="Select unit" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        {unitOptions.map((unit) => (
-                                          <SelectItem
-                                            key={unit}
-                                            value={unit}
-                                            className="text-sm"
-                                          >
-                                            {unit}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                    <FormControl>
+                                      <InlineSearchField
+                                        open={unitOpen}
+                                        onOpenChange={setUnitOpen}
+                                        displayValue={field.value || ""}
+                                        placeholder="Search units..."
+                                        emptyMessage="No unit found."
+                                        disabled={isSubmitting}
+                                        inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                      >
+                                        <CommandGroup>
+                                          {unitOptions.map((unit) => (
+                                            <CommandItem
+                                              key={unit}
+                                              value={unit}
+                                              onSelect={() => {
+                                                field.onChange(unit);
+                                                setUnitOpen(false);
+                                              }}
+                                            >
+                                              {unit}
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </InlineSearchField>
+                                    </FormControl>
                                     <FormMessage />
                                   </FormItem>
                                 )}
@@ -632,27 +650,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                   <FormLabel className="text-xs font-medium">
                                     Product Group *
                                   </FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                        <SelectValue placeholder="Select group" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {productGroupOptions.map((group) => (
-                                        <SelectItem
-                                          key={group}
-                                          value={group}
-                                          className="text-sm"
-                                        >
-                                          {group}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <FormControl>
+                                    <InlineSearchField
+                                      open={productGroupOpen}
+                                      onOpenChange={setProductGroupOpen}
+                                      displayValue={field.value || ""}
+                                      placeholder="Search groups..."
+                                      emptyMessage="No group found."
+                                      disabled={isSubmitting}
+                                      inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    >
+                                      <CommandGroup>
+                                        {productGroupOptions.map((group) => (
+                                          <CommandItem
+                                            key={group}
+                                            value={group}
+                                            onSelect={() => {
+                                              field.onChange(group);
+                                              setProductGroupOpen(false);
+                                            }}
+                                          >
+                                            {group}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
+                                  </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -702,11 +725,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                     Product Company *
                                   </FormLabel>
                                   <FormControl>
-                                    <Input
-                                      placeholder="e.g., Parle Agro Private Limited"
-                                      {...field}
-                                      className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
-                                    />
+                                    <InlineSearchField
+                                      open={productCompanyOpen}
+                                      onOpenChange={setProductCompanyOpen}
+                                      displayValue={field.value || ""}
+                                      placeholder="Search companies..."
+                                      emptyMessage="No company found."
+                                      disabled={isSubmitting}
+                                      inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    >
+                                      <CommandGroup>
+                                        {productCompanyOptions.map((company) => (
+                                          <CommandItem
+                                            key={company}
+                                            value={company}
+                                            onSelect={() => {
+                                              field.onChange(company);
+                                              setProductCompanyOpen(false);
+                                            }}
+                                          >
+                                            {company}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -995,27 +1037,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                   <FormLabel className="text-xs font-medium">
                                     GST Applicability *
                                   </FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                        <SelectValue placeholder="Select applicability" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {gstApplicabilityOptions.map((option) => (
-                                        <SelectItem
-                                          key={option}
-                                          value={option}
-                                          className="text-sm"
-                                        >
-                                          {option}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <FormControl>
+                                    <InlineSearchField
+                                      open={gstApplicabilityOpen}
+                                      onOpenChange={setGstApplicabilityOpen}
+                                      displayValue={field.value || ""}
+                                      placeholder="Search applicability..."
+                                      emptyMessage="No option found."
+                                      disabled={isSubmitting}
+                                      inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
+                                    >
+                                      <CommandGroup>
+                                        {gstApplicabilityOptions.map((option) => (
+                                          <CommandItem
+                                            key={option}
+                                            value={option}
+                                            onSelect={() => {
+                                              field.onChange(option);
+                                              setGstApplicabilityOpen(false);
+                                            }}
+                                          >
+                                            {option}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
+                                  </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}

@@ -16,19 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   Plus,
   Trash2,
@@ -36,7 +24,6 @@ import {
   Package,
   Hash,
   FileText,
-  ChevronsUpDown,
   Check,
   IndianRupee,
   Layers,
@@ -56,6 +43,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -1217,6 +1206,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
         <Form {...form}>
           <form
+            data-entry-form
             onSubmit={form.handleSubmit(onSubmit, onError)}
             className="space-y-6"
           >
@@ -1238,70 +1228,50 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   {!isReturnMode && (
                     <FormItem className="flex flex-col">
                       <FormLabel className="text-sm">Search Invoice</FormLabel>
-                      <Popover
+                      <InlineSearchField
                         open={invoiceSearchHover.open}
                         onOpenChange={invoiceSearchHover.setOpen}
+                        displayValue={
+                          invoiceSearchQuery || "Search by invoice number..."
+                        }
+                        searchValue={invoiceSearchQuery}
+                        onSearchChange={setInvoiceSearchQuery}
+                        placeholder="Type invoice number..."
+                        emptyMessage={
+                          isSearchingInvoice
+                            ? "Searching..."
+                            : "No invoice found."
+                        }
+                        shouldFilter={false}
+                        onMouseEnter={invoiceSearchHover.onMouseEnter}
+                        onMouseLeave={invoiceSearchHover.onMouseLeave}
+                        disabled={isSubmitting}
                       >
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={invoiceSearchHover.open}
-                            className="w-full justify-between font-normal"
-                            disabled={isSubmitting}
-                            onMouseEnter={invoiceSearchHover.onMouseEnter}
-                            onMouseLeave={invoiceSearchHover.onMouseLeave}
-                          >
-                            {invoiceSearchQuery || "Search by invoice number..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-full p-0"
-                          onMouseEnter={invoiceSearchHover.onMouseEnter}
-                          onMouseLeave={invoiceSearchHover.onMouseLeave}
-                        >
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder="Type invoice number..."
-                              value={invoiceSearchQuery}
-                              onValueChange={setInvoiceSearchQuery}
-                            />
-                            <CommandList>
-                              {isSearchingInvoice ? (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                  Searching...
-                                </div>
-                              ) : invoiceSearchResults.length === 0 ? (
-                                <CommandEmpty>No invoice found.</CommandEmpty>
-                              ) : (
-                                <CommandGroup>
-                                  {invoiceSearchResults.map((sale) => (
-                                    <CommandItem
-                                      key={sale.id}
-                                      value={sale.invoiceNo}
-                                      onSelect={() => handleLoadSalesInvoice(sale)}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {sale.invoiceNo}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {sale.customer?.personName} •{" "}
-                                          {new Date(
-                                            sale.invoiceDate,
-                                          ).toLocaleDateString()}
-                                        </span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                        {!isSearchingInvoice &&
+                          invoiceSearchResults.length > 0 && (
+                            <CommandGroup>
+                              {invoiceSearchResults.map((sale) => (
+                                <CommandItem
+                                  key={sale.id}
+                                  value={sale.invoiceNo}
+                                  onSelect={() => handleLoadSalesInvoice(sale)}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {sale.invoiceNo}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {sale.customer?.personName} •{" "}
+                                      {new Date(
+                                        sale.invoiceDate,
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                      </InlineSearchField>
                     </FormItem>
                   )}
 
@@ -1314,74 +1284,56 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                         <FormLabel className="text-sm">
                           Search by Phone
                         </FormLabel>
-                        <Popover open={phoneHover.open} onOpenChange={phoneHover.setOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={phoneHover.open}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting}
-                                onMouseEnter={phoneHover.onMouseEnter}
-                                onMouseLeave={phoneHover.onMouseLeave}
-                              >
-                                {field.value
-                                  ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
-                                  : "Search phone number..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
+                        <FormControl>
+                          <InlineSearchField
+                            open={phoneHover.open}
+                            onOpenChange={phoneHover.setOpen}
+                            displayValue={
+                              field.value
+                                ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
+                                : "Search phone number..."
+                            }
+                            placeholder="Search phone numbers..."
+                            emptyMessage="No customer found."
                             onMouseEnter={phoneHover.onMouseEnter}
                             onMouseLeave={phoneHover.onMouseLeave}
+                            disabled={isSubmitting}
                           >
-                            <Command>
-                              <CommandInput placeholder="Search phone numbers..." />
-                              <CommandList>
-                                <CommandEmpty>No customer found.</CommandEmpty>
-                                <CommandGroup>
-                                  {customers.map((customer: Customer) => (
-                                    <CommandItem
-                                      key={customer.id}
-                                      value={`${customer.phoneNo} ${customer.personName}`}
-                                      onSelect={() => {
-                                        handlePhoneSelect(customer.id);
-                                      }}
-                                    >
-                                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {customer.phoneNo}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {customer.personName}{" "}
-                                          {customer.companyName
-                                            ? `(${customer.companyName})`
-                                            : ""}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          customer.id ===
-                                            form.getValues("customerId")
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                            <CommandGroup>
+                              {customers.map((customer: Customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={`${customer.phoneNo} ${customer.personName}`}
+                                  onSelect={() => {
+                                    handlePhoneSelect(customer.id);
+                                  }}
+                                >
+                                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {customer.phoneNo}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {customer.personName}{" "}
+                                      {customer.companyName
+                                        ? `(${customer.companyName})`
+                                        : ""}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      customer.id ===
+                                        form.getValues("customerId")
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1397,21 +1349,17 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                           Invoice Date *
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              type="date"
-                              value={field.value ?? ""}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                form.setValue("invoiceDate", e.target.value, {
-                                  shouldDirty: true,
-                                });
-                              }}
-                              className="pl-10"
-                              disabled={isSubmitting}
-                            />
-                          </div>
+                          <HoverDateInput
+                            value={field.value ?? ""}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              form.setValue("invoiceDate", value, {
+                                shouldDirty: true,
+                              });
+                            }}
+                            inputClassName="pl-10"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1425,38 +1373,20 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Area *</FormLabel>
-                        <Popover open={areaHover.open} onOpenChange={areaHover.setOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={areaHover.open}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting}
-                                onMouseEnter={areaHover.onMouseEnter}
-                                onMouseLeave={areaHover.onMouseLeave}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={areaHover.open}
+                            onOpenChange={areaHover.setOpen}
+                            displayValue={field.value
                                   ? findAreaName(field.value)
                                   : "Select area"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
+                            placeholder="Search areas..."
+                            emptyMessage="No area found."
                             onMouseEnter={areaHover.onMouseEnter}
                             onMouseLeave={areaHover.onMouseLeave}
+                            disabled={isSubmitting}
                           >
-                            <Command>
-                              <CommandInput placeholder="Search areas..." />
-                              <CommandList>
-                                <CommandEmpty>No area found.</CommandEmpty>
-                                <CommandGroup>
+                            <CommandGroup>
                                   {areas.map((area) => (
                                     <CommandItem
                                       key={area.id}
@@ -1487,10 +1417,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1503,45 +1431,24 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Customer *</FormLabel>
-                        <Popover
-                          open={customerHover.open}
-                          onOpenChange={customerHover.setOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={customerHover.open}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || !areaId}
-                                onMouseEnter={customerHover.onMouseEnter}
-                                onMouseLeave={customerHover.onMouseLeave}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={customerHover.open}
+                            onOpenChange={customerHover.setOpen}
+                            displayValue={field.value
                                   ? findCustomerName(field.value)
                                   : "Select customer"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
+                            placeholder="Search customers..."
+                            emptyMessage={
+                              areaId
+                                ? "No customer found in this area."
+                                : "Please select an area first."
+                            }
                             onMouseEnter={customerHover.onMouseEnter}
                             onMouseLeave={customerHover.onMouseLeave}
+                            disabled={isSubmitting || !areaId}
                           >
-                            <Command>
-                              <CommandInput placeholder="Search customers..." />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {areaId
-                                    ? "No customer found in this area."
-                                    : "Please select an area first."}
-                                </CommandEmpty>
-                                <CommandGroup>
+                            <CommandGroup>
                                   {filteredCustomers.map(
                                     (customer: Customer) => (
                                       <CommandItem
@@ -1575,10 +1482,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     ),
                                   )}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1621,39 +1526,20 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Van *</FormLabel>
-                        <Popover open={vanHover.open} onOpenChange={vanHover.setOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={vanHover.open}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting}
-                                onMouseEnter={vanHover.onMouseEnter}
-                                onMouseLeave={vanHover.onMouseLeave}
-                                onClick={() => field.onChange(field.value)}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={vanHover.open}
+                            onOpenChange={vanHover.setOpen}
+                            displayValue={field.value
                                   ? findVanName(field.value)
                                   : "Select van"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
+                            placeholder="Search vans..."
+                            emptyMessage="No van found."
                             onMouseEnter={vanHover.onMouseEnter}
                             onMouseLeave={vanHover.onMouseLeave}
+                            disabled={isSubmitting}
                           >
-                            <Command>
-                              <CommandInput placeholder="Search vans..." />
-                              <CommandList>
-                                <CommandEmpty>No van found.</CommandEmpty>
-                                <CommandGroup>
+                            <CommandGroup>
                                   {vans.map((van) => (
                                     <CommandItem
                                       key={van.id}
@@ -1685,10 +1571,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1701,45 +1585,24 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-sm">Salesman *</FormLabel>
-                        <Popover
-                          open={salesmanHover.open}
-                          onOpenChange={salesmanHover.setOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={salesmanHover.open}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || !areaId}
-                                onMouseEnter={salesmanHover.onMouseEnter}
-                                onMouseLeave={salesmanHover.onMouseLeave}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={salesmanHover.open}
+                            onOpenChange={salesmanHover.setOpen}
+                            displayValue={field.value
                                   ? findSalesmanName(field.value)
                                   : "Select salesman"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
+                            placeholder="Search salesmen..."
+                            emptyMessage={
+                              areaId
+                                ? "No salesman found in this area."
+                                : "Please select an area first."
+                            }
                             onMouseEnter={salesmanHover.onMouseEnter}
                             onMouseLeave={salesmanHover.onMouseLeave}
+                            disabled={isSubmitting || !areaId}
                           >
-                            <Command>
-                              <CommandInput placeholder="Search salesmen..." />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {areaId
-                                    ? "No salesman found in this area."
-                                    : "Please select an area first."}
-                                </CommandEmpty>
-                                <CommandGroup>
+                            <CommandGroup>
                                   {filteredSalesmen.map((salesman: any) => (
                                     <CommandItem
                                       key={salesman.id}
@@ -1773,10 +1636,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1918,11 +1779,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
                                 {/* Product Selection */}
                                 <TableCell>
-                                  <Popover
-                                    open={
-                                      productOpen &&
-                                      activeProductIndex === index
-                                    }
+                                  <InlineSearchField
+                                    open={productOpen && activeProductIndex === index}
                                     onOpenChange={(open) => {
                                       if (open) {
                                         setActiveProductIndex(index);
@@ -1931,29 +1789,14 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       }
                                       setProductOpen(open);
                                     }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        id={`productSearch-${index}`}
-                                        variant="outline"
-                                        role="combobox"
-                                        className="w-full justify-between"
-                                        disabled={isSubmitting}
-                                      >
-                                        {item.productId
+                                    displayValue={item.productId
                                           ? findProductName(item.productId)
                                           : "Select product"}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0">
-                                      <Command>
-                                        <CommandInput placeholder="Search products..." />
-                                        <CommandList>
-                                          <CommandEmpty>
-                                            No product found.
-                                          </CommandEmpty>
-                                          <CommandGroup>
+                                    placeholder="Search products..."
+                                    emptyMessage="No product found."
+                                    disabled={isSubmitting}
+                                  >
+                                    <CommandGroup>
                                             {products.map((product) => (
                                               <CommandItem
                                                 key={product.id}
@@ -1985,10 +1828,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                               </CommandItem>
                                             ))}
                                           </CommandGroup>
-                                        </CommandList>
-                                      </Command>
-                                    </PopoverContent>
-                                  </Popover>
+                                  </InlineSearchField>
                                 </TableCell>
 
                                 {/* Rate */}

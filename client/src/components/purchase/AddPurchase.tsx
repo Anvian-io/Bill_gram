@@ -17,19 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   Plus,
   Trash2,
@@ -37,7 +25,6 @@ import {
   Package,
   Hash,
   FileText,
-  ChevronsUpDown,
   Check,
   IndianRupee,
   Layers,
@@ -53,6 +40,8 @@ import {
   FilePlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -1076,6 +1065,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
         <Form {...form}>
           <form
+            data-entry-form
             onSubmit={form.handleSubmit(onSubmit, onError)}
             className="space-y-6"
           >
@@ -1106,75 +1096,56 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                         <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
                           Search Invoice
                         </FormLabel>
-                        <Popover
+                        <InlineSearchField
                           open={invoiceSearchHover.open}
                           onOpenChange={invoiceSearchHover.setOpen}
+                          displayValue={
+                            invoiceSearchQuery || "Search by invoice number..."
+                          }
+                          searchValue={invoiceSearchQuery}
+                          onSearchChange={setInvoiceSearchQuery}
+                          placeholder="Type invoice number..."
+                          emptyMessage={
+                            isSearchingInvoice
+                              ? "Searching..."
+                              : "No invoice found."
+                          }
+                          shouldFilter={false}
+                          onMouseEnter={invoiceSearchHover.onMouseEnter}
+                          onMouseLeave={invoiceSearchHover.onMouseLeave}
+                          disabled={isSubmitting}
+                          inputClassName={cn(
+                            layoutMode === "classic" &&
+                              "classic-input h-8 pl-0 border-b-2 bg-transparent",
+                          )}
                         >
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={invoiceSearchHover.open}
-                              className={cn(
-                                "w-full justify-between font-normal",
-                                layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent",
-                              )}
-                              disabled={isSubmitting}
-                              onMouseEnter={invoiceSearchHover.onMouseEnter}
-                              onMouseLeave={invoiceSearchHover.onMouseLeave}
-                            >
-                              {invoiceSearchQuery || "Search by invoice number..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-full p-0"
-                            onMouseEnter={invoiceSearchHover.onMouseEnter}
-                            onMouseLeave={invoiceSearchHover.onMouseLeave}
-                          >
-                            <Command shouldFilter={false}>
-                              <CommandInput
-                                placeholder="Type invoice number..."
-                                value={invoiceSearchQuery}
-                                onValueChange={setInvoiceSearchQuery}
-                              />
-                              <CommandList>
-                                {isSearchingInvoice ? (
-                                  <div className="py-6 text-center text-sm text-muted-foreground">
-                                    Searching...
-                                  </div>
-                                ) : invoiceSearchResults.length === 0 ? (
-                                  <CommandEmpty>No invoice found.</CommandEmpty>
-                                ) : (
-                                  <CommandGroup>
-                                    {invoiceSearchResults.map((purchase) => (
-                                      <CommandItem
-                                        key={purchase.id}
-                                        value={purchase.invoiceNo}
-                                        onSelect={() =>
-                                          handleLoadPurchaseInvoice(purchase)
-                                        }
-                                      >
-                                        <div className="flex flex-col">
-                                          <span className="font-medium">
-                                            {purchase.invoiceNo}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {purchase.supplier?.name} •{" "}
-                                            {new Date(
-                                              purchase.invoiceDate,
-                                            ).toLocaleDateString()}
-                                          </span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                )}
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          {!isSearchingInvoice &&
+                            invoiceSearchResults.length > 0 && (
+                              <CommandGroup>
+                                {invoiceSearchResults.map((purchase) => (
+                                  <CommandItem
+                                    key={purchase.id}
+                                    value={purchase.invoiceNo}
+                                    onSelect={() =>
+                                      handleLoadPurchaseInvoice(purchase)
+                                    }
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">
+                                        {purchase.invoiceNo}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {purchase.supplier?.name} •{" "}
+                                        {new Date(
+                                          purchase.invoiceDate,
+                                        ).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                        </InlineSearchField>
                       </FormItem>
                     )}
 
@@ -1188,16 +1159,15 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             Invoice Date *
                           </FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="date"
-                                value={field.value}
-                                onChange={field.onChange}
-                                className={cn("pl-10", layoutMode === "classic" && "classic-input")}
-                                disabled={isSubmitting}
-                              />
-                            </div>
+                            <HoverDateInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              inputClassName={cn(
+                                "pl-10",
+                                layoutMode === "classic" && "classic-input",
+                              )}
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1213,80 +1183,60 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                           <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
                             Supplier Name *
                           </FormLabel>
-                          <Popover
-                            open={supplierHover.open}
-                            onOpenChange={supplierHover.setOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={supplierHover.open}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground",
-                                    layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent"
-                                  )}
-                                  disabled={isSubmitting}
-                                  onMouseEnter={supplierHover.onMouseEnter}
-                                  onMouseLeave={supplierHover.onMouseLeave}
-                                >
-                                  {field.value
-                                    ? findSupplierName(field.value)
-                                    : "Select supplier"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-full p-0"
+                          <FormControl>
+                            <InlineSearchField
+                              open={supplierHover.open}
+                              onOpenChange={supplierHover.setOpen}
+                              displayValue={
+                                field.value
+                                  ? findSupplierName(field.value)
+                                  : "Select supplier"
+                              }
+                              placeholder="Search suppliers..."
+                              emptyMessage="No supplier found."
                               onMouseEnter={supplierHover.onMouseEnter}
                               onMouseLeave={supplierHover.onMouseLeave}
+                              disabled={isSubmitting}
+                              inputClassName={cn(
+                                layoutMode === "classic" &&
+                                  "classic-input h-8 pl-0 border-b-2 bg-transparent",
+                              )}
                             >
-                              <Command>
-                                <CommandInput placeholder="Search suppliers..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No supplier found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {suppliers.map((supplier) => (
-                                      <CommandItem
-                                        key={supplier.id}
-                                        value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
-                                        onSelect={() => {
-                                          field.onChange(supplier.id);
-                                          supplierHover.setOpen(false);
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span className="font-medium">
-                                            {supplier.name}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {supplier.phoneNo &&
-                                              `${supplier.phoneNo} • `}
-                                            {supplier.email &&
-                                              `${supplier.email} • `}
-                                            {supplier.address}
-                                          </span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            supplier.id === field.value
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                              <CommandGroup>
+                                {suppliers.map((supplier) => (
+                                  <CommandItem
+                                    key={supplier.id}
+                                    value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
+                                    onSelect={() => {
+                                      field.onChange(supplier.id);
+                                      supplierHover.setOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">
+                                        {supplier.name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {supplier.phoneNo &&
+                                          `${supplier.phoneNo} • `}
+                                        {supplier.email &&
+                                          `${supplier.email} • `}
+                                        {supplier.address}
+                                      </span>
+                                    </div>
+                                    <Check
+                                      className={cn(
+                                        "ml-auto h-4 w-4",
+                                        supplier.id === field.value
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </InlineSearchField>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1434,42 +1384,24 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
                                   {/* Product Selection */}
                                   <TableCell>
-                                    <Popover
-                                      open={
-                                        productOpen &&
-                                        activeProductIndex === index
+                                    <InlineSearchField
+                                    open={productOpen && activeProductIndex === index}
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setActiveProductIndex(index);
+                                      } else {
+                                        setActiveProductIndex(null);
                                       }
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          setActiveProductIndex(index);
-                                        } else {
-                                          setActiveProductIndex(null);
-                                        }
-                                        setProductOpen(open);
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          id={`productSearch-${index}`}
-                                          variant="outline"
-                                          role="combobox"
-                                          className="w-full justify-between"
-                                          disabled={isSubmitting}
-                                        >
-                                          {item.productId
+                                      setProductOpen(open);
+                                    }}
+                                    displayValue={item.productId
                                             ? findProductName(item.productId)
                                             : "Select product"}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-full p-0">
-                                        <Command>
-                                          <CommandInput placeholder="Search products..." />
-                                          <CommandList>
-                                            <CommandEmpty>
-                                              No product found.
-                                            </CommandEmpty>
-                                            <CommandGroup>
+                                    placeholder="Search products..."
+                                    emptyMessage="No product found."
+                                    disabled={isSubmitting}
+                                  >
+                                    <CommandGroup>
                                               {products.map((product) => (
                                                 <CommandItem
                                                   key={product.id}
@@ -1501,10 +1433,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                                 </CommandItem>
                                               ))}
                                             </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
+                                  </InlineSearchField>
                                   </TableCell>
 
                                   {/* Rate */}

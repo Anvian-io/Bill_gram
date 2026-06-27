@@ -56,6 +56,8 @@ import {
   Tag,
 } from "lucide-react";
 import { toast } from "sonner";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -669,6 +671,7 @@ export default function PurchaseForm({
 
           <Form {...form}>
             <form
+              data-entry-form
               onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-6"
             >
@@ -689,16 +692,12 @@ export default function PurchaseForm({
                           Invoice Date *
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              type="date"
-                              value={field.value}
-                              onChange={field.onChange}
-                              className="pl-10"
-                              disabled={isSubmitting || isReadOnly}
-                            />
-                          </div>
+                          <HoverDateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            inputClassName="pl-10"
+                            disabled={isSubmitting || isReadOnly}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -714,35 +713,18 @@ export default function PurchaseForm({
                         <FormLabel className="text-sm">
                           Supplier Name *
                         </FormLabel>
-                        <Popover
-                          open={supplierOpen}
-                          onOpenChange={setSupplierOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={supplierOpen}
-                                className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled={isSubmitting || isReadOnly}
-                              >
-                                {field.value
+                        <FormControl>
+                          <InlineSearchField
+                            open={supplierOpen}
+                            onOpenChange={setSupplierOpen}
+                            displayValue={field.value
                                   ? findSupplierName(field.value)
                                   : "Select supplier"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search suppliers..." />
-                              <CommandList>
-                                <CommandEmpty>No supplier found.</CommandEmpty>
-                                <CommandGroup>
+                            placeholder="Search suppliers..."
+                            emptyMessage="No supplier found."
+                            disabled={isSubmitting || isReadOnly}
+                          >
+                            <CommandGroup>
                                   {suppliers.map((supplier) => (
                                     <CommandItem
                                       key={supplier.id}
@@ -777,10 +759,8 @@ export default function PurchaseForm({
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                          </InlineSearchField>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -935,41 +915,24 @@ export default function PurchaseForm({
                                       {item.productCode} – {item.description}
                                     </div>
                                   ) : (
-                                    <Popover
-                                      open={
-                                        productOpen &&
-                                        activeProductIndex === index
+                                    <InlineSearchField
+                                    open={productOpen && activeProductIndex === index}
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setActiveProductIndex(index);
+                                      } else {
+                                        setActiveProductIndex(null);
                                       }
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          setActiveProductIndex(index);
-                                        } else {
-                                          setActiveProductIndex(null);
-                                        }
-                                        setProductOpen(open);
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className="w-full justify-between"
-                                          disabled={isSubmitting || isReadOnly}
-                                        >
-                                          {item.productId
+                                      setProductOpen(open);
+                                    }}
+                                    displayValue={item.productId
                                             ? findProductName(item.productId)
                                             : "Select product"}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-full p-0">
-                                        <Command>
-                                          <CommandInput placeholder="Search products..." />
-                                          <CommandList>
-                                            <CommandEmpty>
-                                              No product found.
-                                            </CommandEmpty>
-                                            <CommandGroup>
+                                    placeholder="Search products..."
+                                    emptyMessage="No product found."
+                                    disabled={isSubmitting}
+                                  >
+                                    <CommandGroup>
                                               {products.map((product) => (
                                                 <CommandItem
                                                   key={product.id}
@@ -1001,10 +964,7 @@ export default function PurchaseForm({
                                                 </CommandItem>
                                               ))}
                                             </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
+                                  </InlineSearchField>
                                   )}
                                 </TableCell>
 
