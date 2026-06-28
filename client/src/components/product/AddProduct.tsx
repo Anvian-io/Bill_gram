@@ -741,15 +741,10 @@ export default function AddProduct() {
         >
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-heading flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-heading flex items-center gap-2 mb-4">
                 <Package className="h-8 w-8" />
                 {isEditMode ? "Edit Product" : "Add New Product"}
               </h1>
-              <p className="text-muted-foreground mt-1">
-                {isEditMode 
-                  ? "Update product details and inventory information" 
-                  : "Create a new product in your inventory"}
-              </p>
             </div>
           </div>
 
