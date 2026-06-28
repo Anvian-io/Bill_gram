@@ -115,7 +115,9 @@ export function useEnterToNextField() {
 
       const inlineSearch = target.closest("[data-inline-search]");
       if (inlineSearch) {
-        const panel = inlineSearch.querySelector("[data-inline-search-panel]");
+        const panel =
+          inlineSearch.querySelector("[data-inline-search-panel]") ??
+          document.querySelector("[data-inline-search-panel]");
         if (panel) {
           inlineSearch.dispatchEvent(new CustomEvent("inline-search-close"));
         }

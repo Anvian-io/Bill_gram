@@ -173,6 +173,7 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
       style={panelStyle}
       className="overflow-hidden rounded-md border bg-popover p-0 text-popover-foreground shadow-lg ring-1 ring-border/50"
       data-floating-panel
+      onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={cancelDismiss}
       onMouseLeave={scheduleDismiss}
     >

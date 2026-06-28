@@ -11,6 +11,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
+import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
+import {
+  resolvePortalContainer,
+  setFloatingDropdownOpen,
+} from "@/lib/floatingPanelEvents";
 
 export interface InlineSearchFieldProps {
   open?: boolean;
@@ -47,18 +52,23 @@ export function InlineSearchField({
 }: InlineSearchFieldProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [internalSearch, setInternalSearch] = React.useState("");
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
+    null,
+  );
   const anchorRef = React.useRef<HTMLDivElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const leaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
 
   const open = openProp ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const searchValue = searchValueProp ?? internalSearch;
   const setSearchValue = onSearchChange ?? setInternalSearch;
-  const panelStyle = useFloatingPanelPosition(open, anchorRef);
+  const panelStyle = useFloatingPanelPosition(
+    open,
+    anchorRef,
+    4,
+    portalTarget,
+  );
 
   const focusInput = React.useCallback(() => {
     requestAnimationFrame(() => {
@@ -73,32 +83,43 @@ export function InlineSearchField({
     setSearchValue("");
   }, [setOpen, setSearchValue]);
 
+  const { cancelDismiss, scheduleDismiss } = useHoverPanelDismiss(
+    anchorRef,
+    panelRef,
+    closeDropdown,
+  );
+
   const handleMouseEnter = React.useCallback(() => {
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
+    cancelDismiss();
     onMouseEnter?.();
     if (!disabled) {
       setOpen(true);
       focusInput();
     }
-  }, [disabled, focusInput, onMouseEnter, setOpen]);
+  }, [cancelDismiss, disabled, focusInput, onMouseEnter, setOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
     onMouseLeave?.();
-    leaveTimeoutRef.current = setTimeout(() => {
-      const active = document.activeElement;
-      const insideAnchor = anchorRef.current?.contains(active);
-      const insidePanel = panelRef.current?.contains(active);
-      if (!insideAnchor && !insidePanel) {
-        closeDropdown();
-      }
-    }, 200);
-  }, [closeDropdown, onMouseLeave]);
+    if (open) {
+      scheduleDismiss();
+    }
+  }, [onMouseLeave, open, scheduleDismiss]);
+
+  React.useLayoutEffect(() => {
+    if (!open || !anchorRef.current) {
+      setPortalTarget(null);
+      return;
+    }
+    setPortalTarget(resolvePortalContainer(anchorRef.current));
+  }, [open]);
 
   React.useEffect(() => {
-    if (open) focusInput();
+    if (open) {
+      setFloatingDropdownOpen(true);
+      focusInput();
+      return () => setFloatingDropdownOpen(false);
+    }
+    return undefined;
   }, [open, focusInput]);
 
   React.useEffect(() => {
@@ -146,7 +167,7 @@ export function InlineSearchField({
       data-inline-search-panel
       data-floating-panel
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={scheduleDismiss}
     >
       <Command shouldFilter={shouldFilter}>
         <CommandList className="max-h-[240px]">
@@ -163,6 +184,7 @@ export function InlineSearchField({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       data-inline-search
+      data-inline-search-open={open ? "true" : undefined}
     >
       <div ref={anchorRef} className="relative">
         <Input
@@ -193,8 +215,8 @@ export function InlineSearchField({
         <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0 opacity-50" />
       </div>
 
-      {typeof document !== "undefined" && panel
-        ? createPortal(panel, document.body)
+      {typeof document !== "undefined" && panel && portalTarget
+        ? createPortal(panel, portalTarget)
         : null}
     </div>
   );

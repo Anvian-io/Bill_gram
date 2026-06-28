@@ -51,6 +51,7 @@ export function useHoverFocusInput(
   }, [skip]);
 
   const handleMouseEnter = React.useCallback(() => {
+    if (document.body.dataset.floatingDropdownOpen === "true") return;
     if (!options?.disabled) {
       ref.current?.focus();
       if (!skip) setHoverActive(true);

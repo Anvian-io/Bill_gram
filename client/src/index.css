@@ -672,9 +672,9 @@ html {
   --table-cell-padding: 0.5rem 0.75rem;
   --table-font-size: 0.95rem;
 }
-/* Floating dropdown/calendar panels portaled to body */
+/* Floating dropdown/calendar panels portaled to body — z-index set inline */
 [data-floating-panel] {
-  z-index: 20;
+  isolation: isolate;
 }
 .report-checkbox[data-state=checked] {
   background-color: #3ae043 !important;

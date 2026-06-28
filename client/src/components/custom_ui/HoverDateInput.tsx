@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
 import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
+import {
+  resolvePortalContainer,
+  setFloatingDropdownOpen,
+} from "@/lib/floatingPanelEvents";
 
 export interface HoverDateInputProps
   extends Omit<React.ComponentProps<"input">, "type" | "value" | "onChange"> {
@@ -27,10 +31,13 @@ export function HoverDateInput({
   ...props
 }: HoverDateInputProps) {
   const [open, setOpen] = React.useState(false);
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
+    null,
+  );
   const inputRef = React.useRef<HTMLInputElement>(null);
   const anchorRef = React.useRef<HTMLDivElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
-  const panelStyle = useFloatingPanelPosition(open, anchorRef);
+  const panelStyle = useFloatingPanelPosition(open, anchorRef, 4, portalTarget);
 
   const dismiss = React.useCallback(() => {
     setOpen(false);
@@ -76,6 +83,22 @@ export function HoverDateInput({
     dismiss();
   };
 
+  React.useLayoutEffect(() => {
+    if (!open || !anchorRef.current) {
+      setPortalTarget(null);
+      return;
+    }
+    setPortalTarget(resolvePortalContainer(anchorRef.current));
+  }, [open]);
+
+  React.useEffect(() => {
+    if (open) {
+      setFloatingDropdownOpen(true);
+      return () => setFloatingDropdownOpen(false);
+    }
+    return undefined;
+  }, [open]);
+
   React.useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -101,6 +124,7 @@ export function HoverDateInput({
       style={panelStyle}
       className="overflow-hidden rounded-md border bg-popover p-0 text-popover-foreground shadow-lg ring-1 ring-border/50"
       data-floating-panel
+      onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={cancelDismiss}
       onMouseLeave={scheduleDismiss}
     >
@@ -141,8 +165,8 @@ export function HoverDateInput({
         <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       </div>
 
-      {typeof document !== "undefined" && panel
-        ? createPortal(panel, document.body)
+      {typeof document !== "undefined" && panel && portalTarget
+        ? createPortal(panel, portalTarget)
         : null}
     </div>
   );

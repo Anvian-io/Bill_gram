@@ -3,6 +3,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { setFloatingDropdownOpen } from "@/lib/floatingPanelEvents"
 
 const SelectHoverContext = React.createContext<{
   handleMouseEnter: () => void;
@@ -11,29 +12,52 @@ const SelectHoverContext = React.createContext<{
 
 function Select({
   children,
+  open: openProp,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isOpen = openProp !== undefined ? openProp : internalOpen;
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setFloatingDropdownOpen(true);
+      return () => setFloatingDropdownOpen(false);
+    }
+    return undefined;
+  }, [isOpen]);
 
   const handleMouseEnter = React.useCallback(() => {
+    if (
+      document.body.dataset.floatingDropdownOpen === "true" &&
+      !isOpen
+    ) {
+      return;
+    }
     clearTimeout(timeoutRef.current);
-    setOpen(true);
-  }, []);
+    if (openProp === undefined) {
+      setInternalOpen(true);
+    }
+    onOpenChange?.(true);
+  }, [isOpen, onOpenChange, openProp]);
 
   const handleMouseLeave = React.useCallback(() => {
     timeoutRef.current = setTimeout(() => {
-      setOpen(false);
+      if (openProp === undefined) {
+        setInternalOpen(false);
+      }
+      onOpenChange?.(false);
     }, 150);
-  }, []);
+  }, [onOpenChange, openProp]);
 
   return (
     <SelectHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
       <SelectPrimitive.Root
-        open={props.open !== undefined ? props.open : open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          props.onOpenChange?.(o);
+        open={isOpen}
+        onOpenChange={(nextOpen) => {
+          setInternalOpen(nextOpen);
+          onOpenChange?.(nextOpen);
         }}
         {...props}
       >
@@ -111,7 +135,7 @@ function SelectContent({
       onMouseEnter={hoverCtx?.handleMouseEnter}
       onMouseLeave={hoverCtx?.handleMouseLeave}
       className={cn(
-        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative z-[60] max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
         portalled
           ? ""
           : "absolute top-full left-0 mt-1 w-full",
