@@ -27,13 +27,7 @@ import {
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ItemsPerPageSelect } from "@/components/custom_ui/ItemsPerPageSelect";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -706,21 +700,11 @@ export default function ProductInventory() {
                 <div className="text-sm text-muted-foreground whitespace-nowrap">
                   Items per page:
                 </div>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value) => setItemsPerPage(Number(value))}
+                <ItemsPerPageSelect
+                  value={itemsPerPage}
+                  onChange={setItemsPerPage}
                   disabled={isLoading}
-                >
-                  <SelectTrigger className="w-20 h-9">
-                    <SelectValue placeholder="10" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
           </motion.div>

@@ -69,11 +69,24 @@ export function useHoverContainerDismiss(
     cancelDismiss();
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      if (!isPointerOverContainer(containerRef)) {
+      if (
+        !isPointerOverContainer(containerRef) &&
+        !isPointerOverSelectContent()
+      ) {
         onDismiss();
       }
     });
   }, [containerRef, cancelDismiss, onDismiss]);
 
   return { cancelDismiss, dismissOnLeave };
+}
+
+function isPointerOverSelectContent() {
+  const hovered = document.querySelectorAll(":hover");
+  for (let i = 0; i < hovered.length; i++) {
+    if (hovered[i] instanceof Element && hovered[i].closest('[data-slot="select-content"]')) {
+      return true;
+    }
+  }
+  return false;
 }

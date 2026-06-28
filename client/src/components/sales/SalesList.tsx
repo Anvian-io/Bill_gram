@@ -12,37 +12,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Edit,
-  Trash2,
+import {
   Search,
   X,
-  Calendar,
   Plus,
   Package,
   ShoppingCart,
   RefreshCw,
   IndianRupee,
   Check,
-  ChevronsUpDown,
+  Info,
+  Filter,
 } from "lucide-react";
 import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ItemsPerPageSelect } from "@/components/custom_ui/ItemsPerPageSelect";
 import { Input } from "@/components/ui/input";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   containerVariants,
@@ -56,24 +44,54 @@ import { useDebounce } from "@/utils/debounce";
 import SalesForm from "../forms/SalesForm";
 import type { Sales, SalesFormData, SalesFilters } from "@/types/sales";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { salesService } from "@/services/salesService";
 import { CheckIsExpanded } from "@/utils/commonHelper";
-import { FileText } from "lucide-react"; // add this
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"; // add this
 import SalesInvoicePreview from "./SalesInvoicePreview";
+
+function DateInfoBadge({
+  createdAt,
+  updatedAt,
+  formatDateTime,
+}: {
+  createdAt: string;
+  updatedAt: string;
+  formatDateTime: (dateString: string) => string;
+}) {
+  return (
+    <div className="relative group/info inline-block">
+      <Badge
+        variant="outline"
+        className="text-xs cursor-default gap-1 px-2 py-0.5"
+      >
+        <Info className="h-3 w-3" />
+        Info
+      </Badge>
+      <div className="pointer-events-none absolute z-50 hidden group-hover/info:block bottom-full left-0 mb-2 w-48">
+        <Card className="shadow-lg border bg-popover">
+          <CardContent className="p-3 space-y-2">
+            <div>
+              <span className="text-xs font-medium text-green-500">
+                Created:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(createdAt)}
+              </p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-orange-500">
+                Updated:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(updatedAt)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 export default function Sales() {
   const { layoutMode } = useTheme();
@@ -135,6 +153,7 @@ export default function Sales() {
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showMainFilter, setShowMainFilter] = useState(false);
 
   // Ref to track if initial load is done
   const initialLoadDone = useRef(false);
@@ -399,7 +418,6 @@ export default function Sales() {
     filters.status,
   ]);
 
-  // Format date for display
   const formatDateTime = (dateString: string) => {
     if (!dateString) return "N/A";
     try {
@@ -409,6 +427,23 @@ export default function Sales() {
         year: "numeric",
         month: "short",
         day: "numeric",
+      });
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  const formatAuditDateTime = (dateString: string) => {
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date";
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch {
       return "Invalid date";
@@ -543,172 +578,90 @@ export default function Sales() {
               : "max-w-9xl lg:max-w-5xl xl:max-w-7xl 2xl:max-w-8xl"
           }`}
         >
-          {/* Filter Section */}
-          <motion.div className="mb-2" variants={itemVariants}>
-            <Card className="overflow-hidden">
-              <CardContent className="p-1">
-                <div className="flex flex-col gap-4 p-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Invoice No Filter */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="invoiceNo"
-                                placeholder="Invoice No"
-                                value={invoiceNoInput}
-                                onChange={(e) =>
-                                  handleInvoiceNoChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              {invoiceNoInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("invoiceNo")}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+          {/* Toolbar */}
+          <motion.div
+            className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-1"
+            variants={itemVariants}
+          >
+            <p className="text-sm text-muted-foreground">
+              Showing {startIndex} to {endIndex} of {totalItems} sales
+              {activeFiltersCount > 0 && " (filtered)"}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                Total sales:{" "}
+                <span className="font-medium text-foreground">{totalItems}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 h-9"
+                onClick={() => setShowMainFilter((prev) => !prev)}
+                disabled={isLoading}
+              >
+                <Filter className="h-4 w-4" />
+                {showMainFilter ? "Hide Main Filter" : "Show Main Filter"}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleAddSales}
+                disabled={isLoading}
+                aria-label="Add sales"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                aria-label="Refresh sales"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                  Items per page:
+                </div>
+                <ItemsPerPageSelect
+                  value={itemsPerPage}
+                  onChange={setItemsPerPage}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+          </motion.div>
 
-                          {/* Area Filter */}
-                          <div>
-                            <InlineSearchField
-                            open={areaOpen}
-                            onOpenChange={setAreaOpen}
-                            displayValue={getAreaName(filters.areaId as string)}
-                            placeholder="Area"
-                            emptyMessage="No area found."
-                            disabled={isLoading}
-                          >
-                            <CommandGroup>
-                                      <CommandItem
-                                        value="all"
-                                        onSelect={() => {
-                                          handleFilterChange("areaId", "all");
-                                          setAreaOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.areaId === "all"
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        All Areas
-                                      </CommandItem>
-                                      {areas.map((area) => (
-                                        <CommandItem
-                                          key={area.id}
-                                          value={area.id.toString()}
-                                          onSelect={() => {
-                                            handleFilterChange(
-                                              "areaId",
-                                              area.id.toString(),
-                                            );
-                                            setAreaOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              filters.areaId ===
-                                                area.id.toString()
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          {area.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                          </InlineSearchField>
-                          </div>
+          {/* Main Filter Section */}
+          <AnimatePresence>
+            {showMainFilter && (
+              <motion.div
+                className="mb-4"
+                variants={itemVariants}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <Card className="overflow-hidden">
+                  <CardContent className="p-1">
+                    <div className="flex flex-col gap-4 p-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
 
-                          {/* Customer Filter */}
-                          <div>
-                            <InlineSearchField
-                            open={customerOpen}
-                            onOpenChange={setCustomerOpen}
-                            displayValue={getCustomerName(
-                                    filters.customerId as string,
-                                  )}
-                            placeholder="Customer"
-                            emptyMessage="No customer found."
-                            disabled={isLoading}
-                          >
-                            <CommandGroup>
-                                      <CommandItem
-                                        value="all"
-                                        onSelect={() => {
-                                          handleFilterChange(
-                                            "customerId",
-                                            "all",
-                                          );
-                                          setCustomerOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.customerId === "all"
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        All Customers
-                                      </CommandItem>
-                                      {customers.map((customer) => (
-                                        <CommandItem
-                                          key={customer.id}
-                                          value={customer.id.toString()}
-                                          onSelect={() => {
-                                            handleFilterChange(
-                                              "customerId",
-                                              customer.id.toString(),
-                                            );
-                                            setCustomerOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              filters.customerId ===
-                                                customer.id.toString()
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          {customer.companyName ||
-                                            customer.personName}
-                                          {customer.phoneNo && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                              ({customer.phoneNo})
-                                            </span>
-                                          )}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                          </InlineSearchField>
-                          </div>
-
-                          <GstDetailsFilter
-                            value={filters.gstDetails}
-                            onChange={(value) =>
-                              handleFilterChange("gstDetails", value)
-                            }
-                            disabled={isLoading}
-                          />
-
-                          {/* Van Filter */}
-                          <div>
-                            <InlineSearchField
+                        {/* Van Filter */}
+                        <div>
+                          <InlineSearchField
                             open={vanOpen}
                             onOpenChange={setVanOpen}
                             displayValue={getVanName(filters.vanId as string)}
@@ -717,321 +670,429 @@ export default function Sales() {
                             disabled={isLoading}
                           >
                             <CommandGroup>
-                                      <CommandItem
-                                        value="all"
-                                        onSelect={() => {
-                                          handleFilterChange("vanId", "all");
-                                          setVanOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.vanId === "all"
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        All Vans
-                                      </CommandItem>
-                                      {vans.map((van) => (
-                                        <CommandItem
-                                          key={van.id}
-                                          value={van.id.toString()}
-                                          onSelect={() => {
-                                            handleFilterChange(
-                                              "vanId",
-                                              van.id.toString(),
-                                            );
-                                            setVanOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              filters.vanId ===
-                                                van.id.toString()
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          {van.name}
-                                          {van.vehicleNo && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                              ({van.vehicleNo})
-                                            </span>
-                                          )}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("vanId", "all");
+                                  setVanOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.vanId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Vans
+                              </CommandItem>
+                              {vans.map((van) => (
+                                <CommandItem
+                                  key={van.id}
+                                  value={van.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "vanId",
+                                      van.id.toString(),
+                                    );
+                                    setVanOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.vanId === van.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {van.name}
+                                  {van.vehicleNo && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      ({van.vehicleNo})
+                                    </span>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
-                          </div>
+                        </div>
 
-                          {/* Salesman Filter */}
-                          <div>
-                            <InlineSearchField
+                        {/* Salesman Filter */}
+                        <div>
+                          <InlineSearchField
                             open={salesmanOpen}
                             onOpenChange={setSalesmanOpen}
                             displayValue={getSalesmanName(
-                                    filters.salesmanId as string,
-                                  )}
+                              filters.salesmanId as string,
+                            )}
                             placeholder="Salesman"
                             emptyMessage="No salesman found."
                             disabled={isLoading}
                           >
                             <CommandGroup>
-                                      <CommandItem
-                                        value="all"
-                                        onSelect={() => {
-                                          handleFilterChange(
-                                            "salesmanId",
-                                            "all",
-                                          );
-                                          setSalesmanOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.salesmanId === "all"
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        All Salesmen
-                                      </CommandItem>
-                                      {salesmen.map((salesman) => (
-                                        <CommandItem
-                                          key={salesman.id}
-                                          value={salesman.id.toString()}
-                                          onSelect={() => {
-                                            handleFilterChange(
-                                              "salesmanId",
-                                              salesman.id.toString(),
-                                            );
-                                            setSalesmanOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              filters.salesmanId ===
-                                                salesman.id.toString()
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          {salesman.name}
-                                          {salesman.phoneNo && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                              ({salesman.phoneNo})
-                                            </span>
-                                          )}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                          </InlineSearchField>
-                          </div>
-
-                          {/* Amount Range */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Min Amount"
-                                type="number"
-                                value={minAmountInput}
-                                onChange={(e) =>
-                                  handleMinAmountChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              <Input
-                                placeholder="Max Amount"
-                                type="number"
-                                value={maxAmountInput}
-                                onChange={(e) =>
-                                  handleMaxAmountChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-
-                          <CustomDateInput
-                            value={fromDateValue}
-                            onChange={handleFromDateChange}
-                            placeholder="Invoice Date From"
-                            disabled={isLoading}
-                          />
-
-                          <CustomDateInput
-                            value={toDateValue}
-                            onChange={handleToDateChange}
-                            placeholder="Invoice Date To"
-                            disabled={isLoading}
-                          />
-
-                          {/* Status Filter */}
-                          <div>
-                            <InlineSearchField
-                              open={statusOpen}
-                              onOpenChange={setStatusOpen}
-                              displayValue={
-                                filters.status === "all" ? "" : filters.status
-                              }
-                              placeholder="Status"
-                              emptyMessage="No status found."
-                              disabled={isLoading}
-                            >
-                              <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("salesmanId", "all");
+                                  setSalesmanOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.salesmanId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Salesmen
+                              </CommandItem>
+                              {salesmen.map((salesman) => (
                                 <CommandItem
-                                  value="all status"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "all");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  All Status
-                                </CommandItem>
-                                <CommandItem
-                                  value="Pending"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Pending");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Pending
-                                </CommandItem>
-                                <CommandItem
-                                  value="Paid"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Paid");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Paid
-                                </CommandItem>
-                                <CommandItem
-                                  value="Partially Paid"
+                                  key={salesman.id}
+                                  value={salesman.id.toString()}
                                   onSelect={() => {
                                     handleFilterChange(
-                                      "status",
-                                      "Partially Paid",
+                                      "salesmanId",
+                                      salesman.id.toString(),
                                     );
-                                    setStatusOpen(false);
+                                    setSalesmanOpen(false);
                                   }}
                                 >
-                                  Partially Paid
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.salesmanId ===
+                                        salesman.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {salesman.name}
+                                  {salesman.phoneNo && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      ({salesman.phoneNo})
+                                    </span>
+                                  )}
                                 </CommandItem>
-                                <CommandItem
-                                  value="Cancelled"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Cancelled");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Cancelled
-                                </CommandItem>
-                                <CommandItem
-                                  value="Delivered"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Delivered");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Delivered
-                                </CommandItem>
-                                <CommandItem
-                                  value="Return"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Return");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Return
-                                </CommandItem>
-                              </CommandGroup>
-                            </InlineSearchField>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </div>
+
+                        {/* Amount Range */}
+                        <div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Min Amount"
+                              type="number"
+                              value={minAmountInput}
+                              onChange={(e) =>
+                                handleMinAmountChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="Max Amount"
+                              type="number"
+                              value={maxAmountInput}
+                              onChange={(e) =>
+                                handleMaxAmountChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
                           </div>
                         </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
 
-          {/* Results Count */}
-          <motion.div
-            className="flex justify-between items-center mb-4"
-            variants={itemVariants}
-          >
-            <p className="text-sm text-muted-foreground">
-              Showing {startIndex} to {endIndex} of {totalItems} sales
-              {activeFiltersCount > 0 && " (filtered)"}
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">
-                  Items per page:
-                </div>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value) => setItemsPerPage(Number(value))}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue placeholder="10" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </motion.div>
+                        <CustomDateInput
+                          value={fromDateValue}
+                          onChange={handleFromDateChange}
+                          placeholder="Invoice Date From"
+                          disabled={isLoading}
+                        />
 
-          {/* Sales Table (unchanged) */}
+                        <CustomDateInput
+                          value={toDateValue}
+                          onChange={handleToDateChange}
+                          placeholder="Invoice Date To"
+                          disabled={isLoading}
+                        />
+
+                        {/* Status Filter */}
+                        <div>
+                          <InlineSearchField
+                            open={statusOpen}
+                            onOpenChange={setStatusOpen}
+                            displayValue={
+                              filters.status === "all" ? "" : filters.status
+                            }
+                            placeholder="Status"
+                            emptyMessage="No status found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all status"
+                                onSelect={() => {
+                                  handleFilterChange("status", "all");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                All Status
+                              </CommandItem>
+                              <CommandItem
+                                value="Pending"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Pending");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Pending
+                              </CommandItem>
+                              <CommandItem
+                                value="Paid"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Paid");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Paid
+                              </CommandItem>
+                              <CommandItem
+                                value="Partially Paid"
+                                onSelect={() => {
+                                  handleFilterChange(
+                                    "status",
+                                    "Partially Paid",
+                                  );
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Partially Paid
+                              </CommandItem>
+                              <CommandItem
+                                value="Cancelled"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Cancelled");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Cancelled
+                              </CommandItem>
+                              <CommandItem
+                                value="Delivered"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Delivered");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Delivered
+                              </CommandItem>
+                              <CommandItem
+                                value="Return"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Return");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Return
+                              </CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Sales Table */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
+                <div className="overflow-x-auto w-full">
+                  <Table
+                    className={cn(
+                      "table-fixed",
+                      layoutMode === "classic" && "classic-table",
+                    )}
+                  >
                     <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold">
+                      <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                        <TableHead className="font-semibold w-[120px] max-w-[120px] text-center">
                           Invoice No
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[140px] max-w-[140px] text-center">
                           Customer
                         </TableHead>
-                        <TableHead className="font-semibold">Area</TableHead>
-                        <TableHead className="font-semibold">Van</TableHead>
-                        <TableHead className="font-semibold">
-                          Salesman
+                        <TableHead className="font-semibold min-w-[100px] text-center">
+                          Area
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold min-w-[100px] text-center">
                           Invoice Date
                         </TableHead>
-                        <TableHead className="font-semibold">Items</TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold min-w-[90px] text-center">
+                          Items
+                        </TableHead>
+                        <TableHead className="font-semibold min-w-[100px] text-center">
                           Gross Amount
                         </TableHead>
-                        <TableHead className="font-semibold">Tax</TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[64px] max-w-[64px] whitespace-normal px-1 text-center">
+                          Tax
+                        </TableHead>
+                        <TableHead className="font-semibold min-w-[100px] text-center">
                           Final Amount
                         </TableHead>
-                        <TableHead className="font-semibold">
-                          Discount %
-                        </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] whitespace-normal px-1 text-center">
                           GST Details
                         </TableHead>
-                        <TableHead className="font-semibold">
-                          Created & Updated
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] px-2 text-center">
+                          Info
                         </TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
+                        <TableHead className="font-semibold text-center">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                      <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                        <TableHead className="py-2 w-[120px] max-w-[120px]">
+                          <Input
+                            placeholder="Invoice No"
+                            value={invoiceNoInput}
+                            onChange={(e) =>
+                              handleInvoiceNoChange(e.target.value)
+                            }
+                            className="h-8 text-xs font-normal"
+                            disabled={isLoading}
+                          />
+                        </TableHead>
+                        <TableHead className="py-2 w-[140px] max-w-[140px]">
+                          <InlineSearchField
+                            open={customerOpen}
+                            onOpenChange={setCustomerOpen}
+                            displayValue={getCustomerName(
+                              filters.customerId as string,
+                            )}
+                            placeholder="Customer"
+                            emptyMessage="No customer found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("customerId", "all");
+                                  setCustomerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.customerId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Customers
+                              </CommandItem>
+                              {customers.map((customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "customerId",
+                                      customer.id.toString(),
+                                    );
+                                    setCustomerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.customerId ===
+                                        customer.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {customer.companyName || customer.personName}
+                                  {customer.phoneNo && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      ({customer.phoneNo})
+                                    </span>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[100px]">
+                          <InlineSearchField
+                            open={areaOpen}
+                            onOpenChange={setAreaOpen}
+                            displayValue={getAreaName(filters.areaId as string)}
+                            placeholder="Area"
+                            emptyMessage="No area found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("areaId", "all");
+                                  setAreaOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.areaId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Areas
+                              </CommandItem>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={area.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "areaId",
+                                      area.id.toString(),
+                                    );
+                                    setAreaOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.areaId === area.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {area.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[100px]" />
+                        <TableHead className="py-2 min-w-[90px]" />
+                        <TableHead className="py-2 min-w-[100px]" />
+                        <TableHead className="py-2 w-[64px] max-w-[64px] px-1" />
+                        <TableHead className="py-2 min-w-[100px]" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-1" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-2" />
+                        <TableHead className="py-2" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1045,7 +1106,7 @@ export default function Sales() {
                             // transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={15}
+                              colSpan={11}
                               className="text-center py-12"
                             >
                               <div className="flex flex-col items-center justify-center">
@@ -1065,7 +1126,7 @@ export default function Sales() {
                             transition={{ duration: 0.3 }}
                           >
                             <TableCell
-                              colSpan={15}
+                              colSpan={11}
                               className="text-center py-8 text-muted-foreground"
                             >
                               <motion.div
@@ -1100,25 +1161,39 @@ export default function Sales() {
                               animate="visible"
                               whileHover="hover"
                               variants={rowVariants}
-                              className="group border-1"
+                              className="group border"
                               layout
                               transition={{ layout: { duration: 0.3 } }}
                             >
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="font-mono font-medium text-primary">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[120px] max-w-[120px] align-top">
+                                <div
+                                  className="font-mono font-medium text-primary truncate"
+                                  title={sale.invoiceNo}
+                                >
                                   {sale.invoiceNo}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div>
-                                  <p className="font-medium">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[140px] max-w-[140px] align-top">
+                                <div className="min-w-0">
+                                  <p
+                                    className="font-medium truncate"
+                                    title={
+                                      sale.customer.companyName ||
+                                      sale.customer.personName ||
+                                      undefined
+                                    }
+                                  >
                                     {sale.customer.companyName ||
                                       sale.customer.personName}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {sale.customer.phoneNo &&
-                                      `Phone: ${sale.customer.phoneNo}`}
-                                  </p>
+                                  {sale.customer.phoneNo && (
+                                    <p
+                                      className="text-xs text-muted-foreground truncate"
+                                      title={sale.customer.phoneNo}
+                                    >
+                                      {sale.customer.phoneNo}
+                                    </p>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
@@ -1128,26 +1203,6 @@ export default function Sales() {
                                 >
                                   {sale.area.name}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div>
-                                  <p className="font-medium text-sm">
-                                    {sale.van.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {sale.van.vehicleNo}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div>
-                                  <p className="font-medium text-sm">
-                                    {sale.salesman.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {sale.salesman.phoneNo}
-                                  </p>
-                                </div>
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                 {formatDateTime(sale.invoiceDate)}
@@ -1180,10 +1235,11 @@ export default function Sales() {
                                   </span>
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[64px] max-w-[64px] px-1 align-top">
                                 <Badge
                                   variant="outline"
-                                  className="bg-blue-50 text-blue-700"
+                                  className="bg-blue-50 text-blue-700 truncate max-w-full"
+                                  title={`₹${sale.tax.toFixed(2)}`}
                                 >
                                   ₹{sale.tax.toFixed(2)}
                                 </Badge>
@@ -1193,74 +1249,71 @@ export default function Sales() {
                                   ₹{sale.finalAmount.toFixed(2)}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                {sale.discountPercent > 0 ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-red-50 text-red-700"
-                                  >
-                                    {sale.discountPercent}%
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">
-                                    -
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="text-xs text-muted-foreground">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[72px] max-w-[72px] px-1 align-top">
+                                <div
+                                  className="text-xs text-muted-foreground truncate"
+                                  title={getGstDetailsLabel(sale.gstDetails)}
+                                >
                                   {getGstDetailsLabel(sale.gstDetails)}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="space-y-1">
-                                  <div className="flex items-center">
-                                    <span className="text-xs font-medium text-green-400">
-                                      Created:
-                                    </span>
-                                    <p className="text-xs text-muted-foreground ml-1">
-                                      {formatDateTime(sale.createdAt)}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <span className="text-xs font-medium text-orange-400">
-                                      Updated:
-                                    </span>
-                                    <p className="text-xs text-muted-foreground ml-1">
-                                      {formatDateTime(sale.updatedAt)}
-                                    </p>
-                                  </div>
-                                </div>
+                              <TableCell className="group-hover:bg-secondary/30 w-[72px] max-w-[72px] px-2">
+                                <DateInfoBadge
+                                  createdAt={sale.createdAt}
+                                  updatedAt={sale.updatedAt}
+                                  formatDateTime={formatAuditDateTime}
+                                />
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30">
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleEditSales(sale)}
-                                    className="h-8 w-8 hover:bg-green-100"
-                                    disabled={isLoading}
+                                <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 shrink-0",
+                                      isLoading
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "cursor-pointer hover:bg-green-100 text-green-700 border-green-200",
+                                    )}
+                                    onClick={() => {
+                                      if (!isLoading) {
+                                        handleEditSales(sale);
+                                      }
+                                    }}
                                   >
-                                    <Edit className="h-4 w-4 text-green-600" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => confirmDeleteSales(sale)}
-                                    className="h-8 w-8 hover:bg-red-100"
-                                    disabled={isLoading}
+                                    edit
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 shrink-0",
+                                      isLoading
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "cursor-pointer hover:bg-red-100 text-red-700 border-red-200",
+                                    )}
+                                    onClick={() => {
+                                      if (!isLoading) {
+                                        confirmDeleteSales(sale);
+                                      }
+                                    }}
                                   >
-                                    <Trash2 className="h-4 w-4 text-red-600" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handlePreview(sale.id)}
-                                    className="h-8 w-8 hover:bg-gray-100"
-                                    disabled={isLoading}
+                                    delete
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 shrink-0",
+                                      isLoading
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "cursor-pointer hover:bg-gray-100 text-gray-700 border-gray-200",
+                                    )}
+                                    onClick={() => {
+                                      if (!isLoading) {
+                                        handlePreview(sale.id);
+                                      }
+                                    }}
                                   >
-                                    <FileText className="h-4 w-4 text-gray-600" />
-                                  </Button>
+                                    preview
+                                  </Badge>
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1342,31 +1395,6 @@ export default function Sales() {
           ) : (
             <Search className="h-5 w-5" />
           )}
-        </Button>
-      </div>
-
-      {/* Fixed bottom-right actions */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-background"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          aria-label="Refresh sales"
-        >
-          <RefreshCw
-            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
-          />
-        </Button>
-        <Button
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
-          onClick={handleAddSales}
-          disabled={isLoading}
-          aria-label="Add sales"
-        >
-          <Plus className="h-5 w-5" />
         </Button>
       </div>
 

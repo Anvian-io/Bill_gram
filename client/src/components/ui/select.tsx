@@ -7,12 +7,50 @@ import { setFloatingDropdownOpen } from "@/lib/floatingPanelEvents"
 import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay"
 import { useHoverContainerDismiss } from "@/hooks/useHoverPanelDismiss"
 
+const SelectConfigContext = React.createContext({ enableHoverOpen: true })
+
 const SelectHoverContext = React.createContext<{
   handleMouseEnter: () => void;
   handleMouseLeave: () => void;
 } | null>(null);
 
 function Select({
+  enableHoverOpen = true,
+  children,
+  open: openProp,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Root> & {
+  enableHoverOpen?: boolean;
+}) {
+  if (!enableHoverOpen) {
+    return (
+      <SelectConfigContext.Provider value={{ enableHoverOpen: false }}>
+        <SelectPrimitive.Root
+          open={openProp}
+          onOpenChange={onOpenChange}
+          {...props}
+        >
+          <div className="relative w-fit">{children}</div>
+        </SelectPrimitive.Root>
+      </SelectConfigContext.Provider>
+    )
+  }
+
+  return (
+    <SelectConfigContext.Provider value={{ enableHoverOpen: true }}>
+      <HoverSelect
+        open={openProp}
+        onOpenChange={onOpenChange}
+        {...props}
+      >
+        {children}
+      </HoverSelect>
+    </SelectConfigContext.Provider>
+  )
+}
+
+function HoverSelect({
   children,
   open: openProp,
   onOpenChange,
@@ -31,12 +69,6 @@ function Select({
   }, [onOpenChange, openProp]);
 
   const openSelect = React.useCallback(() => {
-    if (
-      document.body.dataset.floatingDropdownOpen === "true" &&
-      !isOpen
-    ) {
-      return;
-    }
     if (openProp === undefined) {
       setInternalOpen(true);
     }
@@ -46,7 +78,7 @@ function Select({
         ?.querySelector<HTMLElement>('[data-slot="select-trigger"]')
         ?.focus();
     });
-  }, [isOpen, onOpenChange, openProp]);
+  }, [onOpenChange, openProp]);
 
   const { cancelDismiss, dismissOnLeave } = useHoverContainerDismiss(
     wrapperRef,
@@ -83,7 +115,14 @@ function Select({
         }}
         {...props}
       >
-        <div ref={wrapperRef} className="relative w-full">{children}</div>
+        <div
+          ref={wrapperRef}
+          className="relative w-fit"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {children}
+        </div>
       </SelectPrimitive.Root>
     </SelectHoverContext.Provider>
   )
@@ -111,19 +150,29 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
 }) {
+  const { enableHoverOpen } = React.useContext(SelectConfigContext);
   const hoverCtx = React.useContext(SelectHoverContext);
+
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      onMouseEnter={(event) => {
-        hoverCtx?.handleMouseEnter();
-        onMouseEnter?.(event);
-      }}
-      onMouseLeave={(event) => {
-        hoverCtx?.handleMouseLeave();
-        onMouseLeave?.(event);
-      }}
+      onMouseEnter={
+        enableHoverOpen
+          ? (event) => {
+              hoverCtx?.handleMouseEnter();
+              onMouseEnter?.(event);
+            }
+          : onMouseEnter
+      }
+      onMouseLeave={
+        enableHoverOpen
+          ? (event) => {
+              hoverCtx?.handleMouseLeave();
+              onMouseLeave?.(event);
+            }
+          : onMouseLeave
+      }
       className={cn(
         "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
@@ -141,20 +190,25 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
+  position = "popper",
   align = "center",
-  portalled = false,
+  portalled = true,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content> & {
   portalled?: boolean;
 }) {
+  const { enableHoverOpen } = React.useContext(SelectConfigContext);
   const hoverCtx = React.useContext(SelectHoverContext);
 
   const content = (
     <SelectPrimitive.Content
       data-slot="select-content"
-      onMouseEnter={hoverCtx?.handleMouseEnter}
-      onMouseLeave={hoverCtx?.handleMouseLeave}
+      onMouseEnter={
+        enableHoverOpen ? hoverCtx?.handleMouseEnter : undefined
+      }
+      onMouseLeave={
+        enableHoverOpen ? hoverCtx?.handleMouseLeave : undefined
+      }
       className={cn(
         "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative z-[60] max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
         portalled
@@ -173,7 +227,7 @@ function SelectContent({
         className={cn(
           "p-1",
           position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+            "w-full min-w-[var(--radix-select-trigger-width)]"
         )}
       >
         {children}

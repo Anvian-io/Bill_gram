@@ -1,6 +1,5 @@
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -12,38 +11,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus,
-  Edit,
-  Trash2,
+import {
+  Plus,
   Search,
   X,
   RefreshCw,
   Package,
   ShoppingCart,
   IndianRupee,
-  ChevronsUpDown,
   Check,
-  Calendar,
-  FileText,
+  Info,
+  Filter,
 } from "lucide-react";
 import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ItemsPerPageSelect } from "@/components/custom_ui/ItemsPerPageSelect";
 import { Input } from "@/components/ui/input";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   containerVariants,
@@ -58,14 +44,7 @@ import { useDebounce } from "@/utils/debounce";
 import PurchaseForm from "@/components/forms/PurchaseForm";
 import { purchaseService } from "@/services/purchaseService";
 import { useActiveLists } from "@/hooks/useActiveLists";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import type {
   Purchase,
   PurchaseFormData,
@@ -74,14 +53,56 @@ import type {
 import { CheckIsExpanded } from "@/utils/commonHelper";
 import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
 
+function DateInfoBadge({
+  createdAt,
+  updatedAt,
+  formatDateTime,
+}: {
+  createdAt: string;
+  updatedAt: string;
+  formatDateTime: (dateString: string) => string;
+}) {
+  return (
+    <div className="relative group/info inline-block">
+      <Badge
+        variant="outline"
+        className="text-xs cursor-default gap-1 px-2 py-0.5"
+      >
+        <Info className="h-3 w-3" />
+        Info
+      </Badge>
+      <div className="pointer-events-none absolute z-50 hidden group-hover/info:block bottom-full left-0 mb-2 w-48">
+        <Card className="shadow-lg border bg-popover">
+          <CardContent className="p-3 space-y-2">
+            <div>
+              <span className="text-xs font-medium text-green-500">
+                Created:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(createdAt)}
+              </p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-orange-500">
+                Updated:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(updatedAt)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
 export default function Purchase() {
   const { layoutMode } = useTheme();
   // State
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,11 +140,13 @@ export default function Purchase() {
 
   // Local inputs (before debounce)
   const [searchInput, setSearchInput] = useState("");
+  const [invoiceNoInput, setInvoiceNoInput] = useState("");
   const [minAmountInput, setMinAmountInput] = useState("");
   const [maxAmountInput, setMaxAmountInput] = useState("");
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showMainFilter, setShowMainFilter] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Hooks
@@ -146,6 +169,12 @@ export default function Purchase() {
   // Input handlers
   // --------------------------------------------------------------------
   const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    setInvoiceNoInput(value);
+    debouncedSetSearch(value);
+  };
+  const handleInvoiceNoChange = (value: string) => {
+    setInvoiceNoInput(value);
     setSearchInput(value);
     debouncedSetSearch(value);
   };
@@ -202,6 +231,7 @@ export default function Purchase() {
       showDeleted: false,
     });
     setSearchInput("");
+    setInvoiceNoInput("");
     setMinAmountInput("");
     setMaxAmountInput("");
     setFromDateValue(null);
@@ -227,6 +257,7 @@ export default function Purchase() {
     switch (filterName) {
       case "search":
         setSearchInput("");
+        setInvoiceNoInput("");
         break;
       case "minAmount":
         setMinAmountInput("");
@@ -427,268 +458,329 @@ export default function Purchase() {
               : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
           }`}
         >
-          {/* Filter Section */}
-          <motion.div className="mb-2" variants={itemVariants}>
-            <Card className="overflow-hidden">
-              <CardContent className="p-1">
-                <div className="flex flex-col gap-4 p-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Supplier */}
-                          <div>
-                            <InlineSearchField
-                            open={supplierOpen}
-                            onOpenChange={setSupplierOpen}
-                            displayValue={getSupplierName(filters.supplierId!)}
-                            placeholder="Supplier"
-                            emptyMessage="No supplier found."
-                            disabled={isLoading}
-                          >
-                            <CommandGroup>
-                                      <CommandItem
-                                        value="all"
-                                        onSelect={() => {
-                                          handleFilterChange(
-                                            "supplierId",
-                                            "all",
-                                          );
-                                          setSupplierOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filters.supplierId === "all"
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        All Suppliers
-                                      </CommandItem>
-                                      {suppliers.map((supplier) => (
-                                        <CommandItem
-                                          key={supplier.id}
-                                          value={supplier.id.toString()}
-                                          onSelect={() => {
-                                            handleFilterChange(
-                                              "supplierId",
-                                              supplier.id.toString(),
-                                            );
-                                            setSupplierOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              filters.supplierId ===
-                                                supplier.id.toString()
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          {supplier.name}
-                                          {supplier.phoneNo && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                              ({supplier.phoneNo})
-                                            </span>
-                                          )}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                          </InlineSearchField>
-                          </div>
-
-                          <GstDetailsFilter
-                            value={filters.gstDetails}
-                            onChange={(value) =>
-                              handleFilterChange("gstDetails", value)
-                            }
-                            disabled={isLoading}
-                          />
-
-                          {/* Amount Range */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Min Amount"
-                                type="number"
-                                value={minAmountInput}
-                                onChange={(e) =>
-                                  handleMinAmountChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              <Input
-                                placeholder="Max Amount"
-                                type="number"
-                                value={maxAmountInput}
-                                onChange={(e) =>
-                                  handleMaxAmountChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Status */}
-                          <div>
-                            <InlineSearchField
-                              open={statusOpen}
-                              onOpenChange={setStatusOpen}
-                              displayValue={
-                                filters.status === "all" ? "" : filters.status
-                              }
-                              placeholder="Status"
-                              emptyMessage="No status found."
-                              disabled={isLoading}
-                            >
-                              <CommandGroup>
-                                <CommandItem
-                                  value="all status"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "all");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  All Status
-                                </CommandItem>
-                                <CommandItem
-                                  value="Pending"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Pending");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Pending
-                                </CommandItem>
-                                <CommandItem
-                                  value="Paid"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Paid");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Paid
-                                </CommandItem>
-                                <CommandItem
-                                  value="Partially Paid"
-                                  onSelect={() => {
-                                    handleFilterChange(
-                                      "status",
-                                      "Partially Paid",
-                                    );
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Partially Paid
-                                </CommandItem>
-                                <CommandItem
-                                  value="Cancelled"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Cancelled");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Cancelled
-                                </CommandItem>
-                                <CommandItem
-                                  value="Return"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "Return");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Return
-                                </CommandItem>
-                              </CommandGroup>
-                            </InlineSearchField>
-                          </div>
-
-                          <CustomDateInput
-                            value={fromDateValue}
-                            onChange={handleFromDateChange}
-                            placeholder="Invoice Date From"
-                            disabled={isLoading}
-                          />
-
-                          <CustomDateInput
-                            value={toDateValue}
-                            onChange={handleToDateChange}
-                            placeholder="Invoice Date To"
-                            disabled={isLoading}
-                          />
-                        </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Results Count */}
+          {/* Toolbar */}
           <motion.div
-            className="flex justify-between items-center mb-4"
+            className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-1"
             variants={itemVariants}
           >
             <p className="text-sm text-muted-foreground">
               Showing {startIndex} to {endIndex} of {totalItems} purchases
               {activeFiltersCount > 0 && " (filtered)"}
             </p>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                Items per page:
-              </div>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => setItemsPerPage(Number(value))}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                Total purchases:{" "}
+                <span className="font-medium text-foreground">{totalItems}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 h-9"
+                onClick={() => setShowMainFilter((prev) => !prev)}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+                <Filter className="h-4 w-4" />
+                {showMainFilter ? "Hide Main Filter" : "Show Main Filter"}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleAddPurchase}
+                disabled={isLoading}
+                aria-label="Add purchase"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                aria-label="Refresh purchases"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                  Items per page:
+                </div>
+                <ItemsPerPageSelect
+                  value={itemsPerPage}
+                  onChange={setItemsPerPage}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           </motion.div>
 
-          {/* Purchases Table (unchanged) */}
+          {/* Main Filter Section */}
+          <AnimatePresence>
+            {showMainFilter && (
+              <motion.div
+                className="mb-4"
+                variants={itemVariants}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <Card className="overflow-hidden">
+                  <CardContent className="p-1">
+                    <div className="flex flex-col gap-4 p-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <GstDetailsFilter
+                          value={filters.gstDetails}
+                          onChange={(value) =>
+                            handleFilterChange("gstDetails", value)
+                          }
+                          disabled={isLoading}
+                        />
+
+                        {/* Amount Range */}
+                        <div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Min Amount"
+                              type="number"
+                              value={minAmountInput}
+                              onChange={(e) =>
+                                handleMinAmountChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="Max Amount"
+                              type="number"
+                              value={maxAmountInput}
+                              onChange={(e) =>
+                                handleMaxAmountChange(e.target.value)
+                              }
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+
+                        <CustomDateInput
+                          value={fromDateValue}
+                          onChange={handleFromDateChange}
+                          placeholder="Invoice Date From"
+                          disabled={isLoading}
+                        />
+
+                        <CustomDateInput
+                          value={toDateValue}
+                          onChange={handleToDateChange}
+                          placeholder="Invoice Date To"
+                          disabled={isLoading}
+                        />
+
+                        {/* Status */}
+                        <div>
+                          <InlineSearchField
+                            open={statusOpen}
+                            onOpenChange={setStatusOpen}
+                            displayValue={
+                              filters.status === "all" ? "" : filters.status
+                            }
+                            placeholder="Status"
+                            emptyMessage="No status found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all status"
+                                onSelect={() => {
+                                  handleFilterChange("status", "all");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                All Status
+                              </CommandItem>
+                              <CommandItem
+                                value="Pending"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Pending");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Pending
+                              </CommandItem>
+                              <CommandItem
+                                value="Paid"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Paid");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Paid
+                              </CommandItem>
+                              <CommandItem
+                                value="Partially Paid"
+                                onSelect={() => {
+                                  handleFilterChange(
+                                    "status",
+                                    "Partially Paid",
+                                  );
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Partially Paid
+                              </CommandItem>
+                              <CommandItem
+                                value="Cancelled"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Cancelled");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Cancelled
+                              </CommandItem>
+                              <CommandItem
+                                value="Return"
+                                onSelect={() => {
+                                  handleFilterChange("status", "Return");
+                                  setStatusOpen(false);
+                                }}
+                              >
+                                Return
+                              </CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Purchases Table */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
+                <div className="overflow-x-auto w-full">
+                  <Table className={cn("table-fixed", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold">
+                      <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                        <TableHead className="font-semibold w-[120px] max-w-[120px] whitespace-normal text-center">
                           Invoice No
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[140px] max-w-[140px] whitespace-normal text-center">
                           Supplier
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-center">
                           Invoice Date
                         </TableHead>
-                        <TableHead className="font-semibold">Items</TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-center">
+                          Items
+                        </TableHead>
+                        <TableHead className="font-semibold text-center">
                           Gross Amount
                         </TableHead>
-                        <TableHead className="font-semibold">Tax</TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[64px] max-w-[64px] whitespace-normal px-1 text-center">
+                          Tax
+                        </TableHead>
+                        <TableHead className="font-semibold text-center">
                           Final Amount
                         </TableHead>
-                        <TableHead className="font-semibold">
-                          Discount %
-                        </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] whitespace-normal px-1 text-center">
                           GST Details
                         </TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">
-                          Created & Updated
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] whitespace-normal px-1 text-center">
+                          Status
                         </TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] px-2 text-center">
+                          Info
+                        </TableHead>
+                        <TableHead className="font-semibold text-center">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                      <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                        <TableHead className="py-2 w-[120px] max-w-[120px] whitespace-normal">
+                          <Input
+                            placeholder="Invoice No"
+                            value={invoiceNoInput}
+                            onChange={(e) =>
+                              handleInvoiceNoChange(e.target.value)
+                            }
+                            className="h-8 text-xs font-normal"
+                            disabled={isLoading}
+                          />
+                        </TableHead>
+                        <TableHead className="py-2 w-[140px] max-w-[140px] whitespace-normal">
+                          <InlineSearchField
+                            open={supplierOpen}
+                            onOpenChange={setSupplierOpen}
+                            displayValue={getSupplierName(filters.supplierId!)}
+                            placeholder="Supplier"
+                            emptyMessage="No supplier found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  handleFilterChange("supplierId", "all");
+                                  setSupplierOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.supplierId === "all"
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                All Suppliers
+                              </CommandItem>
+                              {suppliers.map((supplier) => (
+                                <CommandItem
+                                  key={supplier.id}
+                                  value={supplier.id.toString()}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "supplierId",
+                                      supplier.id.toString(),
+                                    );
+                                    setSupplierOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.supplierId ===
+                                        supplier.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {supplier.name}
+                                  {supplier.phoneNo && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      ({supplier.phoneNo})
+                                    </span>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2" />
+                        <TableHead className="py-2" />
+                        <TableHead className="py-2" />
+                        <TableHead className="py-2" />
+                        <TableHead className="py-2" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-1" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-1" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-2" />
+                        <TableHead className="py-2" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -701,7 +793,7 @@ export default function Purchase() {
                             // exit={{ opacity: 0 }}
                           >
                             <TableCell
-                              colSpan={12}
+                              colSpan={11}
                               className="text-center py-12"
                             >
                               <div className="flex flex-col items-center justify-center">
@@ -720,7 +812,7 @@ export default function Purchase() {
                             exit={{ opacity: 0 }}
                           >
                             <TableCell
-                              colSpan={12}
+                              colSpan={11}
                               className="text-center py-8 text-muted-foreground"
                             >
                               <motion.div
@@ -752,13 +844,19 @@ export default function Purchase() {
                               className="group border"
                               layout
                             >
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="font-mono font-medium text-primary">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[120px] max-w-[120px] whitespace-normal align-top">
+                                <div
+                                  className="font-mono font-medium text-primary truncate"
+                                  title={purchase.invoiceNo}
+                                >
                                   {purchase.invoiceNo}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <p className="font-medium">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[140px] max-w-[140px] whitespace-normal align-top">
+                                <p
+                                  className="font-medium truncate"
+                                  title={purchase.supplier.name}
+                                >
                                   {purchase.supplier.name}
                                 </p>
                               </TableCell>
@@ -793,10 +891,11 @@ export default function Purchase() {
                                   </span>
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[64px] max-w-[64px] px-1 align-top">
                                 <Badge
                                   variant="outline"
-                                  className="bg-blue-50 text-blue-700"
+                                  className="bg-blue-50 text-blue-700 truncate max-w-full"
+                                  title={`₹${purchase.tax.toFixed(2)}`}
                                 >
                                   ₹{purchase.tax.toFixed(2)}
                                 </Badge>
@@ -806,26 +905,15 @@ export default function Purchase() {
                                   ₹{purchase.finalAmount.toFixed(2)}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                {purchase.discountPercent > 0 ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-red-50 text-red-700"
-                                  >
-                                    {purchase.discountPercent}%
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">
-                                    -
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="text-xs text-muted-foreground">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[72px] max-w-[72px] px-1 align-top">
+                                <div
+                                  className="text-xs text-muted-foreground truncate"
+                                  title={getGstDetailsLabel(purchase.gstDetails)}
+                                >
                                   {getGstDetailsLabel(purchase.gstDetails)}
                                 </div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[72px] max-w-[72px] whitespace-normal px-1 align-top">
                                 <motion.div
                                   variants={badgeVariants}
                                   whileHover="hover"
@@ -840,78 +928,84 @@ export default function Purchase() {
                                             ? "outline"
                                             : "destructive"
                                     }
-                                    className={
+                                    className={cn(
+                                      "text-[10px] px-1.5 py-0.5 whitespace-normal text-center leading-tight",
                                       purchase.status === "Paid"
-                                        ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
                                         : purchase.status === "Pending"
-                                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400"
                                           : purchase.status === "Partially Paid"
-                                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                                            : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-                                    }
+                                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"
+                                            : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400",
+                                    )}
                                   >
                                     {purchase.status}
                                   </Badge>
                                 </motion.div>
                               </TableCell>
-                              <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                <div className="space-y-1">
-                                  <div className="flex items-center">
-                                    <span className="text-xs font-medium text-green-400">
-                                      Created:
-                                    </span>
-                                    <p className="text-xs text-muted-foreground ml-1">
-                                      {formatDateTime(purchase.createdAt)}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <span className="text-xs font-medium text-orange-400">
-                                      Updated:
-                                    </span>
-                                    <p className="text-xs text-muted-foreground ml-1">
-                                      {formatDateTime(purchase.updatedAt)}
-                                    </p>
-                                  </div>
-                                </div>
+                              <TableCell className="group-hover:bg-secondary/30 w-[72px] max-w-[72px] px-2">
+                                <DateInfoBadge
+                                  createdAt={purchase.createdAt}
+                                  updatedAt={purchase.updatedAt}
+                                  formatDateTime={formatDateTime}
+                                />
                               </TableCell>
                               <TableCell className="group-hover:bg-secondary/30">
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleEditPurchase(purchase)}
-                                    className="h-8 w-8 hover:bg-green-100"
-                                    disabled={
+                                <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 shrink-0",
                                       isLoading || purchase.status !== "Pending"
-                                    }
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "cursor-pointer hover:bg-green-100 text-green-700 border-green-200",
+                                    )}
                                     title={
                                       purchase.status !== "Pending"
                                         ? "Only pending invoices can be edited"
                                         : "Edit purchase"
                                     }
+                                    onClick={() => {
+                                      if (
+                                        !isLoading &&
+                                        purchase.status === "Pending"
+                                      ) {
+                                        handleEditPurchase(purchase);
+                                      }
+                                    }}
                                   >
-                                    <Edit className="h-4 w-4 text-green-600" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      confirmDeletePurchase(purchase)
-                                    }
-                                    className="h-8 w-8 hover:bg-red-100"
-                                    disabled={isLoading || purchase.deleted}
+                                    edit
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 shrink-0",
+                                      isLoading || purchase.deleted
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "cursor-pointer hover:bg-red-100 text-red-700 border-red-200",
+                                    )}
+                                    onClick={() => {
+                                      if (!isLoading && !purchase.deleted) {
+                                        confirmDeletePurchase(purchase);
+                                      }
+                                    }}
                                   >
-                                    <Trash2 className="h-4 w-4 text-red-600" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handlePreview(purchase.id)}
-                                    className="h-8 w-8 hover:bg-gray-100"
-                                    disabled={isLoading}
+                                    delete
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] px-2 py-0.5 cursor-pointer shrink-0 hover:bg-secondary text-muted-foreground",
+                                      isLoading && "opacity-50 cursor-not-allowed",
+                                    )}
+                                    onClick={() => {
+                                      if (!isLoading) {
+                                        handlePreview(purchase.id);
+                                      }
+                                    }}
                                   >
-                                    <FileText className="h-4 w-4 text-gray-600" />
-                                  </Button>
+                                    preview
+                                  </Badge>
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -970,6 +1064,7 @@ export default function Purchase() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0 rounded-full"
                   onClick={() => {
                     setSearchInput("");
+                    setInvoiceNoInput("");
                     handleFilterChange("search", "");
                   }}
                   disabled={isLoading}
@@ -993,31 +1088,6 @@ export default function Purchase() {
           ) : (
             <Search className="h-5 w-5" />
           )}
-        </Button>
-      </div>
-
-      {/* Fixed bottom-right actions */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-background"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          aria-label="Refresh purchases"
-        >
-          <RefreshCw
-            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
-          />
-        </Button>
-        <Button
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
-          onClick={handleAddPurchase}
-          disabled={isLoading}
-          aria-label="Add purchase"
-        >
-          <Plus className="h-5 w-5" />
         </Button>
       </div>
 

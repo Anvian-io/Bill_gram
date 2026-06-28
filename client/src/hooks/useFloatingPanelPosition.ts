@@ -23,11 +23,14 @@ export function resolveFloatingPanelZIndex(
   return FLOATING_PANEL_MODAL_Z_INDEX;
 }
 
+export const INLINE_SEARCH_PANEL_MIN_WIDTH = 240;
+
 export function useFloatingPanelPosition(
   open: boolean,
   anchorRef: RefObject<HTMLElement | null>,
   offset = 4,
   portalContainer: HTMLElement | null = null,
+  minWidth = 0,
 ): CSSProperties {
   const [style, setStyle] = useState<CSSProperties>({
     position: "fixed",
@@ -54,13 +57,16 @@ export function useFloatingPanelPosition(
       const rect = anchor.getBoundingClientRect();
       const zIndex = resolveFloatingPanelZIndex(anchor, container);
 
+      const panelWidth =
+        minWidth > 0 ? Math.max(rect.width, minWidth) : rect.width;
+
       if (useAbsolute) {
         const containerRect = container.getBoundingClientRect();
         setStyle({
           position: "absolute",
           top: rect.bottom - containerRect.top + container.scrollTop + offset,
           left: rect.left - containerRect.left + container.scrollLeft,
-          width: rect.width,
+          width: panelWidth,
           zIndex,
           visibility: "visible",
         });
@@ -71,7 +77,7 @@ export function useFloatingPanelPosition(
         position: "fixed",
         top: rect.bottom + offset,
         left: rect.left,
-        width: rect.width,
+        width: panelWidth,
         zIndex,
         visibility: "visible",
       });
@@ -95,7 +101,7 @@ export function useFloatingPanelPosition(
       window.removeEventListener("resize", update);
       container.removeEventListener("scroll", update, true);
     };
-  }, [open, anchorRef, offset, portalContainer]);
+  }, [open, anchorRef, offset, portalContainer, minWidth]);
 
   return style;
 }

@@ -10,7 +10,10 @@ import {
   CommandEmpty,
   CommandList,
 } from "@/components/ui/command";
-import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
+import {
+  INLINE_SEARCH_PANEL_MIN_WIDTH,
+  useFloatingPanelPosition,
+} from "@/hooks/useFloatingPanelPosition";
 import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
 import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 import {
@@ -30,6 +33,8 @@ export interface InlineSearchFieldProps {
   inputClassName?: string;
   emptyMessage?: string;
   shouldFilter?: boolean;
+  /** Minimum width for the dropdown panel (defaults to 240px). */
+  panelMinWidth?: number;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   children: React.ReactNode;
@@ -47,6 +52,7 @@ export function InlineSearchField({
   inputClassName,
   emptyMessage = "No results found.",
   shouldFilter = true,
+  panelMinWidth = INLINE_SEARCH_PANEL_MIN_WIDTH,
   onMouseEnter,
   onMouseLeave,
   children,
@@ -69,6 +75,7 @@ export function InlineSearchField({
     anchorRef,
     4,
     portalTarget,
+    panelMinWidth,
   );
 
   const focusInput = React.useCallback(() => {
