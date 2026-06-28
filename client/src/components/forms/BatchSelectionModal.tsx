@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -165,7 +165,11 @@ export default function BatchSelectionModal({
   };
 
   const handleApplyBatch = () => {
-    if (!selectedBatch) {
+    const batch =
+      selectedBatch ??
+      (filteredBatches.length > 0 ? filteredBatches[0] : null);
+
+    if (!batch) {
       setShowBatchError(true);
       toast.error("Please select a batch", {
         description: "Batch selection is required to proceed",
@@ -174,31 +178,45 @@ export default function BatchSelectionModal({
       return;
     }
 
-    if (aQty <= 0) {
-      toast.error("Please enter a quantity", {
-        description: "A Qty must be greater than zero before applying a batch.",
-      });
-      return;
-    }
-
-    // Double-check stock before applying
+    // Double-check stock before applying (only when quantity entered)
     if (
-      selectedBatch.openingStock !== undefined &&
-      aQty > selectedBatch.openingStock
+      aQty > 0 &&
+      batch.openingStock !== undefined &&
+      aQty > batch.openingStock
     ) {
-      toast.error(`Only ${selectedBatch.openingStock} stock available`, {
+      toast.error(`Only ${batch.openingStock} stock available`, {
         description: `Cannot apply A Qty of ${aQty}. Adjust quantity.`,
       });
       return;
     }
 
-    if (selectedBatch && onBatchSelect) {
-      onBatchSelect(selectedBatch, aQty, mQty);
+    if (onBatchSelect) {
+      onBatchSelect(batch, aQty, mQty);
       onOpenChange(false);
-      toast.success(`Batch ${selectedBatch.batchNo} applied`, {
-        description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${((selectedBatch.saleRate || 0) * aQty).toFixed(2)}`,
+      toast.success(`Batch ${batch.batchNo} applied`, {
+        description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${((batch.saleRate || 0) * aQty).toFixed(2)}`,
       });
     }
+  };
+
+  const handleEnterApply = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    handleApplyBatch();
+  };
+
+  const handleDialogKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" || activeTab !== "batch") return;
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "BUTTON"
+    ) {
+      return;
+    }
+    e.preventDefault();
+    handleApplyBatch();
   };
 
   const handleCancel = () => {
@@ -244,7 +262,10 @@ export default function BatchSelectionModal({
         onOpenChange(newOpen);
       }}
     >
-      <DialogContent className="min-w-[90vw] min-h-[40vh] overflow-y-auto">
+      <DialogContent
+        className="min-w-[90vw] min-h-[40vh] overflow-y-auto"
+        onKeyDown={handleDialogKeyDown}
+      >
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl flex items-center gap-2">
@@ -306,12 +327,7 @@ export default function BatchSelectionModal({
                       }
                     }}
                     className="w-24"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        document.getElementById("searchBatch")?.focus();
-                      }
-                    }}
+                    onKeyDown={handleEnterApply}
                   />
                 </div>
               </div>
@@ -386,16 +402,7 @@ export default function BatchSelectionModal({
                   className="pl-10"
                   value={searchBatch}
                   onChange={(e) => setSearchBatch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && selectedBatch) {
-                      e.preventDefault();
-                      document.getElementById("applyBatchBtn")?.click();
-                    } else if (e.key === "Enter" && filteredBatches.length > 0) {
-                      e.preventDefault();
-                      // If no batch selected but user pressed enter on search, maybe select the first one
-                      // handleBatchSelect(filteredBatches[0]);
-                    }
-                  }}
+                  onKeyDown={handleEnterApply}
                 />
                 {searchBatch && (
                   <Button

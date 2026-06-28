@@ -779,6 +779,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       });
 
       setPendingBatchSelection(null);
+      focusField(`rate-${index}`, 350);
     }
   };
 
@@ -819,7 +820,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const isRowEditable = (index: number) =>
     index === 0 || editingRowIndex === index;
 
-  const focusField = (fieldId: string) => {
+  const focusField = (fieldId: string, delay = 100) => {
     setTimeout(() => {
       const nextElement = document.getElementById(fieldId) as HTMLElement;
       if (nextElement) {
@@ -828,7 +829,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
           nextElement.select();
         }
       }
-    }, 100);
+    }, delay);
   };
 
   const focusProductSearch = () => focusField("productSearch-0");

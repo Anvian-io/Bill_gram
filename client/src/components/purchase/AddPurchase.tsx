@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,7 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CustomAlert } from "@/components/custom_ui";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   Plus,
@@ -33,10 +39,16 @@ import {
   Gift,
   Shield,
   Tag,
-  ArrowLeft,
   Save,
   Printer,
   FilePlus,
+  Loader2,
+  Search,
+  MoreVertical,
+  Pencil,
+  LogOut,
+  Download,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
@@ -52,13 +64,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTheme } from "@/contexts/ThemeProvider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PurchaseFormData } from "@/types/purchase";
 import BatchSelectionModal from "@/components/forms/BatchSelection";
@@ -67,12 +72,12 @@ import {
   gst_details,
   GST_DETAILS_DEFAULT_ID,
   normalizeGstDetailsValue,
+  getGstDetailsLabel,
 } from "@/store/dropdown_data/gst_details";
 import { purchaseService } from "@/services/purchaseService";
 import { productService } from "@/services/productService";
 import type { Purchase } from "@/types/purchase";
 import { useHoverOpen } from "@/hooks/useHoverOpen";
-import { containerVariants, itemVariants } from "@/components/FramerVariants";
 import { CheckIsExpanded } from "@/utils/commonHelper";
 import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
 
@@ -111,7 +116,7 @@ const purchaseSchema = z.object({
   items: z
     .array(
       z.object({
-        productId: z.coerce.number().min(1, "Product is required"),
+        productId: z.coerce.number().min(0).default(0),
         productCode: z.string().optional(),
         description: z.string().optional(),
         rate: z.coerce.number().min(0, "Rate must be positive"),
@@ -135,7 +140,11 @@ const purchaseSchema = z.object({
         productBrand: z.string().optional(),
       }),
     )
-    .min(1, "At least one product item is required"),
+    .min(1, "At least one product item is required")
+    .refine(
+      (items) => items.some((item) => item.productId > 0),
+      "At least one product item is required",
+    ),
 
   remarks: z.string().optional(),
   grossAmount: z.coerce.number().min(0, "Gross amount must be positive"),
@@ -193,6 +202,8 @@ const defaultValues: PurchaseFormData = {
   finalAmount: 0,
 };
 
+const MIN_TABLE_ROWS = 8;
+
 // ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
@@ -233,6 +244,13 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const [activeProductIndex, setActiveProductIndex] = useState<number | null>(
     null,
   );
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const saveAndNewRef = useRef(false);
+  const invoiceSearchSectionRef = useRef<HTMLDivElement>(null);
 
   // Batch selection modal state
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -365,7 +383,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
         purchaseData.invoiceDate?.split("T")[0] ?? defaultValues.invoiceDate,
       supplierId: purchaseData.supplier?.id ?? 0,
       gstDetails: normalizeGstDetailsValue(purchaseData.gstDetails),
-      items: mappedItems.length > 0 ? mappedItems : defaultValues.items,
+      items: [{ ...emptyItem }, ...mappedItems],
       remarks: purchaseData.remarks ?? "",
       grossAmount: purchaseData.grossAmount ?? 0,
       boxUnit: purchaseData.boxUnit ?? 0,
@@ -376,6 +394,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       creditAmount: purchaseData.creditAmount ?? 0,
       finalAmount: purchaseData.finalAmount ?? 0,
     });
+    setEditingRowIndex(null);
   };
 
   // ----------------------------------------------------------------------
@@ -549,6 +568,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       });
 
       setPendingBatchSelection(null);
+      focusField(`rate-${index}`, 350);
     }
   };
 
@@ -586,6 +606,38 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   // ----------------------------------------------------------------------
   // Row management
   // ----------------------------------------------------------------------
+  const isRowEditable = (index: number) =>
+    index === 0 || editingRowIndex === index;
+
+  const focusField = (fieldId: string, delay = 100) => {
+    setTimeout(() => {
+      const nextElement = document.getElementById(fieldId) as HTMLElement;
+      if (nextElement) {
+        nextElement.focus();
+        if (nextElement instanceof HTMLInputElement) {
+          nextElement.select();
+        }
+      }
+    }, delay);
+  };
+
+  const focusProductSearch = () => focusField("productSearch-0");
+
+  const confirmProductRow = () => {
+    const item = items[0];
+    if (!item?.productId) {
+      toast.error("Please select a product");
+      return;
+    }
+    if ((item.aQty ?? 0) <= 0 && (item.fQty ?? 0) <= 0) {
+      toast.error("Please enter quantity");
+      return;
+    }
+    setEditingRowIndex(null);
+    addProductRow();
+    focusProductSearch();
+  };
+
   const addProductRow = () => {
     const newItem: PurchaseFormData["items"][0] = {
       productId: 0,
@@ -626,41 +678,34 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       if (field === "rate") nextFieldId = `aQty-${index}`;
       else if (field === "aQty") nextFieldId = `fQty-${index}`;
       else if (field === "fQty") nextFieldId = `DQty-${index}`;
-      else if (field === "DQty") {
-        if (index === 0) {
-          addProductRow();
-          nextFieldId = `productSearch-0`;
-        } else {
-          nextFieldId = `productSearch-${index - 1}`;
-        }
-      }
+      else if (field === "DQty") nextFieldId = `totalAmount-${index}`;
+      else if (field === "totalAmount") nextFieldId = `schPercent-${index}`;
       else if (field === "schPercent") nextFieldId = `taxRate-${index}`;
-      else if (field === "taxRate") {
-        if (index === 0) {
-          addProductRow();
-          nextFieldId = `productSearch-0`;
-        } else {
-          nextFieldId = `productSearch-${index - 1}`;
-        }
-      }
+      else if (field === "taxRate") nextFieldId = `confirmProduct-${index}`;
       if (nextFieldId) {
-        setTimeout(() => {
-          const nextElement = document.getElementById(nextFieldId) as HTMLElement;
-          if (nextElement) {
-            nextElement.focus();
-            if (nextElement instanceof HTMLInputElement) {
-              nextElement.select();
-            }
-          }
-        }, 100);
+        focusField(nextFieldId);
       }
     }
   };
 
+  const handleConfirmKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    if (e.key === "Enter" && index === 0) {
+      e.preventDefault();
+      confirmProductRow();
+    }
+  };
+
   const removeProductRow = (index: number) => {
-    if (items.length > 0) {
+    if (index === 0) return;
+    if (items.length > 1) {
       const updatedItems = items.filter((_, i) => i !== index);
       form.setValue("items", updatedItems);
+      if (editingRowIndex === index) {
+        setEditingRowIndex(null);
+      }
     }
   };
 
@@ -727,7 +772,13 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const onSubmit = async (data: PurchaseFormData) => {
     setIsSubmitting(true);
     try {
-      const payload = { ...data, boxUnit: 0 };
+      const filteredItems = data.items.filter((item) => item.productId > 0);
+      if (filteredItems.length === 0) {
+        toast.error("Add at least one product");
+        setIsSubmitting(false);
+        return;
+      }
+      const payload = { ...data, items: filteredItems, boxUnit: 0 };
       // @ts-ignore
       delete payload.invoiceNo;
 
@@ -740,6 +791,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           payload,
         );
         toast.success("Purchase updated successfully");
+        form.reset(data, { keepDirty: false });
       } else {
         // Create new purchase
         response = isReturnMode
@@ -755,9 +807,14 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           if (!isReturnMode) {
             setSearchParams({ id: response.id.toString() }, { replace: true });
           }
+          form.reset(data, { keepDirty: false });
         }
       }
       void refreshActiveLists();
+      if (saveAndNewRef.current) {
+        saveAndNewRef.current = false;
+        handleNewPurchase();
+      }
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast.error(
@@ -778,25 +835,170 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   // Navigation handlers
   // ----------------------------------------------------------------------
   const handleNewPurchase = () => {
-    // Reset form and navigate to ?id=new
     form.reset(defaultValues);
     setGeneratedPurchaseId(null);
     setGeneratedInvoiceNo(null);
+    setEditingRowIndex(null);
     if (!isReturnMode) {
       setSearchParams({ id: "new" }, { replace: true });
     }
   };
 
-  const handleBillPreview = () => {
-    const idToPreview = Number(
+  const handleSaveAndNew = () => {
+    saveAndNewRef.current = true;
+    form.handleSubmit(onSubmit, onError)();
+  };
+
+  const scrollToInvoiceSearch = () => {
+    invoiceSearchSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    invoiceSearchHover.setOpen(true);
+  };
+
+  const getPreviewPurchaseId = () =>
+    Number(
       isReturnMode
         ? generatedPurchaseId || 0
-        : purchaseId && purchaseId !== "new" ? purchaseId : generatedPurchaseId || 0,
+        : purchaseId && purchaseId !== "new"
+          ? purchaseId
+          : generatedPurchaseId || 0,
     );
+
+  const handleDeletePurchase = async () => {
+    if (!isEditMode || !purchaseId) return;
+    setIsDeleting(true);
+    try {
+      await purchaseService.deletePurchase(Number(purchaseId));
+      toast.success("Purchase deleted successfully");
+      void refreshActiveLists();
+      navigate("/purchases");
+    } catch {
+      toast.error("Failed to delete purchase");
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
+  const handleBillPreview = () => {
+    const idToPreview = getPreviewPurchaseId();
     if (idToPreview > 0) {
       setPreviewPurchaseId(idToPreview);
       setIsPreviewOpen(true);
+    } else {
+      toast.error("Save the invoice first to preview");
     }
+  };
+
+  const handleDownloadPdf = async () => {
+    const idToPreview = getPreviewPurchaseId();
+    if (idToPreview <= 0) {
+      toast.error("Save the invoice first to download PDF");
+      return;
+    }
+    setIsDownloadingPdf(true);
+    try {
+      const blob =
+        await purchaseService.downloadPurchaseBillPreviewPDF(idToPreview);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeInvoiceNo = (generatedInvoiceNo || `purchase-${idToPreview}`)
+        .toString()
+        .replace(/[^a-zA-Z0-9_-]/g, "_");
+      link.download = `purchase-invoice-${safeInvoiceNo}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded");
+    } catch {
+      toast.error("Failed to download PDF");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handlePrintBill = async () => {
+    const idToPreview = getPreviewPurchaseId();
+    if (idToPreview <= 0) {
+      toast.error("Save the invoice first to print");
+      return;
+    }
+    setIsPrinting(true);
+    try {
+      const blob =
+        await purchaseService.downloadPurchaseBillPreviewPDF(idToPreview);
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => printWindow.print();
+      }
+    } catch {
+      toast.error("Failed to open print preview");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleDmPrint = () => {
+    const damageItems = items.filter(
+      (item) => item.productId > 0 && (item.DQty ?? 0) > 0,
+    );
+    if (damageItems.length === 0) {
+      toast.info("No damaged items to print");
+      return;
+    }
+
+    const supplierName =
+      findSupplierName(form.getValues("supplierId")) || "—";
+    const invoiceNo = generatedInvoiceNo || "Draft";
+    const invoiceDate = form.getValues("invoiceDate") || "—";
+    const rowsHtml = damageItems
+      .map(
+        (item, idx) => `
+        <tr>
+          <td style="border:1px solid #ccc;padding:4px;text-align:center">${idx + 1}</td>
+          <td style="border:1px solid #ccc;padding:4px">${findProductName(item.productId)}</td>
+          <td style="border:1px solid #ccc;padding:4px;text-align:right">${item.DQty ?? 0}</td>
+          <td style="border:1px solid #ccc;padding:4px;text-align:right">${(item.rate ?? 0).toFixed(2)}</td>
+          <td style="border:1px solid #ccc;padding:4px;text-align:right">${((item.DQty ?? 0) * (item.rate ?? 0)).toFixed(2)}</td>
+        </tr>`,
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>DM Print - ${invoiceNo}</title></head>
+        <body style="font-family:Arial,sans-serif;padding:16px">
+          <h2 style="margin:0 0 8px">Damage Memo (DM)</h2>
+          <p style="margin:0 0 4px"><strong>Invoice:</strong> ${invoiceNo}</p>
+          <p style="margin:0 0 4px"><strong>Date:</strong> ${invoiceDate}</p>
+          <p style="margin:0 0 12px"><strong>Supplier:</strong> ${supplierName}</p>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:#f3f4f6">
+                <th style="border:1px solid #ccc;padding:4px">Sr</th>
+                <th style="border:1px solid #ccc;padding:4px">Product</th>
+                <th style="border:1px solid #ccc;padding:4px">DM Qty</th>
+                <th style="border:1px solid #ccc;padding:4px">Rate</th>
+                <th style="border:1px solid #ccc;padding:4px">Amount</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.onload = () => printWindow.print();
   };
 
   const handleBackToPurchases = () => {
@@ -867,126 +1069,25 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const canShowBillPreview = isReturnMode
     ? !!generatedPurchaseId
     : (!!purchaseId && purchaseId !== "new") || !!generatedPurchaseId;
-
-  // ----------------------------------------------------------------------
-  // Skeleton Loader Component
-  // ----------------------------------------------------------------------
-  const SkeletonLoader = () => (
-    <div className="min-h-screen bg-background p-4 md:p-2">
-      <div
-        className={`mx-auto ${
-          CheckIsExpanded()
-            ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
-            : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
-        }`}
-      >
-        {/* Header Skeleton */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div>
-              <Skeleton className="h-8 w-64 mb-2" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-        </div>
-
-        {/* Invoice Details Card Skeleton */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <Skeleton className="h-6 w-48 mb-4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Products Table Skeleton */}
-        <Card className="mb-6">
-          <CardContent className="p-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-4 w-64" />
-              </div>
-              <Skeleton className="h-9 w-32" />
-            </div>
-            <div className="border rounded-lg">
-              <div className="grid grid-cols-15 gap-4 p-4 bg-secondary/50">
-                {Array.from({ length: 15 }).map((_, i) => (
-                  <Skeleton key={i} className="h-4 w-full" />
-                ))}
-              </div>
-              {Array.from({ length: 3 }).map((_, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="grid grid-cols-15 gap-4 p-4 border-t"
-                >
-                  {Array.from({ length: 15 }).map((_, colIndex) => (
-                    <Skeleton key={colIndex} className="h-8 w-full" />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Summary Section Skeleton */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className={cn("lg:col-span-1", layoutMode === "classic" && "remarks-section")}>
-                <Skeleton className="h-6 w-32 mb-3" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-              <div className={cn("lg:col-span-3", layoutMode === "classic" && "classic-summary")}>
-                <Skeleton className="h-6 w-32 mb-4" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i}>
-                      <Skeleton className="h-4 w-24 mb-2" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ))}
-                </div>
-                <Skeleton className="h-20 w-full mt-4" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+  const dummyRowCount = Math.max(MIN_TABLE_ROWS - items.length, 0);
+  const totalScheme = items.reduce(
+    (sum, item) => sum + (item.schAmount || 0),
+    0,
   );
 
   // ----------------------------------------------------------------------
   // Render
   // ----------------------------------------------------------------------
   if (isLoading) {
-    return <SkeletonLoader />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
-    <motion.div
-      className="min-h-screen bg-background p-4 md:p-2"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
+    <div className="min-h-screen bg-background p-2 pb-56">
       <div
         className={`mx-auto ${
           CheckIsExpanded()
@@ -994,37 +1095,110 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
             : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
         }`}
       >
-        {/* Header */}
+        {isEditMode && isDirty && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+            You have unsaved changes
+          </div>
+        )}
 
         <Form {...form}>
           <form
             data-entry-form
             onSubmit={form.handleSubmit(onSubmit, onError)}
-            className="space-y-6"
+            className="space-y-4"
           >
-            {/* Invoice Details Card */}
-            <motion.div variants={itemVariants}>
-              <Card className={cn(layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
-                <CardContent className={cn(layoutMode === "classic" ? "p-0 pb-2" : "p-6")}>
-                  {layoutMode !== "classic" && (
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      {isReturnMode ? "Return Details" : "Invoice Details"}
-                      {generatedInvoiceNo && (
-                        <Badge variant="secondary" className="ml-2">
-                          {generatedInvoiceNo}
-                        </Badge>
-                      )}
-                    </h3>
-                  )}
-                  <div className={cn(
-                    "grid gap-4",
-                    layoutMode === "classic" 
-                      ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 items-end" 
-                      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-                  )}>
-                    {/* Load from existing invoice */}
-                    {!isReturnMode && (
+            {/* Invoice Details */}
+            <Card className="p-3">
+              <CardContent className="p-0 pt-1">
+                {generatedInvoiceNo && (
+                  <div className="flex justify-end mb-2">
+                    <Badge variant="secondary">{generatedInvoiceNo}</Badge>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="invoiceDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <HoverDateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Invoice Date *"
+                            inputClassName={cn(
+                              "pl-10",
+                              layoutMode === "classic" && "classic-input",
+                            )}
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gstDetails"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormControl>
+                          <InlineSearchField
+                            open={gstHover.open}
+                            onOpenChange={gstHover.setOpen}
+                            displayValue={
+                              field.value
+                                ? getGstDetailsLabel(field.value)
+                                : ""
+                            }
+                            placeholder="Tax Details"
+                            emptyMessage="No tax option found."
+                            onMouseEnter={gstHover.onMouseEnter}
+                            onMouseLeave={gstHover.onMouseLeave}
+                            disabled={isSubmitting}
+                            inputClassName={cn(
+                              layoutMode === "classic" &&
+                                "classic-input h-8 pl-0 border-b-2 bg-transparent",
+                            )}
+                          >
+                            <CommandGroup>
+                              {gst_details.map((gst) => (
+                                <CommandItem
+                                  key={gst.id}
+                                  value={`${gst.id} ${gst.type}`}
+                                  onSelect={() => {
+                                    field.onChange(String(gst.id));
+                                    form.setValue(
+                                      "gstDetails",
+                                      String(gst.id),
+                                      { shouldDirty: true },
+                                    );
+                                    gstHover.setOpen(false);
+                                  }}
+                                >
+                                  <span className="font-medium">{gst.type}</span>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      String(gst.id) === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {!isReturnMode && (
+                    <div ref={invoiceSearchSectionRef}>
                       <FormItem className="flex flex-col">
                         <InlineSearchField
                           open={invoiceSearchHover.open}
@@ -1075,175 +1249,94 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             )}
                         </InlineSearchField>
                       </FormItem>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Invoice Date */}
-                    <FormField
-                      control={form.control}
-                      name="invoiceDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <HoverDateInput
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder="Invoice Date *"
-                              inputClassName={cn(
-                                "pl-10",
-                                layoutMode === "classic" && "classic-input",
-                              )}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Supplier */}
-                    <FormField
-                      control={form.control}
-                      name="supplierId"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormControl>
-                            <InlineSearchField
-                              open={supplierHover.open}
-                              onOpenChange={supplierHover.setOpen}
-                              displayValue={
-                                field.value
-                                  ? findSupplierName(field.value)
-                                  : ""
-                              }
-                              placeholder="Supplier Name *"
-                              emptyMessage="No supplier found."
-                              onMouseEnter={supplierHover.onMouseEnter}
-                              onMouseLeave={supplierHover.onMouseLeave}
-                              disabled={isSubmitting}
-                              inputClassName={cn(
-                                layoutMode === "classic" &&
-                                  "classic-input h-8 pl-0 border-b-2 bg-transparent",
-                              )}
-                            >
-                              <CommandGroup>
-                                {suppliers.map((supplier) => (
-                                  <CommandItem
-                                    key={supplier.id}
-                                    value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
-                                    onSelect={() => {
-                                      field.onChange(supplier.id);
-                                      supplierHover.setOpen(false);
-                                    }}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">
-                                        {supplier.name}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {supplier.phoneNo &&
-                                          `${supplier.phoneNo} • `}
-                                        {supplier.email &&
-                                          `${supplier.email} • `}
-                                        {supplier.address}
-                                      </span>
-                                    </div>
-                                    <Check
-                                      className={cn(
-                                        "ml-auto h-4 w-4",
-                                        supplier.id === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </InlineSearchField>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* GST Details */}
-                    <FormField
-                      control={form.control}
-                      name="gstDetails"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select
-                            open={gstHover.open}
-                            onOpenChange={gstHover.setOpen}
-                            onValueChange={field.onChange}
-                            value={field.value ?? GST_DETAILS_DEFAULT_ID}
+                  <FormField
+                    control={form.control}
+                    name="supplierId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormControl>
+                          <InlineSearchField
+                            open={supplierHover.open}
+                            onOpenChange={supplierHover.setOpen}
+                            displayValue={
+                              field.value ? findSupplierName(field.value) : ""
+                            }
+                            placeholder="Supplier *"
+                            emptyMessage="No supplier found."
+                            onMouseEnter={supplierHover.onMouseEnter}
+                            onMouseLeave={supplierHover.onMouseLeave}
                             disabled={isSubmitting}
+                            inputClassName={cn(
+                              layoutMode === "classic" &&
+                                "classic-input h-8 pl-0 border-b-2 bg-transparent",
+                            )}
                           >
-                            <FormControl>
-                              <SelectTrigger
-                                className={cn(layoutMode === "classic" && "classic-input h-8 pl-0 border-b-2 bg-transparent")}
-                                onMouseEnter={gstHover.onMouseEnter}
-                                onMouseLeave={gstHover.onMouseLeave}
-                              >
-                                <SelectValue placeholder="GST Details" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent
-                              onMouseEnter={gstHover.onMouseEnter}
-                              onMouseLeave={gstHover.onMouseLeave}
-                            >
-                              {gst_details.map((gst) => (
-                                <SelectItem key={gst.id} value={String(gst.id)}>
-                                  {gst.type}
-                                </SelectItem>
+                            <CommandGroup>
+                              {suppliers.map((supplier) => (
+                                <CommandItem
+                                  key={supplier.id}
+                                  value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    field.onChange(supplier.id);
+                                    supplierHover.setOpen(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {supplier.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {supplier.phoneNo &&
+                                        `${supplier.phoneNo} • `}
+                                      {supplier.email && `${supplier.email} • `}
+                                      {supplier.address}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      supplier.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
                               ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Products Table */}
-            <motion.div variants={itemVariants}>
-              <Card className={cn(layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
-                <CardContent className={cn("p-2", layoutMode === "classic" && "p-0")}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">Products</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Add products to the purchase invoice
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addProductRow}
-                      disabled={isSubmitting}
+            <Card className={cn("p-2", layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
+              <CardContent className={cn("p-0 pt-1", layoutMode === "classic" && "p-0")}>
+                <div className="w-full overflow-x-auto">
+                  <div
+                    className={cn(
+                      "w-full overflow-x-auto border rounded-lg",
+                      layoutMode === "classic" && "rounded-none border-none",
+                    )}
+                  >
+                    <Table
+                      className={cn(
+                        "w-full",
+                        layoutMode === "classic" && "classic-table",
+                      )}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Product
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-center overflow-x-auto w-full">
-                    <div className={cn(
-                      "overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl",
-                      layoutMode === "classic" && "rounded-none border-none"
-                    )}>
-                      <Table className={cn(layoutMode === "classic" && "classic-table")}>
-                        <TableHeader>
-                          <TableRow className="bg-secondary/50">
-                            <TableHead className="font-semibold w-12">
-                              Sr
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Prod Code & Description
-                            </TableHead>
+                      <TableHeader>
+                        <TableRow className="bg-secondary/50">
+                          <TableHead className="font-semibold">
+                            Prod Code & Description
+                          </TableHead>
                             <TableHead className="font-semibold">
                               Rate
                             </TableHead>
@@ -1282,91 +1375,99 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          <AnimatePresence>
-                            {items.length === 0 ? (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={15}
-                                  className="text-center py-8 text-muted-foreground"
-                                >
-                                  No products added. Click "Add Product" to get
-                                  started.
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              items.map((item, index) => (
-                                <motion.tr
-                                  key={index}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -10 }}
-                                  className="hover:bg-secondary/30"
-                                >
-                                  <TableCell>{index + 1}</TableCell>
+                        <AnimatePresence>
+                          {items.map((item, index) => {
+                              const editable = isRowEditable(index);
+                              const isEntryRow = index === 0;
+                              return (
+                              <motion.tr
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className={cn(
+                                  "hover:bg-secondary/30",
+                                  !editable && "bg-muted/20",
+                                )}
+                              >
 
-                                  {/* Product Selection */}
-                                  <TableCell>
+                                {/* Product Selection */}
+                                <TableCell>
+                                  {editable ? (
                                     <InlineSearchField
-                                    open={productOpen && activeProductIndex === index}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        setActiveProductIndex(index);
-                                      } else {
-                                        setActiveProductIndex(null);
+                                      inputId={`productSearch-${index}`}
+                                      open={
+                                        productOpen &&
+                                        activeProductIndex === index
                                       }
-                                      setProductOpen(open);
-                                    }}
-                                    displayValue={item.productId
-                                            ? findProductName(item.productId)
-                                            : "Select product"}
-                                    placeholder="Search products..."
-                                    emptyMessage="No product found."
-                                    disabled={isSubmitting}
-                                  >
-                                    <CommandGroup>
-                                              {products.map((product) => (
-                                                <CommandItem
-                                                  key={product.id}
-                                                  value={`${product.id} ${product.productCode} ${product.productBrand}`}
-                                                  onSelect={() => {
-                                                    handleProductSelect(
-                                                      index,
-                                                      product.id,
-                                                    );
-                                                  }}
-                                                >
-                                                  <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                      {product.productCode}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                      {product.productBrand}
-                                                    </span>
-                                                  </div>
-                                                  <Check
-                                                    className={cn(
-                                                      "ml-auto h-4 w-4",
-                                                      product.id ===
-                                                        item.productId
-                                                        ? "opacity-100"
-                                                        : "opacity-0",
-                                                    )}
-                                                  />
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                  </InlineSearchField>
-                                  </TableCell>
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          setActiveProductIndex(index);
+                                        } else {
+                                          setActiveProductIndex(null);
+                                        }
+                                        setProductOpen(open);
+                                      }}
+                                      displayValue={
+                                        item.productId
+                                          ? findProductName(item.productId)
+                                          : ""
+                                      }
+                                      placeholder="Search products..."
+                                      emptyMessage="No product found."
+                                      disabled={isSubmitting}
+                                    >
+                                      <CommandGroup>
+                                        {products.map((product) => (
+                                          <CommandItem
+                                            key={product.id}
+                                            value={`${product.id} ${product.productCode} ${product.productBrand}`}
+                                            onSelect={() => {
+                                              handleProductSelect(
+                                                index,
+                                                product.id,
+                                              );
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">
+                                                {product.productCode}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {product.productBrand}
+                                              </span>
+                                            </div>
+                                            <Check
+                                              className={cn(
+                                                "ml-auto h-4 w-4",
+                                                product.id === item.productId
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
+                                  ) : (
+                                    <span className="text-sm font-medium">
+                                      {item.productId
+                                        ? findProductName(item.productId)
+                                        : "—"}
+                                    </span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Rate */}
-                                  <TableCell>
+                                {/* Rate */}
+                                <TableCell>
+                                  {editable ? (
                                     <div className="relative">
                                       <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                       <Input
                                         id={`rate-${index}`}
                                         type="number"
                                         step="0.01"
-                                        value={item.rate}
+                                        value={item.rate ?? 0}
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -1374,20 +1475,28 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
-                                        onKeyDown={(e) => handleKeyDown(e, index, "rate")}
+                                        onKeyDown={(e) =>
+                                          handleKeyDown(e, index, "rate")
+                                        }
                                         className="w-24 pl-7"
                                         disabled={isSubmitting}
                                       />
                                     </div>
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">
+                                      ₹{(item.rate ?? 0).toFixed(2)}
+                                    </span>
+                                  )}
+                                </TableCell>
 
-                                  {/* A. Qty */}
-                                  <TableCell>
+                                {/* A. Qty */}
+                                <TableCell>
+                                  {editable ? (
                                     <Input
                                       id={`aQty-${index}`}
                                       type="number"
                                       step="1"
-                                      value={item.aQty}
+                                      value={item.aQty ?? 0}
                                       onChange={(e) =>
                                         handleItemChange(
                                           index,
@@ -1395,19 +1504,25 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
-                                      onKeyDown={(e) => handleKeyDown(e, index, "aQty")}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, index, "aQty")
+                                      }
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">{item.aQty ?? 0}</span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Fr */}
-                                  <TableCell>
+                                {/* Fr (Free Qty) */}
+                                <TableCell>
+                                  {editable ? (
                                     <Input
                                       id={`fQty-${index}`}
                                       type="number"
                                       step="1"
-                                      value={item.fQty}
+                                      value={item.fQty ?? 0}
                                       onChange={(e) =>
                                         handleItemChange(
                                           index,
@@ -1415,19 +1530,25 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
-                                      onKeyDown={(e) => handleKeyDown(e, index, "fQty")}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, index, "fQty")
+                                      }
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">{item.fQty ?? 0}</span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Dm */}
-                                  <TableCell>
+                                {/* Dm (Damaged Qty) */}
+                                <TableCell>
+                                  {editable ? (
                                     <Input
                                       id={`DQty-${index}`}
                                       type="number"
                                       step="1"
-                                      value={item.DQty}
+                                      value={item.DQty ?? 0}
                                       onChange={(e) =>
                                         handleItemChange(
                                           index,
@@ -1435,44 +1556,41 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
-                                      onKeyDown={(e) => handleKeyDown(e, index, "DQty")}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, index, "DQty")
+                                      }
                                       className="w-20"
                                       disabled={isSubmitting}
                                     />
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">{item.DQty ?? 0}</span>
+                                  )}
+                                </TableCell>
 
-                                  {/* M. Qty - Disabled */}
-                                  <TableCell>
-                                    <Input
-                                      type="number"
-                                      step="1"
-                                      value={item.mQty}
-                                      readOnly
-                                      disabled
-                                      className="w-20 bg-muted cursor-not-allowed"
-                                    />
-                                  </TableCell>
+                                {/* M. Qty */}
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {item.mQty.toFixed(0) ?? 0}
+                                  </span>
+                                </TableCell>
 
-                                  {/* Unit - Disabled */}
-                                  <TableCell>
-                                    <Input
-                                      type="number"
-                                      step="1"
-                                      value={item.unit}
-                                      readOnly
-                                      disabled
-                                      className="w-20 bg-muted cursor-not-allowed"
-                                    />
-                                  </TableCell>
+                                {/* Unit */}
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {item.unit.toFixed(0) ?? 0}
+                                  </span>
+                                </TableCell>
 
-                                  {/* Amount */}
-                                  <TableCell>
+                                {/* Amount (inclusive) */}
+                                <TableCell>
+                                  {editable ? (
                                     <div className="relative">
                                       <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                       <Input
+                                        id={`totalAmount-${index}`}
                                         type="number"
                                         step="0.01"
-                                        value={item.totalAmount}
+                                        value={item.totalAmount ?? 0}
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -1480,20 +1598,29 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        onKeyDown={(e) =>
+                                          handleKeyDown(e, index, "totalAmount")
+                                        }
                                         className="w-24 pl-7"
                                         disabled={isSubmitting}
                                       />
                                     </div>
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">
+                                      ₹{(item.totalAmount ?? 0).toFixed(2)}
+                                    </span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Sch% */}
-                                  <TableCell>
+                                {/* Sch% */}
+                                <TableCell className="max-w-16">
+                                  {editable ? (
                                     <div className="relative">
                                       <Input
                                         id={`schPercent-${index}`}
                                         type="number"
                                         step="0.01"
-                                        value={item.schPercent}
+                                        value={item.schPercent ?? 0}
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -1501,29 +1628,37 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
-                                        onKeyDown={(e) => handleKeyDown(e, index, "schPercent")}
-                                        className="w-16 pl-5"
+                                        onKeyDown={(e) =>
+                                          handleKeyDown(e, index, "schPercent")
+                                        }
+                                        className="w-14 pl-6"
                                         disabled={isSubmitting}
                                       />
-                                      <Percent className="absolute left-1.5 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                      <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                     </div>
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">
+                                      {item.schPercent ?? 0}%
+                                    </span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Sch Amount */}
-                                  <TableCell>
-                                    <div className="font-medium text-sm">
-                                      ₹{item.schAmount.toFixed(2)}
-                                    </div>
-                                  </TableCell>
+                                {/* Sch Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{(item.schAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
 
-                                  {/* Tax Rate */}
-                                  <TableCell>
+                                {/* Tax Rate */}
+                                <TableCell className="max-w-16">
+                                  {editable ? (
                                     <div className="relative">
                                       <Input
                                         id={`taxRate-${index}`}
                                         type="number"
                                         step="0.01"
-                                        value={item.taxRate}
+                                        value={item.taxRate ?? 0}
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -1531,402 +1666,138 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
-                                        onKeyDown={(e) => handleKeyDown(e, index, "taxRate")}
-                                        className="w-16 pl-5"
+                                        onKeyDown={(e) =>
+                                          handleKeyDown(e, index, "taxRate")
+                                        }
+                                        className="w-14 pl-6"
                                         disabled={isSubmitting}
                                       />
-                                      <Percent className="absolute left-1.5 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                      <Percent className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                     </div>
-                                  </TableCell>
+                                  ) : (
+                                    <span className="text-sm">
+                                      {item.taxRate ?? 0}%
+                                    </span>
+                                  )}
+                                </TableCell>
 
-                                  {/* Tax Amount */}
-                                  <TableCell>
-                                    <div className="font-medium text-sm">
-                                      ₹{item.taxAmount.toFixed(2)}
-                                    </div>
-                                  </TableCell>
+                                {/* Tax Amount */}
+                                <TableCell>
+                                  <div className="font-medium text-sm">
+                                    ₹{(item.taxAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
 
-                                  {/* Final Amount */}
-                                  <TableCell>
-                                    <div className="font-bold text-sm text-green-700">
-                                      ₹{item.finalAmount.toFixed(2)}
-                                    </div>
-                                  </TableCell>
+                                {/* Final Amount (item) */}
+                                <TableCell>
+                                  <div className="font-bold text-sm text-green-700">
+                                    ₹{(item.finalAmount ?? 0).toFixed(2)}
+                                  </div>
+                                </TableCell>
 
-                                  {/* Actions */}
-                                  <TableCell>
+                                {/* Actions */}
+                                <TableCell>
+                                  {isEntryRow ? (
                                     <div className="flex gap-1">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         onClick={() => openBatchModal(index)}
-                                        disabled={
-                                          !item.productId || isSubmitting
-                                        }
+                                        disabled={!item.productId || isSubmitting}
                                         className="h-7 w-7 p-0"
                                         title="Select Batch"
                                       >
                                         <Layers className="h-3.5 w-3.5" />
                                       </Button>
                                       <Button
+                                        id={`confirmProduct-${index}`}
                                         type="button"
-                                        variant="ghost"
+                                        variant="default"
                                         size="sm"
-                                        onClick={() => removeProductRow(index)}
+                                        onClick={confirmProductRow}
+                                        onKeyDown={(e) =>
+                                          handleConfirmKeyDown(e, index)
+                                        }
                                         disabled={isSubmitting}
                                         className="h-7 w-7 p-0"
+                                        title="Add product"
                                       >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Check className="h-3.5 w-3.5" />
                                       </Button>
                                     </div>
-                                  </TableCell>
-                                </motion.tr>
-                              ))
-                            )}
-                          </AnimatePresence>
-                        </TableBody>
-                      </Table>
-                      <div className="p-2 text-xs text-muted-foreground border-t">
-                        * M Qty = floor(A Qty / Carton Pack), Unit = A Qty %
-                        Carton Pack (both auto-calculated).
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Summary Section with Original Color Classes */}
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Remarks - Left Side */}
-                    <div className={cn("lg:col-span-1", layoutMode === "classic" && "remarks-section")}>
-                      <div className="bg-remarks-bg rounded-lg p-4 border border-remarks-border">
-                        <h4 className="font-semibold mb-3 text-remarks-text flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Remarks & Notes
-                        </h4>
-                        <FormField
-                          control={form.control}
-                          name="remarks"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Enter any additional remarks, notes, or special instructions..."
-                                  className="min-h-[120px] bg-white dark:bg-gray-900 border-remarks-border focus:border-primary"
-                                  {...field}
-                                  disabled={isSubmitting}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <p className="text-xs text-remarks-text mt-2">
-                          Add any special instructions or notes for this
-                          invoice.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Summary - Right Side */}
-                    <div className={cn("lg:col-span-3", layoutMode === "classic" && "classic-summary")}>
-                      <div className={cn(
-                        "bg-summary-container-bg rounded-xl p-5 border border-summary-container-border shadow-sm",
-                        layoutMode === "classic" && "rounded-none shadow-none border-none p-0 bg-transparent"
-                      )}>
-                        {layoutMode !== "classic" && (
-                          <h4 className="font-semibold mb-4 text-summary-container-text flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            Invoice Summary
-                          </h4>
-                        )}
-
-                        <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4", layoutMode === "classic" && "flex flex-nowrap w-max")}>
-                          {/* Gross Amount */}
-                          <div className="bg-summary-bg-1 rounded-lg p-3 border border-summary-border-1 grey-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-1">
-                                Gross Amount
-                              </span>
-                              <Tag className="h-3 w-3 text-summary-icon-1" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="grossAmount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-1" />
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        readOnly
-                                        disabled
-                                        className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-1 text-summary-text-1 font-medium"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Box/Unit Ratio */}
-                          <div className="bg-summary-bg-2 rounded-lg p-3 border border-summary-border-2 yellow-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-2">
-                                Box/Unit Ratio
-                              </span>
-                              <Package className="h-3 w-3 text-summary-icon-2" />
-                            </div>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                value={`${totalCartons.toFixed(2)} / ${totalUnits.toFixed(2)}`}
-                                readOnly
-                                disabled
-                                className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
-                              />
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              Total units (remainder)
-                            </p>
-                          </div>
-
-                          {/* CESS/INS */}
-                          <div className="bg-summary-bg-3 rounded-lg p-3 border border-summary-border-3 yellow-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-3">
-                                CESS/INS
-                              </span>
-                              <Shield className="h-3 w-3 text-summary-icon-3" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="cessInsurance"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-3" />
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        disabled={isSubmitting}
-                                        className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Discount % */}
-                          <div className="bg-summary-bg-5 rounded-lg p-3 border border-summary-border-5 yellow-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-5">
-                                Discount %
-                              </span>
-                              <Percent className="h-3 w-3 text-summary-icon-5" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="discountPercent"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        disabled={isSubmitting}
-                                        className="h-8 bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Tax */}
-                          <div className="bg-summary-bg-6 rounded-lg p-3 border border-summary-border-6 grey-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-6">
-                                Tax Amount
-                              </span>
-                              <FileText className="h-3 w-3 text-summary-icon-6" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="tax"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-6" />
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        readOnly
-                                        disabled
-                                        className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-6 text-summary-text-6 font-medium"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Add Amount */}
-                          <div className="bg-summary-bg-7 rounded-lg p-3 border border-summary-border-7">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-7">
-                                Add Amount
-                              </span>
-                              <Plus className="h-3 w-3 text-summary-icon-7" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="amountAdd"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-7" />
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        disabled={isSubmitting}
-                                        className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Credit Amount */}
-                          <div className="bg-summary-bg-8 rounded-lg p-3 border border-summary-border-8">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-8">
-                                Credit Amount
-                              </span>
-                              <CreditCard className="h-3 w-3 text-summary-icon-8" />
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="creditAmount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-8" />
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        disabled={isSubmitting}
-                                        className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Total Scheme */}
-                          <div className="bg-summary-bg-4 rounded-lg p-3 border border-summary-border-4 grey-block">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-summary-text-4">
-                                Total Scheme
-                              </span>
-                              <Gift className="h-3 w-3 text-summary-icon-4" />
-                            </div>
-                            <div className="relative">
-                              <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-summary-text-4" />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={items
-                                  .reduce(
-                                    (sum, item) => sum + item.schAmount,
-                                    0,
-                                  )
-                                  .toFixed(2)}
-                                readOnly
-                                disabled
-                                className="pl-7 h-8 bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Final Amount */}
-                          <div className="col-span-2 md:col-span-4 mt-4">
-                            <div className="bg-summary-bg-final rounded-xl p-5 border border-summary-border-final shadow-md">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <DollarSign className="h-5 w-5 text-summary-text-final" />
-                                  <span className="text-lg font-bold text-summary-text-final">
-                                    Final Amount
-                                  </span>
-                                </div>
-                                <Badge className="bg-white/20 text-summary-text-final hover:bg-white/30 border-0">
-                                  PAYABLE
-                                </Badge>
-                              </div>
-                              <FormField
-                                control={form.control}
-                                name="finalAmount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <div className="relative">
-                                        <IndianRupee className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-summary-text-final" />
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          {...field}
-                                          className="pl-12 h-14 text-2xl font-bold bg-white/10 text-summary-text-final border-white/30 placeholder:text-white/60"
-                                          readOnly
-                                          disabled
-                                        />
-                                      </div>
-                                    </FormControl>
-                                  </FormItem>
+                                  ) : (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0"
+                                          disabled={isSubmitting}
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            setEditingRowIndex(index)
+                                          }
+                                        >
+                                          <Pencil className="mr-2 h-4 w-4" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() =>
+                                            removeProductRow(index)
+                                          }
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                </TableCell>
+                              </motion.tr>
+                              );
+                            })}
+                          {Array.from({ length: dummyRowCount }).map(
+                            (_, dummyIndex) => (
+                              <TableRow
+                                key={`dummy-row-${dummyIndex}`}
+                                className="h-11 bg-muted/5 pointer-events-none"
+                              >
+                                {Array.from({ length: 14 }).map(
+                                  (_, cellIndex) => (
+                                    <TableCell
+                                      key={`dummy-cell-${dummyIndex}-${cellIndex}`}
+                                      className="py-2"
+                                    >
+                                      <span className="text-transparent select-none">
+                                        —
+                                      </span>
+                                    </TableCell>
+                                  ),
                                 )}
-                              />
-                              <p className="text-xs text-(--summary-text-final)/80 mt-3 flex items-center gap-1">
-                                <span className="font-medium">Note:</span> This
-                                is the total payable amount including all taxes
-                                and adjustments.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                              </TableRow>
+                            ),
+                          )}
+                        </AnimatePresence>
+                      </TableBody>
+                    </Table>
+                    <div className="p-2 text-xs text-muted-foreground border-t">
+                      * M Qty = floor(A Qty / Carton Pack), Unit = A Qty %
+                      Carton Pack (both auto-calculated).
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Hidden boxUnit field */}
+            
             <FormField
               control={form.control}
               name="boxUnit"
@@ -1935,52 +1806,490 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
               )}
             />
 
-            {/* Bottom Actions */}
-            <motion.div
-              className="flex justify-end gap-3 pt-4 border-t mt-4"
-              variants={itemVariants}
-            >
-              {/* Bill Preview Button - Also shown at bottom for convenience */}
-              {canShowBillPreview && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBillPreview}
-                  className="gap-2"
-                >
-                  <Printer className="h-4 w-4" />
-                  Bill Preview
-                </Button>
-              )}
+{/* Fixed bottom: remarks + summary + actions */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+              <div className="border-b bg-muted/30 px-3 py-2">
+                <div className="mx-auto flex flex-wrap items-end gap-3 max-w-[1600px]">
+                  <div className="w-full sm:w-48 shrink-0">
+                    <FormField
+                      control={form.control}
+                      name="remarks"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Remarks
+                          </span>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Remarks..."
+                              className="min-h-[52px] max-h-[52px] text-sm resize-none"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.setValue("remarks", e.target.value, {
+                                  shouldDirty: true,
+                                });
+                              }}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBackToPurchases}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || (isEditMode && !isDirty)}
-                className="gap-2 fixed bottom-6 right-6 z-50 shadow-xl rounded-full px-6 py-6 text-base font-semibold"
-                size="lg"
-              >
-                <Save className="h-5 w-5" />
-                {isSubmitting
-                  ? "Saving..."
-                  : isEditMode
-                    ? "Update Purchase"
-                    : `Create ${purchaseLabel}`}
-              </Button>
-            </motion.div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                      Invoice Summary
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2">
+                      <div className="bg-summary-bg-1 rounded-lg p-2 border border-summary-border-1 grey-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-1">
+                            Gross
+                          </span>
+                          <Tag className="h-3 w-3 text-summary-icon-1" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="grossAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-1" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    readOnly
+                                    disabled
+                                    className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-1 text-summary-text-1 font-medium"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-2 rounded-lg p-2 border border-summary-border-2 yellow-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-2">
+                            Box/Unit
+                          </span>
+                          <Package className="h-3 w-3 text-summary-icon-2" />
+                        </div>
+                        <Input
+                          type="text"
+                          value={`${totalCartons.toFixed(2)}/${totalUnits.toFixed(2)}`}
+                          readOnly
+                          disabled
+                          className="h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-2 text-summary-text-2 font-medium text-center"
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-3 rounded-lg p-2 border border-summary-border-3 yellow-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-3">
+                            CESS/INS
+                          </span>
+                          <Shield className="h-3 w-3 text-summary-icon-3" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="cessInsurance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-3" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      form.setValue(
+                                        "cessInsurance",
+                                        parseFloat(e.target.value) || 0,
+                                        { shouldDirty: true },
+                                      );
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-3 text-summary-text-3 font-medium"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-5 rounded-lg p-2 border border-summary-border-5 yellow-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-5">
+                            Disc %
+                          </span>
+                          <Percent className="h-3 w-3 text-summary-icon-5" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="discountPercent"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    form.setValue(
+                                      "discountPercent",
+                                      parseFloat(e.target.value) || 0,
+                                      { shouldDirty: true },
+                                    );
+                                  }}
+                                  disabled={isSubmitting}
+                                  className="h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-5 text-summary-text-5 font-medium text-center"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-6 rounded-lg p-2 border border-summary-border-6 grey-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-6">
+                            Tax
+                          </span>
+                          <FileText className="h-3 w-3 text-summary-icon-6" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="tax"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-6" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    readOnly
+                                    disabled
+                                    className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-6 text-summary-text-6 font-medium"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-7 rounded-lg p-2 border border-summary-border-7">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-7">
+                            Add Amt
+                          </span>
+                          <Plus className="h-3 w-3 text-summary-icon-7" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="amountAdd"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-7" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      form.setValue(
+                                        "amountAdd",
+                                        parseFloat(e.target.value) || 0,
+                                        { shouldDirty: true },
+                                      );
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-7 text-summary-text-7 font-medium"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-8 rounded-lg p-2 border border-summary-border-8">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-8">
+                            Credit
+                          </span>
+                          <CreditCard className="h-3 w-3 text-summary-icon-8" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="creditAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-8" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      form.setValue(
+                                        "creditAmount",
+                                        parseFloat(e.target.value) || 0,
+                                        { shouldDirty: true },
+                                      );
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-8 text-summary-text-8 font-medium"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-summary-bg-4 rounded-lg p-2 border border-summary-border-4 grey-block">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-summary-text-4">
+                            Tot Sch
+                          </span>
+                          <Gift className="h-3 w-3 text-summary-icon-4" />
+                        </div>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-4" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={totalScheme.toFixed(2)}
+                            readOnly
+                            disabled
+                            className="pl-6 h-7 text-xs bg-white dark:bg-gray-900/80 border-summary-border-4 text-summary-text-4 font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-summary-bg-final rounded-lg p-2 border border-summary-border-final">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[10px] font-semibold text-summary-text-final">
+                            Final Amt
+                          </span>
+                          <DollarSign className="h-3 w-3 text-summary-icon-final" />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="finalAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="relative">
+                                  <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-summary-text-final" />
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    readOnly
+                                    disabled
+                                    className="pl-6 h-7 text-xs font-bold bg-white/10 dark:bg-gray-900/80 border-summary-border-final text-summary-text-final"
+                                  />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-3 py-2.5 bg-background">
+                <div className="mx-auto flex items-center justify-between gap-3 max-w-[1600px]">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={scrollToInvoiceSearch}
+                      disabled={isSubmitting || isReturnMode}
+                      aria-label="Search invoice"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteOpen(true)}
+                      disabled={
+                        isSubmitting || isReturnMode || !isEditMode || !purchaseId || purchaseId === "new"
+                      }
+                      aria-label="Delete invoice"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 font-semibold text-xs"
+                      onClick={handleDmPrint}
+                      disabled={isSubmitting}
+                      aria-label="DM print"
+                      title="DM Print"
+                    >
+                      DM
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={handlePrintBill}
+                      disabled={isSubmitting || isPrinting}
+                      aria-label="Print invoice"
+                      title="Print"
+                    >
+                      {isPrinting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Printer className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={handleDownloadPdf}
+                      disabled={
+                        isSubmitting || isDownloadingPdf || !canShowBillPreview
+                      }
+                      aria-label="Download PDF"
+                      title="PDF"
+                    >
+                      {isDownloadingPdf ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </Button>
+                    {canShowBillPreview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={handleBillPreview}
+                        disabled={isSubmitting}
+                        aria-label="Preview invoice"
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {!isEditMode && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSaveAndNew}
+                        disabled={isSubmitting}
+                        className="gap-1.5"
+                      >
+                        <FilePlus className="h-4 w-4" />
+                        Save & New
+                      </Button>
+                    )}
+                    {isEditMode && !isNew && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNewPurchase}
+                        disabled={isSubmitting}
+                        className="gap-1.5"
+                      >
+                        <FilePlus className="h-4 w-4" />
+                        New
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isSubmitting || (isEditMode && !isDirty)}
+                      className="gap-1.5"
+                      title={isEditMode && !isDirty ? "No changes made" : ""}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {isSubmitting
+                        ? "Saving..."
+                        : isEditMode
+                          ? "Update"
+                          : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBackToPurchases}
+                      disabled={isSubmitting}
+                      className="gap-1.5"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Exit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          
           </form>
         </Form>
-      </div>
 
-      {/* Batch Selection Modal */}
-      {pendingBatchSelection && (
+
+        <CustomAlert
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          mainText="Delete Purchase"
+          subText={
+            generatedInvoiceNo
+              ? `Are you sure you want to delete invoice "${generatedInvoiceNo}"? This action cannot be undone.`
+              : "Are you sure you want to delete this purchase? This action cannot be undone."
+          }
+          nextButtonText={isDeleting ? "Deleting..." : "Delete"}
+          cancelButtonText="Cancel"
+          onNext={handleDeletePurchase}
+          variant="destructive"
+          showCancel={true}
+        />
+
+        {/* Batch Selection Modal */}
+        {pendingBatchSelection && (
         <BatchSelectionModal
           open={batchModalOpen}
           onOpenChange={handleBatchModalClose}
@@ -1998,6 +2307,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
         onOpenChange={setIsPreviewOpen}
         purchaseId={previewPurchaseId}
       />
-    </motion.div>
+      </div>
+    </div>
   );
 }
