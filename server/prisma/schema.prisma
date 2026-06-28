@@ -80,7 +80,8 @@ model Product {
   gstApplicability String? @default("Regular") @map("gst_applicability")
 
   // Status
-  status Boolean @default(true)
+  status   Boolean @default(true)
+  isLocked Boolean @default(false) @map("is_locked")
 
   // Main Image
   mainImage String? @map("main_image")

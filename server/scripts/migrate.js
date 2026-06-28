@@ -8,6 +8,7 @@ import os from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const SERVER_ROOT = path.join(__dirname, "..");
 
 function getDatabasePath() {
   const appName = "Shopkeeper";
@@ -38,37 +39,72 @@ function getDatabasePath() {
   return path.join(dbDir, "shopkeeper.db");
 }
 
+function runPrisma(command) {
+  execSync(command, {
+    stdio: "inherit",
+    env: process.env,
+    cwd: SERVER_ROOT,
+  });
+}
+
 async function main() {
+  const mode = process.argv[2] || "deploy";
+  const migrationName = process.argv[3] || "update";
+
   try {
-    console.log("🚀 Running migration with AppData path...");
-
-    // Get the AppData database path
     const dbPath = getDatabasePath();
-    console.log(`📁 Database location: ${dbPath}`);
-
-    // Convert Windows path to file:// URL format
     const databaseUrl = `file:${dbPath.replace(/\\/g, "/")}`;
-    console.log(`🔗 Setting DATABASE_URL: ${databaseUrl}`);
-
-    // Set environment variable for Prisma
     process.env.DATABASE_URL = databaseUrl;
 
-    // Check if migration name was provided as argument
-    const migrationName = process.argv[2] || "init";
+    console.log(`📁 Database location: ${dbPath}`);
+    console.log(`🔗 DATABASE_URL: ${databaseUrl}`);
 
-    console.log(`📝 Creating migration: ${migrationName}`);
-
-    // Use prisma migrate dev to create and apply migration
-    execSync(`npx prisma migrate dev --name ${migrationName}`, {
-      stdio: "inherit",
-      env: process.env,
-      cwd: process.cwd(),
-    });
-
-    console.log("✅ Migration completed successfully!");
-    console.log(`💾 Database is now at: ${dbPath}`);
+    if (mode === "create") {
+      console.log(`📝 Creating migration file only: ${migrationName}`);
+      console.log(
+        "ℹ️  This does not apply changes. Run npm run prisma:migrate after reviewing the SQL.",
+      );
+      runPrisma(
+        `npx prisma migrate dev --create-only --name ${migrationName}`,
+      );
+    } else if (mode === "deploy") {
+      console.log("🚀 Applying pending migrations (safe, no database reset)...");
+      runPrisma("npx prisma migrate deploy");
+      console.log("✅ Migrations applied successfully!");
+    } else if (mode === "resolve") {
+      const migrationId = process.argv[3];
+      if (!migrationId) {
+        console.error(
+          "❌ Usage: npm run prisma:migrate -- resolve <migration_folder_name>",
+        );
+        process.exit(1);
+      }
+      console.log(`✅ Marking migration as applied: ${migrationId}`);
+      runPrisma(`npx prisma migrate resolve --applied ${migrationId}`);
+    } else {
+      console.error(`❌ Unknown mode: ${mode}`);
+      console.error("Usage:");
+      console.error("  npm run prisma:migrate              # apply pending migrations");
+      console.error("  npm run prisma:migrate -- create <name>  # create migration SQL only");
+      console.error(
+        "  npm run prisma:migrate -- resolve <id>   # mark migration applied (if column already exists)",
+      );
+      console.error("");
+      console.error(
+        "For day-to-day schema sync on this project, prefer: npm run prisma:push",
+      );
+      process.exit(1);
+    }
   } catch (error) {
-    console.error("❌ Migration failed:", error.message);
+    console.error("\n❌ Migration command failed:", error.message);
+    console.error("");
+    console.error("Common fixes:");
+    console.error("  • Schema already synced via push? Use:");
+    console.error(
+      "    npm run prisma:migrate -- resolve 20260628180000_add_product_is_locked",
+    );
+    console.error("  • Day-to-day updates: npm run prisma:push");
+    console.error("  • Never answer Y to a database reset prompt — it deletes all data.");
     process.exit(1);
   }
 }

@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -14,18 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Eye,
-  Edit,
-  Trash2,
   Search,
   X,
   Plus,
   Package,
   RefreshCw,
   Image as ImageIcon,
-  Layers,
   Building,
-  Percent,
+  Info,
+  Lock,
+  Unlock,
+  Filter,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,6 +39,7 @@ import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
 import {
   containerVariants,
@@ -74,9 +73,52 @@ interface ProductsResponse {
   };
 }
 
+function DateInfoBadge({
+  createdAt,
+  updatedAt,
+  formatDateTime,
+}: {
+  createdAt: string;
+  updatedAt: string;
+  formatDateTime: (dateString: string) => string;
+}) {
+  return (
+    <div className="relative group/info inline-block">
+      <Badge
+        variant="outline"
+        className="text-xs cursor-default gap-1 px-2 py-0.5"
+      >
+        <Info className="h-3 w-3" />
+        Info
+      </Badge>
+      <div className="pointer-events-none absolute z-50 hidden group-hover/info:block bottom-full left-0 mb-2 w-48">
+        <Card className="shadow-lg border bg-popover">
+          <CardContent className="p-3 space-y-2">
+            <div>
+              <span className="text-xs font-medium text-green-500">
+                Created:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(createdAt)}
+              </p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-orange-500">
+                Updated:
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDateTime(updatedAt)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductInventory() {
   const { layoutMode } = useTheme();
-  const navigate = useNavigate();
   // State for products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +138,10 @@ export default function ProductInventory() {
     productCode: "",
     productBrand: "",
     barcode: "",
-    productName: "",
+    description: "",
+    saleUnit: "all" as string | "all",
+    purchaseUnit: "all" as string | "all",
+    hsnSacCode: "",
     brand: "all" as string | "all",
     productGroup: "all" as string | "all",
     minStock: "",
@@ -119,11 +164,19 @@ export default function ProductInventory() {
   const [searchInput, setSearchInput] = useState<string>("");
   const [productCodeInput, setProductCodeInput] = useState<string>("");
   const [productBrandInput, setProductBrandInput] = useState<string>("");
+  const [descriptionInput, setDescriptionInput] = useState<string>("");
+  const [hsnSacCodeInput, setHsnSacCodeInput] = useState<string>("");
   const [minStockInput, setMinStockInput] = useState<string>("");
   const [maxStockInput, setMaxStockInput] = useState<string>("");
   const [brandOpen, setBrandOpen] = useState(false);
+  const [saleUnitOpen, setSaleUnitOpen] = useState(false);
+  const [purchaseUnitOpen, setPurchaseUnitOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showMainFilter, setShowMainFilter] = useState(false);
+  const [lockingProductId, setLockingProductId] = useState<number | null>(
+    null,
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Create debounced filter functions
@@ -137,6 +190,14 @@ export default function ProductInventory() {
 
   const debouncedSetProductBrand = useDebounce((value: string) => {
     setFilters((prev) => ({ ...prev, productBrand: value }));
+  }, 300);
+
+  const debouncedSetDescription = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, description: value }));
+  }, 300);
+
+  const debouncedSetHsnSacCode = useDebounce((value: string) => {
+    setFilters((prev) => ({ ...prev, hsnSacCode: value }));
   }, 300);
 
   const debouncedSetMinStock = useDebounce((value: string) => {
@@ -163,6 +224,16 @@ export default function ProductInventory() {
     debouncedSetProductBrand(value);
   };
 
+  const handleDescriptionChange = (value: string) => {
+    setDescriptionInput(value);
+    debouncedSetDescription(value);
+  };
+
+  const handleHsnSacCodeChange = (value: string) => {
+    setHsnSacCodeInput(value);
+    debouncedSetHsnSacCode(value);
+  };
+
   const handleMinStockChange = (value: string) => {
     setMinStockInput(value);
     debouncedSetMinStock(value);
@@ -179,7 +250,7 @@ export default function ProductInventory() {
     }
   }, [showSearchBar]);
 
-  const { productCompanies, groups } = useActiveLists();
+  const { productCompanies, groups, units } = useActiveLists();
 
   // Safely handle products data
   const displayProducts = useMemo(() => {
@@ -238,8 +309,12 @@ export default function ProductInventory() {
       if (filters.search) params.search = filters.search;
       if (filters.productCode) params.productCode = filters.productCode;
       if (filters.productBrand) params.productBrand = filters.productBrand;
+      if (filters.description) params.description = filters.description;
+      if (filters.saleUnit !== "all") params.saleUnit = filters.saleUnit;
+      if (filters.purchaseUnit !== "all")
+        params.purchaseUnit = filters.purchaseUnit;
+      if (filters.hsnSacCode) params.hsnSacCode = filters.hsnSacCode;
       if (filters.barcode) params.barcode = filters.barcode;
-      if (filters.productName) params.productName = filters.productName;
       if (filters.brand !== "all") params.productCompanyId = filters.brand;
       if (filters.productGroup !== "all")
         params.productGroupId = filters.productGroup;
@@ -310,8 +385,11 @@ export default function ProductInventory() {
     filters.search,
     filters.productCode,
     filters.productBrand,
+    filters.description,
+    filters.saleUnit,
+    filters.purchaseUnit,
+    filters.hsnSacCode,
     filters.barcode,
-    filters.productName,
     filters.brand,
     filters.productGroup,
     filters.minStock,
@@ -340,7 +418,10 @@ export default function ProductInventory() {
       productCode: "",
       productBrand: "",
       barcode: "",
-      productName: "",
+      description: "",
+      saleUnit: "all",
+      purchaseUnit: "all",
+      hsnSacCode: "",
       brand: "all",
       productGroup: "all",
       minStock: "",
@@ -355,6 +436,8 @@ export default function ProductInventory() {
     setSearchInput("");
     setProductCodeInput("");
     setProductBrandInput("");
+    setDescriptionInput("");
+    setHsnSacCodeInput("");
     setMinStockInput("");
     setMaxStockInput("");
   };
@@ -366,7 +449,9 @@ export default function ProductInventory() {
       [filterName]:
         filterName === "brand" ||
         filterName === "productGroup" ||
-        filterName === "status"
+        filterName === "status" ||
+        filterName === "saleUnit" ||
+        filterName === "purchaseUnit"
           ? "all"
           : filterName === "showDeleted"
             ? false
@@ -388,6 +473,12 @@ export default function ProductInventory() {
         break;
       case "productBrand":
         setProductBrandInput("");
+        break;
+      case "description":
+        setDescriptionInput("");
+        break;
+      case "hsnSacCode":
+        setHsnSacCodeInput("");
         break;
       case "minStock":
         setMinStockInput("");
@@ -416,6 +507,18 @@ export default function ProductInventory() {
   const getGroupLabel = (groupId: string) => {
     if (groupId === "all") return "";
     return uniqueGroups.find((g) => g.id.toString() === groupId)?.name || "";
+  };
+
+  const getUnitSymbol = (unitValue: string | null | undefined) => {
+    if (!unitValue) return null;
+    const unit = units.find((u) => u.id.toString() === unitValue);
+    return unit?.symbol || unitValue;
+  };
+
+  const getUnitFilterLabel = (unitId: string) => {
+    if (unitId === "all") return "";
+    const unit = units.find((u) => u.id.toString() === unitId);
+    return unit ? unit.symbol : "";
   };
 
   // Calculate start and end index for display
@@ -458,19 +561,6 @@ export default function ProductInventory() {
     }
   };
 
-  // Handle View Product
-  const handleViewProduct = async (product: Product) => {
-    try {
-      const productDetail = await productService.getProduct(product.id);
-      setEditingProduct(productDetail);
-      setIsModalOpen(true);
-    } catch (error: any) {
-      toast.error("Failed to load product details", {
-        description: error.response?.data?.message || "Please try again",
-      });
-    }
-  };
-
   // Handle Save Product (from modal)
   const handleSaveProduct = async (data: ProductFormData, id?: number) => {
     setIsSubmitting(true);
@@ -504,6 +594,33 @@ export default function ProductInventory() {
     toast.info("Refreshing product data...");
   };
 
+  const handleToggleLock = async (product: Product) => {
+    const nextLocked = !product.isLocked;
+    setLockingProductId(product.id);
+    try {
+      const updated = await productService.toggleProductLock(
+        product.id,
+        nextLocked,
+      );
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === product.id
+            ? { ...item, isLocked: updated.isLocked }
+            : item,
+        ),
+      );
+      toast.success(
+        nextLocked ? "Product locked successfully" : "Product unlocked successfully",
+      );
+    } catch (error: any) {
+      toast.error("Failed to update product lock", {
+        description: error.message || "Please try again",
+      });
+    } finally {
+      setLockingProductId(null);
+    }
+  };
+
   // Active filters count – now includes the new date range fields
   const activeFiltersCount =
     Object.entries(filters).filter(
@@ -527,7 +644,7 @@ export default function ProductInventory() {
   return (
     <>
       <motion.div
-        className="min-h-screen bg-background p-3 pb-24"
+        className="min-h-screen bg-background p-2 pb-24"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -539,273 +656,54 @@ export default function ProductInventory() {
               : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
           }`}
         >
-          {/* Filter Section */}
-          <motion.div className="mb-2" variants={itemVariants}>
-            <Card className="overflow-hidden">
-              <CardContent className="p-1">
-                <div className="flex flex-col gap-4 p-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Product Code Filter */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="productCode"
-                                placeholder="Product Code"
-                                value={productCodeInput}
-                                onChange={(e) =>
-                                  handleProductCodeChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              {productCodeInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("productCode")}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Product Brand Filter */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="productBrand"
-                                placeholder="Product Brand"
-                                value={productBrandInput}
-                                onChange={(e) =>
-                                  handleProductBrandChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              {productBrandInput && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-10 w-10"
-                                  onClick={() => clearFilter("productBrand")}
-                                  disabled={isLoading}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Brand Filter */}
-                          <div>
-                            <InlineSearchField
-                              open={brandOpen}
-                              onOpenChange={setBrandOpen}
-                              displayValue={getBrandLabel(filters.brand)}
-                              placeholder="Brand"
-                              emptyMessage="No brand found."
-                              disabled={isLoading}
-                            >
-                              <CommandGroup>
-                                <CommandItem
-                                  value="all brands"
-                                  onSelect={() => {
-                                    handleFilterChange("brand", "all");
-                                    setBrandOpen(false);
-                                  }}
-                                >
-                                  All Brands
-                                </CommandItem>
-                                {uniqueBrands.map((company) => (
-                                  <CommandItem
-                                    key={company.id}
-                                    value={`${company.id} ${company.name}`}
-                                    onSelect={() => {
-                                      handleFilterChange(
-                                        "brand",
-                                        company.id.toString(),
-                                      );
-                                      setBrandOpen(false);
-                                    }}
-                                  >
-                                    {company.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </InlineSearchField>
-                          </div>
-
-                          {/* Product Group Filter */}
-                          <div>
-                            <InlineSearchField
-                              open={productGroupOpen}
-                              onOpenChange={setProductGroupOpen}
-                              displayValue={getGroupLabel(filters.productGroup)}
-                              placeholder="Product Group"
-                              emptyMessage="No group found."
-                              disabled={isLoading}
-                            >
-                              <CommandGroup>
-                                <CommandItem
-                                  value="all groups"
-                                  onSelect={() => {
-                                    handleFilterChange("productGroup", "all");
-                                    setProductGroupOpen(false);
-                                  }}
-                                >
-                                  All Groups
-                                </CommandItem>
-                                {uniqueGroups.map((group) => (
-                                  <CommandItem
-                                    key={group.id}
-                                    value={`${group.id} ${group.name}`}
-                                    onSelect={() => {
-                                      handleFilterChange(
-                                        "productGroup",
-                                        group.id.toString(),
-                                      );
-                                      setProductGroupOpen(false);
-                                    }}
-                                  >
-                                    {group.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </InlineSearchField>
-                          </div>
-
-                          {/* Status Filter */}
-                          <div>
-                            <FilterStatusField
-                              value={filters.status}
-                              onValueChange={(value) =>
-                                handleFilterChange("status", value)
-                              }
-                              disabled={isLoading}
-                            />
-                          </div>
-
-                          {/* Stock Range Filter */}
-                          <div>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Min Stock"
-                                type="number"
-                                value={minStockInput}
-                                onChange={(e) =>
-                                  handleMinStockChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                              <Input
-                                placeholder="Max Stock"
-                                type="number"
-                                value={maxStockInput}
-                                onChange={(e) =>
-                                  handleMaxStockChange(e.target.value)
-                                }
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-
-                          <CustomDateInput
-                            value={filters.mfgFromDate}
-                            onChange={(value) =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                mfgFromDate: value,
-                              }))
-                            }
-                            placeholder="Mfg Date From"
-                            disabled={isLoading}
-                          />
-
-                          <CustomDateInput
-                            value={filters.mfgToDate}
-                            onChange={(value) =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                mfgToDate: value,
-                              }))
-                            }
-                            placeholder="Mfg Date To"
-                            disabled={isLoading}
-                          />
-
-                          <CustomDateInput
-                            value={filters.expFromDate}
-                            onChange={(value) =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                expFromDate: value,
-                              }))
-                            }
-                            placeholder="Exp Date From"
-                            disabled={isLoading}
-                          />
-
-                          <CustomDateInput
-                            value={filters.expToDate}
-                            onChange={(value) =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                expToDate: value,
-                              }))
-                            }
-                            placeholder="Exp Date To"
-                            disabled={isLoading}
-                          />
-
-                          {/* Show Deleted Filter */}
-                          <div>
-                            <div className="flex items-center gap-3 pt-2">
-                              <input
-                                type="checkbox"
-                                id="showDeleted"
-                                checked={filters.showDeleted}
-                                onChange={(e) =>
-                                  handleFilterChange(
-                                    "showDeleted",
-                                    e.target.checked,
-                                  )
-                                }
-                                disabled={isLoading}
-                                className="h-4 w-4"
-                              />
-                              <Label
-                                htmlFor="showDeleted"
-                                className={`text-sm cursor-pointer ${
-                                  filters.showDeleted
-                                    ? "text-red-600"
-                                    : "text-muted-foreground"
-                                }`}
-                              >
-                                {filters.showDeleted
-                                  ? "Showing Deleted"
-                                  : "Hide Deleted"}
-                              </Label>
-                            </div>
-                          </div>
-                        </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Results Count */}
+          {/* Toolbar */}
           <motion.div
-            className="flex justify-between items-center mb-4"
+            className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-1"
             variants={itemVariants}
           >
             <p className="text-sm text-muted-foreground">
               Showing {startIndex} to {endIndex} of {totalItems} products
               {activeFiltersCount > 0 && " (filtered)"}
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                Total products:{" "}
+                <span className="font-medium text-foreground">{totalItems}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 h-9"
+                onClick={() => setShowMainFilter((prev) => !prev)}
+                disabled={isLoading}
+              >
+                <Filter className="h-4 w-4" />
+                {showMainFilter ? "Hide Main Filter" : "Show Main Filter"}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleAddProduct}
+                disabled={isLoading}
+                aria-label="Add product"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                aria-label="Refresh products"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+              </Button>
               <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
                   Items per page:
                 </div>
                 <Select
@@ -813,7 +711,7 @@ export default function ProductInventory() {
                   onValueChange={(value) => setItemsPerPage(Number(value))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-20 h-9">
                     <SelectValue placeholder="10" />
                   </SelectTrigger>
                   <SelectContent>
@@ -827,34 +725,378 @@ export default function ProductInventory() {
             </div>
           </motion.div>
 
-          {/* Product Table (unchanged) */}
+          {/* Main Filter Section */}
+          <AnimatePresence>
+            {showMainFilter && (
+              <motion.div
+                className="mb-4"
+                variants={itemVariants}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <Card className="overflow-hidden">
+                  <CardContent className="p-1">
+                    <div className="flex flex-col gap-4 p-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Product Group Filter */}
+                        <div>
+                          <InlineSearchField
+                            open={productGroupOpen}
+                            onOpenChange={setProductGroupOpen}
+                            displayValue={getGroupLabel(filters.productGroup)}
+                            placeholder="Product Group"
+                            emptyMessage="No group found."
+                            disabled={isLoading}
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all groups"
+                                onSelect={() => {
+                                  handleFilterChange("productGroup", "all");
+                                  setProductGroupOpen(false);
+                                }}
+                              >
+                                All Groups
+                              </CommandItem>
+                              {uniqueGroups.map((group) => (
+                                <CommandItem
+                                  key={group.id}
+                                  value={`${group.id} ${group.name}`}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "productGroup",
+                                      group.id.toString(),
+                                    );
+                                    setProductGroupOpen(false);
+                                  }}
+                                >
+                                  {group.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </div>
+
+                        {/* Status Filter */}
+                        <div>
+                          <FilterStatusField
+                            value={filters.status}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <CustomDateInput
+                          value={filters.mfgFromDate}
+                          onChange={(value) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              mfgFromDate: value,
+                            }))
+                          }
+                          placeholder="Mfg Date From"
+                          disabled={isLoading}
+                        />
+
+                        <CustomDateInput
+                          value={filters.mfgToDate}
+                          onChange={(value) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              mfgToDate: value,
+                            }))
+                          }
+                          placeholder="Mfg Date To"
+                          disabled={isLoading}
+                        />
+
+                        <CustomDateInput
+                          value={filters.expFromDate}
+                          onChange={(value) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              expFromDate: value,
+                            }))
+                          }
+                          placeholder="Exp Date From"
+                          disabled={isLoading}
+                        />
+
+                        <CustomDateInput
+                          value={filters.expToDate}
+                          onChange={(value) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              expToDate: value,
+                            }))
+                          }
+                          placeholder="Exp Date To"
+                          disabled={isLoading}
+                        />
+
+                        {/* Show Deleted Filter */}
+                        <div>
+                          <div className="flex items-center gap-3 pt-2">
+                            <Switch
+                              id="showDeleted"
+                              checked={filters.showDeleted}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("showDeleted", checked)
+                              }
+                              disabled={isLoading}
+                            />
+                            <Label
+                              htmlFor="showDeleted"
+                              className={`text-sm cursor-pointer ${
+                                filters.showDeleted
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {filters.showDeleted
+                                ? "Showing Deleted"
+                                : "Hide Deleted"}
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Product Table */}
           <motion.div variants={itemVariants}>
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
-                  <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
+                  <Table className={cn("table-fixed", layoutMode === "classic" && "classic-table")}>
                     <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="font-semibold">Product</TableHead>
-                        <TableHead className="font-semibold">
+                      <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                        <TableHead className="font-semibold w-[180px] max-w-[180px] whitespace-normal text-center">
+                          Product
+                        </TableHead>
+                        <TableHead className="font-semibold w-[128px] max-w-[128px] whitespace-normal text-center">
                           Description
                         </TableHead>
-                        <TableHead className="font-semibold">Company</TableHead>
-                        <TableHead className="font-semibold">
-                          Carton Unit
+                        <TableHead className="font-semibold min-w-[140px] text-center">
+                          Company
                         </TableHead>
-                        <TableHead className="font-semibold">
-                          GST Rate
+                        <TableHead className="font-semibold min-w-[110px] text-center">
+                          Sale Unit
                         </TableHead>
-                        <TableHead className="font-semibold">Batches</TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold min-w-[110px] text-center">
+                          Purchase Unit
+                        </TableHead>
+                        <TableHead className="font-semibold min-w-[120px] text-center">
+                          HSN/SAC Code
+                        </TableHead>
+                        <TableHead className="font-semibold min-w-[130px] text-center">
                           Total Stock
                         </TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">
-                          Created & Updated
+                        <TableHead className="font-semibold w-[96px] max-w-[96px] whitespace-normal px-1 text-center">
+                          Status
                         </TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
+                        <TableHead className="font-semibold w-[72px] max-w-[72px] px-2 text-center">
+                          Info
+                        </TableHead>
+                        <TableHead className="font-semibold text-center">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                      <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                        <TableHead className="py-2 w-[180px] max-w-[180px] whitespace-normal">
+                          <div className="space-y-1">
+                            {/* <Input
+                              placeholder="Brand"
+                              value={productBrandInput}
+                              onChange={(e) =>
+                                handleProductBrandChange(e.target.value)
+                              }
+                              className="h-8 text-xs font-normal"
+                              disabled={isLoading}
+                            /> */}
+                            <Input
+                              placeholder="Code"
+                              value={productCodeInput}
+                              onChange={(e) =>
+                                handleProductCodeChange(e.target.value)
+                              }
+                              className="h-8 text-xs font-normal"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </TableHead>
+                        <TableHead className="py-2 w-[128px] max-w-[128px] whitespace-normal">
+                          <Input
+                            placeholder="Description"
+                            value={descriptionInput}
+                            onChange={(e) =>
+                              handleDescriptionChange(e.target.value)
+                            }
+                            className="h-8 text-xs font-normal"
+                            disabled={isLoading}
+                          />
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[140px]">
+                          <InlineSearchField
+                            open={brandOpen}
+                            onOpenChange={setBrandOpen}
+                            displayValue={getBrandLabel(filters.brand)}
+                            placeholder="Company"
+                            emptyMessage="No company found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all brands"
+                                onSelect={() => {
+                                  handleFilterChange("brand", "all");
+                                  setBrandOpen(false);
+                                }}
+                              >
+                                All Companies
+                              </CommandItem>
+                              {uniqueBrands.map((company) => (
+                                <CommandItem
+                                  key={company.id}
+                                  value={`${company.id} ${company.name}`}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "brand",
+                                      company.id.toString(),
+                                    );
+                                    setBrandOpen(false);
+                                  }}
+                                >
+                                  {company.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[110px]">
+                          <InlineSearchField
+                            open={saleUnitOpen}
+                            onOpenChange={setSaleUnitOpen}
+                            displayValue={getUnitFilterLabel(filters.saleUnit)}
+                            placeholder="Sale Unit"
+                            emptyMessage="No unit found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all sale units"
+                                onSelect={() => {
+                                  handleFilterChange("saleUnit", "all");
+                                  setSaleUnitOpen(false);
+                                }}
+                              >
+                                All Units
+                              </CommandItem>
+                              {units.map((unit) => (
+                                <CommandItem
+                                  key={unit.id}
+                                  value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "saleUnit",
+                                      unit.id.toString(),
+                                    );
+                                    setSaleUnitOpen(false);
+                                  }}
+                                >
+                                  {unit.symbol} ({unit.name})
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[110px]">
+                          <InlineSearchField
+                            open={purchaseUnitOpen}
+                            onOpenChange={setPurchaseUnitOpen}
+                            displayValue={getUnitFilterLabel(
+                              filters.purchaseUnit,
+                            )}
+                            placeholder="Purchase Unit"
+                            emptyMessage="No unit found."
+                            disabled={isLoading}
+                            inputClassName="h-8 text-xs"
+                          >
+                            <CommandGroup>
+                              <CommandItem
+                                value="all purchase units"
+                                onSelect={() => {
+                                  handleFilterChange("purchaseUnit", "all");
+                                  setPurchaseUnitOpen(false);
+                                }}
+                              >
+                                All Units
+                              </CommandItem>
+                              {units.map((unit) => (
+                                <CommandItem
+                                  key={unit.id}
+                                  value={`${unit.id} ${unit.symbol} ${unit.name}`}
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "purchaseUnit",
+                                      unit.id.toString(),
+                                    );
+                                    setPurchaseUnitOpen(false);
+                                  }}
+                                >
+                                  {unit.symbol} ({unit.name})
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </InlineSearchField>
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[120px]">
+                          <Input
+                            placeholder="HSN/SAC Code"
+                            value={hsnSacCodeInput}
+                            onChange={(e) =>
+                              handleHsnSacCodeChange(e.target.value)
+                            }
+                            className="h-8 text-xs font-normal"
+                            disabled={isLoading}
+                          />
+                        </TableHead>
+                        <TableHead className="py-2 min-w-[130px]">
+                          <div className="flex gap-1">
+                            <Input
+                              placeholder="Min"
+                              type="number"
+                              value={minStockInput}
+                              onChange={(e) =>
+                                handleMinStockChange(e.target.value)
+                              }
+                              className="h-8 text-xs font-normal"
+                              disabled={isLoading}
+                            />
+                            <Input
+                              placeholder="Max"
+                              type="number"
+                              value={maxStockInput}
+                              onChange={(e) =>
+                                handleMaxStockChange(e.target.value)
+                              }
+                              className="h-8 text-xs font-normal"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </TableHead>
+                        <TableHead className="py-2 w-[96px] max-w-[96px] px-1" />
+                        <TableHead className="py-2 w-[72px] max-w-[72px] px-2" />
+                        <TableHead className="py-2" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -920,10 +1162,6 @@ export default function ProductInventory() {
                               product.totalOpeningStock ||
                               calculateTotalOpeningStock(product);
                             const status = getProductStatus(totalOpeningStock);
-                            const batchCount =
-                              product.batches?.length ||
-                              product._count?.batches ||
-                              0;
 
                             return (
                               <motion.tr
@@ -939,11 +1177,11 @@ export default function ProductInventory() {
                                   layout: { duration: 0.3 },
                                 }}
                               >
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <div className="flex items-center gap-3">
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[180px] max-w-[180px] whitespace-normal align-top">
+                                  <div className="flex items-center gap-3 min-w-0">
                                     {product.mainImage ? (
                                       <motion.div
-                                        className="relative h-12 w-12 rounded-md overflow-hidden"
+                                        className="relative h-12 w-12 shrink-0 rounded-md overflow-hidden"
                                         whileHover={{ scale: 1.05 }}
                                         transition={{ duration: 0.2 }}
                                       >
@@ -957,25 +1195,25 @@ export default function ProductInventory() {
                                       </motion.div>
                                     ) : (
                                       <motion.div
-                                        className="h-12 w-12 rounded-md bg-secondary flex items-center justify-center"
+                                        className="h-12 w-12 shrink-0 rounded-md bg-secondary flex items-center justify-center"
                                         whileHover={{ rotate: 5 }}
                                         transition={{ duration: 0.2 }}
                                       >
                                         <ImageIcon className="h-6 w-6 text-muted-foreground" />
                                       </motion.div>
                                     )}
-                                    <div>
-                                      <p className="font-medium">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-medium truncate" title={product.productBrand}>
                                         {product.productBrand}
                                       </p>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-xs text-muted-foreground truncate" title={product.productCode}>
                                         {product.productCode}
                                       </p>
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer max-w-xs">
-                                  <div className="text-sm text-muted-foreground h-16 overflow-y-auto prose prose-sm text-wrap w-60">
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[128px] max-w-[128px] whitespace-normal align-top">
+                                  <div className="text-sm text-muted-foreground max-h-10 overflow-y-auto break-words [overflow-wrap:anywhere] w-full leading-snug">
                                     {product.description || "No description"}
                                   </div>
                                 </TableCell>
@@ -994,18 +1232,13 @@ export default function ProductInventory() {
                                   )}
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  {product.cartonPack ? (
-                                    <motion.div
-                                      variants={badgeVariants}
-                                      whileHover="hover"
+                                  {getUnitSymbol(product.saleUnit) ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="font-mono text-xs"
                                     >
-                                      <Badge
-                                        variant="outline"
-                                        className="font-mono"
-                                      >
-                                        {product.cartonPack}
-                                      </Badge>
-                                    </motion.div>
+                                      {getUnitSymbol(product.saleUnit)}
+                                    </Badge>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">
                                       -
@@ -1013,28 +1246,23 @@ export default function ProductInventory() {
                                   )}
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <div className="flex items-center gap-2">
-                                    <Percent className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium">
-                                      {product.gstRate || 0}%
+                                  {getUnitSymbol(product.purchaseUnit) ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="font-mono text-xs"
+                                    >
+                                      {getUnitSymbol(product.purchaseUnit)}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">
+                                      -
                                     </span>
-                                  </div>
+                                  )}
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <div className="flex items-center gap-2">
-                                    <Layers className="h-4 w-4 text-muted-foreground" />
-                                    <motion.div
-                                      variants={badgeVariants}
-                                      whileHover="hover"
-                                    >
-                                      <Badge
-                                        variant="outline"
-                                        className="font-mono"
-                                      >
-                                        {batchCount}
-                                      </Badge>
-                                    </motion.div>
-                                  </div>
+                                  <code className="text-sm font-mono">
+                                    {product.hsnSacCode || "-"}
+                                  </code>
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
                                   <div className="flex items-center gap-2">
@@ -1068,7 +1296,7 @@ export default function ProductInventory() {
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[96px] max-w-[96px] whitespace-normal px-1 align-top">
                                   <motion.div
                                     variants={badgeVariants}
                                     whileHover="hover"
@@ -1081,69 +1309,87 @@ export default function ProductInventory() {
                                             ? "secondary"
                                             : "destructive"
                                       }
-                                      className={
+                                      className={cn(
+                                        "text-[10px] px-1.5 py-0.5 whitespace-normal text-center leading-tight",
                                         status === "In Stock"
                                           ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
                                           : status === "Low Stock"
                                             ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400"
-                                            : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                                      }
+                                            : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400",
+                                      )}
                                     >
                                       {status}
                                     </Badge>
                                   </motion.div>
                                 </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center">
-                                      <span className="text-xs font-medium text-green-400">
-                                        Created:
-                                      </span>
-                                      <p className="text-xs text-muted-foreground ml-1">
-                                        {formatDateTime(product.createdAt)}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <span className="text-xs font-medium text-orange-400">
-                                        Updated:
-                                      </span>
-                                      <p className="text-xs text-muted-foreground ml-1">
-                                        {formatDateTime(product.updatedAt)}
-                                      </p>
-                                    </div>
-                                  </div>
+                                <TableCell className="group-hover:bg-secondary/30 w-[72px] max-w-[72px] px-2">
+                                  <DateInfoBadge
+                                    createdAt={product.createdAt}
+                                    updatedAt={product.updatedAt}
+                                    formatDateTime={formatDateTime}
+                                  />
                                 </TableCell>
                                 <TableCell className="group-hover:bg-secondary/30">
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleViewProduct(product)}
-                                      className="h-8 w-8 hover:bg-blue-100"
-                                      disabled={isLoading}
+                                  <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "text-[10px] px-2 py-0.5 shrink-0",
+                                        product.isLocked || product.deleted || isLoading
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : "cursor-pointer hover:bg-green-100 text-green-700 border-green-200",
+                                      )}
+                                      onClick={() => {
+                                        if (
+                                          !product.isLocked &&
+                                          !product.deleted &&
+                                          !isLoading
+                                        ) {
+                                          handleEditProduct(product);
+                                        }
+                                      }}
                                     >
-                                      <Eye className="h-4 w-4 text-blue-600" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleEditProduct(product)}
-                                      className="h-8 w-8 hover:bg-green-100"
-                                      disabled={isLoading}
+                                      edit
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "text-[10px] px-2 py-0.5 shrink-0",
+                                        product.isLocked || product.deleted || isLoading
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : "cursor-pointer hover:bg-red-100 text-red-700 border-red-200",
+                                      )}
+                                      onClick={() => {
+                                        if (
+                                          !product.isLocked &&
+                                          !product.deleted &&
+                                          !isLoading
+                                        ) {
+                                          confirmDeleteProduct(product);
+                                        }
+                                      }}
                                     >
-                                      <Edit className="h-4 w-4 text-green-600" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() =>
-                                        confirmDeleteProduct(product)
-                                      }
-                                      className="h-8 w-8 hover:bg-red-100"
-                                      disabled={isLoading || product.deleted}
+                                      delete
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "text-[10px] px-2 py-0.5 cursor-pointer gap-1 shrink-0",
+                                        product.isLocked
+                                          ? "hover:bg-amber-100 text-amber-700 border-amber-200"
+                                          : "hover:bg-secondary text-muted-foreground",
+                                      )}
+                                      onClick={() => handleToggleLock(product)}
                                     >
-                                      <Trash2 className="h-4 w-4 text-red-600" />
-                                    </Button>
+                                      {lockingProductId === product.id ? (
+                                        <RefreshCw className="h-3 w-3 animate-spin" />
+                                      ) : product.isLocked ? (
+                                        <Unlock className="h-3 w-3" />
+                                      ) : (
+                                        <Lock className="h-3 w-3" />
+                                      )}
+                                      {product.isLocked ? "unlock" : "lock"}
+                                    </Badge>
                                   </div>
                                 </TableCell>
                               </motion.tr>
@@ -1226,31 +1472,6 @@ export default function ProductInventory() {
           ) : (
             <Search className="h-5 w-5" />
           )}
-        </Button>
-      </div>
-
-      {/* Fixed bottom-right actions */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-background"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          aria-label="Refresh products"
-        >
-          <RefreshCw
-            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
-          />
-        </Button>
-        <Button
-          size="icon"
-          className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
-          onClick={handleAddProduct}
-          disabled={isLoading}
-          aria-label="Add product"
-        >
-          <Plus className="h-5 w-5" />
         </Button>
       </div>
 

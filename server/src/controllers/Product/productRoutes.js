@@ -21,6 +21,9 @@ router.put("/:id", productController.updateProduct);
 // Delete a product (soft delete)
 router.delete("/:id", productController.deleteProduct);
 
+// Lock or unlock a product
+router.patch("/:id/lock", productController.toggleProductLock);
+
 // Get batches associated with a product
 router.get("/:id/batches", productController.getProductBatches);
 

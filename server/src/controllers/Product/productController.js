@@ -369,6 +369,10 @@ export const getProducts = asyncHandler(async (req, res) => {
     search = "",
     productCode = "",
     productBrand = "",
+    description = "",
+    saleUnit = "",
+    purchaseUnit = "",
+    hsnSacCode = "",
     productGroupId,
     productCompanyId,
     status,
@@ -421,6 +425,34 @@ export const getProducts = asyncHandler(async (req, res) => {
   if (productBrand) {
     andConditions.push({
       productBrand: { contains: productBrand },
+    });
+  }
+
+  // Description filter
+  if (description) {
+    andConditions.push({
+      description: { contains: description },
+    });
+  }
+
+  // Sale unit filter
+  if (saleUnit) {
+    andConditions.push({
+      saleUnit: saleUnit.toString(),
+    });
+  }
+
+  // Purchase unit filter
+  if (purchaseUnit) {
+    andConditions.push({
+      purchaseUnit: purchaseUnit.toString(),
+    });
+  }
+
+  // HSN/SAC code filter
+  if (hsnSacCode) {
+    andConditions.push({
+      hsnSacCode: { contains: hsnSacCode },
     });
   }
 
@@ -815,6 +847,16 @@ export const updateProduct = asyncHandler(async (req, res) => {
     );
   }
 
+  if (existingProduct.isLocked) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product is locked and cannot be modified",
+      statusType.FORBIDDEN,
+    );
+  }
+
   // Check if new product code conflicts with other products
   if (productCode && productCode !== existingProduct.productCode) {
     const codeConflict = await prisma.product.findFirst({
@@ -1090,6 +1132,16 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     );
   }
 
+  if (existingProduct.isLocked) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product is locked and cannot be deleted",
+      statusType.FORBIDDEN,
+    );
+  }
+
   // Find all batches for this product with zero opening stock
   const zeroStockBatches = await prisma.batch.findMany({
     where: {
@@ -1133,6 +1185,60 @@ export const deleteProduct = asyncHandler(async (req, res) => {
       deletedZeroStockBatches: zeroStockBatches.length,
     },
     "Product deleted",
+    statusType.OK,
+  );
+});
+
+/**
+ * Toggle product lock status
+ */
+export const toggleProductLock = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { locked } = req.body;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const existingProduct = await prisma.product.findFirst({
+    where: {
+      id: parseInt(id),
+      deleted: false,
+    },
+  });
+
+  if (!existingProduct) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const isLocked = locked === true || locked === "true";
+
+  const product = await prisma.product.update({
+    where: { id: parseInt(id) },
+    data: { isLocked },
+  });
+
+  await createNotification(
+    {
+      title: isLocked ? "Product Locked" : "Product Unlocked",
+      message: `Product "${existingProduct.productCode} - ${existingProduct.productBrand}" has been ${isLocked ? "locked" : "unlocked"} by ${req.user?.username || "Admin"}`,
+      type: "info",
+      section: null,
+      page: "product",
+    },
+    res,
+  );
+
+  return sendResponse(
+    res,
+    true,
+    { product },
+    isLocked ? "Product locked successfully" : "Product unlocked successfully",
     statusType.OK,
   );
 });
@@ -1519,6 +1625,7 @@ export const productController = {
   getProductById,
   updateProduct,
   deleteProduct,
+  toggleProductLock,
   getProductBatches,
   pinProductBatch,
   getProductPurchaseHistory,

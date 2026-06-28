@@ -92,6 +92,7 @@ export interface Product {
   hsnChapter: string | null;
   gstApplicability: string;
   status: boolean;
+  isLocked?: boolean;
   mainImage: string | null;
   userId: number | null;
   deleted: boolean;
@@ -171,6 +172,10 @@ export interface ProductFilters {
   search?: string;
   productCode?: string;
   productBrand?: string;
+  description?: string;
+  saleUnit?: string;
+  purchaseUnit?: string;
+  hsnSacCode?: string;
   productGroupId?: number;
   productCompanyId?: number;
   status?: "all" | "active" | "inactive";

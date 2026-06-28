@@ -118,6 +118,21 @@ export const productService = {
     }
   },
 
+  // Lock or unlock product
+  async toggleProductLock(id: number, locked: boolean): Promise<Product> {
+    try {
+      const response = await apiClient.patch<ApiResponse<{ product: Product }>>(
+        `/products/${id}/lock`,
+        { locked },
+      );
+      return response.data.data.product;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error toggling product lock:", message);
+      throw new Error(message);
+    }
+  },
+
   // Get product batches
   async getProductBatches(id: number): Promise<ProductBatchesResponse> {
     try {
