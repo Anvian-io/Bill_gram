@@ -35,6 +35,7 @@ import {
   Eye,
   Hash,
 } from "lucide-react";
+import { parseNumberInputValue } from "@/lib/numberInput";
 import { toast } from "sonner";
 import { productService, type ProductBatchHistoryEntry } from "@/services/productService";
 import type { Batch } from "@/types/product";
@@ -62,7 +63,7 @@ export default function BatchSelectionModal({
 }: BatchSelectionModalProps) {
   const { layoutMode } = useTheme();
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-  const [aQty, setAQty] = useState<number>(1);
+  const [aQty, setAQty] = useState<number>(0);
   const [mQty, setMQty] = useState<number>(0);
   const [searchBatch, setSearchBatch] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("batch");
@@ -173,6 +174,13 @@ export default function BatchSelectionModal({
       return;
     }
 
+    if (aQty <= 0) {
+      toast.error("Please enter a quantity", {
+        description: "A Qty must be greater than zero before applying a batch.",
+      });
+      return;
+    }
+
     // Double-check stock before applying
     if (
       selectedBatch.openingStock !== undefined &&
@@ -214,7 +222,7 @@ export default function BatchSelectionModal({
   useEffect(() => {
     if (open) {
       setSelectedBatch(null);
-      setAQty(1);
+      setAQty(0);
       setMQty(1 * cartonPack * conversionFactor);
       setSearchBatch("");
       setActiveTab("batch");
@@ -273,11 +281,14 @@ export default function BatchSelectionModal({
                   <Input
                     id="aQty"
                     type="number"
-                    min="1"
+                    min="0"
                     max={selectedBatch?.openingStock ?? 999999}
                     value={aQty}
                     onChange={(e) => {
-                      const newVal = Math.max(1, parseInt(e.target.value) || 1);
+                      const newVal = Math.max(
+                        0,
+                        parseNumberInputValue(e.target.value),
+                      );
                       if (
                         selectedBatch &&
                         selectedBatch.openingStock !== undefined &&
@@ -635,10 +646,10 @@ export default function BatchSelectionModal({
                                   history.quantity,
                                   batch.openingStock ?? history.quantity,
                                 );
-                                setAQty(Math.max(1, qty));
+                                setAQty(Math.max(0, qty));
                                 setShowBatchError(false);
                                 toast.info("Batch selected from history", {
-                                  description: `Batch ${batch.batchNo} loaded with qty ${Math.max(1, qty)} at current rate ₹${(batch.saleRate || 0).toFixed(2)}`,
+                                  description: `Batch ${batch.batchNo} loaded with qty ${Math.max(0, qty)} at current rate ₹${(batch.saleRate || 0).toFixed(2)}`,
                                 });
                               } else {
                                 toast.error("Batch not available", {

@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { bindNumberField } from "@/lib/numberInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -162,16 +163,16 @@ const defaultValues: ProductFormData = {
   description: "",
   hsnSacCode: "",
   goodsServices: "Goods",
-  weight: 1,
+  weight: 0,
   unitId: 0,
   productGroupId: 0,
   productShortName: "",
   purchaseUnit: "",
-  conversionFactor: 1,
+  conversionFactor: 0,
   pricePerPcs: 0,
   productCompanyId: 0,
   saleUnit: "",
-  cartonPack: 24,
+  cartonPack: 0,
   innerPack: "",
   packagingBasic: true,
   packagingMRP: false,
@@ -219,7 +220,7 @@ const sampleData: ProductFormData = {
   pricePerPcs: 299.99,
   productCompanyId: 1,
   saleUnit: "2",
-  cartonPack: 24,
+  cartonPack: 0,
   innerPack: "6 units per inner pack",
   packagingBasic: true,
   packagingMRP: true,
@@ -358,11 +359,11 @@ export default function ProductFormModal({
         productGroupId: editingProduct.productGroupId || 0,
         productShortName: editingProduct.productShortName || "",
         purchaseUnit: editingProduct.purchaseUnit || "",
-        conversionFactor: editingProduct.conversionFactor || 1,
+        conversionFactor: editingProduct.conversionFactor ?? 0,
         pricePerPcs: editingProduct.pricePerPcs || 0,
         productCompanyId: editingProduct.productCompanyId || 0,
         saleUnit: editingProduct.saleUnit || "",
-        cartonPack: editingProduct.cartonPack || 24,
+        cartonPack: editingProduct.cartonPack ?? 0,
         innerPack: editingProduct.innerPack || "",
         packagingBasic: editingProduct.packagingBasic,
         packagingMRP: editingProduct.packagingMRP,
@@ -815,7 +816,7 @@ export default function ProductFormModal({
                                 type="number"
                                 step="0.01"
                                 placeholder="Weight *"
-                                {...field}
+                                {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
                             </FormControl>
@@ -1161,7 +1162,7 @@ export default function ProductFormModal({
                                 type="number"
                                 step="0.01"
                                 placeholder="Conversion Factor *"
-                                {...field}
+                                {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
                             </FormControl>
@@ -1185,7 +1186,7 @@ export default function ProductFormModal({
                                 type="number"
                                 step="0.01"
                                 placeholder="Price per PCS *"
-                                {...field}
+                                {...bindNumberField(field)}
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
@@ -1252,7 +1253,7 @@ export default function ProductFormModal({
                               <Input
                                 type="number"
                                 placeholder="Carton Pack *"
-                                {...field}
+                                {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
                             </FormControl>
@@ -1511,7 +1512,7 @@ export default function ProductFormModal({
                                 type="number"
                                 step="0.01"
                                 placeholder="GST Rate (%) *"
-                                {...field}
+                                {...bindNumberField(field)}
                                 className="pl-9"
                                 disabled={isSubmitting}
                               />
@@ -1536,7 +1537,7 @@ export default function ProductFormModal({
                                 type="number"
                                 step="0.01"
                                 placeholder="CESS Rate (%)"
-                                {...field}
+                                {...bindNumberField(field)}
                                 className="pl-9"
                                 disabled={isSubmitting}
                               />

@@ -206,7 +206,7 @@ const defaultValues: SalesFormData = {
       DQty: 0,
       totalAmount: 0,
       finalAmount: 0,
-      taxRate: 5,
+      taxRate: 0,
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
@@ -439,14 +439,14 @@ export default function SalesForm({
           totalAmount: item.totalAmount ?? 0,
           finalAmount:
             item.finalAmount ?? item.totalAmount - (item.schAmount ?? 0),
-          taxRate: item.taxRate ?? 5,
+          taxRate: item.taxRate ?? 0,
           taxAmount: item.taxAmount ?? 0,
           schPercent: item.schPercent ?? 0,
           schAmount: item.schAmount ?? 0,
           batchId: item.batchId ?? undefined,
           batchOpeningStock: item.batch?.openingStock ?? undefined,
           cartonPack,
-          conversionFactor: item.conversionFactor ?? 1,
+          conversionFactor: item.conversionFactor ?? 0,
         };
       });
 
@@ -703,7 +703,7 @@ export default function SalesForm({
       DQty: 0,
       totalAmount: 0,
       finalAmount: 0,
-      taxRate: 5,
+      taxRate: 0,
       taxAmount: 0,
       schPercent: 0,
       schAmount: 0,
@@ -1529,7 +1529,7 @@ export default function SalesForm({
                                     <Input
                                       type="number"
                                       step="0.01"
-                                      value={item.taxRate ?? 5}
+                                      value={item.taxRate ?? 0}
                                       onChange={(e) =>
                                         handleItemChange(
                                           index,

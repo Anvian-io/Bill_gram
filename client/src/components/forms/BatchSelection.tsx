@@ -35,6 +35,7 @@ import {
   Eye,
   Hash,
 } from "lucide-react";
+import { parseNumberInputValue } from "@/lib/numberInput";
 import { toast } from "sonner";
 import { productService, type ProductBatchHistoryEntry } from "@/services/productService";
 import type { Batch } from "@/types/product";
@@ -62,7 +63,7 @@ export default function BatchSelectionModal({
 }: BatchSelectionModalProps) {
   const { layoutMode } = useTheme();
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-  const [aQty, setAQty] = useState<number>(1);
+  const [aQty, setAQty] = useState<number>(0);
   const [mQty, setMQty] = useState<number>(0);
   const [searchBatch, setSearchBatch] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("batch");
@@ -153,6 +154,13 @@ export default function BatchSelectionModal({
       return;
     }
 
+    if (aQty <= 0) {
+      toast.error("Please enter a quantity", {
+        description: "A Qty must be greater than zero before applying a batch.",
+      });
+      return;
+    }
+
     if (selectedBatch && onBatchSelect) {
       onBatchSelect(selectedBatch, aQty);
       onOpenChange(false);
@@ -184,8 +192,8 @@ export default function BatchSelectionModal({
   useEffect(() => {
     if (open) {
       setSelectedBatch(null);
-      setAQty(1);
-      setMQty(1 * cartonPack * conversionFactor); // initial calculation
+      setAQty(0);
+      setMQty(0);
       setSearchBatch("");
       setActiveTab("batch");
       setShowBatchError(false);
@@ -246,7 +254,9 @@ export default function BatchSelectionModal({
                     min="1"
                     value={aQty}
                     onChange={(e) =>
-                      setAQty(Math.max(1, parseInt(e.target.value) || 1))
+                      setAQty(
+                        Math.max(0, parseNumberInputValue(e.target.value)),
+                      )
                     }
                     className="w-24"
                     onKeyDown={(e) => {
@@ -584,10 +594,10 @@ export default function BatchSelectionModal({
                                   history.quantity,
                                   batch.openingStock ?? history.quantity,
                                 );
-                                setAQty(Math.max(1, qty));
+                                setAQty(Math.max(0, qty));
                                 setShowBatchError(false);
                                 toast.info("Batch selected from history", {
-                                  description: `Batch ${batch.batchNo} loaded with qty ${Math.max(1, qty)} at current rate ₹${batch.purchaseRate.toFixed(2)}`,
+                                  description: `Batch ${batch.batchNo} loaded with qty ${Math.max(0, qty)} at current rate ₹${batch.purchaseRate.toFixed(2)}`,
                                 });
                               } else {
                                 toast.error("Batch not available", {
