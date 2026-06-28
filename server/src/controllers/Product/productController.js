@@ -26,6 +26,38 @@ function getProductsImageDirectory() {
   return imagesDir;
 }
 
+const batchSelectFields = {
+  id: true,
+  batchNo: true,
+  mfgDate: true,
+  expDate: true,
+  barcode: true,
+  basicPrice: true,
+  openingStock: true,
+  mrp: true,
+  purchaseRate: true,
+  saleRate: true,
+  margin: true,
+  gstAmount: true,
+  isPinned: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
+function normalizeBatchPinFlags(batches = []) {
+  let pinnedIndex = -1;
+  batches.forEach((batch, index) => {
+    if (batch.isPinned) {
+      if (pinnedIndex === -1) {
+        pinnedIndex = index;
+      } else {
+        batch.isPinned = false;
+      }
+    }
+  });
+  return batches;
+}
+
 
 /**
  * Create Product
@@ -206,8 +238,9 @@ export const createProduct = asyncHandler(async (req, res) => {
 
       // Create batches if provided
       if (batches && batches.length > 0) {
+        const normalizedBatches = normalizeBatchPinFlags(batches);
         await Promise.all(
-          batches.map((batch) =>
+          normalizedBatches.map((batch) =>
             tx.batch.create({
               data: {
                 batchNo: batch.bNo,
@@ -221,6 +254,7 @@ export const createProduct = asyncHandler(async (req, res) => {
                 saleRate: parseFloat(batch.sRate),
                 margin: parseFloat(batch.margin),
                 gstAmount: parseFloat(batch.gstAmount || 0),
+                isPinned: Boolean(batch.isPinned),
                 productId: newProduct.id,
               },
             }),
@@ -894,8 +928,9 @@ export const updateProduct = asyncHandler(async (req, res) => {
           where: { productId: parseInt(id) },
         });
 
+        const normalizedBatches = normalizeBatchPinFlags(batches);
         await Promise.all(
-          batches.map((batch) =>
+          normalizedBatches.map((batch) =>
             tx.batch.create({
               data: {
                 batchNo: batch.bNo,
@@ -909,6 +944,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
                 saleRate: parseFloat(batch.sRate),
                 margin: parseFloat(batch.margin),
                 gstAmount: parseFloat(batch.gstAmount || 0),
+                isPinned: Boolean(batch.isPinned),
                 productId: parseInt(id),
               },
             }),
@@ -1143,33 +1179,33 @@ export const getProductBatches = asyncHandler(async (req, res) => {
     );
   }
 
-  // Fetch batches with positive opening stock
-  const batches = await prisma.batch.findMany({
+  // If a batch is pinned, only that batch is available for sales/purchase selection
+  const pinnedBatch = await prisma.batch.findFirst({
     where: {
       productId: parseInt(id),
-      openingStock: { gt: 0 },
+      isPinned: true,
     },
-    orderBy: [
-      { expDate: 'asc' }, // Soon-to-expire first
-      { createdAt: 'desc' },
-    ],
-    select: {
-      id: true,
-      batchNo: true,
-      mfgDate: true,
-      expDate: true,
-      barcode: true,
-      basicPrice: true,
-      openingStock: true,
-      mrp: true,
-      purchaseRate: true,
-      saleRate: true,
-      margin: true,
-      gstAmount: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    orderBy: { updatedAt: "desc" },
+    select: batchSelectFields,
   });
+
+  let batches;
+  if (pinnedBatch) {
+    batches = [pinnedBatch];
+  } else {
+    // Fetch batches with positive opening stock
+    batches = await prisma.batch.findMany({
+      where: {
+        productId: parseInt(id),
+        openingStock: { gt: 0 },
+      },
+      orderBy: [
+        { expDate: "asc" }, // Soon-to-expire first
+        { createdAt: "desc" },
+      ],
+      select: batchSelectFields,
+    });
+  }
 
   // Calculate total available stock for the product
   const totalStock = batches.reduce(
@@ -1398,6 +1434,83 @@ export const getProductSalesHistory = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Pin or unpin a batch for a product.
+ * Only one batch per product can be pinned at a time.
+ */
+export const pinProductBatch = asyncHandler(async (req, res) => {
+  const { id, batchId } = req.params;
+  const { pinned = true } = req.body;
+
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const productId = parseInt(id);
+  const parsedBatchId = parseInt(batchId);
+
+  const product = await prisma.product.findFirst({
+    where: {
+      id: productId,
+      deleted: false,
+    },
+    select: { id: true },
+  });
+
+  if (!product) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Product not found",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const batch = await prisma.batch.findFirst({
+    where: {
+      id: parsedBatchId,
+      productId,
+    },
+  });
+
+  if (!batch) {
+    return sendResponse(
+      res,
+      false,
+      null,
+      "Batch not found for this product",
+      statusType.NOT_FOUND,
+    );
+  }
+
+  const shouldPin = Boolean(pinned);
+
+  const updatedBatch = await prisma.$transaction(async (tx) => {
+    if (shouldPin) {
+      await tx.batch.updateMany({
+        where: { productId },
+        data: { isPinned: false },
+      });
+    }
+
+    return tx.batch.update({
+      where: { id: parsedBatchId },
+      data: { isPinned: shouldPin },
+      select: batchSelectFields,
+    });
+  });
+
+  return sendResponse(
+    res,
+    true,
+    { batch: updatedBatch },
+    shouldPin
+      ? "Batch pinned successfully"
+      : "Batch unpinned successfully",
+    statusType.OK,
+  );
+});
+
 // Export all functions
 export const productController = {
   createProduct,
@@ -1407,6 +1520,7 @@ export const productController = {
   updateProduct,
   deleteProduct,
   getProductBatches,
+  pinProductBatch,
   getProductPurchaseHistory,
   getProductSalesHistory,
 };

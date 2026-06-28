@@ -11,6 +11,40 @@ const SERVER_ROOT = path.join(__dirname, "..", "..");
 
 let prisma = null;
 
+function runPrismaGenerate() {
+  const prismaCli = path.join(SERVER_ROOT, "node_modules", "prisma", "build", "index.js");
+
+  if (!fs.existsSync(prismaCli)) {
+    throw new Error(
+      `Prisma CLI not found at ${prismaCli}. Ensure server dependencies are installed.`,
+    );
+  }
+
+  console.log("🔄 Generating Prisma client...");
+
+  const result = spawnSync(process.execPath, [prismaCli, "generate"], {
+    cwd: SERVER_ROOT,
+    env: process.env,
+    encoding: "utf-8",
+  });
+
+  if (result.stdout) {
+    console.log(result.stdout.trimEnd());
+  }
+
+  if (result.stderr) {
+    console.error(result.stderr.trimEnd());
+  }
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Prisma generate failed with exit code ${result.status ?? "unknown"}`,
+    );
+  }
+
+  console.log("✅ Prisma client generated");
+}
+
 function runPrismaMigrations() {
   const prismaCli = path.join(SERVER_ROOT, "node_modules", "prisma", "build", "index.js");
 
@@ -109,6 +143,9 @@ export async function initializeDatabase() {
     // Set environment variable for Prisma
     process.env.DATABASE_URL = databaseUrl;
     console.log(`🔗 DATABASE_URL: ${databaseUrl}`);
+
+    // Regenerate client so schema changes (e.g. new columns) are available at runtime
+    runPrismaGenerate();
 
     // Apply pending Prisma migrations (creates schema on first run)
     runPrismaMigrations();

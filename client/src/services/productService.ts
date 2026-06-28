@@ -6,6 +6,7 @@ import {
   type ApiResponse,
   type ProductFilters,
   type ProductBatchesResponse,
+  type Batch,
 } from "@/types/product";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
 
@@ -127,6 +128,23 @@ export const productService = {
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error fetching product batches:", message);
+      throw new Error(message);
+    }
+  },
+
+  async pinProductBatch(
+    productId: number,
+    batchId: number,
+    pinned: boolean,
+  ): Promise<Batch> {
+    try {
+      const response = await apiClient.patch<
+        ApiResponse<{ batch: Batch }>
+      >(`/products/${productId}/batches/${batchId}/pin`, { pinned });
+      return response.data.data.batch;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error pinning product batch:", message);
       throw new Error(message);
     }
   },

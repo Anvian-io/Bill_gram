@@ -53,10 +53,13 @@ import {
   Database,
   ChevronsUpDown,
   Check,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { toast } from "sonner";
 import { imageService } from "@/services/imageService";
+import { productService } from "@/services/productService";
 import {
   type ProductFormData as ImportedProductFormData,
   type Product,
@@ -123,6 +126,7 @@ const productSchema = z.object({
   batches: z
     .array(
       z.object({
+        id: z.coerce.number().optional(),
         bNo: z.string().min(1, "Batch number is required"),
         mfgDate: z.string().optional().nullable(),
         expDate: z.string().optional().nullable(),
@@ -134,6 +138,7 @@ const productSchema = z.object({
         sRate: z.coerce.number().positive("Sale rate must be positive"),
         margin: z.coerce.number(),
         gstAmount: z.coerce.number().min(0).optional(),
+        isPinned: z.boolean().default(false),
       }),
     )
     .default([]),
@@ -193,6 +198,7 @@ const defaultValues: ProductFormData = {
       sRate: 0,
       margin: 0,
       gstAmount: 0,
+      isPinned: false,
     },
   ],
 };
@@ -240,6 +246,7 @@ const sampleData: ProductFormData = {
       sRate: 299.99,
       margin: 100,
       gstAmount: 36,
+      isPinned: false,
     },
     {
       bNo: "BATCH002",
@@ -253,6 +260,7 @@ const sampleData: ProductFormData = {
       sRate: 315.5,
       margin: 110,
       gstAmount: 37,
+      isPinned: false,
     },
   ],
 };
@@ -376,6 +384,7 @@ export default function ProductFormModal({
           ) || [],
         batches:
           editingProduct.batches?.map((batch) => ({
+            id: batch.id,
             bNo: batch.batchNo,
             mfgDate: batch.mfgDate,
             expDate: batch.expDate,
@@ -387,6 +396,7 @@ export default function ProductFormModal({
             sRate: batch.saleRate,
             margin: batch.margin,
             gstAmount: batch.gstAmount || 0,
+            isPinned: batch.isPinned ?? false,
           })) || [],
       });
 
@@ -472,8 +482,50 @@ export default function ProductFormModal({
       sRate: 0,
       margin: 0,
       gstAmount: calculateGST(0),
+      isPinned: false,
     };
     form.setValue("batches", [...batches, newBatch]);
+  };
+
+  const handlePinBatch = async (index: number) => {
+    const batch = batches[index];
+    const nextPinned = !batch.isPinned;
+
+    if (editingProduct?.id && batch.id) {
+      try {
+        await productService.pinProductBatch(
+          editingProduct.id,
+          batch.id,
+          nextPinned,
+        );
+        const updatedBatches = batches.map((item, itemIndex) => ({
+          ...item,
+          isPinned: itemIndex === index ? nextPinned : false,
+        }));
+        form.setValue("batches", updatedBatches);
+        toast.success(
+          nextPinned
+            ? `Batch ${batch.bNo || `#${index + 1}`} pinned for sales & purchase`
+            : `Batch ${batch.bNo || `#${index + 1}`} unpinned`,
+        );
+      } catch (error: any) {
+        toast.error("Failed to update pinned batch", {
+          description: error.message || "Please try again",
+        });
+      }
+      return;
+    }
+
+    const updatedBatches = batches.map((item, itemIndex) => ({
+      ...item,
+      isPinned: itemIndex === index ? nextPinned : false,
+    }));
+    form.setValue("batches", updatedBatches);
+    toast.success(
+      nextPinned
+        ? `Batch ${batch.bNo || `#${index + 1}`} will be pinned after save`
+        : `Batch ${batch.bNo || `#${index + 1}`} unpinned`,
+    );
   };
 
   // Remove batch row
@@ -576,6 +628,7 @@ export default function ProductFormModal({
           mfgDate: batch.mfgDate ?? null,
           expDate: batch.expDate ?? null,
           gstAmount: batch.gstAmount || 0,
+          isPinned: batch.isPinned ?? false,
         })),
       };
 
@@ -1570,7 +1623,8 @@ export default function ProductFormModal({
                 <div>
                   <h3 className="text-lg font-semibold">Batch Details</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Manage batch-specific pricing, stock, and expiration dates
+                    Manage batch-specific pricing, stock, and expiration dates.
+                    Pin one batch to use it exclusively in sales and purchase.
                   </p>
                 </div>
                 <Button
@@ -1597,7 +1651,12 @@ export default function ProductFormModal({
                     <div className="bg-muted/50 px-4 py-3 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
+                          <div
+                            className={cn(
+                              "h-2 w-2 rounded-full",
+                              batch.isPinned ? "bg-amber-500" : "bg-primary",
+                            )}
+                          />
                           <div className="text-sm font-medium">
                             Batch #{index + 1}
                             {batch.bNo && (
@@ -1606,8 +1665,40 @@ export default function ProductFormModal({
                               </span>
                             )}
                           </div>
+                          {batch.isPinned && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-amber-100 text-amber-800 border-amber-200"
+                            >
+                              Pinned
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant={batch.isPinned ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePinBatch(index)}
+                            disabled={isSubmitting}
+                            className={cn(
+                              "h-7 gap-1.5",
+                              batch.isPinned &&
+                                "bg-amber-500 hover:bg-amber-600 text-white",
+                            )}
+                            title={
+                              batch.isPinned
+                                ? "Unpin batch"
+                                : "Pin batch for sales & purchase"
+                            }
+                          >
+                            {batch.isPinned ? (
+                              <PinOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <Pin className="h-3.5 w-3.5" />
+                            )}
+                            {batch.isPinned ? "Unpin" : "Pin Batch"}
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"

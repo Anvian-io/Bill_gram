@@ -133,6 +133,14 @@ export default function BatchSelectionModal({
     }
   }, [selectedBatch, aQty]);
 
+  // Auto-select when only one batch is available (e.g. pinned batch)
+  useEffect(() => {
+    if (open && batches.length === 1) {
+      setSelectedBatch(batches[0]);
+      setShowBatchError(false);
+    }
+  }, [open, batches]);
+
   const filteredBatches = batches.filter(
     (batch) =>
       batch.batchNo.toLowerCase().includes(searchBatch.toLowerCase()) ||

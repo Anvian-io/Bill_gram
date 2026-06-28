@@ -14,6 +14,48 @@ export function resolvePortalContainer(anchor: HTMLElement | null): HTMLElement 
 }
 
 let floatingDropdownOpenCount = 0;
+let lastPointerX = 0;
+let lastPointerY = 0;
+
+const HOVER_FOCUS_SELECTOR = [
+  'input[data-slot="input"]:not([disabled])',
+  'textarea[data-slot="textarea"]:not([disabled])',
+  '[data-inline-search-input]:not([disabled])',
+  '[data-slot="select-trigger"]:not([disabled])',
+  '[data-hover-date-input]:not([disabled])',
+].join(", ");
+
+function trackPointerPosition(event: MouseEvent) {
+  lastPointerX = event.clientX;
+  lastPointerY = event.clientY;
+}
+
+function focusFieldUnderPointer() {
+  const stack = document.elementsFromPoint(lastPointerX, lastPointerY);
+  for (const element of stack) {
+    if (
+      element instanceof HTMLElement &&
+      element.closest(
+        '[data-inline-search-panel], [data-slot="select-content"], [data-floating-panel]',
+      )
+    ) {
+      continue;
+    }
+
+    const focusTarget = element.closest(HOVER_FOCUS_SELECTOR) as HTMLElement | null;
+    if (focusTarget) {
+      focusTarget.dispatchEvent(
+        new MouseEvent("mouseenter", { bubbles: true, clientX: lastPointerX, clientY: lastPointerY }),
+      );
+      focusTarget.focus();
+      return;
+    }
+  }
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("mousemove", trackPointerPosition, { passive: true });
+}
 
 export function setFloatingDropdownOpen(open: boolean) {
   if (open) {
@@ -25,6 +67,9 @@ export function setFloatingDropdownOpen(open: boolean) {
   floatingDropdownOpenCount = Math.max(0, floatingDropdownOpenCount - 1);
   if (floatingDropdownOpenCount === 0) {
     delete document.body.dataset.floatingDropdownOpen;
+    requestAnimationFrame(() => {
+      focusFieldUnderPointer();
+    });
   }
 }
 

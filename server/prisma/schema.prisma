@@ -126,6 +126,7 @@ model Batch {
   saleRate     Float   @map("sale_rate")
   margin       Float
   gstAmount    Float?  @default(0) @map("gst_amount")
+  isPinned     Boolean @default(false) @map("is_pinned")
 
   // Relations
   productId Int

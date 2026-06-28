@@ -11,6 +11,7 @@ export interface Batch {
   saleRate: number;
   margin: number;
   gstAmount: number;
+  isPinned?: boolean;
   productId: number;
   createdAt: string;
   updatedAt: string;
@@ -150,6 +151,7 @@ export interface ProductFormData {
 
   // Batches
   batches: Array<{
+    id?: number;
     bNo: string;
     mfgDate: string | null;
     expDate: string | null;
@@ -161,6 +163,7 @@ export interface ProductFormData {
     sRate: number;
     margin: number;
     gstAmount: number;
+    isPinned?: boolean;
   }>;
 }
 

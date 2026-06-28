@@ -24,6 +24,9 @@ router.delete("/:id", productController.deleteProduct);
 // Get batches associated with a product
 router.get("/:id/batches", productController.getProductBatches);
 
+// Pin or unpin a batch for sales/purchase selection
+router.patch("/:id/batches/:batchId/pin", productController.pinProductBatch);
+
 // Batch-linked transaction history for a product
 router.get("/:id/purchase-history", productController.getProductPurchaseHistory);
 router.get("/:id/sales-history", productController.getProductSalesHistory);

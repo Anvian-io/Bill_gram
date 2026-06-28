@@ -51,11 +51,25 @@ export function useHoverFocusInput(
   }, [skip]);
 
   const handleMouseEnter = React.useCallback(() => {
-    if (document.body.dataset.floatingDropdownOpen === "true") return;
-    if (!options?.disabled) {
-      ref.current?.focus();
-      if (!skip) setHoverActive(true);
+    const tryFocus = () => {
+      if (document.body.dataset.floatingDropdownOpen === "true") return false;
+      if (!options?.disabled) {
+        ref.current?.focus();
+        if (!skip) setHoverActive(true);
+      }
+      return true;
+    };
+
+    if (document.body.dataset.floatingDropdownOpen === "true") {
+      requestAnimationFrame(() => {
+        if (!tryFocus()) {
+          window.setTimeout(tryFocus, 220);
+        }
+      });
+      return;
     }
+
+    tryFocus();
   }, [skip, options?.disabled]);
 
   const handleMouseLeave = React.useCallback(() => {
