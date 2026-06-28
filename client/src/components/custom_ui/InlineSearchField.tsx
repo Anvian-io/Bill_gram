@@ -37,6 +37,7 @@ export interface InlineSearchFieldProps {
   panelMinWidth?: number;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  inputId?: string;
   children: React.ReactNode;
 }
 
@@ -55,6 +56,7 @@ export function InlineSearchField({
   panelMinWidth = INLINE_SEARCH_PANEL_MIN_WIDTH,
   onMouseEnter,
   onMouseLeave,
+  inputId,
   children,
 }: InlineSearchFieldProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
@@ -210,6 +212,7 @@ export function InlineSearchField({
       <div ref={anchorRef} className="relative">
         <Input
           ref={inputRef}
+          id={inputId}
           alwaysEditable
           role="combobox"
           aria-expanded={open}
