@@ -12,9 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Filter,
-  Search,
+import { Search,
   X,
   RefreshCw,
   FileText,
@@ -77,8 +75,7 @@ const parseHistoryFilters = (data: string) => {
 
 export default function GSTHistory() {
   const { layoutMode } = useTheme();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [rows, setRows] = useState<GSTReportHistory[]>([]);
@@ -253,32 +250,7 @@ export default function GSTHistory() {
           <Card className="overflow-hidden">
             <CardContent className="p-1">
               <div className="flex flex-col gap-4 p-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Filters</h3>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="h-8"
-                    disabled={isLoading}
-                  >
-                    {showFilters ? "Hide" : "Show"} Filters
-                  </Button>
-                </div>
-
-                <AnimatePresence>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                           <InlineSearchField
                             open={sourceOpen}
@@ -351,9 +323,6 @@ export default function GSTHistory() {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </CardContent>
           </Card>

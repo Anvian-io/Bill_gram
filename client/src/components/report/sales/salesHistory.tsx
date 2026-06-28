@@ -12,9 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Filter,
-  Search,
+import { Search,
   X,
   RefreshCw,
   FileText,
@@ -55,8 +53,7 @@ export default function SalesHistory() {
   const { layoutMode } = useTheme();
   // State
   const [histories, setHistories] = useState<SalesReportHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -366,52 +363,7 @@ export default function SalesHistory() {
           <Card className="overflow-hidden">
             <CardContent className="p-1">
               <div className="flex flex-col gap-4 p-1">
-                {/* Filter Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Filters</h3>
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {activeFiltersCount} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {activeFiltersCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearFilters}
-                        className="h-8 text-muted-foreground"
-                        disabled={isLoading}
-                      >
-                        Clear all
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="h-8"
-                      disabled={isLoading}
-                    >
-                      {showFilters ? "Hide" : "Show"} Filters
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Filter Controls */}
-                <AnimatePresence>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Global Search */}
                         <div>
                           <div className="relative">
@@ -520,9 +472,6 @@ export default function SalesHistory() {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </CardContent>
           </Card>

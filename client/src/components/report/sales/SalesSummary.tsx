@@ -10,9 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Filter,
-  Search,
+import { Search,
   X,
   RefreshCw,
   FileText,
@@ -76,8 +74,7 @@ export default function SalesSummary() {
   const [areaOpen, setAreaOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
-  const [productGroupOpen, setProductGroupOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [productGroupOpen, setProductGroupOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<SalesSummaryReportData | null>(
     null,
@@ -404,51 +401,6 @@ export default function SalesSummary() {
         <motion.div className="mb-2" variants={itemVariants}>
           <div className="bg-white dark:bg-gray-900 border rounded-none p-2">
               <div className="flex flex-col gap-2">
-                {/* Filter Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Filters</h3>
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {activeFiltersCount} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {activeFiltersCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearFilters}
-                        className="h-8 text-muted-foreground"
-                        disabled={isLoading}
-                      >
-                        Clear all
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="h-8"
-                      disabled={isLoading}
-                    >
-                      {showFilters ? "Hide" : "Show"} Filters
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Filter Controls */}
-                <AnimatePresence>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
                       <div className="flex flex-wrap items-end gap-3 pt-2">
                         {/* Invoice No */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
@@ -788,9 +740,6 @@ export default function SalesSummary() {
                           />
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </div>
         </motion.div>

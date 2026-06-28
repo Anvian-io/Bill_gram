@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Filter, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { RefreshCw, FileSpreadsheet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfYear } from "date-fns";
 import { CustomDateInput } from "@/components/custom_ui";
@@ -60,8 +60,7 @@ export default function PurchaseMonthlyGST({
   >(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Filters state with default dates
   const [filters, setFilters] = useState<PurchaseMonthlyFilters>({
@@ -297,50 +296,7 @@ export default function PurchaseMonthlyGST({
           <Card className="overflow-hidden">
             <CardContent className="p-1">
               <div className="flex flex-col gap-4 p-1">
-                {/* Filter Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Date Range</h3>
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {activeFiltersCount} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="h-8 text-muted-foreground"
-                      disabled={isLoading}
-                    >
-                      Reset to Default
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="h-8"
-                      disabled={isLoading}
-                    >
-                      {showFilters ? "Hide" : "Show"} Filters
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Filter Controls */}
-                <AnimatePresence>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <GstDetailsFilter
                           value={filters.gstDetails}
                           onChange={(value) =>
@@ -363,9 +319,6 @@ export default function PurchaseMonthlyGST({
                           disabled={isLoading}
                         />
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </CardContent>
           </Card>
