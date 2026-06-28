@@ -1148,69 +1148,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-heading">
-                {isEditMode ? "Edit Sales Invoice" : `Add New ${saleLabel}`}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {isEditMode
-                  ? `Editing Invoice ${generatedInvoiceNo || saleId || ""}`
-                  : generatedInvoiceNo
-                    ? `Invoice ${generatedInvoiceNo} - Saved`
-                    : `Create a new ${saleLabel.toLowerCase()} entry`}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {/* Bill Preview Button - Only visible after generation */}
-            {canShowBillPreview && (
-              <Button
-                variant="outline"
-                onClick={handleBillPreview}
-                className="gap-2"
-              >
-                <Printer className="h-4 w-4" />
-                Bill Preview
-              </Button>
-            )}
-
-            {/* New Sales Button - Visible after generation or in edit mode */}
-            {(canShowBillPreview || generatedSaleId) && (
-              <Button
-                variant="outline"
-                onClick={handleNewSales}
-                className="gap-2"
-              >
-                <FilePlus className="h-4 w-4" />
-                New {saleLabel}
-              </Button>
-            )}
-
-            {/* <Button
-              variant="outline"
-              onClick={handleBackToSales}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button> */}
-
-            <Button
-              onClick={form.handleSubmit(onSubmit, onError)}
-              disabled={isSubmitting || (isEditMode && !isDirty)}
-              className="gap-2"
-              title={isEditMode && !isDirty ? "No changes made" : ""}
-            >
-              <Save className="h-4 w-4" />
-              {isSubmitting
-                ? "Saving..."
-                : isEditMode
-                  ? "Update Sales"
-                  : `Create ${saleLabel}`}
-            </Button>
-          </div>
-        </div>
 
         {/* Show unsaved changes indicator in edit mode */}
         {isEditMode && isDirty && (

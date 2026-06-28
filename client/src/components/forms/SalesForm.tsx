@@ -770,7 +770,7 @@ export default function SalesForm({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="min-w-[99vw] max-h-[95vh] overflow-y-auto">
-          <DialogHeader>
+          {/* <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-2xl flex items-center gap-2">
                 <FileText className="h-6 w-6" />
@@ -791,7 +791,7 @@ export default function SalesForm({
                   : "View sales invoice details (read‑only)"
                 : "Create a new sales invoice"}
             </DialogDescription>
-          </DialogHeader>
+          </DialogHeader> */}
 
           <Form {...form}>
             <form

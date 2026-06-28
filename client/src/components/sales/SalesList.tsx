@@ -48,8 +48,6 @@ import {
   containerVariants,
   itemVariants,
   rowVariants,
-  headerVariants,
-  buttonVariants,
 } from "../FramerVariants";
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
@@ -127,7 +125,7 @@ export default function Sales() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Local input values (before debounce)
   const [searchInput, setSearchInput] = useState("");
@@ -136,11 +134,13 @@ export default function Sales() {
   const [maxAmountInput, setMaxAmountInput] = useState("");
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
+  const [showSearchBar, setShowSearchBar] = useState(false);
 
   // Ref to track if initial load is done
   const initialLoadDone = useRef(false);
   // Ref to track current request to prevent race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Debounced filter setters
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -195,6 +195,12 @@ export default function Sales() {
       toDate: value ? new Date(`${value}T00:00:00`) : undefined,
     }));
   };
+
+  useEffect(() => {
+    if (showSearchBar) {
+      searchInputRef.current?.focus();
+    }
+  }, [showSearchBar]);
 
   // Generic filter change for selects
   const handleFilterChange = (field: keyof SalesFilters, value: any) => {
@@ -525,7 +531,7 @@ export default function Sales() {
   return (
     <>
       <motion.div
-        className="min-h-screen bg-background p-3"
+        className="min-h-screen bg-background p-3 pb-24"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -537,86 +543,6 @@ export default function Sales() {
               : "max-w-9xl lg:max-w-5xl xl:max-w-7xl 2xl:max-w-8xl"
           }`}
         >
-          {/* Header */}
-          <motion.div
-            className="flex flex-col gap-6 mb-6 w-full"
-            variants={headerVariants}
-          >
-            <div className="flex justify-between gap-4">
-              
-
-              {/* Search Bar */}
-              <motion.div
-                className="relative w-100"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by invoice no, customer, area, van, salesman..."
-                  className="pl-10 py-6 text-base"
-                  value={searchInput}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                />
-                {searchInput && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => {
-                      setSearchInput("");
-                      handleFilterChange("search", "");
-                    }}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </motion.div>
-
-              {/* Action Buttons */}
-              <motion.div className="flex flex-wrap items-center gap-3">
-                <motion.div
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                    />
-                    Refresh
-                  </Button>
-                </motion.div>
-
-                <motion.div
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Button
-                    onClick={handleAddSales}
-                    className="gap-2 bg-primary hover:bg-primary/90"
-                    disabled={isLoading}
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Sales
-                  </Button>
-                </motion.div>
-              </motion.div>
-            </div>
-          </motion.div>
-
           {/* Filter Section */}
           <motion.div className="mb-2" variants={itemVariants}>
             <Card className="overflow-hidden">
@@ -1364,6 +1290,85 @@ export default function Sales() {
           )}
         </div>
       </motion.div>
+
+      {/* Fixed bottom-left search */}
+      <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2">
+        <AnimatePresence>
+          {showSearchBar && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative overflow-hidden"
+            >
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                type="search"
+                placeholder="Search by invoice no, customer, area..."
+                className="w-64 sm:w-80 pl-10 pr-10 h-12 rounded-full shadow-xl bg-background"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                disabled={isLoading}
+              />
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0 rounded-full"
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-background"
+          onClick={() => setShowSearchBar((prev) => !prev)}
+          disabled={isLoading}
+          aria-label={showSearchBar ? "Close search" : "Search sales"}
+        >
+          {showSearchBar ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Search className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Fixed bottom-right actions */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-background"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          aria-label="Refresh sales"
+        >
+          <RefreshCw
+            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+          />
+        </Button>
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
+          onClick={handleAddSales}
+          disabled={isLoading}
+          aria-label="Add sales"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>
 
       <SalesInvoicePreview
         open={isPreviewOpen}
