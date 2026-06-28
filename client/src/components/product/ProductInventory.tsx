@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -47,8 +47,6 @@ import {
   containerVariants,
   itemVariants,
   rowVariants,
-  headerVariants,
-  buttonVariants,
   badgeVariants,
 } from "../FramerVariants";
 import ProductFormModal from "@/components/forms/ProductForm";
@@ -127,6 +125,8 @@ export default function ProductInventory() {
   const [maxStockInput, setMaxStockInput] = useState<string>("");
   const [brandOpen, setBrandOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -174,6 +174,12 @@ export default function ProductInventory() {
     setMaxStockInput(value);
     debouncedSetMaxStock(value);
   };
+
+  useEffect(() => {
+    if (showSearchBar) {
+      searchInputRef.current?.focus();
+    }
+  }, [showSearchBar]);
 
   const { productCompanies, groups } = useActiveLists();
 
@@ -523,7 +529,7 @@ export default function ProductInventory() {
   return (
     <>
       <motion.div
-        className="min-h-screen bg-background p-3"
+        className="min-h-screen bg-background p-3 pb-24"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -535,86 +541,6 @@ export default function ProductInventory() {
               : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
           }`}
         >
-          {/* Header (unchanged) */}
-          <motion.div
-            className="flex flex-col gap-6 mb-6 w-full"
-            variants={headerVariants}
-          >
-            <div className="flex justify-between gap-4">
-              
-
-              {/* Search Bar */}
-              <motion.div
-                className="relative w-100"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Search className="absolute left-3 top-6 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search products by name, brand, barcode, HSN Code, or group..."
-                  className="pl-10 py-6 text-base"
-                  value={searchInput}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                />
-                {searchInput && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => {
-                      setSearchInput("");
-                      handleFilterChange("search", "");
-                    }}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </motion.div>
-
-              {/* Action Buttons */}
-              <motion.div className="flex flex-wrap items-center gap-3">
-                <motion.div
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                    />
-                    Refresh
-                  </Button>
-                </motion.div>
-
-                <motion.div
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Button
-                    onClick={handleAddProduct}
-                    className="gap-2 bg-primary hover:bg-primary/90"
-                    disabled={isLoading}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                  </Button>
-                </motion.div>
-              </motion.div>
-            </div>
-          </motion.div>
-
           {/* Filter Section */}
           <motion.div className="mb-2" variants={itemVariants}>
             <Card className="overflow-hidden">
@@ -1298,6 +1224,85 @@ export default function ProductInventory() {
           )}
         </div>
       </motion.div>
+
+      {/* Fixed bottom-left search */}
+      <div className="fixed bottom-6 left-20 z-50 flex items-center gap-2">
+        <AnimatePresence>
+          {showSearchBar && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative overflow-hidden"
+            >
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                type="search"
+                placeholder="Search products by name, brand..."
+                className="w-64 sm:w-80 pl-10 pr-10 h-12 rounded-full shadow-xl bg-background"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                disabled={isLoading}
+              />
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0 rounded-full"
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-background"
+          onClick={() => setShowSearchBar((prev) => !prev)}
+          disabled={isLoading}
+          aria-label={showSearchBar ? "Close search" : "Search products"}
+        >
+          {showSearchBar ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Search className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Fixed bottom-right actions */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-background"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          aria-label="Refresh products"
+        >
+          <RefreshCw
+            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+          />
+        </Button>
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
+          onClick={handleAddProduct}
+          disabled={isLoading}
+          aria-label="Add product"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>
 
       {/* Product Form Modal */}
       <ProductFormModal
