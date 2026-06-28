@@ -1,13 +1,8 @@
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState } from "react";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { cn } from "@/lib/utils";
-import { gst_details } from "@/store/dropdown_data/gst_details";
+import { gst_details, getGstDetailsLabel } from "@/store/dropdown_data/gst_details";
 
 interface GstDetailsFilterProps {
   value?: string;
@@ -23,33 +18,47 @@ export default function GstDetailsFilter({
   value,
   onChange,
   disabled = false,
-  label = "GST Details",
   allLabel = "All GST Types",
-  placeholder = "Select GST details",
+  placeholder = "GST Details",
   className,
 }: GstDetailsFilterProps) {
+  const [open, setOpen] = useState(false);
+  const displayValue = value ? getGstDetailsLabel(value) : "";
+
   return (
-    <div className={cn("space-y-2", className)}>
-      <Label className="text-sm font-medium">{label}</Label>
-      <Select
-        value={value ?? "all"}
-        onValueChange={(nextValue) =>
-          onChange(nextValue === "all" ? undefined : nextValue)
-        }
+    <div className={cn(className)}>
+      <InlineSearchField
+        open={open}
+        onOpenChange={setOpen}
+        displayValue={displayValue}
+        placeholder={placeholder}
+        emptyMessage="No GST type found."
         disabled={disabled}
       >
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{allLabel}</SelectItem>
+        <CommandGroup>
+          <CommandItem
+            value="all gst types"
+            onSelect={() => {
+              onChange(undefined);
+              setOpen(false);
+            }}
+          >
+            {allLabel}
+          </CommandItem>
           {gst_details.map((gst) => (
-            <SelectItem key={gst.id} value={String(gst.id)}>
+            <CommandItem
+              key={gst.id}
+              value={`${gst.id} ${gst.type}`}
+              onSelect={() => {
+                onChange(String(gst.id));
+                setOpen(false);
+              }}
+            >
               {gst.type}
-            </SelectItem>
+            </CommandItem>
           ))}
-        </SelectContent>
-      </Select>
+        </CommandGroup>
+      </InlineSearchField>
     </div>
   );
 }

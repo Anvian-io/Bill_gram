@@ -26,6 +26,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -38,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import VanForm, { type VanFormData } from "@/components/forms/VanForm";
 import {
@@ -340,6 +342,7 @@ export default function VanComponent() {
         await vanService.createVan(data);
         toast.success("Van created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchVans(); // Refresh the list
     } catch (error: any) {
@@ -369,6 +372,7 @@ export default function VanComponent() {
       try {
         await vanService.deleteVan(vanToDelete.id);
         toast.success("Van deleted successfully!");
+        void refreshActiveLists();
         fetchVans(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete van", {
@@ -566,14 +570,11 @@ export default function VanComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Name Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="name" className="text-sm font-medium">
-                            Van Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="name"
-                              placeholder="Enter van name"
+                              placeholder="Van Name"
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
@@ -597,17 +598,11 @@ export default function VanComponent() {
                         </div>
 
                         {/* Vehicle Number Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="vehicleNo"
-                            className="text-sm font-medium"
-                          >
-                            Vehicle Number
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="vehicleNo"
-                              placeholder="DL01AB1234"
+                              placeholder="Vehicle Number"
                               value={vehicleNoInput}
                               onChange={(e) =>
                                 handleVehicleNoChange(e.target.value)
@@ -633,17 +628,11 @@ export default function VanComponent() {
                         </div>
 
                         {/* Model Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="model"
-                            className="text-sm font-medium"
-                          >
-                            Model
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="model"
-                              placeholder="Enter model"
+                              placeholder="Model"
                               value={modelInput}
                               onChange={(e) =>
                                 handleModelChange(e.target.value)
@@ -669,14 +658,11 @@ export default function VanComponent() {
                         </div>
 
                         {/* Area Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="area" className="text-sm font-medium">
-                            Area
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="area"
-                              placeholder="Enter area"
+                              placeholder="Area"
                               value={areaInput}
                               onChange={(e) => handleAreaChange(e.target.value)}
                               className="flex-1"
@@ -700,14 +686,11 @@ export default function VanComponent() {
                         </div>
 
                         {/* City Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm font-medium">
-                            City
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="city"
-                              placeholder="Enter city"
+                              placeholder="City"
                               value={cityInput}
                               onChange={(e) => handleCityChange(e.target.value)}
                               className="flex-1"
@@ -731,40 +714,19 @@ export default function VanComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

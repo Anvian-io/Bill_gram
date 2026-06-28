@@ -26,6 +26,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -38,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import UnitForm from "@/components/forms/UnitForm";
 import {
@@ -313,6 +315,7 @@ export default function UnitComponent() {
         await unitService.createUnit(data);
         toast.success("Unit created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchUnits(); // Refresh the list
     } catch (error: any) {
@@ -343,6 +346,7 @@ export default function UnitComponent() {
         // console.log("Deleting unit with ID:", unitToDelete);
         await unitService.deleteUnit(unitToDelete.id);
         toast.success("Unit deleted successfully!");
+        void refreshActiveLists();
         fetchUnits(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete unit", {
@@ -365,6 +369,7 @@ export default function UnitComponent() {
     try {
       const result = await unitService.bulkDeleteUnits(selectedUnits);
       toast.success(result.message);
+      void refreshActiveLists();
       fetchUnits(); // Refresh the list
       setSelectedUnits([]);
       setBulkDeleteOpen(false);
@@ -577,17 +582,11 @@ export default function UnitComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Unit Name Filter - FIXED: Now uses local state */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="unitName"
-                            className="text-sm font-medium"
-                          >
-                            Unit Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="unitName"
-                              placeholder="Enter unit name"
+                              placeholder="Unit Name"
                               value={localName}
                               onChange={handleNameChange}
                               className="flex-1"
@@ -608,17 +607,11 @@ export default function UnitComponent() {
                         </div>
 
                         {/* Symbol Filter - FIXED: Now uses local state */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="symbol"
-                            className="text-sm font-medium"
-                          >
-                            Symbol
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="symbol"
-                              placeholder="Enter symbol"
+                              placeholder="Symbol"
                               value={localSymbol}
                               onChange={handleSymbolChange}
                               className="flex-1"
@@ -639,40 +632,19 @@ export default function UnitComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

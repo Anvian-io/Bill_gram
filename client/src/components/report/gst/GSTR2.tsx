@@ -133,6 +133,7 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
@@ -275,9 +276,20 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
   ].filter((v) => v !== undefined && v !== null).length;
 
   const getSupplierName = (id?: number) => {
-    if (!id) return "All Suppliers";
+    if (!id) return "";
     const supplier = suppliers.find((s) => s.id === id);
-    return supplier ? supplier.name : "Select Supplier";
+    return supplier ? supplier.name : "";
+  };
+
+  const getSortByLabel = (sortBy: string) => {
+    const labels: Record<string, string> = {
+      invoiceDate: "Invoice Date",
+      invoiceNo: "Invoice No",
+      grossAmount: "Gross Amount",
+      finalAmount: "Final Amount",
+      createdAt: "Created At",
+    };
+    return labels[sortBy] ?? "";
   };
 
   const formatAmount = (amount: number) => amount.toFixed(2);
@@ -369,13 +381,12 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Supplier</Label>
+                        <div>
                           <InlineSearchField
                             open={supplierOpen}
                             onOpenChange={setSupplierOpen}
                             displayValue={getSupplierName(filters.supplierId)}
-                            placeholder="Search suppliers..."
+                            placeholder="Supplier"
                             emptyMessage="No supplier found."
                             disabled={isLoading}
                           >
@@ -428,39 +439,76 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
                         />
 
                         <CustomDateInput
-                          label="From Date"
                           value={fromDateValue}
                           onChange={handleFromDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="From Date"
                           disabled={isLoading}
                         />
 
                         <CustomDateInput
-                          label="To Date"
                           value={toDateValue}
                           onChange={handleToDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="To Date"
                           disabled={isLoading}
                         />
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Sort By</Label>
-                          <Select
-                            value={filters.sortBy}
-                            onValueChange={(value) => handleFilterChange("sortBy", value)}
+                        <div>
+                          <InlineSearchField
+                            open={sortOpen}
+                            onOpenChange={setSortOpen}
+                            displayValue={getSortByLabel(filters.sortBy ?? "")}
+                            placeholder="Sort By"
+                            emptyMessage="No sort option found."
                             disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sort by..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="invoiceDate">Invoice Date</SelectItem>
-                              <SelectItem value="invoiceNo">Invoice No</SelectItem>
-                              <SelectItem value="grossAmount">Gross Amount</SelectItem>
-                              <SelectItem value="finalAmount">Final Amount</SelectItem>
-                              <SelectItem value="createdAt">Created At</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <CommandGroup>
+                              <CommandItem
+                                value="invoiceDate"
+                                onSelect={() => {
+                                  handleFilterChange("sortBy", "invoiceDate");
+                                  setSortOpen(false);
+                                }}
+                              >
+                                Invoice Date
+                              </CommandItem>
+                              <CommandItem
+                                value="invoiceNo"
+                                onSelect={() => {
+                                  handleFilterChange("sortBy", "invoiceNo");
+                                  setSortOpen(false);
+                                }}
+                              >
+                                Invoice No
+                              </CommandItem>
+                              <CommandItem
+                                value="grossAmount"
+                                onSelect={() => {
+                                  handleFilterChange("sortBy", "grossAmount");
+                                  setSortOpen(false);
+                                }}
+                              >
+                                Gross Amount
+                              </CommandItem>
+                              <CommandItem
+                                value="finalAmount"
+                                onSelect={() => {
+                                  handleFilterChange("sortBy", "finalAmount");
+                                  setSortOpen(false);
+                                }}
+                              >
+                                Final Amount
+                              </CommandItem>
+                              <CommandItem
+                                value="createdAt"
+                                onSelect={() => {
+                                  handleFilterChange("sortBy", "createdAt");
+                                  setSortOpen(false);
+                                }}
+                              >
+                                Created At
+                              </CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
                       </div>
                     </motion.div>

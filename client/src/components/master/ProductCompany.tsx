@@ -30,6 +30,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -42,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import ProductCompanyForm, {
   type ProductCompanyFormData,
@@ -320,6 +322,7 @@ export default function ProductCompanyComponent() {
         await productCompanyService.createProductCompany(formData);
         toast.success("Company created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchCompanies(); // Refresh the list
     } catch (error: any) {
@@ -354,6 +357,7 @@ export default function ProductCompanyComponent() {
       try {
         await productCompanyService.deleteProductCompany(companyToDelete.id);
         toast.success("Company deleted successfully!");
+        void refreshActiveLists();
         fetchCompanies(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete company", {
@@ -559,17 +563,11 @@ export default function ProductCompanyComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Company Name Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="companyName"
-                            className="text-sm font-medium"
-                          >
-                            Company Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="companyName"
-                              placeholder="Enter company name"
+                              placeholder="Company Name"
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
@@ -593,17 +591,11 @@ export default function ProductCompanyComponent() {
                         </div>
 
                         {/* Contact Person Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="contactPerson"
-                            className="text-sm font-medium"
-                          >
-                            Contact Person
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="contactPerson"
-                              placeholder="Enter contact person"
+                              placeholder="Contact Person"
                               value={contactPersonInput}
                               onChange={(e) =>
                                 handleContactPersonChange(e.target.value)
@@ -629,17 +621,11 @@ export default function ProductCompanyComponent() {
                         </div>
 
                         {/* Email Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="email"
-                            className="text-sm font-medium"
-                          >
-                            Email
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="email"
-                              placeholder="Enter email"
+                              placeholder="Email"
                               value={emailInput}
                               onChange={(e) =>
                                 handleEmailChange(e.target.value)
@@ -665,40 +651,19 @@ export default function ProductCompanyComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

@@ -268,9 +268,9 @@ export default function PurchaseRegister() {
   const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
 
   const getSupplierName = (id?: number) => {
-    if (!id) return "All Suppliers";
+    if (!id) return "";
     const supplier = suppliers.find((s) => s.id === id);
-    return supplier ? supplier.name : "Select Supplier";
+    return supplier ? supplier.name : "";
   };
 
   const formatDate = (dateString: string) => {
@@ -415,12 +415,9 @@ export default function PurchaseRegister() {
                       <div className="flex flex-wrap items-end gap-3 pt-2">
                         {/* Invoice No */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
-                            Invoice No
-                          </Label>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search by invoice no..."
+                            <Input placeholder="Invoice No"
                               className="pl-8 h-8 text-xs rounded-sm"
                               value={invoiceNoInput}
                               onChange={(e) =>
@@ -442,14 +439,11 @@ export default function PurchaseRegister() {
 
                         {/* Supplier */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
-                            Supplier
-                          </Label>
                           <InlineSearchField
                             open={supplierOpen}
                             onOpenChange={setSupplierOpen}
                             displayValue={getSupplierName(filters.supplierId)}
-                            placeholder="Search suppliers..."
+                            placeholder="Supplier"
                             emptyMessage="No supplier found."
                             disabled={isLoading}
                           >
@@ -511,20 +505,18 @@ export default function PurchaseRegister() {
 
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
                           <CustomDateInput
-                            label="From Date"
                             value={fromDateValue}
                             onChange={handleFromDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="From Date"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
                           <CustomDateInput
-                            label="To Date"
                             value={toDateValue}
                             onChange={handleToDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="To Date"
                             disabled={isLoading}
                           />
                         </div>

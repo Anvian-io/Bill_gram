@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  ChevronRight,
-  // Package,
   Layers,
   Ruler,
   Building,
@@ -13,11 +11,10 @@ import {
   MapPin,
   Truck,
   CreditCard,
-  // Wallet,
-  // Banknote,
-  // PieChart,
+  Pin,
+  PinOff,
+  Menu,
 } from "lucide-react";
-// import ProductInventory from "./ProductInventory";
 import ProductGroup from "../components/master/ProductGroup";
 import Unit from "../components/master/Unit";
 import ProductCompany from "../components/master/ProductCompany";
@@ -27,6 +24,8 @@ import Area from "../components/master/Area";
 import Van from "../components/master/Van";
 import Account from "../components/master/Account";
 import Supplier from "@/components/master/Supplier";
+import { cn } from "@/lib/utils";
+
 interface SidebarItem {
   id: string;
   label: string;
@@ -36,19 +35,28 @@ interface SidebarItem {
   category?: string;
 }
 
+const PINNED_MASTER_KEY = "pinnedMasterNavItems";
+
 export default function MasterInventory() {
   const [activeSection, setActiveSection] = useState<string>("product-group");
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(PINNED_MASTER_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const sidebarItems: SidebarItem[] = [
-    // Product Management
     {
       id: "product-group",
       label: "Product Group",
       icon: <Layers className="h-5 w-5" />,
       component: <ProductGroup />,
-      badge: 25,
+      // badge: 25,
       category: "product",
     },
     {
@@ -56,7 +64,7 @@ export default function MasterInventory() {
       label: "Unit",
       icon: <Ruler className="h-5 w-5" />,
       component: <Unit />,
-      badge: 15,
+      // badge: 15,
       category: "product",
     },
     {
@@ -64,7 +72,7 @@ export default function MasterInventory() {
       label: "Product Company",
       icon: <Building className="h-5 w-5" />,
       component: <ProductCompany />,
-      badge: 42,
+      // badge: 42,
       category: "product",
     },
     {
@@ -72,16 +80,15 @@ export default function MasterInventory() {
       label: "Supplier",
       icon: <Building className="h-5 w-5" />,
       component: <Supplier />,
-      badge: 12,
+      // badge: 12,
       category: "sales",
     },
-    // Sales Management
     {
       id: "salesman",
       label: "Salesman",
       icon: <Users className="h-5 w-5" />,
       component: <Salesman />,
-      badge: 8,
+      // badge: 8,
       category: "sales",
     },
     {
@@ -89,7 +96,7 @@ export default function MasterInventory() {
       label: "Customer",
       icon: <UserCircle className="h-5 w-5" />,
       component: <Customer />,
-      badge: 156,
+      // badge: 156,
       category: "sales",
     },
     {
@@ -97,7 +104,7 @@ export default function MasterInventory() {
       label: "Area",
       icon: <MapPin className="h-5 w-5" />,
       component: <Area />,
-      badge: 24,
+      // badge: 24,
       category: "sales",
     },
     {
@@ -105,22 +112,19 @@ export default function MasterInventory() {
       label: "Van",
       icon: <Truck className="h-5 w-5" />,
       component: <Van />,
-      badge: 12,
+      // badge: 12,
       category: "sales",
     },
-
-    // Account Management
     {
       id: "account",
       label: "Account",
       icon: <CreditCard className="h-5 w-5" />,
       component: <Account />,
-      badge: 36,
+      // badge: 36,
       category: "finance",
     },
   ];
 
-  // Category sections
   const categories = [
     { id: "all", label: "All", color: "bg-blue-100 text-blue-800" },
     { id: "product", label: "Product", color: "bg-green-100 text-green-800" },
@@ -128,168 +132,160 @@ export default function MasterInventory() {
     { id: "finance", label: "Finance", color: "bg-amber-100 text-amber-800" },
   ];
 
-  const filteredItems =
+  useEffect(() => {
+    localStorage.setItem(PINNED_MASTER_KEY, JSON.stringify(pinnedItems));
+  }, [pinnedItems]);
+
+  const filteredItems = (
     activeCategory === "all"
       ? sidebarItems
-      : sidebarItems.filter((item) => item.category === activeCategory);
+      : sidebarItems.filter((item) => item.category === activeCategory)
+  ).sort((a, b) => {
+    const aPinned = pinnedItems.includes(a.id);
+    const bPinned = pinnedItems.includes(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
 
-  const activeItem = sidebarItems.find((item) => item.id === activeSection);
-
-  // Animation variants
-  const sidebarVariants = {
-    collapsed: { width: 70, transition: { duration: 0.3 } },
-    expanded: { width: 280, transition: { duration: 0.3 } },
-  };
-
-  const contentVariants = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  const togglePinItem = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPinnedItems((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] bg-background">
-      {/* Left Sidebar */}
-      <motion.div
-        className={`flex-shrink-0 border-r border-border bg-card ${
-          isCollapsed ? "overflow-hidden" : ""
-        }`}
-        animate={isCollapsed ? "collapsed" : "expanded"}
-        variants={sidebarVariants}
+    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-background">
+      <motion.aside
+        className="relative shrink-0 h-full border-r border-border bg-card shadow-sm z-20 overflow-hidden"
+        animate={{ width: isExpanded ? 280 : 72 }}
         initial={false}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
       >
-        <div className="h-full py-4 px-3">
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between mb-6 px-2">
-            {!isCollapsed && (
-              <motion.h2
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-lg font-semibold text-foreground"
-              >
-                Master Data
-              </motion.h2>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1.5 rounded-md hover:bg-secondary"
+        <div className="flex h-full flex-col py-4 px-2">
+          <div className="mb-4 flex items-center px-2 h-10">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15 shrink-0">
+              <Menu className="h-5 w-5 text-foreground" />
+            </div>
+            <span
+              className={cn(
+                "ml-3 font-semibold text-foreground whitespace-nowrap transition-opacity duration-300",
+                isExpanded ? "opacity-100" : "opacity-0",
+              )}
             >
-              <ChevronRight
-                className={`h-4 w-4 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </motion.button>
+              Master Data
+            </span>
           </div>
 
-          {/* Category Filter */}
-          {!isCollapsed && (
+          {/* {isExpanded && (
             <motion.div
-              className="mb-6"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 px-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
             >
-              <div className="flex gap-1 mb-4 overflow-x-auto pb-2">
+              <div className="flex gap-1 overflow-x-auto pb-2">
                 {categories.map((category) => (
                   <button
                     key={category.id}
+                    type="button"
                     onClick={() => setActiveCategory(category.id)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap",
                       activeCategory === category.id
                         ? category.color
-                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                    }`}
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                    )}
                   >
                     {category.label}
                   </button>
                 ))}
               </div>
             </motion.div>
-          )}
+          )} */}
 
-          {/* Sidebar Items */}
-          <nav className="space-y-1">
-            {filteredItems.map((item) => (
-              <motion.button
-                key={item.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                  activeSection === item.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "hover:bg-secondary text-foreground"
-                }`}
-              >
-                <div className="flex-shrink-0">{item.icon}</div>
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden space-y-1">
+            {filteredItems.map((item) => {
+              const isActive = activeSection === item.id;
+              const isPinned = pinnedItems.includes(item.id);
 
-                <AnimatePresence>
-                  {!isCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="flex items-center justify-between flex-1 overflow-hidden"
-                    >
-                      <span className="text-sm font-medium truncate">
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <Badge
-                          variant={
-                            activeSection === item.id ? "secondary" : "outline"
-                          }
-                          className="ml-2"
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            ))}
-          </nav>
-
-          {/* Collapsed View Labels */}
-          {isCollapsed && (
-            <div className="absolute left-full top-0 ml-2 mt-4">
-              {sidebarItems.map((item) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="absolute"
-                  style={{
-                    top: `${sidebarItems.indexOf(item) * 60 + 20}px`,
-                  }}
-                >
-                  <div className="bg-popover text-popover-foreground px-3 py-2 rounded-md shadow-lg text-sm whitespace-nowrap">
-                    {item.label}
-                    {item.badge && (
-                      <Badge className="ml-2" variant="secondary">
-                        {item.badge}
-                      </Badge>
+              return (
+                <div key={item.id} className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                      isActive
+                        ? "text-primary bg-primary/10 border border-primary/20"
+                        : "text-foreground hover:text-primary hover:bg-primary/10",
                     )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.div>
+                  >
+                    <div className="shrink-0">{item.icon}</div>
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: "auto" }}
+                          exit={{ opacity: 0, width: 0 }}
+                          className="flex items-center justify-between flex-1 overflow-hidden"
+                        >
+                          <span className="text-sm font-medium truncate">
+                            {item.label}
+                          </span>
+                          {/* {item.badge !== undefined && (
+                            <Badge
+                              variant={isActive ? "secondary" : "outline"}
+                              className="ml-2"
+                            >
+                              {item.badge}
+                            </Badge>
+                          )} */}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </button>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-auto">
+                  {isExpanded && (
+                    <button
+                      type="button"
+                      onClick={(e) => togglePinItem(item.id, e)}
+                      className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all",
+                        isPinned
+                          ? "text-primary bg-primary/10"
+                          : "text-muted-foreground hover:text-primary hover:bg-primary/10",
+                      )}
+                      title={isPinned ? "Unpin item" : "Pin item"}
+                    >
+                      {isPinned ? (
+                        <Pin className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <PinOff className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </div>
+      </motion.aside>
+
+      <div className="flex-1 min-w-0 overflow-auto">
         <div className="h-full p-1">
           <Card className="border-none shadow-sm h-full">
             <CardContent className="h-full p-0">
               {sidebarItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`h-full ${activeSection === item.id ? "block" : "hidden"}`}
+                  className={cn(
+                    "h-full",
+                    activeSection === item.id ? "block" : "hidden",
+                  )}
                 >
                   {item.component}
                 </div>

@@ -26,6 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { format } from "date-fns";
 import { CustomDateInput } from "@/components/custom_ui";
 import {
@@ -45,6 +47,7 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [sourceOpen, setSourceOpen] = useState(false);
 
   const [filters, setFilters] = useState<HSNSummaryFilters>({
     source: "all",
@@ -260,39 +263,36 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
                           disabled={isLoading}
                         />
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Data Type</Label>
-                          <Select
-                            value={filters.source}
-                            onValueChange={(value: "all" | "sales" | "purchase") =>
-                              setFilters((prev) => ({ ...prev, source: value }))
+                        <div>
+                          <InlineSearchField
+                            open={sourceOpen}
+                            onOpenChange={setSourceOpen}
+                            displayValue={
+                              filters.source === "all" ? "" : filters.source === "sales" ? "Sales" : "Purchase"
                             }
+                            placeholder="Data Type"
+                            emptyMessage="No data type found."
                             disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select source..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All</SelectItem>
-                              <SelectItem value="sales">Sales</SelectItem>
-                              <SelectItem value="purchase">Purchase</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <CommandGroup>
+                              <CommandItem value="all" onSelect={() => { setFilters((prev) => ({ ...prev, source: "all" })); setSourceOpen(false); }}>All</CommandItem>
+                              <CommandItem value="sales" onSelect={() => { setFilters((prev) => ({ ...prev, source: "sales" })); setSourceOpen(false); }}>Sales</CommandItem>
+                              <CommandItem value="purchase" onSelect={() => { setFilters((prev) => ({ ...prev, source: "purchase" })); setSourceOpen(false); }}>Purchase</CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
                         <CustomDateInput
-                          label="From Date"
                           value={fromDateValue}
                           onChange={handleFromDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="From Date"
                           disabled={isLoading}
                         />
 
                         <CustomDateInput
-                          label="To Date"
                           value={toDateValue}
                           onChange={handleToDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="To Date"
                           disabled={isLoading}
                         />
                       </div>

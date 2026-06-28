@@ -9,7 +9,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -43,6 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
@@ -423,25 +423,32 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   }, [idParam, isReturnMode, setSearchParams]);
 
   useEffect(() => {
-    if (!invoiceSearchQuery.trim()) {
-      setInvoiceSearchResults([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setIsSearchingInvoice(true);
-      try {
-        const result = await salesService.getSales(1, 15, {
-          search: invoiceSearchQuery.trim(),
-        } as Parameters<typeof salesService.getSales>[2]);
-        setInvoiceSearchResults(result.sales ?? []);
-      } catch {
-        setInvoiceSearchResults([]);
-      } finally {
-        setIsSearchingInvoice(false);
-      }
-    }, 400);
+    if (!invoiceSearchHover.open) return;
+
+    const query = invoiceSearchQuery.trim();
+    const timer = setTimeout(
+      async () => {
+        setIsSearchingInvoice(true);
+        try {
+          const result = await salesService.getSales(
+            1,
+            15,
+            (query ? { search: query } : {}) as Parameters<
+              typeof salesService.getSales
+            >[2],
+          );
+          setInvoiceSearchResults(result.sales ?? []);
+        } catch {
+          setInvoiceSearchResults([]);
+        } finally {
+          setIsSearchingInvoice(false);
+        }
+      },
+      query ? 400 : 0,
+    );
+
     return () => clearTimeout(timer);
-  }, [invoiceSearchQuery]);
+  }, [invoiceSearchQuery, invoiceSearchHover.open]);
 
   // Load sale data if editing
   useEffect(() => {
@@ -918,8 +925,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
         } else {
           nextFieldId = `productSearch-${index - 1}`;
         }
-      }
-      else if (field === "schPercent") nextFieldId = `taxRate-${index}`;
+      } else if (field === "schPercent") nextFieldId = `taxRate-${index}`;
       else if (field === "taxRate") {
         if (index === 0) {
           addProductRow();
@@ -930,7 +936,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       }
       if (nextFieldId) {
         setTimeout(() => {
-          const nextElement = document.getElementById(nextFieldId) as HTMLElement;
+          const nextElement = document.getElementById(
+            nextFieldId,
+          ) as HTMLElement;
           if (nextElement) {
             nextElement.focus();
             if (nextElement instanceof HTMLInputElement) {
@@ -1005,9 +1013,13 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
           form.reset(data, { keepDirty: false });
         }
       }
+      void refreshActiveLists();
     } catch (error: any) {
       console.error("Error in form submission:", error);
-      toast.error(error.message || `Failed to save ${saleLabel.toLowerCase()}. Please try again.`);
+      toast.error(
+        error.message ||
+          `Failed to save ${saleLabel.toLowerCase()}. Please try again.`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1032,7 +1044,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   };
 
   const handleBillPreview = () => {
-    const idToPreview = Number(isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0);
+    const idToPreview = Number(
+      isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0,
+    );
     if (idToPreview > 0) {
       setPreviewSaleId(idToPreview);
       setIsPreviewOpen(true);
@@ -1108,7 +1122,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   };
 
   // Determine if bill preview should be visible
-  const canShowBillPreview = isReturnMode ? !!generatedSaleId : !!saleId || !!generatedSaleId;
+  const canShowBillPreview = isReturnMode
+    ? !!generatedSaleId
+    : !!saleId || !!generatedSaleId;
   const isEditMode = !isReturnMode && !!saleId && !isNew;
 
   // Determine if update button should be enabled (only in edit mode when dirty)
@@ -1227,16 +1243,13 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {!isReturnMode && (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="text-sm">Search Invoice</FormLabel>
                       <InlineSearchField
                         open={invoiceSearchHover.open}
                         onOpenChange={invoiceSearchHover.setOpen}
-                        displayValue={
-                          invoiceSearchQuery || "Search by invoice number..."
-                        }
+                        displayValue={invoiceSearchQuery}
                         searchValue={invoiceSearchQuery}
                         onSearchChange={setInvoiceSearchQuery}
-                        placeholder="Type invoice number..."
+                        placeholder="Search Invoice"
                         emptyMessage={
                           isSearchingInvoice
                             ? "Searching..."
@@ -1281,9 +1294,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="phoneNo"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">
-                          Search by Phone
-                        </FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={phoneHover.open}
@@ -1291,9 +1301,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             displayValue={
                               field.value
                                 ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
-                                : "Search phone number..."
+                                : ""
                             }
-                            placeholder="Search phone numbers..."
+                            placeholder="Search by Phone"
                             emptyMessage="No customer found."
                             onMouseEnter={phoneHover.onMouseEnter}
                             onMouseLeave={phoneHover.onMouseLeave}
@@ -1345,9 +1355,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="invoiceDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">
-                          Invoice Date *
-                        </FormLabel>
                         <FormControl>
                           <HoverDateInput
                             value={field.value ?? ""}
@@ -1357,6 +1364,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                 shouldDirty: true,
                               });
                             }}
+                            placeholder="Invoice Date *"
                             inputClassName="pl-10"
                             disabled={isSubmitting}
                           />
@@ -1372,51 +1380,52 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="areaId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Area *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={areaHover.open}
                             onOpenChange={areaHover.setOpen}
-                            displayValue={field.value
-                                  ? findAreaName(field.value)
-                                  : "Select area"}
-                            placeholder="Search areas..."
+                            displayValue={
+                              field.value
+                                ? findAreaName(field.value)
+                                : ""
+                            }
+                            placeholder="Area *"
                             emptyMessage="No area found."
                             onMouseEnter={areaHover.onMouseEnter}
                             onMouseLeave={areaHover.onMouseLeave}
                             disabled={isSubmitting}
                           >
                             <CommandGroup>
-                                  {areas.map((area) => (
-                                    <CommandItem
-                                      key={area.id}
-                                      value={`${area.id} ${area.name} ${area.city || ""}`}
-                                      onSelect={() => {
-                                        handleAreaSelect(area.id);
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {area.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {area.city && `${area.city}, `}
-                                          {area.state ||
-                                            area.region ||
-                                            area.description}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          area.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={`${area.id} ${area.name} ${area.city || ""}`}
+                                  onSelect={() => {
+                                    handleAreaSelect(area.id);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {area.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {area.city && `${area.city}, `}
+                                      {area.state ||
+                                        area.region ||
+                                        area.description}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      area.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1430,15 +1439,16 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="customerId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Customer *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={customerHover.open}
                             onOpenChange={customerHover.setOpen}
-                            displayValue={field.value
-                                  ? findCustomerName(field.value)
-                                  : "Select customer"}
-                            placeholder="Search customers..."
+                            displayValue={
+                              field.value
+                                ? findCustomerName(field.value)
+                                : ""
+                            }
+                            placeholder="Customer *"
                             emptyMessage={
                               areaId
                                 ? "No customer found in this area."
@@ -1449,39 +1459,37 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             disabled={isSubmitting || !areaId}
                           >
                             <CommandGroup>
-                                  {filteredCustomers.map(
-                                    (customer: Customer) => (
-                                      <CommandItem
-                                        key={customer.id}
-                                        value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
-                                        onSelect={() => {
-                                          handleCustomerSelect(customer.id);
-                                          customerHover.setOpen(false);
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span className="font-medium">
-                                            {customer.companyName ||
-                                              customer.personName}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {customer.phoneNo &&
-                                              `${customer.phoneNo} • `}
-                                            {customer.city || customer.address}
-                                          </span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            customer.id === field.value
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ),
-                                  )}
-                                </CommandGroup>
+                              {filteredCustomers.map((customer: Customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    handleCustomerSelect(customer.id);
+                                    customerHover.setOpen(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {customer.companyName ||
+                                        customer.personName}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {customer.phoneNo &&
+                                        `${customer.phoneNo} • `}
+                                      {customer.city || customer.address}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      customer.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1495,12 +1503,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">Address *</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Customer address"
+                              placeholder="Address *"
                               className="pl-10"
                               {...field}
                               onChange={(e) => {
@@ -1525,52 +1532,53 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="vanId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Van *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={vanHover.open}
                             onOpenChange={vanHover.setOpen}
-                            displayValue={field.value
-                                  ? findVanName(field.value)
-                                  : "Select van"}
-                            placeholder="Search vans..."
+                            displayValue={
+                              field.value
+                                ? findVanName(field.value)
+                                : ""
+                            }
+                            placeholder="Van *"
                             emptyMessage="No van found."
                             onMouseEnter={vanHover.onMouseEnter}
                             onMouseLeave={vanHover.onMouseLeave}
                             disabled={isSubmitting}
                           >
                             <CommandGroup>
-                                  {vans.map((van) => (
-                                    <CommandItem
-                                      key={van.id}
-                                      value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
-                                      onSelect={() => {
-                                        field.onChange(van.id);
-                                        form.clearErrors(["vanId"]);
-                                        vanHover.setOpen(false);
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {van.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {van.vehicleNo &&
-                                            `Vehicle: ${van.vehicleNo} • `}
-                                          {van.model && `Model: ${van.model}`}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          van.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {vans.map((van) => (
+                                <CommandItem
+                                  key={van.id}
+                                  value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
+                                  onSelect={() => {
+                                    field.onChange(van.id);
+                                    form.clearErrors(["vanId"]);
+                                    vanHover.setOpen(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {van.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {van.vehicleNo &&
+                                        `Vehicle: ${van.vehicleNo} • `}
+                                      {van.model && `Model: ${van.model}`}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      van.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1584,15 +1592,16 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="salesmanId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Salesman *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={salesmanHover.open}
                             onOpenChange={salesmanHover.setOpen}
-                            displayValue={field.value
-                                  ? findSalesmanName(field.value)
-                                  : "Select salesman"}
-                            placeholder="Search salesmen..."
+                            displayValue={
+                              field.value
+                                ? findSalesmanName(field.value)
+                                : ""
+                            }
+                            placeholder="Salesman *"
                             emptyMessage={
                               areaId
                                 ? "No salesman found in this area."
@@ -1603,39 +1612,38 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             disabled={isSubmitting || !areaId}
                           >
                             <CommandGroup>
-                                  {filteredSalesmen.map((salesman: any) => (
-                                    <CommandItem
-                                      key={salesman.id}
-                                      value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
-                                      onSelect={() => {
-                                        field.onChange(salesman.id);
-                                        form.clearErrors(["salesmanId"]);
-                                        salesmanHover.setOpen(false);
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {salesman.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {salesman.phoneNo &&
-                                            `${salesman.phoneNo} • `}
-                                          {salesman.email &&
-                                            `${salesman.email} • `}
-                                          {salesman.areaId}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          salesman.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {filteredSalesmen.map((salesman: any) => (
+                                <CommandItem
+                                  key={salesman.id}
+                                  value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    field.onChange(salesman.id);
+                                    form.clearErrors(["salesmanId"]);
+                                    salesmanHover.setOpen(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {salesman.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {salesman.phoneNo &&
+                                        `${salesman.phoneNo} • `}
+                                      {salesman.email && `${salesman.email} • `}
+                                      {salesman.areaId}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      salesman.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1649,7 +1657,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     name="gstDetails"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
                           open={gstHover.open}
                           onOpenChange={gstHover.setOpen}
@@ -1667,7 +1674,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               onMouseEnter={gstHover.onMouseEnter}
                               onMouseLeave={gstHover.onMouseLeave}
                             >
-                              <SelectValue placeholder="Select GST type" />
+                              <SelectValue placeholder="GST Details" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent
@@ -1712,7 +1719,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
               <CardContent>
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-3xl xl:max-w-6xl 2xl:max-w-8xl">
-                    <Table className={cn(layoutMode === "classic" && "classic-table")}>
+                    <Table
+                      className={cn(
+                        layoutMode === "classic" && "classic-table",
+                      )}
+                    >
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">
@@ -1780,7 +1791,10 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                 {/* Product Selection */}
                                 <TableCell>
                                   <InlineSearchField
-                                    open={productOpen && activeProductIndex === index}
+                                    open={
+                                      productOpen &&
+                                      activeProductIndex === index
+                                    }
                                     onOpenChange={(open) => {
                                       if (open) {
                                         setActiveProductIndex(index);
@@ -1789,45 +1803,46 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       }
                                       setProductOpen(open);
                                     }}
-                                    displayValue={item.productId
-                                          ? findProductName(item.productId)
-                                          : "Select product"}
+                                    displayValue={
+                                      item.productId
+                                        ? findProductName(item.productId)
+                                        : "Select product"
+                                    }
                                     placeholder="Search products..."
                                     emptyMessage="No product found."
                                     disabled={isSubmitting}
                                   >
                                     <CommandGroup>
-                                            {products.map((product) => (
-                                              <CommandItem
-                                                key={product.id}
-                                                value={`${product.id} ${product.productCode} ${product.description}`}
-                                                onSelect={() => {
-                                                  handleProductSelect(
-                                                    index,
-                                                    product.id,
-                                                  );
-                                                }}
-                                              >
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium">
-                                                    {product.productCode}
-                                                  </span>
-                                                  <span className="text-xs text-muted-foreground">
-                                                    {product.productBrand}
-                                                  </span>
-                                                </div>
-                                                <Check
-                                                  className={cn(
-                                                    "ml-auto h-4 w-4",
-                                                    product.id ===
-                                                      item.productId
-                                                      ? "opacity-100"
-                                                      : "opacity-0",
-                                                  )}
-                                                />
-                                              </CommandItem>
-                                            ))}
-                                          </CommandGroup>
+                                      {products.map((product) => (
+                                        <CommandItem
+                                          key={product.id}
+                                          value={`${product.id} ${product.productCode} ${product.description}`}
+                                          onSelect={() => {
+                                            handleProductSelect(
+                                              index,
+                                              product.id,
+                                            );
+                                          }}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">
+                                              {product.productCode}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                              {product.productBrand}
+                                            </span>
+                                          </div>
+                                          <Check
+                                            className={cn(
+                                              "ml-auto h-4 w-4",
+                                              product.id === item.productId
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
                                   </InlineSearchField>
                                 </TableCell>
 
@@ -1847,7 +1862,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                           parseFloat(e.target.value) || 0,
                                         )
                                       }
-                                      onKeyDown={(e) => handleKeyDown(e, index, "rate")}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, index, "rate")
+                                      }
                                       className="w-24 pl-7"
                                       disabled={isSubmitting}
                                     />
@@ -1868,7 +1885,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    onKeyDown={(e) => handleKeyDown(e, index, "aQty")}
+                                    onKeyDown={(e) =>
+                                      handleKeyDown(e, index, "aQty")
+                                    }
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />
@@ -1888,7 +1907,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    onKeyDown={(e) => handleKeyDown(e, index, "fQty")}
+                                    onKeyDown={(e) =>
+                                      handleKeyDown(e, index, "fQty")
+                                    }
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />
@@ -1908,7 +1929,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         parseFloat(e.target.value) || 0,
                                       )
                                     }
-                                    onKeyDown={(e) => handleKeyDown(e, index, "DQty")}
+                                    onKeyDown={(e) =>
+                                      handleKeyDown(e, index, "DQty")
+                                    }
                                     className="w-20"
                                     disabled={isSubmitting}
                                   />

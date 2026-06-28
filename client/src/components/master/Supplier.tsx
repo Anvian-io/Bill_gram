@@ -29,6 +29,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -41,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import SupplierForm, {
   type SupplierFormData,
@@ -348,6 +350,7 @@ export default function SupplierComponent() {
         await supplierService.createSupplier(data);
         toast.success("Supplier created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchSuppliers(); // Refresh the list
     } catch (error: any) {
@@ -377,6 +380,7 @@ export default function SupplierComponent() {
       try {
         await supplierService.deleteSupplier(supplierToDelete.id);
         toast.success("Supplier deleted successfully!");
+        void refreshActiveLists();
         fetchSuppliers(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete supplier", {
@@ -589,14 +593,11 @@ export default function SupplierComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                         {/* Name Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="name" className="text-sm font-medium">
-                            Supplier Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="name"
-                              placeholder="Enter supplier name"
+                              placeholder="Supplier Name"
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
@@ -619,17 +620,11 @@ export default function SupplierComponent() {
                         </div>
 
                         {/* Phone Number Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="phoneNo"
-                            className="text-sm font-medium"
-                          >
-                            Phone Number
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="phoneNo"
-                              placeholder="Enter phone number"
+                              placeholder="Phone Number"
                               value={phoneNoInput}
                               onChange={(e) =>
                                 handlePhoneNoChange(e.target.value)
@@ -654,17 +649,11 @@ export default function SupplierComponent() {
                         </div>
 
                         {/* Email Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="email"
-                            className="text-sm font-medium"
-                          >
-                            Email Address
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="email"
-                              placeholder="Enter email"
+                              placeholder="Email Address"
                               value={emailInput}
                               onChange={(e) =>
                                 handleEmailChange(e.target.value)
@@ -689,17 +678,11 @@ export default function SupplierComponent() {
                         </div>
 
                         {/* Address Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="address"
-                            className="text-sm font-medium"
-                          >
-                            Address
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="address"
-                              placeholder="Enter address"
+                              placeholder="Address"
                               value={addressInput}
                               onChange={(e) =>
                                 handleAddressChange(e.target.value)
@@ -724,17 +707,11 @@ export default function SupplierComponent() {
                         </div>
 
                         {/* GSTIN Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="gstIN"
-                            className="text-sm font-medium"
-                          >
-                            GSTIN
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="gstIN"
-                              placeholder="Enter GSTIN"
+                              placeholder="GSTIN"
                               value={gstINInput}
                               onChange={(e) =>
                                 handleGstINChange(e.target.value)
@@ -759,40 +736,19 @@ export default function SupplierComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

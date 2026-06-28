@@ -40,7 +40,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import {
   Popover,
@@ -57,6 +56,7 @@ import {
   badgeVariants,
 } from "@/components/FramerVariants";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
 import PurchaseForm from "@/components/forms/PurchaseForm";
@@ -96,6 +96,7 @@ export default function Purchase() {
     null,
   );
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
@@ -319,6 +320,7 @@ export default function Purchase() {
     try {
       await purchaseService.deletePurchase(purchaseToDelete.id);
       toast.success("Purchase deleted successfully");
+      void refreshActiveLists();
       fetchPurchases();
     } catch (error: any) {
       toast.error("Failed to delete purchase", {
@@ -340,6 +342,7 @@ export default function Purchase() {
         await purchaseService.createPurchase(data);
         toast.success("Purchase created successfully");
       }
+      void refreshActiveLists();
       setIsModalOpen(false);
       fetchPurchases();
     } catch (error: any) {
@@ -383,9 +386,9 @@ export default function Purchase() {
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   const getSupplierName = (id: string | number) => {
-    if (id === "all" || !id) return "All Suppliers";
+    if (id === "all" || !id) return "";
     const supplier = suppliers.find((s) => s.id.toString() === id.toString());
-    return supplier ? supplier.name : "Select Supplier";
+    return supplier ? supplier.name : "";
   };
 
   const formatDateTime = (dateString: string) => {
@@ -553,15 +556,12 @@ export default function Purchase() {
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                           {/* Supplier */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Supplier
-                            </Label>
+                          <div>
                             <InlineSearchField
                             open={supplierOpen}
                             onOpenChange={setSupplierOpen}
                             displayValue={getSupplierName(filters.supplierId!)}
-                            placeholder="Search suppliers..."
+                            placeholder="Supplier"
                             emptyMessage="No supplier found."
                             disabled={isLoading}
                           >
@@ -628,13 +628,10 @@ export default function Purchase() {
                           />
 
                           {/* Amount Range */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Amount Range
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
-                                placeholder="Min"
+                                placeholder="Min Amount"
                                 type="number"
                                 value={minAmountInput}
                                 onChange={(e) =>
@@ -643,7 +640,7 @@ export default function Purchase() {
                                 className="flex-1"
                               />
                               <Input
-                                placeholder="Max"
+                                placeholder="Max Amount"
                                 type="number"
                                 value={maxAmountInput}
                                 onChange={(e) =>
@@ -655,51 +652,90 @@ export default function Purchase() {
                           </div>
 
                           {/* Status */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="status"
-                              className="text-sm font-medium"
-                            >
-                              Status
-                            </Label>
-                            <Select
-                              value={filters.status}
-                              onValueChange={(value) =>
-                                handleFilterChange("status", value)
+                          <div>
+                            <InlineSearchField
+                              open={statusOpen}
+                              onOpenChange={setStatusOpen}
+                              displayValue={
+                                filters.status === "all" ? "" : filters.status
                               }
+                              placeholder="Status"
+                              emptyMessage="No status found."
                               disabled={isLoading}
                             >
-                              <SelectTrigger id="status">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Paid">Paid</SelectItem>
-                                <SelectItem value="Partially Paid">
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all status"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "all");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  All Status
+                                </CommandItem>
+                                <CommandItem
+                                  value="Pending"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Pending");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Pending
+                                </CommandItem>
+                                <CommandItem
+                                  value="Paid"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Paid");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Paid
+                                </CommandItem>
+                                <CommandItem
+                                  value="Partially Paid"
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "status",
+                                      "Partially Paid",
+                                    );
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Partially Paid
-                                </SelectItem>
-                                <SelectItem value="Cancelled">
+                                </CommandItem>
+                                <CommandItem
+                                  value="Cancelled"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Cancelled");
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Cancelled
-                                </SelectItem>
-                                <SelectItem value="Return">Return</SelectItem>
-                              </SelectContent>
-                            </Select>
+                                </CommandItem>
+                                <CommandItem
+                                  value="Return"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Return");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Return
+                                </CommandItem>
+                              </CommandGroup>
+                            </InlineSearchField>
                           </div>
 
                           <CustomDateInput
-                            label="Invoice Date From"
                             value={fromDateValue}
                             onChange={handleFromDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Invoice Date From"
                             disabled={isLoading}
                           />
 
                           <CustomDateInput
-                            label="Invoice Date To"
                             value={toDateValue}
                             onChange={handleToDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Invoice Date To"
                             disabled={isLoading}
                           />
                         </div>

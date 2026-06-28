@@ -8,7 +8,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -40,6 +39,7 @@ import {
   FilePlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
@@ -282,27 +282,31 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     }
   }, [isReturnMode, purchaseId, setSearchParams]);
 
-  // Search existing invoices by number
+  // Search existing invoices — load recent list on open; filter when typing
   useEffect(() => {
-    if (!invoiceSearchQuery.trim()) {
-      setInvoiceSearchResults([]);
-      return;
-    }
+    if (!invoiceSearchHover.open) return;
+
+    const query = invoiceSearchQuery.trim();
     const timer = setTimeout(async () => {
       setIsSearchingInvoice(true);
       try {
-        const result = await purchaseService.getPurchases(1, 15, {
-          search: invoiceSearchQuery.trim(),
-        } as Parameters<typeof purchaseService.getPurchases>[2]);
+        const result = await purchaseService.getPurchases(
+          1,
+          15,
+          (query
+            ? { search: query }
+            : {}) as Parameters<typeof purchaseService.getPurchases>[2],
+        );
         setInvoiceSearchResults(result.purchases ?? []);
       } catch {
         setInvoiceSearchResults([]);
       } finally {
         setIsSearchingInvoice(false);
       }
-    }, 400);
+    }, query ? 400 : 0);
+
     return () => clearTimeout(timer);
-  }, [invoiceSearchQuery]);
+  }, [invoiceSearchQuery, invoiceSearchHover.open]);
 
   // Effect 2: Load purchase data if editing
   useEffect(() => {
@@ -753,6 +757,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           }
         }
       }
+      void refreshActiveLists();
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast.error(
@@ -1093,18 +1098,13 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                     {/* Load from existing invoice */}
                     {!isReturnMode && (
                       <FormItem className="flex flex-col">
-                        <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
-                          Search Invoice
-                        </FormLabel>
                         <InlineSearchField
                           open={invoiceSearchHover.open}
                           onOpenChange={invoiceSearchHover.setOpen}
-                          displayValue={
-                            invoiceSearchQuery || "Search by invoice number..."
-                          }
+                          displayValue={invoiceSearchQuery}
                           searchValue={invoiceSearchQuery}
                           onSearchChange={setInvoiceSearchQuery}
-                          placeholder="Type invoice number..."
+                          placeholder="Search Invoice"
                           emptyMessage={
                             isSearchingInvoice
                               ? "Searching..."
@@ -1155,13 +1155,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       name="invoiceDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
-                            Invoice Date *
-                          </FormLabel>
                           <FormControl>
                             <HoverDateInput
                               value={field.value}
                               onChange={field.onChange}
+                              placeholder="Invoice Date *"
                               inputClassName={cn(
                                 "pl-10",
                                 layoutMode === "classic" && "classic-input",
@@ -1180,9 +1178,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       name="supplierId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>
-                            Supplier Name *
-                          </FormLabel>
                           <FormControl>
                             <InlineSearchField
                               open={supplierHover.open}
@@ -1190,9 +1185,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                               displayValue={
                                 field.value
                                   ? findSupplierName(field.value)
-                                  : "Select supplier"
+                                  : ""
                               }
-                              placeholder="Search suppliers..."
+                              placeholder="Supplier Name *"
                               emptyMessage="No supplier found."
                               onMouseEnter={supplierHover.onMouseEnter}
                               onMouseLeave={supplierHover.onMouseLeave}
@@ -1248,7 +1243,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       name="gstDetails"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className={cn("text-sm", layoutMode === "classic" && "classic-label")}>GST Details</FormLabel>
                           <Select
                             open={gstHover.open}
                             onOpenChange={gstHover.setOpen}
@@ -1262,7 +1256,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                 onMouseEnter={gstHover.onMouseEnter}
                                 onMouseLeave={gstHover.onMouseLeave}
                               >
-                                <SelectValue placeholder="Select GST type" />
+                                <SelectValue placeholder="GST Details" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent

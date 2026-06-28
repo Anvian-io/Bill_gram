@@ -21,15 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { FormActiveStatusField } from "@/components/custom_ui/FormActiveStatusField";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useActiveLists } from "@/hooks/useActiveLists";
@@ -103,6 +97,7 @@ export default function CustomerForm({
 }: CustomerFormProps) {
   const { areas } = useActiveLists();
   const [areaOpen, setAreaOpen] = useState(false);
+  const [customerTypeOpen, setCustomerTypeOpen] = useState(false);
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(formSchema),
@@ -158,6 +153,11 @@ export default function CustomerForm({
     if (!id) return "Select Area";
     const area = areas.find((a) => a.id === id);
     return area ? area.name : "Select Area";
+  };
+
+  const getCustomerTypeDisplay = (value: string | undefined) => {
+    if (!value) return "Select type";
+    return value;
   };
 
   const onSubmit = (data: CustomerFormData) => {
@@ -266,26 +266,39 @@ export default function CustomerForm({
                 control={form.control}
                 name="customerType"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Customer Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
+                    <InlineSearchField
+                      open={customerTypeOpen}
+                      onOpenChange={setCustomerTypeOpen}
+                      displayValue={getCustomerTypeDisplay(field.value)}
+                      placeholder="Search customer type..."
+                      emptyMessage="No customer type found."
                       disabled={isSubmitting}
                     >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
+                      <CommandGroup>
                         {customerTypeOptions.map((type) => (
-                          <SelectItem key={type} value={type}>
+                          <CommandItem
+                            key={type}
+                            value={type}
+                            onSelect={() => {
+                              field.onChange(type);
+                              setCustomerTypeOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value === type
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
                             {type}
-                          </SelectItem>
+                          </CommandItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </CommandGroup>
+                    </InlineSearchField>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -416,23 +429,13 @@ export default function CustomerForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={(value: string) =>
-                        field.onChange(value === "true")
-                      }
-                      value={field.value ? "true" : "false"}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <FormActiveStatusField
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

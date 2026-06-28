@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties, type RefObject } from "react";
 
-/** Above header (z-10), sidebar (z-50), cards, and tables; below modal overlays if needed. */
-export const FLOATING_PANEL_Z_INDEX = 200;
+/** Above cards/tables; below the fixed header (z-30) and main sidebar (z-50). */
+export const FLOATING_PANEL_Z_INDEX = 20;
 
 export function useFloatingPanelPosition(
   open: boolean,

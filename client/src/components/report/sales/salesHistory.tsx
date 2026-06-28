@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   containerVariants,
   itemVariants,
@@ -71,6 +72,8 @@ export default function SalesHistory() {
   const [tabFilter, setTabFilter] = useState<
     "all" | "summary" | "register" | "area-wise" | "salesman-wise"
   >("all");
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [filters, setFilters] = useState<SalesReportHistoryFilters>({
     page: 1,
     limit: 10,
@@ -310,6 +313,17 @@ export default function SalesHistory() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
+  const getTypeLabel = (type: string) => {
+    if (type === "all") return "";
+    if (type === "pdf") return "PDF";
+    return "Excel";
+  };
+
+  const getCategoryLabel = (tab: string) => {
+    if (tab === "all") return "";
+    return getTabLabel(tab);
+  };
+
   return (
     <motion.div
       className="min-h-screen bg-background p-3"
@@ -399,14 +413,11 @@ export default function SalesHistory() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Global Search */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Global Search
-                          </Label>
+                        <div>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Search by file name..."
+                              placeholder="Global Search"
                               className="pl-10"
                               value={searchInput}
                               onChange={handleSearchChange}
@@ -425,14 +436,11 @@ export default function SalesHistory() {
                         </div>
 
                         {/* File Name Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            File Name
-                          </Label>
+                        <div>
                           <div className="relative">
                             <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Filter by file name..."
+                              placeholder="File Name"
                               className="pl-10"
                               value={fileNameInput}
                               onChange={handleFileNameChange}
@@ -451,24 +459,22 @@ export default function SalesHistory() {
                         </div>
 
                         {/* Type Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Report Type
-                          </Label>
+                        <div>
                           <div className="flex items-center gap-2">
-                            <Select
-                              value={typeFilter}
-                              onValueChange={handleTypeChange}
+                            <InlineSearchField
+                              open={typeOpen}
+                              onOpenChange={setTypeOpen}
+                              displayValue={getTypeLabel(typeFilter)}
+                              placeholder="Report Type"
+                              emptyMessage="No type found."
+                              disabled={isLoading}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="All Types" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="pdf">PDF</SelectItem>
-                                <SelectItem value="excel">Excel</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              <CommandGroup>
+                                <CommandItem value="all" onSelect={() => { handleTypeChange("all"); setTypeOpen(false); }}>All Types</CommandItem>
+                                <CommandItem value="pdf" onSelect={() => { handleTypeChange("pdf"); setTypeOpen(false); }}>PDF</CommandItem>
+                                <CommandItem value="excel" onSelect={() => { handleTypeChange("excel"); setTypeOpen(false); }}>Excel</CommandItem>
+                              </CommandGroup>
+                            </InlineSearchField>
                             {typeFilter !== "all" && (
                               <Button
                                 variant="ghost"
@@ -483,34 +489,24 @@ export default function SalesHistory() {
                         </div>
 
                         {/* Tab/Report Category Filter */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Report Category
-                          </Label>
+                        <div>
                           <div className="flex items-center gap-2">
-                            <Select
-                              value={tabFilter}
-                              onValueChange={handleTabChange}
+                            <InlineSearchField
+                              open={categoryOpen}
+                              onOpenChange={setCategoryOpen}
+                              displayValue={getCategoryLabel(tabFilter)}
+                              placeholder="Report Category"
+                              emptyMessage="No category found."
+                              disabled={isLoading}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="All Categories" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  All Categories
-                                </SelectItem>
-                                <SelectItem value="summary">Summary</SelectItem>
-                                <SelectItem value="register">
-                                  Register
-                                </SelectItem>
-                                <SelectItem value="area-wise">
-                                  Area Wise
-                                </SelectItem>
-                                <SelectItem value="salesman-wise">
-                                  Salesman Wise
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                              <CommandGroup>
+                                <CommandItem value="all" onSelect={() => { handleTabChange("all"); setCategoryOpen(false); }}>All Categories</CommandItem>
+                                <CommandItem value="summary" onSelect={() => { handleTabChange("summary"); setCategoryOpen(false); }}>Summary</CommandItem>
+                                <CommandItem value="register" onSelect={() => { handleTabChange("register"); setCategoryOpen(false); }}>Register</CommandItem>
+                                <CommandItem value="area-wise" onSelect={() => { handleTabChange("area-wise"); setCategoryOpen(false); }}>Area Wise</CommandItem>
+                                <CommandItem value="salesman-wise" onSelect={() => { handleTabChange("salesman-wise"); setCategoryOpen(false); }}>Salesman Wise</CommandItem>
+                              </CommandGroup>
+                            </InlineSearchField>
                             {tabFilter !== "all" && (
                               <Button
                                 variant="ghost"

@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ import {
 } from "../FramerVariants";
 import ProductFormModal from "@/components/forms/ProductForm";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import { productService } from "@/services/productService";
 import { type Product, type ProductFormData } from "@/types/product";
@@ -125,7 +127,6 @@ export default function ProductInventory() {
   const [maxStockInput, setMaxStockInput] = useState<string>("");
   const [brandOpen, setBrandOpen] = useState(false);
   const [productGroupOpen, setProductGroupOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
 
   // Create debounced filter functions
   const debouncedSetSearch = useDebounce((value: string) => {
@@ -413,11 +414,6 @@ export default function ProductInventory() {
     return uniqueGroups.find((g) => g.id.toString() === groupId)?.name || "";
   };
 
-  const getStatusLabel = (status: "all" | "active" | "inactive") => {
-    if (status === "all") return "";
-    return status === "active" ? "Active" : "Inactive";
-  };
-
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
@@ -445,6 +441,7 @@ export default function ProductInventory() {
       try {
         await productService.deleteProduct(productToDelete.id);
         toast.success("Product deleted successfully!");
+        void refreshActiveLists();
         fetchProducts(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete product", {
@@ -483,6 +480,7 @@ export default function ProductInventory() {
         toast.success("Product created successfully!");
       }
 
+      void refreshActiveLists();
       setIsModalOpen(false);
       fetchProducts(); // Refresh the list
     } catch (error: any) {
@@ -669,17 +667,11 @@ export default function ProductInventory() {
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                           {/* Product Code Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="productCode"
-                              className="text-sm font-medium"
-                            >
-                              Product Code
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
                                 id="productCode"
-                                placeholder="Enter product code"
+                                placeholder="Product Code"
                                 value={productCodeInput}
                                 onChange={(e) =>
                                   handleProductCodeChange(e.target.value)
@@ -701,17 +693,11 @@ export default function ProductInventory() {
                           </div>
 
                           {/* Product Brand Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="productBrand"
-                              className="text-sm font-medium"
-                            >
-                              Product Brand
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
                                 id="productBrand"
-                                placeholder="Enter product brand"
+                                placeholder="Product Brand"
                                 value={productBrandInput}
                                 onChange={(e) =>
                                   handleProductBrandChange(e.target.value)
@@ -733,18 +719,12 @@ export default function ProductInventory() {
                           </div>
 
                           {/* Brand Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="brand"
-                              className="text-sm font-medium"
-                            >
-                              Brand
-                            </Label>
+                          <div>
                             <InlineSearchField
                               open={brandOpen}
                               onOpenChange={setBrandOpen}
                               displayValue={getBrandLabel(filters.brand)}
-                              placeholder="Search brands..."
+                              placeholder="Brand"
                               emptyMessage="No brand found."
                               disabled={isLoading}
                             >
@@ -778,18 +758,12 @@ export default function ProductInventory() {
                           </div>
 
                           {/* Product Group Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="productGroup"
-                              className="text-sm font-medium"
-                            >
-                              Product Group
-                            </Label>
+                          <div>
                             <InlineSearchField
                               open={productGroupOpen}
                               onOpenChange={setProductGroupOpen}
                               displayValue={getGroupLabel(filters.productGroup)}
-                              placeholder="Search groups..."
+                              placeholder="Product Group"
                               emptyMessage="No group found."
                               disabled={isLoading}
                             >
@@ -823,61 +797,21 @@ export default function ProductInventory() {
                           </div>
 
                           {/* Status Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="status"
-                              className="text-sm font-medium"
-                            >
-                              Status
-                            </Label>
-                            <InlineSearchField
-                              open={statusOpen}
-                              onOpenChange={setStatusOpen}
-                              displayValue={getStatusLabel(filters.status)}
-                              placeholder="Search status..."
-                              emptyMessage="No status found."
+                          <div>
+                            <FilterStatusField
+                              value={filters.status}
+                              onValueChange={(value) =>
+                                handleFilterChange("status", value)
+                              }
                               disabled={isLoading}
-                            >
-                              <CommandGroup>
-                                <CommandItem
-                                  value="all status"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "all");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  All Status
-                                </CommandItem>
-                                <CommandItem
-                                  value="active"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "active");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Active
-                                </CommandItem>
-                                <CommandItem
-                                  value="inactive"
-                                  onSelect={() => {
-                                    handleFilterChange("status", "inactive");
-                                    setStatusOpen(false);
-                                  }}
-                                >
-                                  Inactive
-                                </CommandItem>
-                              </CommandGroup>
-                            </InlineSearchField>
+                            />
                           </div>
 
                           {/* Stock Range Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Stock Range
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
-                                placeholder="Min"
+                                placeholder="Min Stock"
                                 type="number"
                                 value={minStockInput}
                                 onChange={(e) =>
@@ -886,7 +820,7 @@ export default function ProductInventory() {
                                 className="flex-1"
                               />
                               <Input
-                                placeholder="Max"
+                                placeholder="Max Stock"
                                 type="number"
                                 value={maxStockInput}
                                 onChange={(e) =>
@@ -898,7 +832,6 @@ export default function ProductInventory() {
                           </div>
 
                           <CustomDateInput
-                            label="Mfg Date From"
                             value={filters.mfgFromDate}
                             onChange={(value) =>
                               setFilters((prev) => ({
@@ -906,12 +839,11 @@ export default function ProductInventory() {
                                 mfgFromDate: value,
                               }))
                             }
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Mfg Date From"
                             disabled={isLoading}
                           />
 
                           <CustomDateInput
-                            label="Mfg Date To"
                             value={filters.mfgToDate}
                             onChange={(value) =>
                               setFilters((prev) => ({
@@ -919,12 +851,11 @@ export default function ProductInventory() {
                                 mfgToDate: value,
                               }))
                             }
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Mfg Date To"
                             disabled={isLoading}
                           />
 
                           <CustomDateInput
-                            label="Exp Date From"
                             value={filters.expFromDate}
                             onChange={(value) =>
                               setFilters((prev) => ({
@@ -932,12 +863,11 @@ export default function ProductInventory() {
                                 expFromDate: value,
                               }))
                             }
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Exp Date From"
                             disabled={isLoading}
                           />
 
                           <CustomDateInput
-                            label="Exp Date To"
                             value={filters.expToDate}
                             onChange={(value) =>
                               setFilters((prev) => ({
@@ -945,15 +875,12 @@ export default function ProductInventory() {
                                 expToDate: value,
                               }))
                             }
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Exp Date To"
                             disabled={isLoading}
                           />
 
                           {/* Show Deleted Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Show Deleted
-                            </Label>
+                          <div>
                             <div className="flex items-center gap-3 pt-2">
                               <input
                                 type="checkbox"

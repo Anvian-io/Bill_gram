@@ -100,7 +100,7 @@ const productSchema = z.object({
         sRate: z.coerce.number().positive("Sale rate must be positive"),
         margin: z.coerce.number(),
         gstAmount: z.coerce.number().min(0).optional(),
-      })
+      }),
     )
     .default([]),
 });
@@ -238,7 +238,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   const handleBatchChange = (
     index: number,
     field: keyof ProductFormValues["batches"][0],
-    value: any
+    value: any,
   ) => {
     const updatedBatches = [...batches];
     updatedBatches[index] = { ...updatedBatches[index], [field]: value };
@@ -293,7 +293,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
   };
 
   const handleRelatedImagesUpload = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(e.target.files || []);
     setRelatedImages([...relatedImages, ...files]);
@@ -462,12 +462,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="productCode"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Product Code *
-                                  </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="e.g., 10079"
+                                      placeholder="Product Code *"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -482,12 +479,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="productBrand"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Product Brand *
-                                  </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="e.g., MILKY BAR 5 RS"
+                                      placeholder="Product Brand *"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -502,12 +496,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="description"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Description *
-                                  </FormLabel>
                                   <FormControl>
                                     <Textarea
-                                      placeholder="Enter product description"
+                                      placeholder="Description *"
                                       className="min-h-[100px] text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                       {...field}
                                     />
@@ -522,12 +513,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="hsnSacCode"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    HSN/SAC Code *
-                                  </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="e.g., 18069010"
+                                      placeholder="HSN/SAC Code *"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -542,9 +530,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="goodsOrServices"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Goods/Services *
-                                  </FormLabel>
                                   <FormControl>
                                     <RadioGroup
                                       onValueChange={field.onChange}
@@ -586,13 +571,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="weight"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Weight *
-                                    </FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
                                         step="0.01"
+                                        placeholder="Weight *"
                                         {...field}
                                         className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -607,15 +590,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="unit"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Unit *
-                                    </FormLabel>
                                     <FormControl>
                                       <InlineSearchField
                                         open={unitOpen}
                                         onOpenChange={setUnitOpen}
                                         displayValue={field.value || ""}
-                                        placeholder="Search units..."
+                                        placeholder="Unit *"
                                         emptyMessage="No unit found."
                                         disabled={isSubmitting}
                                         inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
@@ -647,15 +627,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="productGroup"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Product Group *
-                                  </FormLabel>
                                   <FormControl>
                                     <InlineSearchField
                                       open={productGroupOpen}
                                       onOpenChange={setProductGroupOpen}
                                       displayValue={field.value || ""}
-                                      placeholder="Search groups..."
+                                      placeholder="Product Group *"
                                       emptyMessage="No group found."
                                       disabled={isSubmitting}
                                       inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
@@ -701,12 +678,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="productShortName"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Product Short Name *
-                                  </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="e.g., MILKY BAR 5 RS"
+                                      placeholder="Product Short Name *"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -721,32 +695,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="productCompany"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Product Company *
-                                  </FormLabel>
                                   <FormControl>
                                     <InlineSearchField
                                       open={productCompanyOpen}
                                       onOpenChange={setProductCompanyOpen}
                                       displayValue={field.value || ""}
-                                      placeholder="Search companies..."
+                                      placeholder="Product Company *"
                                       emptyMessage="No company found."
                                       disabled={isSubmitting}
                                       inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     >
                                       <CommandGroup>
-                                        {productCompanyOptions.map((company) => (
-                                          <CommandItem
-                                            key={company}
-                                            value={company}
-                                            onSelect={() => {
-                                              field.onChange(company);
-                                              setProductCompanyOpen(false);
-                                            }}
-                                          >
-                                            {company}
-                                          </CommandItem>
-                                        ))}
+                                        {productCompanyOptions.map(
+                                          (company) => (
+                                            <CommandItem
+                                              key={company}
+                                              value={company}
+                                              onSelect={() => {
+                                                field.onChange(company);
+                                                setProductCompanyOpen(false);
+                                              }}
+                                            >
+                                              {company}
+                                            </CommandItem>
+                                          ),
+                                        )}
                                       </CommandGroup>
                                     </InlineSearchField>
                                   </FormControl>
@@ -761,16 +734,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="purchaseUnit"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Purchase Unit *
-                                    </FormLabel>
                                     <Select
                                       onValueChange={field.onChange}
                                       defaultValue={field.value}
                                     >
                                       <FormControl>
                                         <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                          <SelectValue placeholder="Select unit" />
+                                          <SelectValue placeholder="Purchase Unit *" />
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
@@ -795,13 +765,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="conversionFactor"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Conversion Factor *
-                                    </FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
                                         step="0.01"
+                                        placeholder="Conversion Factor *"
                                         {...field}
                                         className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -817,9 +785,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="pricePerPCS"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Price per PCS *
-                                  </FormLabel>
                                   <FormControl>
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
@@ -828,6 +793,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                       <Input
                                         type="number"
                                         step="0.01"
+                                        placeholder="Price per PCS *"
                                         {...field}
                                         className="h-9 text-sm pl-8 border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -843,16 +809,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="saleUnit"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    Sale Unit *
-                                  </FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
                                   >
                                     <FormControl>
                                       <SelectTrigger className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary">
-                                        <SelectValue placeholder="Select unit" />
+                                        <SelectValue placeholder="Sale Unit *" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -878,12 +841,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="cartonPack"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Carton Pack *
-                                    </FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
+                                        placeholder="Carton Pack *"
                                         {...field}
                                         className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -898,11 +859,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 name="innerPack"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Inner Pack
-                                    </FormLabel>
                                     <FormControl>
                                       <Input
+                                        placeholder="Inner Pack"
                                         {...field}
                                         value={field.value || ""}
                                         className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
@@ -1034,32 +993,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="gstApplicability"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    GST Applicability *
-                                  </FormLabel>
                                   <FormControl>
                                     <InlineSearchField
                                       open={gstApplicabilityOpen}
                                       onOpenChange={setGstApplicabilityOpen}
                                       displayValue={field.value || ""}
-                                      placeholder="Search applicability..."
+                                      placeholder="GST Applicability *"
                                       emptyMessage="No option found."
                                       disabled={isSubmitting}
                                       inputClassName="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     >
                                       <CommandGroup>
-                                        {gstApplicabilityOptions.map((option) => (
-                                          <CommandItem
-                                            key={option}
-                                            value={option}
-                                            onSelect={() => {
-                                              field.onChange(option);
-                                              setGstApplicabilityOpen(false);
-                                            }}
-                                          >
-                                            {option}
-                                          </CommandItem>
-                                        ))}
+                                        {gstApplicabilityOptions.map(
+                                          (option) => (
+                                            <CommandItem
+                                              key={option}
+                                              value={option}
+                                              onSelect={() => {
+                                                field.onChange(option);
+                                                setGstApplicabilityOpen(false);
+                                              }}
+                                            >
+                                              {option}
+                                            </CommandItem>
+                                          ),
+                                        )}
                                       </CommandGroup>
                                     </InlineSearchField>
                                   </FormControl>
@@ -1073,9 +1031,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="gstRate"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    GST Rate (%) *
-                                  </FormLabel>
                                   <FormControl>
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1084,6 +1039,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                       <Input
                                         type="number"
                                         step="0.01"
+                                        placeholder="GST Rate (%) *"
                                         {...field}
                                         className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -1099,9 +1055,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="cessRate"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    CESS Rate (%)
-                                  </FormLabel>
                                   <FormControl>
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1110,6 +1063,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                       <Input
                                         type="number"
                                         step="0.01"
+                                        placeholder="CESS Rate (%)"
                                         {...field}
                                         className="h-9 text-sm pl-9 border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
@@ -1125,12 +1079,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                               name="hsnChapter"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-medium">
-                                    HSN Chapter
-                                  </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="e.g., 18"
+                                      placeholder="HSN Chapter"
                                       {...field}
                                       className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                     />
@@ -1393,9 +1344,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 {/* Batch Information */}
                                 <div className="space-y-3">
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      Batch No. *
-                                    </label>
                                     <Input
                                       value={batch.bNo}
                                       onChange={(e) =>
@@ -1405,14 +1353,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           e.target.value,
                                         )
                                       }
-                                      placeholder="Enter batch number"
+                                      placeholder="Batch No. *"
                                       className="h-8 text-sm"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      Barcode *
-                                    </label>
                                     <Input
                                       value={batch.barcode}
                                       onChange={(e) =>
@@ -1422,7 +1367,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           e.target.value,
                                         )
                                       }
-                                      placeholder="Enter barcode"
+                                      placeholder="Barcode *"
                                       className="h-8 text-sm"
                                     />
                                   </div>
@@ -1431,9 +1376,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 {/* Dates */}
                                 <div className="space-y-3">
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      MFG Date
-                                    </label>
                                     <Input
                                       type="date"
                                       value={batch.mfgDate || ""}
@@ -1444,13 +1386,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           e.target.value || null,
                                         )
                                       }
+                                      placeholder="MFG Date"
                                       className="h-8 text-sm"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      EXP Date
-                                    </label>
                                     <Input
                                       type="date"
                                       value={batch.expDate || ""}
@@ -1461,6 +1401,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           e.target.value || null,
                                         )
                                       }
+                                      placeholder="EXP Date"
                                       className="h-8 text-sm"
                                     />
                                   </div>
@@ -1469,9 +1410,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 {/* Pricing */}
                                 <div className="space-y-3">
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      Purchase Rate *
-                                    </label>
                                     <div className="relative">
                                       <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
                                         ₹
@@ -1487,14 +1425,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        placeholder="Purchase Rate *"
                                         className="h-8 text-sm pl-6"
                                       />
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      Sale Rate *
-                                    </label>
                                     <div className="relative">
                                       <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
                                         ₹
@@ -1510,6 +1446,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        placeholder="Sale Rate *"
                                         className="h-8 text-sm pl-6"
                                       />
                                     </div>
@@ -1519,9 +1456,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                 {/* Stock & MRP */}
                                 <div className="space-y-3">
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      Opening Stock *
-                                    </label>
                                     <Input
                                       type="number"
                                       value={batch.openingStock}
@@ -1532,13 +1466,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                           parseInt(e.target.value) || 0,
                                         )
                                       }
+                                      placeholder="Opening Stock *"
                                       className="h-8 text-sm"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium mb-1 block">
-                                      MRP *
-                                    </label>
                                     <div className="relative">
                                       <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
                                         ₹
@@ -1554,6 +1486,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                             parseFloat(e.target.value) || 0,
                                           )
                                         }
+                                        placeholder="MRP *"
                                         className="h-8 text-sm pl-6"
                                       />
                                     </div>

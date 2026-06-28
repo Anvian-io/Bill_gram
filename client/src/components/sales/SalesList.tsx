@@ -39,7 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import {
   Popover,
@@ -55,6 +54,7 @@ import {
   buttonVariants,
 } from "../FramerVariants";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
 import SalesForm from "../forms/SalesForm";
@@ -123,6 +123,7 @@ export default function Sales() {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -441,6 +442,7 @@ export default function Sales() {
     try {
       await salesService.deleteSale(salesToDelete.id);
       toast.success("Sales deleted successfully");
+      void refreshActiveLists();
       fetchSales();
     } catch (error) {
       toast.error("Failed to delete sales");
@@ -460,6 +462,7 @@ export default function Sales() {
         await salesService.createSale(data);
         toast.success("Sales created successfully");
       }
+      void refreshActiveLists();
       setIsModalOpen(false);
       fetchSales();
     } catch (error: any) {
@@ -492,29 +495,29 @@ export default function Sales() {
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   const getAreaName = (id: string) => {
-    if (id === "all") return "All Areas";
+    if (id === "all") return "";
     const area = areas.find((a) => a.id.toString() === id);
-    return area ? area.name : "Select Area";
+    return area ? area.name : "";
   };
 
   const getCustomerName = (id: string) => {
-    if (id === "all") return "All Customers";
+    if (id === "all") return "";
     const customer = customers.find((c) => c.id.toString() === id);
     return customer
       ? customer.companyName || customer.personName || ""
-      : "Select Customer";
+      : "";
   };
 
   const getVanName = (id: string) => {
-    if (id === "all") return "All Vans";
+    if (id === "all") return "";
     const van = vans.find((v) => v.id.toString() === id);
-    return van ? van.name : "Select Van";
+    return van ? van.name : "";
   };
 
   const getSalesmanName = (id: string) => {
-    if (id === "all") return "All Salesmen";
+    if (id === "all") return "";
     const salesman = salesmen.find((s) => s.id.toString() === id);
-    return salesman ? salesman.name : "Select Salesman";
+    return salesman ? salesman.name : "";
   };
 
     const handlePreview = (saleId: number) => {
@@ -667,17 +670,11 @@ export default function Sales() {
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                           {/* Invoice No Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="invoiceNo"
-                              className="text-sm font-medium"
-                            >
-                              Invoice No
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
                                 id="invoiceNo"
-                                placeholder="Enter invoice no"
+                                placeholder="Invoice No"
                                 value={invoiceNoInput}
                                 onChange={(e) =>
                                   handleInvoiceNoChange(e.target.value)
@@ -699,13 +696,12 @@ export default function Sales() {
                           </div>
 
                           {/* Area Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Area</Label>
+                          <div>
                             <InlineSearchField
                             open={areaOpen}
                             onOpenChange={setAreaOpen}
                             displayValue={getAreaName(filters.areaId as string)}
-                            placeholder="Search area..."
+                            placeholder="Area"
                             emptyMessage="No area found."
                             disabled={isLoading}
                           >
@@ -756,17 +752,14 @@ export default function Sales() {
                           </div>
 
                           {/* Customer Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Customer
-                            </Label>
+                          <div>
                             <InlineSearchField
                             open={customerOpen}
                             onOpenChange={setCustomerOpen}
                             displayValue={getCustomerName(
                                     filters.customerId as string,
                                   )}
-                            placeholder="Search customer..."
+                            placeholder="Customer"
                             emptyMessage="No customer found."
                             disabled={isLoading}
                           >
@@ -834,13 +827,12 @@ export default function Sales() {
                           />
 
                           {/* Van Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Van</Label>
+                          <div>
                             <InlineSearchField
                             open={vanOpen}
                             onOpenChange={setVanOpen}
                             displayValue={getVanName(filters.vanId as string)}
-                            placeholder="Search van..."
+                            placeholder="Van"
                             emptyMessage="No van found."
                             disabled={isLoading}
                           >
@@ -896,17 +888,14 @@ export default function Sales() {
                           </div>
 
                           {/* Salesman Filter */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Salesman
-                            </Label>
+                          <div>
                             <InlineSearchField
                             open={salesmanOpen}
                             onOpenChange={setSalesmanOpen}
                             displayValue={getSalesmanName(
                                     filters.salesmanId as string,
                                   )}
-                            placeholder="Search salesman..."
+                            placeholder="Salesman"
                             emptyMessage="No salesman found."
                             disabled={isLoading}
                           >
@@ -965,13 +954,10 @@ export default function Sales() {
                           </div>
 
                           {/* Amount Range */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Amount Range
-                            </Label>
+                          <div>
                             <div className="flex gap-2">
                               <Input
-                                placeholder="Min"
+                                placeholder="Min Amount"
                                 type="number"
                                 value={minAmountInput}
                                 onChange={(e) =>
@@ -980,7 +966,7 @@ export default function Sales() {
                                 className="flex-1"
                               />
                               <Input
-                                placeholder="Max"
+                                placeholder="Max Amount"
                                 type="number"
                                 value={maxAmountInput}
                                 onChange={(e) =>
@@ -992,55 +978,100 @@ export default function Sales() {
                           </div>
 
                           <CustomDateInput
-                            label="Invoice Date From"
                             value={fromDateValue}
                             onChange={handleFromDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Invoice Date From"
                             disabled={isLoading}
                           />
 
                           <CustomDateInput
-                            label="Invoice Date To"
                             value={toDateValue}
                             onChange={handleToDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="Invoice Date To"
                             disabled={isLoading}
                           />
 
                           {/* Status Filter */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="status"
-                              className="text-sm font-medium"
-                            >
-                              Status
-                            </Label>
-                            <Select
-                              value={filters.status}
-                              onValueChange={(value) =>
-                                handleFilterChange("status", value)
+                          <div>
+                            <InlineSearchField
+                              open={statusOpen}
+                              onOpenChange={setStatusOpen}
+                              displayValue={
+                                filters.status === "all" ? "" : filters.status
                               }
+                              placeholder="Status"
+                              emptyMessage="No status found."
                               disabled={isLoading}
                             >
-                              <SelectTrigger id="status">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Paid">Paid</SelectItem>
-                                <SelectItem value="Partially Paid">
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all status"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "all");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  All Status
+                                </CommandItem>
+                                <CommandItem
+                                  value="Pending"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Pending");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Pending
+                                </CommandItem>
+                                <CommandItem
+                                  value="Paid"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Paid");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Paid
+                                </CommandItem>
+                                <CommandItem
+                                  value="Partially Paid"
+                                  onSelect={() => {
+                                    handleFilterChange(
+                                      "status",
+                                      "Partially Paid",
+                                    );
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Partially Paid
-                                </SelectItem>
-                                <SelectItem value="Cancelled">
+                                </CommandItem>
+                                <CommandItem
+                                  value="Cancelled"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Cancelled");
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Cancelled
-                                </SelectItem>
-                                <SelectItem value="Delivered">
+                                </CommandItem>
+                                <CommandItem
+                                  value="Delivered"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Delivered");
+                                    setStatusOpen(false);
+                                  }}
+                                >
                                   Delivered
-                                </SelectItem>
-                                <SelectItem value="Return">Return</SelectItem>
-                              </SelectContent>
-                            </Select>
+                                </CommandItem>
+                                <CommandItem
+                                  value="Return"
+                                  onSelect={() => {
+                                    handleFilterChange("status", "Return");
+                                    setStatusOpen(false);
+                                  }}
+                                >
+                                  Return
+                                </CommandItem>
+                              </CommandGroup>
+                            </InlineSearchField>
                           </div>
                         </div>
                       </motion.div>

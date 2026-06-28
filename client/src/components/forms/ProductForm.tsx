@@ -646,12 +646,9 @@ export default function ProductFormModal({
                       name="productCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Product Code *
-                          </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="e.g., 10079"
+                              placeholder="Product Code *"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -666,12 +663,9 @@ export default function ProductFormModal({
                       name="productBrand"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Product Brand *
-                          </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="e.g., MILKY BAR 5 RS"
+                              placeholder="Product Brand *"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -686,12 +680,9 @@ export default function ProductFormModal({
                       name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Description *
-                          </FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Enter product description"
+                              placeholder="Description *"
                               className="min-h-[80px]"
                               {...field}
                               disabled={isSubmitting}
@@ -707,12 +698,9 @@ export default function ProductFormModal({
                       name="hsnSacCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            HSN/SAC Code *
-                          </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="e.g., 18069010"
+                              placeholder="HSN/SAC Code *"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -727,9 +715,6 @@ export default function ProductFormModal({
                       name="goodsServices"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Goods/Services *
-                          </FormLabel>
                           <FormControl>
                             <RadioGroup
                               onValueChange={field.onChange}
@@ -772,11 +757,11 @@ export default function ProductFormModal({
                         name="weight"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Weight *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="Weight *"
                                 {...field}
                                 disabled={isSubmitting}
                               />
@@ -792,15 +777,14 @@ export default function ProductFormModal({
                         name="unitId"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
-                            <FormLabel className="text-sm">Unit *</FormLabel>
                             <FormControl>
                           <InlineSearchField
                             open={unitIdOpen}
                             onOpenChange={setUnitIdOpen}
                             displayValue={field.value
                                       ? findUnitName(field.value)
-                                      : "Select unit"}
-                            placeholder="Search units..."
+                                      : ""}
+                            placeholder="Unit *"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -849,17 +833,14 @@ export default function ProductFormModal({
                       name="productGroupId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className="text-sm">
-                            Product Group *
-                          </FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={productGroupIdOpen}
                             onOpenChange={setProductGroupIdOpen}
                             displayValue={field.value
                                     ? findGroupName(field.value)
-                                    : "Select group"}
-                            placeholder="Search groups..."
+                                    : ""}
+                            placeholder="Product Group *"
                             emptyMessage="No group found."
                             disabled={isSubmitting}
                           >
@@ -1003,12 +984,9 @@ export default function ProductFormModal({
                       name="productShortName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Product Short Name *
-                          </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="e.g., MILKY BAR 5 RS"
+                              placeholder="Product Short Name *"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -1024,17 +1002,14 @@ export default function ProductFormModal({
                       name="productCompanyId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className="text-sm">
-                            Product Company *
-                          </FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={productCompanyIdOpen}
                             onOpenChange={setProductCompanyIdOpen}
                             displayValue={field.value
                                     ? findCompanyName(field.value)
-                                    : "Select company"}
-                            placeholder="Search companies..."
+                                    : ""}
+                            placeholder="Product Company *"
                             emptyMessage="No company found."
                             disabled={isSubmitting}
                           >
@@ -1074,17 +1049,14 @@ export default function ProductFormModal({
                         name="purchaseUnit"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
-                            <FormLabel className="text-sm">
-                              Purchase Unit *
-                            </FormLabel>
                             <FormControl>
                           <InlineSearchField
                             open={purchaseUnitOpen}
                             onOpenChange={setPurchaseUnitOpen}
                             displayValue={field.value
                                       ? findUnitName(parseInt(field.value))
-                                      : "Select unit"}
-                            placeholder="Search units..."
+                                      : ""}
+                            placeholder="Purchase Unit *"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -1131,13 +1103,11 @@ export default function ProductFormModal({
                         name="conversionFactor"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">
-                              Conversion Factor *
-                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="Conversion Factor *"
                                 {...field}
                                 disabled={isSubmitting}
                               />
@@ -1153,9 +1123,6 @@ export default function ProductFormModal({
                       name="pricePerPcs"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            Price per PCS *
-                          </FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1164,6 +1131,7 @@ export default function ProductFormModal({
                               <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="Price per PCS *"
                                 {...field}
                                 className="pl-8"
                                 disabled={isSubmitting}
@@ -1181,15 +1149,14 @@ export default function ProductFormModal({
                       name="saleUnit"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className="text-sm">Sale Unit *</FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={saleUnitOpen}
                             onOpenChange={setSaleUnitOpen}
                             displayValue={field.value
                                     ? findUnitName(parseInt(field.value))
-                                    : "Select unit"}
-                            placeholder="Search units..."
+                                    : ""}
+                            placeholder="Sale Unit *"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -1228,12 +1195,10 @@ export default function ProductFormModal({
                         name="cartonPack"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">
-                              Carton Pack *
-                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
+                                placeholder="Carton Pack *"
                                 {...field}
                                 disabled={isSubmitting}
                               />
@@ -1248,11 +1213,9 @@ export default function ProductFormModal({
                         name="innerPack"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">
-                              Inner Pack
-                            </FormLabel>
                             <FormControl>
                               <Input
+                                placeholder="Inner Pack"
                                 {...field}
                                 value={field.value || ""}
                                 disabled={isSubmitting}
@@ -1441,17 +1404,14 @@ export default function ProductFormModal({
                       name="gstApplicability"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel className="text-sm">
-                            GST Applicability *
-                          </FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={gstApplicabilityOpen}
                             onOpenChange={setGstApplicabilityOpen}
                             displayValue={field.value
                                     ? findGstApplicabilityLabel(field.value)
-                                    : "Select applicability"}
-                            placeholder="Search GST applicability..."
+                                    : ""}
+                            placeholder="GST Applicability *"
                             emptyMessage="No option found."
                             disabled={isSubmitting}
                           >
@@ -1489,9 +1449,6 @@ export default function ProductFormModal({
                       name="gstRate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            GST Rate (%) *
-                          </FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1500,6 +1457,7 @@ export default function ProductFormModal({
                               <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="GST Rate (%) *"
                                 {...field}
                                 className="pl-9"
                                 disabled={isSubmitting}
@@ -1516,9 +1474,6 @@ export default function ProductFormModal({
                       name="cessRate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            CESS Rate (%)
-                          </FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1527,6 +1482,7 @@ export default function ProductFormModal({
                               <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="CESS Rate (%)"
                                 {...field}
                                 className="pl-9"
                                 disabled={isSubmitting}
@@ -1543,10 +1499,9 @@ export default function ProductFormModal({
                       name="hsnChapter"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">HSN Chapter</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="e.g., 18"
+                              placeholder="HSN Chapter"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -1671,22 +1626,16 @@ export default function ProductFormModal({
                         {/* Batch Information */}
                         <div className="space-y-3">
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Batch No. *
-                            </label>
                             <Input
                               value={batch.bNo}
                               onChange={(e) =>
                                 handleBatchChange(index, "bNo", e.target.value)
                               }
-                              placeholder="Enter batch number"
+                              placeholder="Batch No. *"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Barcode *
-                            </label>
                             <Input
                               value={batch.barcode}
                               onChange={(e) =>
@@ -1696,7 +1645,7 @@ export default function ProductFormModal({
                                   e.target.value,
                                 )
                               }
-                              placeholder="Enter barcode"
+                              placeholder="Barcode *"
                               disabled={isSubmitting}
                             />
                           </div>
@@ -1709,27 +1658,22 @@ export default function ProductFormModal({
                             onChange={(value) =>
                               handleBatchChange(index, "mfgDate", value)
                             }
-                            placeholder="dd/mm/yyyy or select"
+                            placeholder="MFG Date"
                             disabled={isSubmitting}
-                            label="MFG Date"
                           />
                           <CustomDateInput
                             value={batch.expDate}
                             onChange={(value) =>
                               handleBatchChange(index, "expDate", value)
                             }
-                            placeholder="dd/mm/yyyy or select"
+                            placeholder="EXP Date"
                             disabled={isSubmitting}
-                            label="EXP Date"
                           />
                         </div>
 
                         {/* Pricing */}
                         <div className="space-y-3">
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Purchase Rate *
-                            </label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1745,15 +1689,13 @@ export default function ProductFormModal({
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
+                                placeholder="Purchase Rate *"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
                             </div>
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Sale Rate *
-                            </label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1769,6 +1711,7 @@ export default function ProductFormModal({
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
+                                placeholder="Sale Rate *"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
@@ -1779,9 +1722,6 @@ export default function ProductFormModal({
                         {/* Stock & MRP */}
                         <div className="space-y-3">
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Opening Stock *
-                            </label>
                             <Input
                               type="number"
                               value={batch.openingStock}
@@ -1792,13 +1732,11 @@ export default function ProductFormModal({
                                   parseInt(e.target.value) || 0,
                                 )
                               }
+                              placeholder="Opening Stock *"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              MRP *
-                            </label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1814,6 +1752,7 @@ export default function ProductFormModal({
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
+                                placeholder="MRP *"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />

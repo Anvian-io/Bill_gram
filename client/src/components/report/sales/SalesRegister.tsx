@@ -256,19 +256,19 @@ export default function SalesRegister() {
   const getDisplayName = (
     list: Array<{ id: number; name: string }>,
     id?: number,
-    defaultValue = "All",
+    _defaultValue = "All",
   ) => {
-    if (!id) return `All ${defaultValue}s`;
+    if (!id) return "";
     const item = list.find((i) => i.id === id);
-    return item ? item.name : `Select ${defaultValue}`;
+    return item ? item.name : "";
   };
 
   const getCustomerName = (id?: number) => {
-    if (!id) return "All Customers";
+    if (!id) return "";
     const customer = customers.find((c) => c.id === id);
     return customer
       ? customer.companyName || customer.personName || `Customer ${id}`
-      : "Select Customer";
+      : "";
   };
 
   const formatDate = (dateString: string) => {
@@ -451,12 +451,9 @@ export default function SalesRegister() {
                       <div className="flex flex-wrap items-end gap-3 pt-2">
                         {/* Invoice No */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
-                            Invoice No
-                          </Label>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search by invoice no..."
+                            <Input placeholder="Invoice No"
                               className="pl-8 h-8 text-xs rounded-sm"
                               value={invoiceNoInput}
                               onChange={(e) =>
@@ -478,14 +475,11 @@ export default function SalesRegister() {
 
                         {/* Customer */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
-                            Customer
-                          </Label>
                           <InlineSearchField
                             open={customerOpen}
                             onOpenChange={setCustomerOpen}
                             displayValue={getCustomerName(filters.customerId)}
-                            placeholder="Search customers..."
+                            placeholder="Customer"
                             emptyMessage="No customer found."
                             disabled={isLoading}
                           >
@@ -549,12 +543,11 @@ export default function SalesRegister() {
 
                         {/* Area */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">Area</Label>
                           <InlineSearchField
                             open={areaOpen}
                             onOpenChange={setAreaOpen}
                             displayValue={getDisplayName(areas, filters.areaId, "Area")}
-                            placeholder="Search areas..."
+                            placeholder="Area"
                             emptyMessage="No area found."
                             disabled={isLoading}
                           >
@@ -602,12 +595,11 @@ export default function SalesRegister() {
 
                         {/* Van */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">Van</Label>
                           <InlineSearchField
                             open={vanOpen}
                             onOpenChange={setVanOpen}
                             displayValue={getDisplayName(vans, filters.vanId, "Van")}
-                            placeholder="Search vans..."
+                            placeholder="Van"
                             emptyMessage="No van found."
                             disabled={isLoading}
                           >
@@ -655,9 +647,6 @@ export default function SalesRegister() {
 
                         {/* Salesman */}
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
-                          <Label className="text-[10px] uppercase text-muted-foreground font-semibold mb-1 block">
-                            Salesman
-                          </Label>
                           <InlineSearchField
                             open={salesmanOpen}
                             onOpenChange={setSalesmanOpen}
@@ -666,7 +655,7 @@ export default function SalesRegister() {
                                   filters.salesmanId,
                                   "Salesman",
                                 )}
-                            placeholder="Search salesmen..."
+                            placeholder="Salesman"
                             emptyMessage="No salesman found."
                             disabled={isLoading}
                           >
@@ -720,20 +709,18 @@ export default function SalesRegister() {
 
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
                           <CustomDateInput
-                            label="From Date"
                             value={fromDateValue}
                             onChange={handleFromDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="From Date"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="flex-1 min-w-[150px] max-w-[200px]">
                           <CustomDateInput
-                            label="To Date"
                             value={toDateValue}
                             onChange={handleToDateChange}
-                            placeholder="dd/mm/yyyy"
+                            placeholder="To Date"
                             disabled={isLoading}
                           />
                         </div>

@@ -28,6 +28,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -40,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import AccountForm, {
   type AccountFormData,
@@ -304,6 +306,7 @@ export default function AccountComponent() {
         await accountService.createAccount(data);
         toast.success("Account created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchAccounts(); // Refresh the list
     } catch (error: any) {
@@ -333,6 +336,7 @@ export default function AccountComponent() {
       try {
         await accountService.deleteAccount(accountToDelete.id);
         toast.success("Account deleted successfully!");
+        void refreshActiveLists();
         fetchAccounts(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete account", {
@@ -530,17 +534,11 @@ export default function AccountComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Account Holder Filter */}
-                        <div className={cn("space-y-2", layoutMode === "classic" && "space-y-0.5")}>
-                          <Label
-                            htmlFor="accountHolder"
-                            className={cn("text-sm font-medium", layoutMode === "classic" && "text-xs text-muted-foreground")}
-                          >
-                            Account Holder
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="accountHolder"
-                              placeholder="Enter account holder name"
+                              placeholder="Account Holder"
                               value={accountHolderInput}
                               onChange={(e) =>
                                 handleAccountHolderChange(e.target.value)
@@ -566,17 +564,11 @@ export default function AccountComponent() {
                         </div>
 
                         {/* Bank Name Filter */}
-                        <div className={cn("space-y-2", layoutMode === "classic" && "space-y-0.5")}>
-                          <Label
-                            htmlFor="bankName"
-                            className={cn("text-sm font-medium", layoutMode === "classic" && "text-xs text-muted-foreground")}
-                          >
-                            Bank Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="bankName"
-                              placeholder="Enter bank name"
+                              placeholder="Bank Name"
                               value={bankNameInput}
                               onChange={(e) =>
                                 handleBankNameChange(e.target.value)
@@ -602,17 +594,11 @@ export default function AccountComponent() {
                         </div>
 
                         {/* IFSC Code Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="ifscCode"
-                            className="text-sm font-medium"
-                          >
-                            IFSC Code
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="ifscCode"
-                              placeholder="Enter IFSC code"
+                              placeholder="IFSC Code"
                               value={ifscCodeInput}
                               onChange={(e) =>
                                 handleIfscCodeChange(e.target.value)
@@ -638,40 +624,19 @@ export default function AccountComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

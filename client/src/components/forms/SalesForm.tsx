@@ -17,7 +17,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -360,7 +359,9 @@ export default function SalesForm({
     if (customer) {
       form.setValue("customerId", customer.id, { shouldValidate: true });
       form.setValue("areaId", customer.areaId || 0, { shouldValidate: true });
-      form.setValue("address", customer.address || "", { shouldValidate: true });
+      form.setValue("address", customer.address || "", {
+        shouldValidate: true,
+      });
       form.setValue("phoneNo", customer.phoneNo || "");
       form.clearErrors(["customerId", "areaId", "address"]);
 
@@ -811,55 +812,54 @@ export default function SalesForm({
                     name="phoneNo"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">
-                          Search by Phone
-                        </FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={phoneOpen}
                             onOpenChange={setPhoneOpen}
-                            displayValue={field.value
-                                  ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
-                                  : "Search phone number..."}
-                            placeholder="Search phone numbers..."
+                            displayValue={
+                              field.value
+                                ? `${field.value} - ${findCustomer(form.getValues("customerId"))?.personName || ""}`
+                                : ""
+                            }
+                            placeholder="Search by Phone"
                             emptyMessage="No customer found."
                             disabled={isSubmitting || isReadOnly}
                           >
                             <CommandGroup>
-                                  {customers.map((customer: Customer) => (
-                                    <CommandItem
-                                      key={customer.id}
-                                      value={`${customer.phoneNo} ${customer.personName}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          handlePhoneSelect(customer.id);
-                                        }
-                                      }}
-                                    >
-                                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {customer.phoneNo}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {customer.personName}{" "}
-                                          {customer.companyName
-                                            ? `(${customer.companyName})`
-                                            : ""}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          customer.id ===
-                                            form.getValues("customerId")
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {customers.map((customer: Customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={`${customer.phoneNo} ${customer.personName}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      handlePhoneSelect(customer.id);
+                                    }
+                                  }}
+                                >
+                                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {customer.phoneNo}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {customer.personName}{" "}
+                                      {customer.companyName
+                                        ? `(${customer.companyName})`
+                                        : ""}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      customer.id ===
+                                        form.getValues("customerId")
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -873,13 +873,11 @@ export default function SalesForm({
                     name="invoiceDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">
-                          Invoice Date *
-                        </FormLabel>
                         <FormControl>
                           <HoverDateInput
                             value={field.value ?? ""}
                             onChange={field.onChange}
+                            placeholder="Invoice Date *"
                             inputClassName="pl-10"
                             disabled={isSubmitting || isReadOnly}
                           />
@@ -895,51 +893,52 @@ export default function SalesForm({
                     name="areaId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Area *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={areaOpen}
                             onOpenChange={setAreaOpen}
-                            displayValue={field.value
-                                  ? findAreaName(field.value)
-                                  : "Select area"}
-                            placeholder="Search areas..."
+                            displayValue={
+                              field.value
+                                ? findAreaName(field.value)
+                                : ""
+                            }
+                            placeholder="Area *"
                             emptyMessage="No area found."
                             disabled={isSubmitting || isReadOnly}
                           >
                             <CommandGroup>
-                                  {areas.map((area) => (
-                                    <CommandItem
-                                      key={area.id}
-                                      value={`${area.id} ${area.name} ${area.city || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          handleAreaSelect(area.id);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {area.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {area.city && `${area.city}, `}
-                                          {area.state ||
-                                            area.region ||
-                                            area.description}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          area.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {areas.map((area) => (
+                                <CommandItem
+                                  key={area.id}
+                                  value={`${area.id} ${area.name} ${area.city || ""}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      handleAreaSelect(area.id);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {area.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {area.city && `${area.city}, `}
+                                      {area.state ||
+                                        area.region ||
+                                        area.description}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      area.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -953,15 +952,16 @@ export default function SalesForm({
                     name="customerId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Customer *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={customerOpen}
                             onOpenChange={setCustomerOpen}
-                            displayValue={field.value
-                                  ? findCustomerName(field.value)
-                                  : "Select customer"}
-                            placeholder="Search customers..."
+                            displayValue={
+                              field.value
+                                ? findCustomerName(field.value)
+                                : ""
+                            }
+                            placeholder="Customer *"
                             emptyMessage={
                               areaId
                                 ? "No customer found in this area."
@@ -970,41 +970,39 @@ export default function SalesForm({
                             disabled={isSubmitting || isReadOnly || !areaId}
                           >
                             <CommandGroup>
-                                  {filteredCustomers.map(
-                                    (customer: Customer) => (
-                                      <CommandItem
-                                        key={customer.id}
-                                        value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
-                                        onSelect={() => {
-                                          if (!isReadOnly) {
-                                            handleCustomerSelect(customer.id);
-                                            setCustomerOpen(false);
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span className="font-medium">
-                                            {customer.companyName ||
-                                              customer.personName}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {customer.phoneNo &&
-                                              `${customer.phoneNo} • `}
-                                            {customer.city || customer.address}
-                                          </span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            customer.id === field.value
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ),
-                                  )}
-                                </CommandGroup>
+                              {filteredCustomers.map((customer: Customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={`${customer.id} ${customer.companyName || customer.personName} ${customer.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      handleCustomerSelect(customer.id);
+                                      setCustomerOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {customer.companyName ||
+                                        customer.personName}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {customer.phoneNo &&
+                                        `${customer.phoneNo} • `}
+                                      {customer.city || customer.address}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      customer.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1018,12 +1016,11 @@ export default function SalesForm({
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">Address *</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Customer address"
+                              placeholder="Address *"
                               className="pl-10"
                               {...field}
                               disabled={isSubmitting || isReadOnly}
@@ -1041,51 +1038,52 @@ export default function SalesForm({
                     name="vanId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Van *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={vanOpen}
                             onOpenChange={setVanOpen}
-                            displayValue={field.value
-                                  ? findVanName(field.value)
-                                  : "Select van"}
-                            placeholder="Search vans..."
+                            displayValue={
+                              field.value
+                                ? findVanName(field.value)
+                                : ""
+                            }
+                            placeholder="Van *"
                             emptyMessage="No van found."
                             disabled={isSubmitting || isReadOnly}
                           >
                             <CommandGroup>
-                                  {vans.map((van) => (
-                                    <CommandItem
-                                      key={van.id}
-                                      value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          field.onChange(van.id);
-                                          setVanOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {van.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {van.vehicleNo &&
-                                            `Vehicle: ${van.vehicleNo} • `}
-                                          {van.model && `Model: ${van.model}`}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          van.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {vans.map((van) => (
+                                <CommandItem
+                                  key={van.id}
+                                  value={`${van.id} ${van.name} ${van.vehicleNo || ""}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      field.onChange(van.id);
+                                      setVanOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {van.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {van.vehicleNo &&
+                                        `Vehicle: ${van.vehicleNo} • `}
+                                      {van.model && `Model: ${van.model}`}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      van.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1099,15 +1097,16 @@ export default function SalesForm({
                     name="salesmanId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">Salesman *</FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={salesmanOpen}
                             onOpenChange={setSalesmanOpen}
-                            displayValue={field.value
-                                  ? findSalesmanName(field.value)
-                                  : "Select salesman"}
-                            placeholder="Search salesmen..."
+                            displayValue={
+                              field.value
+                                ? findSalesmanName(field.value)
+                                : ""
+                            }
+                            placeholder="Salesman *"
                             emptyMessage={
                               areaId
                                 ? "No salesman found in this area."
@@ -1116,40 +1115,39 @@ export default function SalesForm({
                             disabled={isSubmitting || isReadOnly || !areaId}
                           >
                             <CommandGroup>
-                                  {filteredSalesmen.map((salesman: any) => (
-                                    <CommandItem
-                                      key={salesman.id}
-                                      value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          field.onChange(salesman.id);
-                                          setSalesmanOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {salesman.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {salesman.phoneNo &&
-                                            `${salesman.phoneNo} • `}
-                                          {salesman.email &&
-                                            `${salesman.email} • `}
-                                          {salesman.areaId}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          salesman.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {filteredSalesmen.map((salesman: any) => (
+                                <CommandItem
+                                  key={salesman.id}
+                                  value={`${salesman.id} ${salesman.name} ${salesman.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      field.onChange(salesman.id);
+                                      setSalesmanOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {salesman.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {salesman.phoneNo &&
+                                        `${salesman.phoneNo} • `}
+                                      {salesman.email && `${salesman.email} • `}
+                                      {salesman.areaId}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      salesman.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -1163,7 +1161,6 @@ export default function SalesForm({
                     name="gstDetails"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value ?? GST_DETAILS_DEFAULT_ID}
@@ -1171,7 +1168,7 @@ export default function SalesForm({
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select GST type" />
+                              <SelectValue placeholder="GST Details" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -1190,12 +1187,12 @@ export default function SalesForm({
                   {/* Display Invoice Number when editing (read‑only) */}
                   {editingSales && (
                     <FormItem>
-                      <FormLabel className="text-sm">Invoice No.</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             value={editingSales.invoiceNo}
+                            placeholder="Invoice No."
                             readOnly
                             disabled
                             className="pl-10 bg-muted"
@@ -1233,7 +1230,12 @@ export default function SalesForm({
                 </div>
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-4xl xl:max-w-7.5xl 2xl:max-w-10xl">
-                    <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
+                    <Table
+                      className={cn(
+                        layoutMode === "classic" && "classic-table",
+                        layoutMode === "classic" && "classic-table",
+                      )}
+                    >
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">
@@ -1307,55 +1309,59 @@ export default function SalesForm({
                                     </div>
                                   ) : (
                                     <InlineSearchField
-                                    open={productOpen && activeProductIndex === index}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        setActiveProductIndex(index);
-                                      } else {
-                                        setActiveProductIndex(null);
+                                      open={
+                                        productOpen &&
+                                        activeProductIndex === index
                                       }
-                                      setProductOpen(open);
-                                    }}
-                                    displayValue={item.productId
-                                            ? findProductName(item.productId)
-                                            : "Select product"}
-                                    placeholder="Search products..."
-                                    emptyMessage="No product found."
-                                    disabled={isSubmitting}
-                                  >
-                                    <CommandGroup>
-                                              {products.map((product) => (
-                                                <CommandItem
-                                                  key={product.id}
-                                                  value={`${product.id} ${product.productCode} ${product.description}`}
-                                                  onSelect={() => {
-                                                    handleProductSelect(
-                                                      index,
-                                                      product.id,
-                                                    );
-                                                  }}
-                                                >
-                                                  <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                      {product.productCode}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                      {product.productBrand}
-                                                    </span>
-                                                  </div>
-                                                  <Check
-                                                    className={cn(
-                                                      "ml-auto h-4 w-4",
-                                                      product.id ===
-                                                        item.productId
-                                                        ? "opacity-100"
-                                                        : "opacity-0",
-                                                    )}
-                                                  />
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                  </InlineSearchField>
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          setActiveProductIndex(index);
+                                        } else {
+                                          setActiveProductIndex(null);
+                                        }
+                                        setProductOpen(open);
+                                      }}
+                                      displayValue={
+                                        item.productId
+                                          ? findProductName(item.productId)
+                                          : "Select product"
+                                      }
+                                      placeholder="Search products..."
+                                      emptyMessage="No product found."
+                                      disabled={isSubmitting}
+                                    >
+                                      <CommandGroup>
+                                        {products.map((product) => (
+                                          <CommandItem
+                                            key={product.id}
+                                            value={`${product.id} ${product.productCode} ${product.description}`}
+                                            onSelect={() => {
+                                              handleProductSelect(
+                                                index,
+                                                product.id,
+                                              );
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">
+                                                {product.productCode}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {product.productBrand}
+                                              </span>
+                                            </div>
+                                            <Check
+                                              className={cn(
+                                                "ml-auto h-4 w-4",
+                                                product.id === item.productId
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
                                   )}
                                 </TableCell>
 

@@ -25,6 +25,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -37,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import AreaForm, { type AreaFormData } from "@/components/forms/AreaForm";
 import {
@@ -319,6 +321,7 @@ export default function AreaComponent() {
         await areaService.createArea(data);
         toast.success("Area created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchAreas(); // Refresh the list
     } catch (error: any) {
@@ -348,6 +351,7 @@ export default function AreaComponent() {
       try {
         await areaService.deleteArea(areaToDelete.id);
         toast.success("Area deleted successfully!");
+        void refreshActiveLists();
         fetchAreas(); // Refresh the list
       } catch (error: any) {
         toast.error("Failed to delete area", {
@@ -553,17 +557,11 @@ export default function AreaComponent() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Area Name Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="areaName"
-                            className="text-sm font-medium"
-                          >
-                            Area Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="areaName"
-                              placeholder="Enter area name"
+                              placeholder="Area Name"
                               value={nameInput}
                               onChange={(e) => handleNameChange(e.target.value)}
                               className="flex-1"
@@ -587,14 +585,11 @@ export default function AreaComponent() {
                         </div>
 
                         {/* City Filter */}
-                        <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm font-medium">
-                            City
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="city"
-                              placeholder="Enter city"
+                              placeholder="City"
                               value={cityInput}
                               onChange={(e) => handleCityChange(e.target.value)}
                               className="flex-1"
@@ -618,17 +613,11 @@ export default function AreaComponent() {
                         </div>
 
                         {/* State Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="state"
-                            className="text-sm font-medium"
-                          >
-                            State
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="state"
-                              placeholder="Enter state"
+                              placeholder="State"
                               value={stateInput}
                               onChange={(e) =>
                                 handleStateChange(e.target.value)
@@ -654,17 +643,11 @@ export default function AreaComponent() {
                         </div>
 
                         {/* Region Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="region"
-                            className="text-sm font-medium"
-                          >
-                            Region
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="region"
-                              placeholder="Enter region"
+                              placeholder="Region"
                               value={regionInput}
                               onChange={(e) =>
                                 handleRegionChange(e.target.value)
@@ -690,40 +673,19 @@ export default function AreaComponent() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}

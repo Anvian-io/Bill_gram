@@ -674,7 +674,7 @@ html {
 }
 /* Floating dropdown/calendar panels portaled to body */
 [data-floating-panel] {
-  z-index: 200;
+  z-index: 20;
 }
 .report-checkbox[data-state=checked] {
   background-color: #3ae043 !important;

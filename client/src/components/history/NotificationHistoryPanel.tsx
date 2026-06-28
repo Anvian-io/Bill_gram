@@ -419,14 +419,11 @@ export default function NotificationHistoryPanel({
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
-                        <div className="space-y-2">
-                          <Label htmlFor={`${pageName}-title`} className="text-sm font-medium">
-                            Title
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id={`${pageName}-title`}
-                              placeholder="Filter by title"
+                              placeholder="Title"
                               value={titleInput}
                               onChange={(event) => handleTitleChange(event.target.value)}
                               className="flex-1"
@@ -447,17 +444,11 @@ export default function NotificationHistoryPanel({
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor={`${pageName}-message`}
-                            className="text-sm font-medium"
-                          >
-                            Description
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id={`${pageName}-message`}
-                              placeholder="Filter by description"
+                              placeholder="Description"
                               value={messageInput}
                               onChange={(event) => handleMessageChange(event.target.value)}
                               className="flex-1"
@@ -478,14 +469,8 @@ export default function NotificationHistoryPanel({
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor={`${pageName}-unreadOnly`}
-                            className="text-sm font-medium"
-                          >
-                            Show Unread Only
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id={`${pageName}-unreadOnly`}
                               checked={filters.unreadOnly}

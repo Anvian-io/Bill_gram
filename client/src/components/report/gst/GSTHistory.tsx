@@ -31,7 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   containerVariants,
   itemVariants,
@@ -78,6 +79,8 @@ export default function GSTHistory() {
   const { layoutMode } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [rows, setRows] = useState<GSTReportHistory[]>([]);
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | "sales" | "purchase">("all");
@@ -215,6 +218,17 @@ export default function GSTHistory() {
   const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
+  const getSourceLabel = (value: "all" | "sales" | "purchase") => {
+    if (value === "all") return "";
+    if (value === "sales") return "Sales";
+    return "Purchase";
+  };
+
+  const getReportLabel = (value: string) => {
+    if (value === "all") return "";
+    return reportOptions.find((opt) => opt.value === value)?.label ?? "";
+  };
+
   return (
     <motion.div
       className="min-h-screen bg-background p-3"
@@ -265,55 +279,55 @@ export default function GSTHistory() {
                       className="overflow-hidden"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Source</Label>
-                          <Select
-                            value={source}
-                            onValueChange={(value: "all" | "sales" | "purchase") => {
-                              setSource(value);
-                              setReportFilter("all");
-                              setCurrentPage(1);
-                            }}
+                        <div>
+                          <InlineSearchField
+                            open={sourceOpen}
+                            onOpenChange={setSourceOpen}
+                            displayValue={getSourceLabel(source)}
+                            placeholder="Source"
+                            emptyMessage="No source found."
+                            disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All</SelectItem>
-                              <SelectItem value="sales">Sales</SelectItem>
-                              <SelectItem value="purchase">Purchase</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <CommandGroup>
+                              <CommandItem value="all" onSelect={() => { setSource("all"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>All</CommandItem>
+                              <CommandItem value="sales" onSelect={() => { setSource("sales"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>Sales</CommandItem>
+                              <CommandItem value="purchase" onSelect={() => { setSource("purchase"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>Purchase</CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Report</Label>
-                          <Select
-                            value={reportFilter}
-                            onValueChange={(value) => {
-                              setReportFilter(value);
-                              setCurrentPage(1);
-                            }}
+                        <div>
+                          <InlineSearchField
+                            open={reportOpen}
+                            onOpenChange={setReportOpen}
+                            displayValue={getReportLabel(reportFilter)}
+                            placeholder="Report"
+                            emptyMessage="No report found."
+                            disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
+                            <CommandGroup>
                               {reportOptions.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
+                                <CommandItem
+                                  key={opt.value}
+                                  value={opt.value}
+                                  onSelect={() => {
+                                    setReportFilter(opt.value);
+                                    setCurrentPage(1);
+                                    setReportOpen(false);
+                                  }}
+                                >
                                   {opt.label}
-                                </SelectItem>
+                                </CommandItem>
                               ))}
-                            </SelectContent>
-                          </Select>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Search</Label>
+                        <div>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="File name/report..."
+                              placeholder="Search"
                               className="pl-10"
                               value={search}
                               onChange={(e) => {

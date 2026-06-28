@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { format, startOfYear } from "date-fns";
 import { CustomDateInput } from "@/components/custom_ui";
 import {
@@ -51,6 +53,8 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);
 
   const [filters, setFilters] = useState<SalesB2CFilters>({
     fromDate: getDefaultFromDate(),
@@ -172,6 +176,20 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
 
   const formatCurrency = (amount: number) => `₹${amount.toFixed(2)}`;
 
+  const getSortByLabel = (sortBy: string) => {
+    const labels: Record<string, string> = {
+      place: "Place",
+      rate: "Rate",
+      taxable: "Taxable",
+      taxAmt: "Tax Amt",
+      cess: "Cess",
+    };
+    return labels[sortBy] ?? "";
+  };
+
+  const getOrderLabel = (sortOrder: string) =>
+    sortOrder === "asc" ? "Ascending" : sortOrder === "desc" ? "Descending" : "";
+
   return (
     <motion.div
       className="min-h-screen bg-background p-3"
@@ -278,63 +296,52 @@ export default function B2C({ isCollapsed }: { isCollapsed: boolean }) {
                           disabled={isLoading}
                         />
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Sort By</Label>
-                          <Select
-                            value={filters.sortBy}
-                            onValueChange={(value) =>
-                              handleFilterChange("sortBy", value)
-                            }
+                        <div>
+                          <InlineSearchField
+                            open={sortOpen}
+                            onOpenChange={setSortOpen}
+                            displayValue={getSortByLabel(filters.sortBy ?? "")}
+                            placeholder="Sort By"
+                            emptyMessage="No sort option found."
                             disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sort by..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="place">Place</SelectItem>
-                              <SelectItem value="rate">Rate</SelectItem>
-                              <SelectItem value="taxable">Taxable</SelectItem>
-                              <SelectItem value="taxAmt">Tax Amt</SelectItem>
-                              <SelectItem value="cess">Cess</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <CommandGroup>
+                              <CommandItem value="place" onSelect={() => { handleFilterChange("sortBy", "place"); setSortOpen(false); }}>Place</CommandItem>
+                              <CommandItem value="rate" onSelect={() => { handleFilterChange("sortBy", "rate"); setSortOpen(false); }}>Rate</CommandItem>
+                              <CommandItem value="taxable" onSelect={() => { handleFilterChange("sortBy", "taxable"); setSortOpen(false); }}>Taxable</CommandItem>
+                              <CommandItem value="taxAmt" onSelect={() => { handleFilterChange("sortBy", "taxAmt"); setSortOpen(false); }}>Tax Amt</CommandItem>
+                              <CommandItem value="cess" onSelect={() => { handleFilterChange("sortBy", "cess"); setSortOpen(false); }}>Cess</CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Order</Label>
-                          <Select
-                            value={filters.sortOrder}
-                            onValueChange={(value) =>
-                              handleFilterChange(
-                                "sortOrder",
-                                value as "asc" | "desc",
-                              )
-                            }
+                        <div>
+                          <InlineSearchField
+                            open={orderOpen}
+                            onOpenChange={setOrderOpen}
+                            displayValue={getOrderLabel(filters.sortOrder ?? "")}
+                            placeholder="Order"
+                            emptyMessage="No order option found."
                             disabled={isLoading}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Order..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="asc">Ascending</SelectItem>
-                              <SelectItem value="desc">Descending</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <CommandGroup>
+                              <CommandItem value="asc" onSelect={() => { handleFilterChange("sortOrder", "asc"); setOrderOpen(false); }}>Ascending</CommandItem>
+                              <CommandItem value="desc" onSelect={() => { handleFilterChange("sortOrder", "desc"); setOrderOpen(false); }}>Descending</CommandItem>
+                            </CommandGroup>
+                          </InlineSearchField>
                         </div>
 
                         <CustomDateInput
-                          label="From Date"
                           value={fromDateValue}
                           onChange={handleFromDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="From Date"
                           disabled={isLoading}
                         />
 
                         <CustomDateInput
-                          label="To Date"
                           value={toDateValue}
                           onChange={handleToDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="To Date"
                           disabled={isLoading}
                         />
                       </div>

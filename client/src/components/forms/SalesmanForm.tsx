@@ -20,15 +20,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { FormActiveStatusField } from "@/components/custom_ui/FormActiveStatusField";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useActiveLists } from "@/hooks/useActiveLists";
@@ -42,9 +36,7 @@ const formSchema = z.object({
     message: "Phone number must be at least 10 digits.",
   }),
   email: z.string().email().or(z.literal("")).optional(),
-  areaId: z.number({
-    message: "Please select an area",
-  }),
+  areaId: z.number().optional(),
   status: z.boolean(),
 });
 
@@ -108,9 +100,9 @@ export default function SalesmanForm({
   }, [editingSalesman, form]);
 
   const getAreaName = (id: number | null | undefined) => {
-    if (!id) return "Select Area *";
+    if (!id) return "Select Area";
     const area = areas.find((a) => a.id === id);
-    return area ? area.name : "Select Area *";
+    return area ? area.name : "Select Area";
   };
 
   const onSubmit = (data: SalesmanFormData) => {
@@ -180,7 +172,7 @@ export default function SalesmanForm({
                 name="areaId"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Area *</FormLabel>
+                    <FormLabel>Area</FormLabel>
                     <InlineSearchField
                       open={areaOpen}
                       onOpenChange={setAreaOpen}
@@ -242,23 +234,13 @@ export default function SalesmanForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select
-                    onValueChange={(value: string) =>
-                      field.onChange(value === "true")
-                    }
-                    value={field.value ? "true" : "false"}
-                    disabled={isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="true">Active</SelectItem>
-                      <SelectItem value="false">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <FormActiveStatusField
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

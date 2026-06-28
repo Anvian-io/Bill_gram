@@ -17,7 +17,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -178,7 +177,7 @@ const emptyItem: PurchaseFormData["items"][0] = {
   sch1Percent: 0,
   sch1Amount: 0,
   sch2Percent: 0,
-  sch2Amount: 0
+  sch2Amount: 0,
 };
 
 // ----------------------------------------------------------------------
@@ -688,13 +687,11 @@ export default function PurchaseForm({
                     name="invoiceDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">
-                          Invoice Date *
-                        </FormLabel>
                         <FormControl>
                           <HoverDateInput
                             value={field.value}
                             onChange={field.onChange}
+                            placeholder="Invoice Date *"
                             inputClassName="pl-10"
                             disabled={isSubmitting || isReadOnly}
                           />
@@ -710,55 +707,53 @@ export default function PurchaseForm({
                     name="supplierId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-sm">
-                          Supplier Name *
-                        </FormLabel>
                         <FormControl>
                           <InlineSearchField
                             open={supplierOpen}
                             onOpenChange={setSupplierOpen}
-                            displayValue={field.value
-                                  ? findSupplierName(field.value)
-                                  : "Select supplier"}
-                            placeholder="Search suppliers..."
+                            displayValue={
+                              field.value
+                                ? findSupplierName(field.value)
+                                : ""
+                            }
+                            placeholder="Supplier Name *"
                             emptyMessage="No supplier found."
                             disabled={isSubmitting || isReadOnly}
                           >
                             <CommandGroup>
-                                  {suppliers.map((supplier) => (
-                                    <CommandItem
-                                      key={supplier.id}
-                                      value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
-                                      onSelect={() => {
-                                        if (!isReadOnly) {
-                                          field.onChange(supplier.id);
-                                          setSupplierOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {supplier.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {supplier.phoneNo &&
-                                            `${supplier.phoneNo} • `}
-                                          {supplier.email &&
-                                            `${supplier.email} • `}
-                                          {supplier.address}
-                                        </span>
-                                      </div>
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          supplier.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                              {suppliers.map((supplier) => (
+                                <CommandItem
+                                  key={supplier.id}
+                                  value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
+                                  onSelect={() => {
+                                    if (!isReadOnly) {
+                                      field.onChange(supplier.id);
+                                      setSupplierOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {supplier.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {supplier.phoneNo &&
+                                        `${supplier.phoneNo} • `}
+                                      {supplier.email && `${supplier.email} • `}
+                                      {supplier.address}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      supplier.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
                         <FormMessage />
@@ -772,7 +767,6 @@ export default function PurchaseForm({
                     name="gstDetails"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm">GST Details</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value ?? GST_DETAILS_DEFAULT_ID}
@@ -780,7 +774,7 @@ export default function PurchaseForm({
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select GST type" />
+                              <SelectValue placeholder="GST Details" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -799,12 +793,12 @@ export default function PurchaseForm({
                   {/* Display Invoice Number when editing (read‑only) */}
                   {editingPurchase && (
                     <FormItem>
-                      <FormLabel className="text-sm">Invoice No.</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             value={editingPurchase.invoiceNo}
+                            placeholder="Invoice No."
                             readOnly
                             disabled
                             className="pl-10 bg-muted"
@@ -843,7 +837,12 @@ export default function PurchaseForm({
 
                 <div className="flex items-center justify-center overflow-x-auto w-full">
                   <div className="overflow-x-auto border rounded-lg max-w-9xl lg:max-w-4xl xl:max-w-7.5xl 2xl:max-w-10xl">
-                    <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
+                    <Table
+                      className={cn(
+                        layoutMode === "classic" && "classic-table",
+                        layoutMode === "classic" && "classic-table",
+                      )}
+                    >
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
                           <TableHead className="font-semibold w-12">
@@ -916,55 +915,59 @@ export default function PurchaseForm({
                                     </div>
                                   ) : (
                                     <InlineSearchField
-                                    open={productOpen && activeProductIndex === index}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        setActiveProductIndex(index);
-                                      } else {
-                                        setActiveProductIndex(null);
+                                      open={
+                                        productOpen &&
+                                        activeProductIndex === index
                                       }
-                                      setProductOpen(open);
-                                    }}
-                                    displayValue={item.productId
-                                            ? findProductName(item.productId)
-                                            : "Select product"}
-                                    placeholder="Search products..."
-                                    emptyMessage="No product found."
-                                    disabled={isSubmitting}
-                                  >
-                                    <CommandGroup>
-                                              {products.map((product) => (
-                                                <CommandItem
-                                                  key={product.id}
-                                                  value={`${product.id} ${product.productCode} ${product.productBrand}`}
-                                                  onSelect={() => {
-                                                    handleProductSelect(
-                                                      index,
-                                                      product.id,
-                                                    );
-                                                  }}
-                                                >
-                                                  <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                      {product.productCode}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                      {product.productBrand}
-                                                    </span>
-                                                  </div>
-                                                  <Check
-                                                    className={cn(
-                                                      "ml-auto h-4 w-4",
-                                                      product.id ===
-                                                        item.productId
-                                                        ? "opacity-100"
-                                                        : "opacity-0",
-                                                    )}
-                                                  />
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                  </InlineSearchField>
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          setActiveProductIndex(index);
+                                        } else {
+                                          setActiveProductIndex(null);
+                                        }
+                                        setProductOpen(open);
+                                      }}
+                                      displayValue={
+                                        item.productId
+                                          ? findProductName(item.productId)
+                                          : "Select product"
+                                      }
+                                      placeholder="Search products..."
+                                      emptyMessage="No product found."
+                                      disabled={isSubmitting}
+                                    >
+                                      <CommandGroup>
+                                        {products.map((product) => (
+                                          <CommandItem
+                                            key={product.id}
+                                            value={`${product.id} ${product.productCode} ${product.productBrand}`}
+                                            onSelect={() => {
+                                              handleProductSelect(
+                                                index,
+                                                product.id,
+                                              );
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">
+                                                {product.productCode}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {product.productBrand}
+                                              </span>
+                                            </div>
+                                            <Check
+                                              className={cn(
+                                                "ml-auto h-4 w-4",
+                                                product.id === item.productId
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </InlineSearchField>
                                   )}
                                 </TableCell>
 

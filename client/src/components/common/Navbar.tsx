@@ -18,20 +18,15 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
   const [currentPage, setCurrentPage] = useState<
     { label: string; path?: string }[]
   >([]);
-  const [pinnedItems, setPinnedItems] = useState<string[]>([]);
-  const location = useLocation();
-
-  // Load pinned items from localStorage on component mount
-  useEffect(() => {
-    const savedPinnedItems = localStorage.getItem("pinnedNavItems");
-    if (savedPinnedItems) {
-      try {
-        setPinnedItems(JSON.parse(savedPinnedItems));
-      } catch (error) {
-        console.error("Error parsing pinned items from localStorage:", error);
-      }
+  const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("pinnedNavItems");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
-  }, []);
+  });
+  const location = useLocation();
 
   // Save pinned items to localStorage whenever they change
   useEffect(() => {

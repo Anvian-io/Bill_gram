@@ -350,18 +350,16 @@ export default function SalesMonthlyGST({
                         />
 
                         <CustomDateInput
-                          label="From Date"
                           value={fromDateValue}
                           onChange={handleFromDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="From Date"
                           disabled={isLoading}
                         />
 
                         <CustomDateInput
-                          label="To Date"
                           value={toDateValue}
                           onChange={handleToDateChange}
-                          placeholder="dd/mm/yyyy"
+                          placeholder="To Date"
                           disabled={isLoading}
                         />
                       </div>

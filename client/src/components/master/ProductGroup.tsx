@@ -26,6 +26,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { CustomPagination } from "@/components/custom_ui";
+import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -38,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import ProductGroupForm from "@/components/forms/ProductGroupForm";
 import {
@@ -281,6 +283,7 @@ export default function ProductGroup() {
         await productGroupService.createProductGroup(data);
         toast.success("Product group created successfully!");
       }
+      void refreshActiveLists();
       setFormOpen(false);
       fetchProductGroups();
     } catch (error: any) {
@@ -310,6 +313,7 @@ export default function ProductGroup() {
       try {
         await productGroupService.deleteProductGroup(groupToDelete.id);
         toast.success("Product group deleted successfully!");
+        void refreshActiveLists();
         fetchProductGroups();
       } catch (error: any) {
         toast.error("Failed to delete product group", {
@@ -504,17 +508,11 @@ export default function ProductGroup() {
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                         {/* Group Name Filter - FIXED: Now uses local state */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="groupName"
-                            className="text-sm font-medium"
-                          >
-                            Group Name
-                          </Label>
+                        <div>
                           <div className="flex gap-2">
                             <Input
                               id="groupName"
-                              placeholder="Enter group name"
+                              placeholder="Group Name"
                               value={localName}
                               onChange={handleNameChange}
                               className="flex-1"
@@ -536,40 +534,19 @@ export default function ProductGroup() {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="status"
-                            className="text-sm font-medium"
-                          >
-                            Status
-                          </Label>
-                          <Select
+                        <div>
+                          <FilterStatusField
                             value={filters.status}
-                            onValueChange={(
-                              value: "all" | "active" | "inactive",
-                            ) => handleFilterChange("status", value)}
+                            onValueChange={(value) =>
+                              handleFilterChange("status", value)
+                            }
                             disabled={isLoading}
-                          >
-                            <SelectTrigger id="status">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         {/* Show Deleted Filter */}
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="showDeleted"
-                            className="text-sm font-medium"
-                          >
-                            Show Deleted
-                          </Label>
-                          <div className="flex items-center gap-3 pt-2">
+                        <div>
+                          <div className="flex items-center gap-3">
                             <Switch
                               id="showDeleted"
                               checked={filters.showDeleted}
