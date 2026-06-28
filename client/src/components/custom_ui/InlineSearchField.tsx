@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
 import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 import {
   resolvePortalContainer,
   setFloatingDropdownOpen,
@@ -83,27 +84,40 @@ export function InlineSearchField({
     setSearchValue("");
   }, [setOpen, setSearchValue]);
 
-  const { cancelDismiss, scheduleDismiss } = useHoverPanelDismiss(
+  const { cancelDismiss, dismissOnLeave } = useHoverPanelDismiss(
     anchorRef,
     panelRef,
     closeDropdown,
   );
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
+
+  const openDropdown = React.useCallback(() => {
+    if (disabled) return;
+    setOpen(true);
+    focusInput();
+  }, [disabled, focusInput, setOpen]);
 
   const handleMouseEnter = React.useCallback(() => {
     cancelDismiss();
-    onMouseEnter?.();
-    if (!disabled) {
-      setOpen(true);
-      focusInput();
+    if (openProp !== undefined) {
+      onMouseEnter?.();
+      return;
     }
-  }, [cancelDismiss, disabled, focusInput, onMouseEnter, setOpen]);
+    scheduleOpen(openDropdown);
+  }, [cancelDismiss, onMouseEnter, openDropdown, openProp, scheduleOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
+    cancelScheduledOpen();
     onMouseLeave?.();
     if (open) {
-      scheduleDismiss();
+      dismissOnLeave();
     }
-  }, [onMouseLeave, open, scheduleDismiss]);
+  }, [
+    cancelScheduledOpen,
+    dismissOnLeave,
+    onMouseLeave,
+    open,
+  ]);
 
   React.useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
@@ -167,7 +181,7 @@ export function InlineSearchField({
       data-inline-search-panel
       data-floating-panel
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={scheduleDismiss}
+      onMouseLeave={dismissOnLeave}
     >
       <Command shouldFilter={shouldFilter}>
         <CommandList className="max-h-[240px]">

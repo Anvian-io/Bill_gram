@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 
 const SKIP_HOVER_FOCUS_TYPES = new Set([
   "checkbox",
@@ -31,6 +32,7 @@ export function useHoverFocusInput(
   const skip = shouldSkipHoverFocus(type, options);
   const [hoverActive, setHoverActive] = React.useState(false);
   const ref = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
 
   const isEditable =
     skip || options?.disabled
@@ -45,36 +47,26 @@ export function useHoverFocusInput(
 
   const deactivate = React.useCallback(() => {
     if (skip) return;
-    if (document.activeElement !== ref.current) {
-      setHoverActive(false);
+    setHoverActive(false);
+    if (document.activeElement === ref.current) {
+      ref.current?.blur();
     }
   }, [skip]);
 
   const handleMouseEnter = React.useCallback(() => {
-    const tryFocus = () => {
-      if (document.body.dataset.floatingDropdownOpen === "true") return false;
-      if (!options?.disabled) {
-        ref.current?.focus();
-        if (!skip) setHoverActive(true);
-      }
-      return true;
-    };
+    if (options?.disabled) return;
 
-    if (document.body.dataset.floatingDropdownOpen === "true") {
-      requestAnimationFrame(() => {
-        if (!tryFocus()) {
-          window.setTimeout(tryFocus, 220);
-        }
-      });
-      return;
-    }
-
-    tryFocus();
-  }, [skip, options?.disabled]);
+    scheduleOpen(() => {
+      if (document.body.dataset.floatingDropdownOpen === "true") return;
+      ref.current?.focus();
+      if (!skip) setHoverActive(true);
+    });
+  }, [options?.disabled, scheduleOpen, skip]);
 
   const handleMouseLeave = React.useCallback(() => {
+    cancelScheduledOpen();
     deactivate();
-  }, [deactivate]);
+  }, [cancelScheduledOpen, deactivate]);
 
   const handleFocus = React.useCallback(() => {
     if (!skip) setHoverActive(true);

@@ -6,6 +6,8 @@ import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay"
+import { useHoverContainerDismiss } from "@/hooks/useHoverPanelDismiss"
 import {
   InputGroup,
   InputGroupAddon,
@@ -23,30 +25,48 @@ function Combobox({
   ...props
 }: React.ComponentProps<typeof ComboboxPrimitive.Root>) {
   const [open, setOpen] = React.useState(false);
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const isOpen = props.open !== undefined ? props.open : open;
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
+
+  const closeCombobox = React.useCallback(() => {
+    setOpen(false);
+    (props as { onOpenChange?: (open: boolean) => void }).onOpenChange?.(false);
+  }, [props]);
+
+  const openCombobox = React.useCallback(() => {
+    setOpen(true);
+    (props as { onOpenChange?: (open: boolean) => void }).onOpenChange?.(true);
+  }, [props]);
+
+  const { cancelDismiss, dismissOnLeave } = useHoverContainerDismiss(
+    wrapperRef,
+    closeCombobox,
+  );
 
   const handleMouseEnter = React.useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  }, []);
+    cancelDismiss();
+    scheduleOpen(openCombobox);
+  }, [cancelDismiss, openCombobox, scheduleOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
-    timeoutRef.current = setTimeout(() => {
-      setOpen(false);
-    }, 150);
-  }, []);
+    cancelScheduledOpen();
+    if (isOpen) {
+      dismissOnLeave();
+    }
+  }, [cancelScheduledOpen, dismissOnLeave, isOpen]);
 
   return (
     <ComboboxHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
       <ComboboxPrimitive.Root 
-        open={props.open !== undefined ? props.open : open}
-        onOpenChange={(open, event: any) => {
-          setOpen(open);
-          (props as any).onOpenChange?.(open, event);
+        open={isOpen}
+        onOpenChange={(nextOpen, event: unknown) => {
+          setOpen(nextOpen);
+          (props as { onOpenChange?: (open: boolean, event: unknown) => void }).onOpenChange?.(nextOpen, event);
         }}
         {...props} 
       >
-        <div className="relative w-full">{children}</div>
+        <div ref={wrapperRef} className="relative w-full">{children}</div>
       </ComboboxPrimitive.Root>
     </ComboboxHoverContext.Provider>
   )

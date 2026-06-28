@@ -2,6 +2,8 @@ import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay"
+import { useHoverContainerDismiss } from "@/hooks/useHoverPanelDismiss"
 
 const PopoverHoverContext = React.createContext<{
   handleMouseEnter: () => void;
@@ -13,30 +15,48 @@ function Popover({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   const [open, setOpen] = React.useState(false);
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const isOpen = props.open !== undefined ? props.open : open;
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
+
+  const closePopover = React.useCallback(() => {
+    setOpen(false);
+    props.onOpenChange?.(false);
+  }, [props]);
+
+  const openPopover = React.useCallback(() => {
+    setOpen(true);
+    props.onOpenChange?.(true);
+  }, [props]);
+
+  const { cancelDismiss, dismissOnLeave } = useHoverContainerDismiss(
+    wrapperRef,
+    closePopover,
+  );
 
   const handleMouseEnter = React.useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  }, []);
+    cancelDismiss();
+    scheduleOpen(openPopover);
+  }, [cancelDismiss, openPopover, scheduleOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
-    timeoutRef.current = setTimeout(() => {
-      setOpen(false);
-    }, 150);
-  }, []);
+    cancelScheduledOpen();
+    if (isOpen) {
+      dismissOnLeave();
+    }
+  }, [cancelScheduledOpen, dismissOnLeave, isOpen]);
 
   return (
     <PopoverHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
       <PopoverPrimitive.Root 
-        open={props.open !== undefined ? props.open : open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          props.onOpenChange?.(o);
+        open={isOpen}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          props.onOpenChange?.(nextOpen);
         }}
         {...props}
       >
-        <div className="relative w-full">{children}</div>
+        <div ref={wrapperRef} className="relative w-full">{children}</div>
       </PopoverPrimitive.Root>
     </PopoverHoverContext.Provider>
   )

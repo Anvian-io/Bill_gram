@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
 import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 import {
   resolvePortalContainer,
   setFloatingDropdownOpen,
@@ -44,17 +45,12 @@ export function HoverDateInput({
     inputRef.current?.blur();
   }, []);
 
-  const { cancelDismiss, scheduleDismiss } = useHoverPanelDismiss(
+  const { cancelDismiss, dismissOnLeave } = useHoverPanelDismiss(
     anchorRef,
     panelRef,
     dismiss,
   );
-
-  const selectedDate = React.useMemo(() => {
-    if (!value) return undefined;
-    const parsed = parse(value, "yyyy-MM-dd", new Date());
-    return isValid(parsed) ? parsed : undefined;
-  }, [value]);
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
@@ -74,8 +70,21 @@ export function HoverDateInput({
 
   const handleMouseEnter = () => {
     cancelDismiss();
-    openPicker();
+    scheduleOpen(openPicker);
   };
+
+  const handleMouseLeave = () => {
+    cancelScheduledOpen();
+    if (open) {
+      dismissOnLeave();
+    }
+  };
+
+  const selectedDate = React.useMemo(() => {
+    if (!value) return undefined;
+    const parsed = parse(value, "yyyy-MM-dd", new Date());
+    return isValid(parsed) ? parsed : undefined;
+  }, [value]);
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (!date || !onChange) return;
@@ -126,7 +135,7 @@ export function HoverDateInput({
       data-floating-panel
       onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={cancelDismiss}
-      onMouseLeave={scheduleDismiss}
+      onMouseLeave={dismissOnLeave}
     >
       <Calendar
         mode="single"
@@ -142,7 +151,7 @@ export function HoverDateInput({
     <div
       className={cn("relative w-full", className)}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={scheduleDismiss}
+      onMouseLeave={handleMouseLeave}
       data-hover-date
     >
       <div ref={anchorRef} className="relative">

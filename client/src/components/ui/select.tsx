@@ -4,6 +4,8 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { setFloatingDropdownOpen } from "@/lib/floatingPanelEvents"
+import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay"
+import { useHoverContainerDismiss } from "@/hooks/useHoverPanelDismiss"
 
 const SelectHoverContext = React.createContext<{
   handleMouseEnter: () => void;
@@ -17,8 +19,39 @@ function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
   const [internalOpen, setInternalOpen] = React.useState(false);
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
   const isOpen = openProp !== undefined ? openProp : internalOpen;
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
+
+  const closeSelect = React.useCallback(() => {
+    if (openProp === undefined) {
+      setInternalOpen(false);
+    }
+    onOpenChange?.(false);
+  }, [onOpenChange, openProp]);
+
+  const openSelect = React.useCallback(() => {
+    if (
+      document.body.dataset.floatingDropdownOpen === "true" &&
+      !isOpen
+    ) {
+      return;
+    }
+    if (openProp === undefined) {
+      setInternalOpen(true);
+    }
+    onOpenChange?.(true);
+    requestAnimationFrame(() => {
+      wrapperRef.current
+        ?.querySelector<HTMLElement>('[data-slot="select-trigger"]')
+        ?.focus();
+    });
+  }, [isOpen, onOpenChange, openProp]);
+
+  const { cancelDismiss, dismissOnLeave } = useHoverContainerDismiss(
+    wrapperRef,
+    closeSelect,
+  );
 
   React.useEffect(() => {
     if (isOpen) {
@@ -29,27 +62,16 @@ function Select({
   }, [isOpen]);
 
   const handleMouseEnter = React.useCallback(() => {
-    if (
-      document.body.dataset.floatingDropdownOpen === "true" &&
-      !isOpen
-    ) {
-      return;
-    }
-    clearTimeout(timeoutRef.current);
-    if (openProp === undefined) {
-      setInternalOpen(true);
-    }
-    onOpenChange?.(true);
-  }, [isOpen, onOpenChange, openProp]);
+    cancelDismiss();
+    scheduleOpen(openSelect);
+  }, [cancelDismiss, openSelect, scheduleOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
-    timeoutRef.current = setTimeout(() => {
-      if (openProp === undefined) {
-        setInternalOpen(false);
-      }
-      onOpenChange?.(false);
-    }, 150);
-  }, [onOpenChange, openProp]);
+    cancelScheduledOpen();
+    if (isOpen) {
+      dismissOnLeave();
+    }
+  }, [cancelScheduledOpen, dismissOnLeave, isOpen]);
 
   return (
     <SelectHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
@@ -61,7 +83,7 @@ function Select({
         }}
         {...props}
       >
-        <div className="relative w-full">{children}</div>
+        <div ref={wrapperRef} className="relative w-full">{children}</div>
       </SelectPrimitive.Root>
     </SelectHoverContext.Provider>
   )
@@ -97,7 +119,6 @@ function SelectTrigger({
       onMouseEnter={(event) => {
         hoverCtx?.handleMouseEnter();
         onMouseEnter?.(event);
-        event.currentTarget.focus();
       }}
       onMouseLeave={(event) => {
         hoverCtx?.handleMouseLeave();
