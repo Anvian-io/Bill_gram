@@ -884,7 +884,7 @@ export default function ProductInventory() {
                         <TableHead className="font-semibold w-[128px] max-w-[128px] whitespace-normal text-center">
                           Description
                         </TableHead>
-                        <TableHead className="font-semibold min-w-[140px] text-center">
+                        <TableHead className="font-semibold w-[140px] max-w-[140px] whitespace-normal text-center">
                           Company
                         </TableHead>
                         <TableHead className="font-semibold min-w-[110px] text-center">
@@ -943,7 +943,7 @@ export default function ProductInventory() {
                             disabled={isLoading}
                           />
                         </TableHead>
-                        <TableHead className="py-2 min-w-[140px]">
+                        <TableHead className="py-2 w-[140px] max-w-[140px] whitespace-normal">
                           <InlineSearchField
                             open={brandOpen}
                             onOpenChange={setBrandOpen}
@@ -1217,11 +1217,14 @@ export default function ProductInventory() {
                                     {product.description || "No description"}
                                   </div>
                                 </TableCell>
-                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer">
+                                <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[140px] max-w-[140px] whitespace-normal align-top">
                                   {product.productCompany ? (
-                                    <div className="flex items-center gap-2">
-                                      <Building className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-sm">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Building className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                      <span
+                                        className="text-sm truncate"
+                                        title={product.productCompany.name}
+                                      >
                                         {product.productCompany.name}
                                       </span>
                                     </div>
