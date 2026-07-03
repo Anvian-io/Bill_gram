@@ -647,7 +647,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       toast.error("Please select a product");
       return;
     }
-    if ((item.aQty ?? 0) <= 0 && (item.fQty ?? 0) <= 0) {
+    if (Number(item.aQty ?? 0) <= 0 && Number(item.fQty ?? 0) <= 0) {
       toast.error("Please enter quantity");
       return;
     }
@@ -965,7 +965,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
   const handleDmPrint = () => {
     const damageItems = items.filter(
-      (item) => item.productId > 0 && (item.DQty ?? 0) > 0,
+      (item) => item.productId > 0 && Number(item.DQty ?? 0) > 0,
     );
     if (damageItems.length === 0) {
       toast.info("No damaged items to print");
@@ -983,10 +983,10 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           <td style="border:1px solid #ccc;padding:4px">${findProductName(item.productId)}</td>
           <td style="border:1px solid #ccc;padding:4px;text-align:right">${item.DQty ?? 0}</td>
           <td style="border:1px solid #ccc;padding:4px;text-align:right">${(item.rate ?? 0).toFixed(2)}</td>
-          <td style="border:1px solid #ccc;padding:4px;text-align:right">${((item.DQty ?? 0) * (item.rate ?? 0)).toFixed(2)}</td>
+          <td style="border:1px solid #ccc;padding:4px;text-align:right">$${(Number(item.DQty ?? 0) * Number(item.rate ?? 0)).toFixed(2)}</td>
         </tr>`,
       )
-      .join("");
+      .join('');
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
