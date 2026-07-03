@@ -1,8 +1,8 @@
-version: 1.0.4
+version: 1.0.5
 files:
-  - url: BillGram-Setup-1.0.4.exe
-    sha512: GuT/n8llSoJ3k4uocNJQf+IDtx4J1dEbVuK84TKMveOkCRqkTU4NESE9jGgBZb3VWrOdxFI/SREZ/DsQd2z3Vw==
-    size: 342895608
-path: BillGram-Setup-1.0.4.exe
-sha512: GuT/n8llSoJ3k4uocNJQf+IDtx4J1dEbVuK84TKMveOkCRqkTU4NESE9jGgBZb3VWrOdxFI/SREZ/DsQd2z3Vw==
-releaseDate: '2026-07-03T17:55:48.291Z'
+  - url: BillGram-Setup-1.0.5.exe
+    sha512: HD4REBKzs94noAZi8SiTBcmYfpgDaW+cSZv7rBnz1tCnTGxLODfvzLWTTRRCtji65MD4rM9M2DaKyrvT+2WXsg==
+    size: 342895335
+path: BillGram-Setup-1.0.5.exe
+sha512: HD4REBKzs94noAZi8SiTBcmYfpgDaW+cSZv7rBnz1tCnTGxLODfvzLWTTRRCtji65MD4rM9M2DaKyrvT+2WXsg==
+releaseDate: '2026-07-03T19:22:17.807Z'
