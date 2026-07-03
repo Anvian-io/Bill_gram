@@ -522,6 +522,11 @@ function setupAutoUpdater() {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
+
+  if (process.platform === "win32") {
+    autoUpdater.verifyUpdateCodeSignature = async () => null;
+  }
+
   autoUpdater.setFeedURL({
     provider: "generic",
     url: updateServerUrl,

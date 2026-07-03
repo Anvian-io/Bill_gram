@@ -27,8 +27,8 @@
       }
     ],
     "icon": "assets/icon.ico",
-    "publisherName": "Your Company Name",
-    "artifactName": "BillGram-Setup-${version}.${ext}"
+    "artifactName": "BillGram-Setup-${version}.${ext}",
+    "verifyUpdateCodeSignature": false
   },
   "nsis": {
     "oneClick": false,
