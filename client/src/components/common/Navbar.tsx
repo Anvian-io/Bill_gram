@@ -140,7 +140,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                     isExpanded ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  Dashboard
+                  Dashboard v1.0.2
                 </span>
               </div>
             </div>
