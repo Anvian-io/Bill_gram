@@ -48,6 +48,7 @@ import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
 import type { User } from "@/types/user";
 import { getFullImageUrl } from "@/utils/imageUtils";
+import SoftwareUpdateSettings from "@/components/SoftwareUpdateSettings";
 import { useTheme } from "@/contexts/ThemeProvider";
 import {
   Select,
@@ -858,6 +859,9 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Check for Updates — last section */}
+        <SoftwareUpdateSettings />
       </div>
     </motion.div>
   );

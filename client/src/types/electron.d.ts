@@ -28,6 +28,7 @@ export interface ElectronAPI {
   platform: string;
   isElectron: boolean;
   getAppVersion: () => Promise<string>;
+  getUpdateStatus: () => Promise<UpdateStatusPayload | null>;
   checkForUpdates: () => Promise<{
     success: boolean;
     updateInfo?: { version?: string } | null;

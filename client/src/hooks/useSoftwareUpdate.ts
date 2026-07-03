@@ -19,6 +19,7 @@ export function useSoftwareUpdate() {
   const [availableVersion, setAvailableVersion] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [infoMessage, setInfoMessage] = useState<string>("");
   const [isElectron] = useState(isElectronApp);
 
   useEffect(() => {
@@ -30,21 +31,59 @@ export function useSoftwareUpdate() {
       setCurrentVersion("");
     });
 
+    window.electronAPI
+      .getUpdateStatus()
+      .then((payload) => {
+        if (!payload?.status) {
+          return;
+        }
+
+        switch (payload.status) {
+          case "available":
+            setState("available");
+            setAvailableVersion(payload.version ?? "");
+            break;
+          case "downloading":
+            setState("downloading");
+            setProgress(Math.round(payload.percent ?? 0));
+            break;
+          case "downloaded":
+            setState("downloaded");
+            setProgress(100);
+            if (payload.version) {
+              setAvailableVersion(payload.version);
+            }
+            break;
+          case "error":
+            setState("error");
+            setErrorMessage(payload.message ?? "Update check failed");
+            break;
+          default:
+            break;
+        }
+      })
+      .catch(() => undefined);
+
     const unsubscribe = window.electronAPI.onUpdateStatus(
       (payload: UpdateStatusPayload) => {
         switch (payload.status) {
           case "checking":
             setState("checking");
             setErrorMessage("");
+            setInfoMessage("");
             break;
           case "available":
             setState("available");
             setAvailableVersion(payload.version ?? "");
             setErrorMessage("");
+            setInfoMessage("");
             break;
           case "not-available":
             setState("idle");
             setAvailableVersion("");
+            setInfoMessage(
+              `You are on the latest version (v${payload.version || "unknown"}).`,
+            );
             break;
           case "downloading":
             setState("downloading");
@@ -77,6 +116,7 @@ export function useSoftwareUpdate() {
 
     setState("checking");
     setErrorMessage("");
+    setInfoMessage("");
 
     const result = await window.electronAPI.checkForUpdates();
     if (!result.success) {
@@ -120,6 +160,7 @@ export function useSoftwareUpdate() {
     availableVersion,
     progress,
     errorMessage,
+    infoMessage,
     checkForUpdates,
     downloadUpdate,
     installUpdate,

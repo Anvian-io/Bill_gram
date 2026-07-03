@@ -27,7 +27,8 @@
       }
     ],
     "icon": "assets/icon.ico",
-    "publisherName": "Your Company Name"
+    "publisherName": "Your Company Name",
+    "artifactName": "BillGram-Setup-${version}.${ext}"
   },
   "nsis": {
     "oneClick": false,

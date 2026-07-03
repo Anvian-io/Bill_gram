@@ -12,6 +12,8 @@ app.commandLine.appendSwitch("disable-gpu");
 let mainWindow;
 let backendProcess;
 let updatesEnabled = false;
+let lastUpdateStatus = null;
+let frontendUpdateCheckScheduled = false;
 
 const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
 const BACKEND_START_TIMEOUT_MS = 180000;
@@ -323,6 +325,7 @@ function loadFrontend() {
   console.log("Loading frontend from:", indexPath);
   console.log("File exists:", fs.existsSync(indexPath));
   mainWindow.loadFile(indexPath);
+  scheduleUpdateCheckAfterFrontendLoad();
 }
 
 function showStartupError(message) {
@@ -439,9 +442,42 @@ function startBackend() {
 }
 
 function sendUpdateStatus(payload) {
+  lastUpdateStatus = payload;
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update-status", payload);
   }
+}
+
+function scheduleUpdateCheckAfterFrontendLoad() {
+  if (!updatesEnabled || frontendUpdateCheckScheduled) {
+    return;
+  }
+
+  frontendUpdateCheckScheduled = true;
+
+  const runCheck = () => {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((error) => {
+        console.error("Update check failed:", error);
+        sendUpdateStatus({
+          status: "error",
+          message: error.message,
+        });
+      });
+    }, 2000);
+  };
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once("did-finish-load", runCheck);
+    return;
+  }
+
+  runCheck();
 }
 
 function getUpdateServerUrl() {
@@ -533,12 +569,6 @@ function setupAutoUpdater() {
       version: info.version,
     });
   });
-
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((error) => {
-      console.error("Startup update check failed:", error);
-    });
-  }, 10000);
 }
 
 app.whenReady().then(async () => {
@@ -722,6 +752,8 @@ ipcMain.handle("get-user-credential", async (_event, emailInput) => {
 });
 
 ipcMain.handle("get-app-version", async () => app.getVersion());
+
+ipcMain.handle("get-update-status", async () => lastUpdateStatus);
 
 ipcMain.handle("check-for-updates", async () => {
   if (process.env.NODE_ENV === "development") {
