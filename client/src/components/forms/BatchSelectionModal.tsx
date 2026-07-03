@@ -202,19 +202,12 @@ export default function BatchSelectionModal({
   const handleEnterApply = (e: KeyboardEvent) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
+    e.stopPropagation();
     handleApplyBatch();
   };
 
   const handleDialogKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Enter" || activeTab !== "batch") return;
-    const target = e.target as HTMLElement;
-    if (
-      target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.tagName === "BUTTON"
-    ) {
-      return;
-    }
     e.preventDefault();
     handleApplyBatch();
   };

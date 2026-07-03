@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useState, useEffect, type KeyboardEvent } from "react";
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -144,7 +144,7 @@ export default function BatchSelectionModal({
     });
   };
 
-  const handleApplyBatch = () => {
+  const handleApplyBatch = useCallback(() => {
     const batch =
       selectedBatch ??
       (filteredBatches.length > 0 ? filteredBatches[0] : null);
@@ -158,6 +158,11 @@ export default function BatchSelectionModal({
       return;
     }
 
+    if (!selectedBatch) {
+      setSelectedBatch(batch);
+      setShowBatchError(false);
+    }
+
     if (onBatchSelect) {
       onBatchSelect(batch, aQty);
       onOpenChange(false);
@@ -165,27 +170,41 @@ export default function BatchSelectionModal({
         description: `Quantity: A=${aQty}, M=${mQty} | Total: ₹${(batch.purchaseRate * aQty).toFixed(2)}`,
       });
     }
-  };
+  }, [
+    aQty,
+    filteredBatches,
+    mQty,
+    onBatchSelect,
+    onOpenChange,
+    selectedBatch,
+  ]);
 
-  const handleEnterApply = (e: KeyboardEvent) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    handleApplyBatch();
-  };
+  const handleApplyBatchRef = useRef(handleApplyBatch);
+  handleApplyBatchRef.current = handleApplyBatch;
 
-  const handleDialogKeyDown = (e: KeyboardEvent) => {
+  const handleEnterKey = useCallback((e: KeyboardEvent) => {
     if (e.key !== "Enter" || activeTab !== "batch") return;
-    const target = e.target as HTMLElement;
-    if (
-      target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.tagName === "BUTTON"
-    ) {
-      return;
-    }
     e.preventDefault();
-    handleApplyBatch();
-  };
+    e.stopPropagation();
+    handleApplyBatchRef.current();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onDocumentEnter = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Enter" || activeTab !== "batch") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "TEXTAREA") return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      handleApplyBatchRef.current();
+    };
+
+    document.addEventListener("keydown", onDocumentEnter, true);
+    return () => document.removeEventListener("keydown", onDocumentEnter, true);
+  }, [open, activeTab]);
 
   const handleCancel = () => {
     if (selectedBatch) {
@@ -233,7 +252,7 @@ export default function BatchSelectionModal({
     >
       <DialogContent
         className="min-w-[90vw] min-h-[40vh] overflow-y-auto"
-        onKeyDown={handleDialogKeyDown}
+        onKeyDown={handleEnterKey}
       >
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -279,7 +298,7 @@ export default function BatchSelectionModal({
                       )
                     }
                     className="w-24"
-                    onKeyDown={handleEnterApply}
+                    onKeyDown={handleEnterKey}
                   />
                 </div>
               </div>
@@ -352,7 +371,7 @@ export default function BatchSelectionModal({
                   className="pl-10"
                   value={searchBatch}
                   onChange={(e) => setSearchBatch(e.target.value)}
-                  onKeyDown={handleEnterApply}
+                  onKeyDown={handleEnterKey}
                 />
                 {searchBatch && (
                   <Button
@@ -663,7 +682,7 @@ export default function BatchSelectionModal({
               <Button
                 id="applyBatchBtn"
                 onClick={handleApplyBatch}
-                disabled={!selectedBatch}
+                disabled={filteredBatches.length === 0 && !selectedBatch}
                 className="gap-2"
               >
                 <Check className="h-4 w-4" />

@@ -34,6 +34,8 @@ export interface InlineSearchFieldProps {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   inputId?: string;
+  /** Called after Enter selects the first dropdown item (for focus navigation). */
+  onAfterEnterSelect?: () => void;
   children: React.ReactNode;
 }
 
@@ -53,8 +55,10 @@ export function InlineSearchField({
   onMouseEnter,
   onMouseLeave,
   inputId,
+  onAfterEnterSelect,
   children,
-}: InlineSearchFieldProps) {
+  ...ariaProps
+}: InlineSearchFieldProps & React.AriaAttributes) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [internalSearch, setInternalSearch] = React.useState("");
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
@@ -172,6 +176,20 @@ export function InlineSearchField({
   const closedValue =
     displayValue && displayValue !== placeholder ? displayValue : "";
   const inputValue = open ? searchValue : closedValue;
+  const isInvalid = ariaProps["aria-invalid"] === true;
+
+  const selectFirstItem = React.useCallback(() => {
+    const firstItem = panelRef.current?.querySelector(
+      "[cmdk-item]:not([data-disabled='true'])",
+    ) as HTMLElement | null;
+    if (firstItem) {
+      firstItem.click();
+    }
+    closeDropdown();
+    if (onAfterEnterSelect) {
+      requestAnimationFrame(() => onAfterEnterSelect());
+    }
+  }, [closeDropdown, onAfterEnterSelect]);
 
   const panel = open ? (
     <div
@@ -212,7 +230,12 @@ export function InlineSearchField({
           value={inputValue}
           placeholder={placeholder}
           disabled={disabled}
-          className={cn("pr-8", inputClassName)}
+          className={cn(
+            "pr-8",
+            isInvalid && "border-destructive",
+            inputClassName,
+          )}
+          aria-invalid={isInvalid || undefined}
           onChange={(event) => {
             setSearchValue(event.target.value);
             setOpen(true);
@@ -224,6 +247,11 @@ export function InlineSearchField({
             if (event.key === "Escape") {
               closeDropdown();
               inputRef.current?.blur();
+              return;
+            }
+            if (event.key === "Enter" && open) {
+              event.preventDefault();
+              selectFirstItem();
             }
           }}
         />

@@ -8,7 +8,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +52,8 @@ import {
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { AppliedBatchSummaryBar } from "@/components/custom_ui/AppliedBatchSummaryBar";
+import type { AppliedBatchSummary } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
@@ -109,9 +110,9 @@ interface AddPurchaseProps {
 // Schema
 // ----------------------------------------------------------------------
 const purchaseSchema = z.object({
-  invoiceDate: z.string().min(1, "Invoice date is required"),
-  supplierId: z.coerce.number().min(1, "Supplier is required"),
-  gstDetails: z.string().optional(),
+  invoiceDate: z.string().min(1),
+  supplierId: z.coerce.number().min(1),
+  gstDetails: z.string().min(1),
 
   items: z
     .array(
@@ -140,10 +141,9 @@ const purchaseSchema = z.object({
         productBrand: z.string().optional(),
       }),
     )
-    .min(1, "At least one product item is required")
+    .min(1)
     .refine(
       (items) => items.some((item) => item.productId > 0),
-      "At least one product item is required",
     ),
 
   remarks: z.string().optional(),
@@ -264,6 +264,8 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     cartonPack: number;
     conversionFactor: number;
   } | null>(null);
+  const [appliedBatchSummary, setAppliedBatchSummary] =
+    useState<AppliedBatchSummary | null>(null);
 
   // Get data from hooks
   const { suppliers, products } = useActiveLists();
@@ -568,6 +570,17 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
       form.setValue("items", updatedItems);
 
+      setAppliedBatchSummary({
+        batchNo: batch.batchNo,
+        mfgDate: batch.mfgDate ?? null,
+        expDate: batch.expDate ?? null,
+        barcode: batch.barcode ?? "",
+        stock: batch.openingStock ?? 0,
+        mrp: batch.mrp ?? 0,
+        rate: batch.purchaseRate ?? rate,
+        pack: cartonPack,
+      });
+
       toast.success(`Batch applied to ${item.productCode}`, {
         description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit}`,
       });
@@ -639,6 +652,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       return;
     }
     setEditingRowIndex(null);
+    setAppliedBatchSummary(null);
     addProductRow();
     focusProductSearch();
   };
@@ -720,6 +734,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
+      setAppliedBatchSummary(null);
       const updatedItems = [...items];
       const aQty = 1;
       const mQty = calculateMQty(aQty, product.cartonPack);
@@ -833,7 +848,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
   const onError = (errors: any) => {
     console.error("Form validation errors:", errors);
-    toast.error("Please fix all validation errors before submitting.");
   };
 
   // ----------------------------------------------------------------------
@@ -844,6 +858,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     setGeneratedPurchaseId(null);
     setGeneratedInvoiceNo(null);
     setEditingRowIndex(null);
+    setAppliedBatchSummary(null);
     if (!isReturnMode) {
       setSearchParams({ id: "new" }, { replace: true });
     }
@@ -1124,7 +1139,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                   <FormField
                     control={form.control}
                     name="invoiceDate"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
                         <FormControl>
                           <HoverDateInput
@@ -1134,11 +1149,12 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             inputClassName={cn(
                               "pl-10",
                               layoutMode === "classic" && "classic-input",
+                              fieldState.error && "border-destructive",
                             )}
+                            aria-invalid={!!fieldState.error}
                             disabled={isSubmitting}
                           />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1146,20 +1162,24 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                   <FormField
                     control={form.control}
                     name="gstDetails"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="gstDetailsSearch"
                             open={gstHover.open}
                             onOpenChange={gstHover.setOpen}
                             displayValue={
                               field.value ? getGstDetailsLabel(field.value) : ""
                             }
-                            placeholder="Tax Details"
+                            placeholder="Tax Details *"
                             emptyMessage="No tax option found."
                             onMouseEnter={gstHover.onMouseEnter}
                             onMouseLeave={gstHover.onMouseLeave}
                             disabled={isSubmitting}
+                            onAfterEnterSelect={() =>
+                              focusField("supplierSearch")
+                            }
                             inputClassName={cn(
                               layoutMode === "classic" &&
                                 "classic-input h-8 pl-0 border-b-2 bg-transparent",
@@ -1177,7 +1197,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                       String(gst.id),
                                       { shouldDirty: true },
                                     );
+                                    form.clearErrors(["gstDetails"]);
                                     gstHover.setOpen(false);
+                                    focusField("supplierSearch");
                                   }}
                                 >
                                   <span className="font-medium">
@@ -1196,7 +1218,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1259,10 +1280,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                   <FormField
                     control={form.control}
                     name="supplierId"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="supplierSearch"
                             open={supplierHover.open}
                             onOpenChange={supplierHover.setOpen}
                             displayValue={
@@ -1273,6 +1295,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             onMouseEnter={supplierHover.onMouseEnter}
                             onMouseLeave={supplierHover.onMouseLeave}
                             disabled={isSubmitting}
+                            onAfterEnterSelect={() =>
+                              focusField("productSearch-0")
+                            }
                             inputClassName={cn(
                               layoutMode === "classic" &&
                                 "classic-input h-8 pl-0 border-b-2 bg-transparent",
@@ -1285,7 +1310,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                   value={`${supplier.id} ${supplier.name} ${supplier.phoneNo || ""}`}
                                   onSelect={() => {
                                     field.onChange(supplier.id);
+                                    form.clearErrors(["supplierId"]);
                                     supplierHover.setOpen(false);
+                                    focusField("productSearch-0");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1312,7 +1339,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -2131,44 +2157,61 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
               </div>
 
               <div className="px-3 py-2.5 bg-background">
-                <div className="mx-auto flex items-center justify-between gap-3 max-w-[1600px]">
-                  <div className="flex items-center gap-2">
+                <div className="mx-auto flex items-center gap-2 max-w-[1600px] flex-nowrap overflow-hidden">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={scrollToInvoiceSearch}
+                    disabled={isSubmitting || isReturnMode}
+                    aria-label="Search invoice"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={
+                      isSubmitting ||
+                      isReturnMode ||
+                      !isEditMode ||
+                      !purchaseId ||
+                      purchaseId === "new"
+                    }
+                    aria-label="Delete invoice"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  {appliedBatchSummary && (
+                    <AppliedBatchSummaryBar
+                      summary={appliedBatchSummary}
+                      rateLabel="P. Rate"
+                    />
+                  )}
+
+                  <div className="flex items-center gap-2 shrink-0 ml-auto flex-nowrap">
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={scrollToInvoiceSearch}
-                      disabled={isSubmitting || isReturnMode}
-                      aria-label="Search invoice"
+                      onClick={handleBillPreview}
+                      disabled={isSubmitting || !canShowBillPreview}
+                      aria-label="Preview invoice"
+                      title="Preview"
                     >
-                      <Search className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon"
-                      className="h-9 w-9 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteOpen(true)}
-                      disabled={
-                        isSubmitting ||
-                        isReturnMode ||
-                        !isEditMode ||
-                        !purchaseId ||
-                        purchaseId === "new"
-                      }
-                      aria-label="Delete invoice"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 font-semibold text-xs"
+                      size="sm"
+                      className="h-9 gap-1 px-2 font-semibold text-xs"
                       onClick={handleDmPrint}
                       disabled={isSubmitting}
                       aria-label="DM print"
@@ -2210,20 +2253,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                         <Download className="h-4 w-4" />
                       )}
                     </Button>
-                    {canShowBillPreview && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={handleBillPreview}
-                        disabled={isSubmitting}
-                        aria-label="Preview invoice"
-                        title="Preview"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
                     {!isEditMode && (
                       <Button
                         type="button"

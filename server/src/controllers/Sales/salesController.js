@@ -72,6 +72,11 @@ const updateBatchStock = async (prisma, batchId, deltaQty) => {
   });
 };
 
+const toNullableFkId = (value) => {
+  const id = Number(value);
+  return Number.isFinite(id) && id > 0 ? id : null;
+};
+
 /**
  * Helper: Create sales history entries for an invoice
  */
@@ -86,14 +91,14 @@ const createSalesHistory = async (
 ) => {
   const historyData = items.map((item) => ({
     productId: item.productId,
-    batchId: item.batchId,
+    batchId: toNullableFkId(item.batchId),
     salesInvoiceId: invoice.id,
     invoiceNo: `SINV-${invoice.id}`, // or use invoice.invoiceNo if already updated
     invoiceDate: invoice.invoiceDate,
     customerId,
-    areaId,
-    vanId,
-    salesmanId,
+    areaId: toNullableFkId(areaId),
+    vanId: toNullableFkId(vanId),
+    salesmanId: toNullableFkId(salesmanId),
     rate: item.rate,
     aQty: item.aQty,
     totalAmount: item.totalAmount,

@@ -9,7 +9,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +48,8 @@ import {
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { AppliedBatchSummaryBar } from "@/components/custom_ui/AppliedBatchSummaryBar";
+import type { AppliedBatchSummary } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
 import { cn } from "@/lib/utils";
 import {
@@ -129,13 +130,13 @@ interface AddSalesProps {
 // Schema
 // ----------------------------------------------------------------------
 const salesSchema = z.object({
-  invoiceDate: z.string().min(1, "Invoice date is required"),
-  areaId: z.coerce.number().min(1, "Area is required"),
-  customerId: z.coerce.number().min(1, "Customer is required"),
+  invoiceDate: z.string().min(1),
+  areaId: z.coerce.number().min(1),
+  customerId: z.coerce.number().min(1),
   vanId: z.coerce.number().min(0).default(0),
   salesmanId: z.coerce.number().min(0).default(0),
-  address: z.string().min(1, "Address is required"),
-  gstDetails: z.string().optional(),
+  address: z.string().optional(),
+  gstDetails: z.string().min(1),
   phoneNo: z.string().optional(),
 
   items: z
@@ -165,10 +166,9 @@ const salesSchema = z.object({
         conversionFactor: z.coerce.number().optional(),
       }),
     )
-    .min(1, "At least one product item is required")
+    .min(1)
     .refine(
       (items) => items.some((item) => item.productId > 0),
-      "At least one product item is required",
     ),
 
   remarks: z.string().optional(),
@@ -289,6 +289,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     cartonPack: number;
     conversionFactor: number;
   } | null>(null);
+  const [appliedBatchSummary, setAppliedBatchSummary] =
+    useState<AppliedBatchSummary | null>(null);
 
   // Get data from Redux store
   const { areas, customers, salesmen, vans, products } = useActiveLists();
@@ -771,6 +773,17 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
       form.setValue("items", updatedItems, { shouldDirty: true });
 
+      setAppliedBatchSummary({
+        batchNo: batch.batchNo,
+        mfgDate: batch.mfgDate ?? null,
+        expDate: batch.expDate ?? null,
+        barcode: batch.barcode ?? "",
+        stock: batch.openingStock ?? 0,
+        mrp: batch.mrp ?? 0,
+        rate: batch.saleRate ?? rate,
+        pack: cartonPack,
+      });
+
       toast.success(`Batch applied to ${productCode}`, {
         description: `Rate: ₹${rate.toFixed(2)} | A Qty: ${aQty} | M Qty: ${mQty} | Unit: ${unit} | Stock: ${batch.openingStock}`,
       });
@@ -846,6 +859,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       return;
     }
     setEditingRowIndex(null);
+    setAppliedBatchSummary(null);
     addProductRow();
     focusProductSearch();
   };
@@ -920,6 +934,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
+      setAppliedBatchSummary(null);
       setPendingBatchSelection({
         index,
         productId: product.id,
@@ -998,7 +1013,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
   const onError = (errors: any) => {
     console.error("Form validation errors:", errors);
-    toast.error("Please fix all validation errors before submitting.");
   };
 
   // --------------------------------------------------------------------
@@ -1010,6 +1024,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     setGeneratedSaleId(null);
     setGeneratedInvoiceNo(null);
     setEditingRowIndex(null);
+    setAppliedBatchSummary(null);
     if (!isReturnMode) {
       setSearchParams({ id: "new" }, { replace: true });
     }
@@ -1138,7 +1153,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
           },
           (errors) => {
             console.error("Form validation errors:", errors);
-            toast.error("Please fix all validation errors before printing.");
             reject(new Error("Validation failed"));
           },
         )();
@@ -1352,7 +1366,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   <FormField
                     control={form.control}
                     name="invoiceDate"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
                         <FormControl>
                           <HoverDateInput
@@ -1364,11 +1378,14 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               });
                             }}
                             placeholder="Invoice Date *"
-                            inputClassName="pl-10"
+                            inputClassName={cn(
+                              "pl-10",
+                              fieldState.error && "border-destructive",
+                            )}
+                            aria-invalid={!!fieldState.error}
                             disabled={isSubmitting}
                           />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1377,20 +1394,22 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   <FormField
                     control={form.control}
                     name="gstDetails"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="gstDetailsSearch"
                             open={gstHover.open}
                             onOpenChange={gstHover.setOpen}
                             displayValue={
                               field.value ? getGstDetailsLabel(field.value) : ""
                             }
-                            placeholder="Tax Details"
+                            placeholder="Tax Details *"
                             emptyMessage="No tax option found."
                             onMouseEnter={gstHover.onMouseEnter}
                             onMouseLeave={gstHover.onMouseLeave}
                             disabled={isSubmitting}
+                            onAfterEnterSelect={() => focusField("areaSearch")}
                           >
                             <CommandGroup>
                               {gst_details.map((gst) => (
@@ -1404,7 +1423,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       String(gst.id),
                                       { shouldDirty: true },
                                     );
+                                    form.clearErrors(["gstDetails"]);
                                     gstHover.setOpen(false);
+                                    focusField("areaSearch");
                                   }}
                                 >
                                   <span className="font-medium">
@@ -1423,7 +1444,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1432,10 +1452,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   <FormField
                     control={form.control}
                     name="areaId"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="areaSearch"
                             open={areaHover.open}
                             onOpenChange={areaHover.setOpen}
                             displayValue={
@@ -1446,6 +1467,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             onMouseEnter={areaHover.onMouseEnter}
                             onMouseLeave={areaHover.onMouseLeave}
                             disabled={isSubmitting}
+                            onAfterEnterSelect={() => focusField("address")}
                           >
                             <CommandGroup>
                               {areas.map((area) => (
@@ -1454,6 +1476,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   value={`${area.id} ${area.name} ${area.city || ""}`}
                                   onSelect={() => {
                                     handleAreaSelect(area.id);
+                                    focusField("address");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1480,7 +1503,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1489,14 +1511,19 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   <FormField
                     control={form.control}
                     name="address"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Address *"
-                              className="pl-10"
+                              id="address"
+                              placeholder="Address"
+                              className={cn(
+                                "pl-10",
+                                fieldState.error && "border-destructive",
+                              )}
+                              aria-invalid={!!fieldState.error}
                               {...field}
                               onChange={(e) => {
                                 field.onChange(e);
@@ -1505,11 +1532,16 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   shouldValidate: true,
                                 });
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  focusField("vanSearch");
+                                }
+                              }}
                               disabled={isSubmitting}
                             />
                           </div>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1574,6 +1606,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="vanSearch"
                             open={vanHover.open}
                             onOpenChange={vanHover.setOpen}
                             displayValue={
@@ -1584,6 +1617,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             onMouseEnter={vanHover.onMouseEnter}
                             onMouseLeave={vanHover.onMouseLeave}
                             disabled={isSubmitting}
+                            onAfterEnterSelect={() => focusField("salesmanSearch")}
                           >
                             <CommandGroup>
                               {vans.map((van) => (
@@ -1594,6 +1628,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     field.onChange(van.id);
                                     form.clearErrors(["vanId"]);
                                     vanHover.setOpen(false);
+                                    focusField("salesmanSearch");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1619,7 +1654,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1632,6 +1666,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="salesmanSearch"
                             open={salesmanHover.open}
                             onOpenChange={salesmanHover.setOpen}
                             displayValue={
@@ -1646,6 +1681,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             onMouseEnter={salesmanHover.onMouseEnter}
                             onMouseLeave={salesmanHover.onMouseLeave}
                             disabled={isSubmitting || !areaId}
+                            onAfterEnterSelect={() =>
+                              focusField("customerSearch")
+                            }
                           >
                             <CommandGroup>
                               {filteredSalesmen.map((salesman: any) => (
@@ -1656,6 +1694,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     field.onChange(salesman.id);
                                     form.clearErrors(["salesmanId"]);
                                     salesmanHover.setOpen(false);
+                                    focusField("customerSearch");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1682,7 +1721,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1691,10 +1729,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   <FormField
                     control={form.control}
                     name="customerId"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
                           <InlineSearchField
+                            inputId="customerSearch"
                             open={customerHover.open}
                             onOpenChange={customerHover.setOpen}
                             displayValue={
@@ -1709,6 +1748,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             onMouseEnter={customerHover.onMouseEnter}
                             onMouseLeave={customerHover.onMouseLeave}
                             disabled={isSubmitting || !areaId}
+                            onAfterEnterSelect={() =>
+                              focusField("productSearch-0")
+                            }
                           >
                             <CommandGroup>
                               {filteredCustomers.map((customer: Customer) => (
@@ -1718,6 +1760,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   onSelect={() => {
                                     handleCustomerSelect(customer.id);
                                     customerHover.setOpen(false);
+                                    focusField("productSearch-0");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1744,7 +1787,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             </CommandGroup>
                           </InlineSearchField>
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -2566,36 +2608,40 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
               </div>
 
               <div className="px-3 py-2.5 bg-background">
-                <div className="mx-auto flex items-center justify-between gap-3 max-w-[1600px]">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={scrollToInvoiceSearch}
-                      disabled={isSubmitting || isReturnMode}
-                      aria-label="Search invoice"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteOpen(true)}
-                      disabled={
-                        isSubmitting || isReturnMode || !saleId || isNew
-                      }
-                      aria-label="Delete invoice"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="mx-auto flex items-center gap-2 max-w-[1600px] flex-nowrap overflow-hidden">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={scrollToInvoiceSearch}
+                    disabled={isSubmitting || isReturnMode}
+                    aria-label="Search invoice"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={
+                      isSubmitting || isReturnMode || !saleId || isNew
+                    }
+                    aria-label="Delete invoice"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
 
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {/* Preview PDF – always visible (was DM position) */}
+                  {appliedBatchSummary && (
+                    <AppliedBatchSummaryBar
+                      summary={appliedBatchSummary}
+                      rateLabel="S. Rate"
+                    />
+                  )}
+
+                  <div className="flex items-center gap-2 shrink-0 ml-auto flex-nowrap">
                     <Button
                       type="button"
                       variant="outline"
@@ -2608,7 +2654,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {/* DM Print – now saves invoice then opens browser print dialog */}
                     <Button
                       type="button"
                       variant="outline"
