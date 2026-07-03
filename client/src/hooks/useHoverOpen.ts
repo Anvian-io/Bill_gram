@@ -4,9 +4,9 @@ import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 /**
  * Open/close state for dropdowns that should open on hover.
  */
-export function useHoverOpen() {
+export function useHoverOpen(delay?: number) {
   const [open, setOpen] = useState(false);
-  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
+  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay(delay);
 
   const onMouseEnter = useCallback(() => {
     scheduleOpen(() => setOpen(true));

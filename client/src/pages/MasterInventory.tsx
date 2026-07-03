@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useHoverOpen } from "@/hooks/useHoverOpen";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,11 @@ const PINNED_MASTER_KEY = "pinnedMasterNavItems";
 
 export default function MasterInventory() {
   const [activeSection, setActiveSection] = useState<string>("product-group");
-  const [isExpanded, setIsExpanded] = useState(false);
+  const {
+    open: isExpanded,
+    onMouseEnter,
+    onMouseLeave,
+  } = useHoverOpen(300);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     try {
@@ -163,8 +168,8 @@ export default function MasterInventory() {
         animate={{ width: isExpanded ? 280 : 72 }}
         initial={false}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       >
         <div className="flex h-full flex-col py-4 px-2">
           <div className="mb-4 flex items-center px-2 h-10">
