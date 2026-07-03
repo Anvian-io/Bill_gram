@@ -8,7 +8,14 @@ type SalesTab = "add" | "return" | "sales" | "history";
 
 export default function Sales() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<SalesTab>("add");
+
+  // Sync active tab with URL ?tab= param
+  const tabParam = searchParams.get("tab") as SalesTab | null;
+  const [activeTab, setActiveTab] = useState<SalesTab>(
+    tabParam && ["add", "return", "sales", "history"].includes(tabParam)
+      ? tabParam
+      : "add",
+  );
 
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const addTabRef = useRef<HTMLButtonElement>(null);
@@ -18,12 +25,20 @@ export default function Sales() {
 
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
+  // Keep activeTab in sync when URL tab param changes (e.g. after navigation from SalesList)
+  useEffect(() => {
+    if (tabParam && ["add", "return", "sales", "history"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
   const handleTabChange = (tab: SalesTab) => {
     setActiveTab(tab);
     if (tab === "add") {
-      setSearchParams({ id: "new" }, { replace: true });
+      setSearchParams({ tab: "add", id: "new" }, { replace: true });
     } else {
       const next = new URLSearchParams(searchParams);
+      next.set("tab", tab);
       next.delete("id");
       setSearchParams(next, { replace: true });
     }

@@ -668,26 +668,6 @@ export const updateSale = asyncHandler(async (req, res) => {
     );
   }
 
-  // --- VALIDATION OF REQUIRED FIELDS (cannot be null) ---
-  // These fields are mandatory in the schema. If they are provided in the request,
-  // they must be non‑null. If not provided, the existing value will be kept.
-  const requiredFields = [
-    { name: "areaId", value: areaId },
-    { name: "vanId", value: vanId },
-    { name: "salesmanId", value: salesmanId },
-    { name: "address", value: address },
-  ];
-  for (const field of requiredFields) {
-    if (field.value === null) {
-      return sendResponse(
-        res,
-        false,
-        null,
-        `${field.name} cannot be set to null`,
-        statusType.BAD_REQUEST,
-      );
-    }
-  }
 
   // If invoiceNo is changed, check uniqueness
   if (invoiceNo && invoiceNo !== existingInvoice.invoiceNo) {

@@ -485,14 +485,14 @@ model SalesInvoice {
   id             Int                   @id @default(autoincrement())
   invoiceNo      String?
   invoiceDate    DateTime
-  areaId         Int
-  area           Area                  @relation(fields: [areaId], references: [id])
+  areaId         Int?
+  area           Area?                 @relation(fields: [areaId], references: [id])
   customerId     Int
   customer       Customer              @relation(fields: [customerId], references: [id])
-  vanId          Int
-  van            Van                   @relation(fields: [vanId], references: [id])
-  salesmanId     Int
-  salesman       Salesman              @relation(fields: [salesmanId], references: [id])
+  vanId          Int?
+  van            Van?                  @relation(fields: [vanId], references: [id])
+  salesmanId     Int?
+  salesman       Salesman?             @relation(fields: [salesmanId], references: [id])
   address        String
   gstDetails     String?               @default("Against GST")
   remarks        String?
@@ -591,11 +591,11 @@ model SalesHistory {
   invoiceDate       DateTime
   customerId        Int
   customer          Customer? @relation(fields: [customerId], references: [id])
-  areaId            Int
+  areaId            Int?
   area              Area? @relation(fields: [areaId], references: [id])
-  vanId             Int
+  vanId             Int?
   van               Van? @relation(fields: [vanId], references: [id])
-  salesmanId        Int
+  salesmanId        Int?
   salesman          Salesman? @relation(fields: [salesmanId], references: [id])
   rate              Float
   aQty              Int

@@ -41,8 +41,7 @@ import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { CustomAlert } from "@/components/custom_ui";
 import { useDebounce } from "@/utils/debounce";
-import SalesForm from "../forms/SalesForm";
-import type { Sales, SalesFormData, SalesFilters } from "@/types/sales";
+import type { Sales, SalesFilters } from "@/types/sales";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { salesService } from "@/services/salesService";
@@ -100,11 +99,6 @@ export default function Sales() {
   const navigate = useNavigate();
   const [sales, setSales] = useState<Sales[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSales, setEditingSales] = useState<Sales | null>(null);
 
   // Delete confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -137,7 +131,6 @@ export default function Sales() {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -452,22 +445,11 @@ export default function Sales() {
 
   // Handlers for CRUD
   const handleAddSales = () => {
-    setEditingSales(null);
-    setIsModalOpen(true);
+    navigate("/sales?tab=add&id=new");
   };
 
   const handleEditSales = async (sale: Sales) => {
-    try {
-      setIsLoading(true);
-      const fullSale = await salesService.getSale(sale.id);
-      console.log("Fetched sale for editing:", fullSale);
-      setEditingSales(fullSale);
-      setIsModalOpen(true);
-    } catch (error) {
-      toast.error("Failed to load sale details");
-    } finally {
-      setIsLoading(false);
-    }
+    navigate(`/sales?tab=add&id=${sale.id}`);
   };
 
   const confirmDeleteSales = (sale: Sales) => {
@@ -487,27 +469,6 @@ export default function Sales() {
     } finally {
       setSalesToDelete(null);
       setDeleteOpen(false);
-    }
-  };
-
-  const handleSaveSales = async (data: SalesFormData, id?: number) => {
-    setIsSubmitting(true);
-    try {
-      if (id) {
-        await salesService.updateSale(id, data);
-        toast.success("Sales updated successfully");
-      } else {
-        await salesService.createSale(data);
-        toast.success("Sales created successfully");
-      }
-      void refreshActiveLists();
-      setIsModalOpen(false);
-      fetchSales();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save sales");
-      throw error;
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -820,88 +781,6 @@ export default function Sales() {
                           disabled={isLoading}
                         />
 
-                        {/* Status Filter */}
-                        <div>
-                          <InlineSearchField
-                            open={statusOpen}
-                            onOpenChange={setStatusOpen}
-                            displayValue={
-                              filters.status === "all" ? "" : filters.status
-                            }
-                            placeholder="Status"
-                            emptyMessage="No status found."
-                            disabled={isLoading}
-                          >
-                            <CommandGroup>
-                              <CommandItem
-                                value="all status"
-                                onSelect={() => {
-                                  handleFilterChange("status", "all");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                All Status
-                              </CommandItem>
-                              <CommandItem
-                                value="Pending"
-                                onSelect={() => {
-                                  handleFilterChange("status", "Pending");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Pending
-                              </CommandItem>
-                              <CommandItem
-                                value="Paid"
-                                onSelect={() => {
-                                  handleFilterChange("status", "Paid");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Paid
-                              </CommandItem>
-                              <CommandItem
-                                value="Partially Paid"
-                                onSelect={() => {
-                                  handleFilterChange(
-                                    "status",
-                                    "Partially Paid",
-                                  );
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Partially Paid
-                              </CommandItem>
-                              <CommandItem
-                                value="Cancelled"
-                                onSelect={() => {
-                                  handleFilterChange("status", "Cancelled");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Cancelled
-                              </CommandItem>
-                              <CommandItem
-                                value="Delivered"
-                                onSelect={() => {
-                                  handleFilterChange("status", "Delivered");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Delivered
-                              </CommandItem>
-                              <CommandItem
-                                value="Return"
-                                onSelect={() => {
-                                  handleFilterChange("status", "Return");
-                                  setStatusOpen(false);
-                                }}
-                              >
-                                Return
-                              </CommandItem>
-                            </CommandGroup>
-                          </InlineSearchField>
-                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -1402,15 +1281,6 @@ export default function Sales() {
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
         saleId={previewSaleId}
-      />
-
-      {/* Sales Form Modal */}
-      <SalesForm
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        editingSales={editingSales}
-        onSave={handleSaveSales}
-        isSubmitting={isSubmitting}
       />
 
       {/* Delete Confirmation */}

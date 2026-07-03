@@ -1108,6 +1108,61 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     }
   };
 
+  // Save the invoice first (if new/dirty), then trigger browser print on the PDF
+  const handleSaveAndPrint = async () => {
+    setIsPrinting(true);
+    try {
+      // If there's already a saved ID, just print directly
+      const existingId = getPreviewSaleId();
+      if (existingId > 0 && !isDirty) {
+        const blob =
+          await salesService.downloadSalesBillPreviewPDF(existingId);
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => printWindow.print();
+        }
+        return;
+      }
+
+      // Otherwise, save first
+      await new Promise<void>((resolve, reject) => {
+        form.handleSubmit(
+          async (data) => {
+            try {
+              await onSubmit(data);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          },
+          (errors) => {
+            console.error("Form validation errors:", errors);
+            toast.error("Please fix all validation errors before printing.");
+            reject(new Error("Validation failed"));
+          },
+        )();
+      });
+
+      // After saving, get the ID and print
+      // Wait a tick for state to update
+      await new Promise((r) => setTimeout(r, 300));
+      const savedId = getPreviewSaleId();
+      if (savedId > 0) {
+        const blob = await salesService.downloadSalesBillPreviewPDF(savedId);
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => printWindow.print();
+        }
+      }
+    } catch {
+      // Error already handled above
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const handleDmPrint = () => {
     const damageItems = items.filter(
       (item) => item.productId > 0 && (item.DQty ?? 0) > 0,
@@ -2540,32 +2595,37 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 font-semibold text-xs"
-                      onClick={handleDmPrint}
-                      disabled={isSubmitting}
-                      aria-label="DM print"
-                      title="DM Print"
-                    >
-                      DM
-                    </Button>
+                    {/* Preview PDF – always visible (was DM position) */}
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={handlePrintBill}
+                      onClick={handleBillPreview}
+                      disabled={isSubmitting || !canShowBillPreview}
+                      aria-label="Preview PDF"
+                      title="Preview PDF"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {/* DM Print – now saves invoice then opens browser print dialog */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1 px-2 font-semibold text-xs"
+                      onClick={handleSaveAndPrint}
                       disabled={isSubmitting || isPrinting}
-                      aria-label="Print invoice"
-                      title="Print"
+                      aria-label="DM print"
+                      title="Save & Print"
                     >
                       {isPrinting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Printer className="h-4 w-4" />
+                        <>
+                          DM
+                          <Printer className="h-4 w-4" />
+                        </>
                       )}
                     </Button>
                     <Button
@@ -2586,20 +2646,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                         <Download className="h-4 w-4" />
                       )}
                     </Button>
-                    {canShowBillPreview && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={handleBillPreview}
-                        disabled={isSubmitting}
-                        aria-label="Preview invoice"
-                        title="Preview"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
                     {!isEditMode && (
                       <Button
                         type="button"
