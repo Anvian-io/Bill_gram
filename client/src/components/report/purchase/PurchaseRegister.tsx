@@ -70,7 +70,8 @@ export default function PurchaseRegister() {
   // State
   const [reportData, setReportData] = useState<PurchaseReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [supplierOpen, setSupplierOpen] = useState(false);
+  const [supplierOpen, setSupplierOpen] = useState(false);
+
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [registerData, setRegisterData] = useState<PurchaseRegisterData | null>(
     null,

@@ -50,7 +50,8 @@ export default function PurchaseHistory() {
   const { layoutMode } = useTheme();
   // State
   const [histories, setHistories] = useState<PurchaseReportHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);

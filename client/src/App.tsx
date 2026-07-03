@@ -27,6 +27,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import AppInitializer from "./components/AppInitializer";
 import BackupSessionGuard from "./components/BackupSessionGuard";
+import SoftwareUpdateBanner from "./components/SoftwareUpdateBanner";
 
 
 import { useEnterToNextField } from "./hooks/useEnterToNextField";
@@ -55,6 +56,7 @@ function App() {
       <ThemeProvider>
         <Router>
           <BackupSessionGuard />
+          <SoftwareUpdateBanner />
           <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <Routes>
               <Route path="/login" element={<Login />} />

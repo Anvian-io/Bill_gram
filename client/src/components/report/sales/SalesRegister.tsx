@@ -76,7 +76,8 @@ export default function SalesRegister() {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
-  const [salesmanOpen, setSalesmanOpen] = useState(false);
+  const [salesmanOpen, setSalesmanOpen] = useState(false);
+
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [registerData, setRegisterData] =
     useState<SalesRegisterReportData | null>(null);

@@ -89,7 +89,8 @@ export default function AreaWise() {
   const [areaOpen, setAreaOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
-  const [productGroupOpen, setProductGroupOpen] = useState(false);
+  const [productGroupOpen, setProductGroupOpen] = useState(false);
+
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Modal state

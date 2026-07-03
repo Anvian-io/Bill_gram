@@ -43,7 +43,8 @@ export default function HSNSummary({ isCollapsed }: { isCollapsed: boolean }) {
   const { layoutMode } = useTheme();
   const [rows, setRows] = useState<HSNSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const [sourceOpen, setSourceOpen] = useState(false);
 
   const [filters, setFilters] = useState<HSNSummaryFilters>({

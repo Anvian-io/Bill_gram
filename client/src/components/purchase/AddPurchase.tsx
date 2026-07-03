@@ -218,7 +218,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
   // Determine mode
   const isNew = purchaseId === "new" || !purchaseId;
-  const isEditMode = Boolean(!isReturnMode && purchaseId && purchaseId !== "new");
+  const isEditMode = Boolean(
+    !isReturnMode && purchaseId && purchaseId !== "new",
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -305,23 +307,26 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     if (!invoiceSearchHover.open) return;
 
     const query = invoiceSearchQuery.trim();
-    const timer = setTimeout(async () => {
-      setIsSearchingInvoice(true);
-      try {
-        const result = await purchaseService.getPurchases(
-          1,
-          15,
-          (query
-            ? { search: query }
-            : {}) as Parameters<typeof purchaseService.getPurchases>[2],
-        );
-        setInvoiceSearchResults(result.purchases ?? []);
-      } catch {
-        setInvoiceSearchResults([]);
-      } finally {
-        setIsSearchingInvoice(false);
-      }
-    }, query ? 400 : 0);
+    const timer = setTimeout(
+      async () => {
+        setIsSearchingInvoice(true);
+        try {
+          const result = await purchaseService.getPurchases(
+            1,
+            15,
+            (query ? { search: query } : {}) as Parameters<
+              typeof purchaseService.getPurchases
+            >[2],
+          );
+          setInvoiceSearchResults(result.purchases ?? []);
+        } catch {
+          setInvoiceSearchResults([]);
+        } finally {
+          setIsSearchingInvoice(false);
+        }
+      },
+      query ? 400 : 0,
+    );
 
     return () => clearTimeout(timer);
   }, [invoiceSearchQuery, invoiceSearchHover.open]);
@@ -952,8 +957,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       return;
     }
 
-    const supplierName =
-      findSupplierName(form.getValues("supplierId")) || "—";
+    const supplierName = findSupplierName(form.getValues("supplierId")) || "—";
     const invoiceNo = generatedInvoiceNo || "Draft";
     const invoiceDate = form.getValues("invoiceDate") || "—";
     const rowsHtml = damageItems
@@ -1149,9 +1153,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                             open={gstHover.open}
                             onOpenChange={gstHover.setOpen}
                             displayValue={
-                              field.value
-                                ? getGstDetailsLabel(field.value)
-                                : ""
+                              field.value ? getGstDetailsLabel(field.value) : ""
                             }
                             placeholder="Tax Details"
                             emptyMessage="No tax option found."
@@ -1178,7 +1180,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                     gstHover.setOpen(false);
                                   }}
                                 >
-                                  <span className="font-medium">{gst.type}</span>
+                                  <span className="font-medium">
+                                    {gst.type}
+                                  </span>
                                   <Check
                                     className={cn(
                                       "ml-auto h-4 w-4",
@@ -1317,8 +1321,16 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
             </Card>
 
             {/* Products Table */}
-            <Card className={cn("p-2", layoutMode === "classic" && "border-none shadow-none bg-transparent")}>
-              <CardContent className={cn("p-0 pt-1", layoutMode === "classic" && "p-0")}>
+            <Card
+              className={cn(
+                "p-2",
+                layoutMode === "classic" &&
+                  "border-none shadow-none bg-transparent",
+              )}
+            >
+              <CardContent
+                className={cn("p-0 pt-1", layoutMode === "classic" && "p-0")}
+              >
                 <div className="w-full overflow-x-auto">
                   <div
                     className={cn(
@@ -1337,49 +1349,43 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                           <TableHead className="font-semibold">
                             Prod Code & Description
                           </TableHead>
-                            <TableHead className="font-semibold">
-                              Rate
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              A. Qty
-                            </TableHead>
-                            <TableHead className="font-semibold">Fr</TableHead>
-                            <TableHead className="font-semibold">Dm</TableHead>
-                            <TableHead className="font-semibold">
-                              M. Qty *
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Unit
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Amount
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Sch%
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Sch amt
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Tax (%)
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Tax Amt
-                            </TableHead>
-                            <TableHead className="font-semibold">
-                              Final Amt
-                            </TableHead>
-                            <TableHead className="font-semibold w-20">
-                              Actions
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                          <TableHead className="font-semibold">Rate</TableHead>
+                          <TableHead className="font-semibold">
+                            A. Qty
+                          </TableHead>
+                          <TableHead className="font-semibold">Fr</TableHead>
+                          <TableHead className="font-semibold">Dm</TableHead>
+                          <TableHead className="font-semibold">
+                            M. Qty *
+                          </TableHead>
+                          <TableHead className="font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">
+                            Amount
+                          </TableHead>
+                          <TableHead className="font-semibold">Sch%</TableHead>
+                          <TableHead className="font-semibold">
+                            Sch amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax (%)
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Tax Amt
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Final Amt
+                          </TableHead>
+                          <TableHead className="font-semibold w-20">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         <AnimatePresence>
                           {items.map((item, index) => {
-                              const editable = isRowEditable(index);
-                              const isEntryRow = index === 0;
-                              return (
+                            const editable = isRowEditable(index);
+                            const isEntryRow = index === 0;
+                            return (
                               <motion.tr
                                 key={index}
                                 initial={{ opacity: 0, y: 10 }}
@@ -1390,7 +1396,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                   !editable && "bg-muted/20",
                                 )}
                               >
-
                                 {/* Product Selection */}
                                 <TableCell>
                                   {editable ? (
@@ -1511,7 +1516,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.aQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.aQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -1537,7 +1544,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.fQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.fQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -1563,7 +1572,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.DQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.DQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -1704,7 +1715,9 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => openBatchModal(index)}
-                                        disabled={!item.productId || isSubmitting}
+                                        disabled={
+                                          !item.productId || isSubmitting
+                                        }
                                         className="h-7 w-7 p-0"
                                         title="Select Batch"
                                       >
@@ -1762,8 +1775,8 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                   )}
                                 </TableCell>
                               </motion.tr>
-                              );
-                            })}
+                            );
+                          })}
                           {Array.from({ length: dummyRowCount }).map(
                             (_, dummyIndex) => (
                               <TableRow
@@ -1797,7 +1810,6 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
               </CardContent>
             </Card>
 
-            
             <FormField
               control={form.control}
               name="boxUnit"
@@ -1806,7 +1818,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
               )}
             />
 
-{/* Fixed bottom: remarks + summary + actions */}
+            {/* Fixed bottom: remarks + summary + actions */}
             <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
               <div className="border-b bg-muted/30 px-3 py-2">
                 <div className="mx-auto flex flex-wrap items-end gap-3 max-w-[1600px]">
@@ -2139,7 +2151,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       className="h-9 w-9 text-destructive hover:text-destructive"
                       onClick={() => setDeleteOpen(true)}
                       disabled={
-                        isSubmitting || isReturnMode || !isEditMode || !purchaseId || purchaseId === "new"
+                        isSubmitting ||
+                        isReturnMode ||
+                        !isEditMode ||
+                        !purchaseId ||
+                        purchaseId === "new"
                       }
                       aria-label="Delete invoice"
                     >
@@ -2267,10 +2283,8 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                 </div>
               </div>
             </div>
-          
           </form>
         </Form>
-
 
         <CustomAlert
           open={deleteOpen}
@@ -2290,23 +2304,23 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
 
         {/* Batch Selection Modal */}
         {pendingBatchSelection && (
-        <BatchSelectionModal
-          open={batchModalOpen}
-          onOpenChange={handleBatchModalClose}
-          productId={pendingBatchSelection.productId}
-          productCode={pendingBatchSelection.productCode}
-          description={pendingBatchSelection.description}
-          cartonPack={pendingBatchSelection.cartonPack}
-          conversionFactor={pendingBatchSelection.conversionFactor}
-          onBatchSelect={handleBatchSelect}
-        />
-      )}
+          <BatchSelectionModal
+            open={batchModalOpen}
+            onOpenChange={handleBatchModalClose}
+            productId={pendingBatchSelection.productId}
+            productCode={pendingBatchSelection.productCode}
+            description={pendingBatchSelection.description}
+            cartonPack={pendingBatchSelection.cartonPack}
+            conversionFactor={pendingBatchSelection.conversionFactor}
+            onBatchSelect={handleBatchSelect}
+          />
+        )}
 
-      <PurchaseInvoicePreview
-        open={isPreviewOpen}
-        onOpenChange={setIsPreviewOpen}
-        purchaseId={previewPurchaseId}
-      />
+        <PurchaseInvoicePreview
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          purchaseId={previewPurchaseId}
+        />
       </div>
     </div>
   );

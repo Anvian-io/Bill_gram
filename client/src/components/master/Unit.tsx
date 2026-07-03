@@ -104,7 +104,8 @@ export default function UnitComponent() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
 
   // Create debounced filter functions
   const debouncedSetSearchFilter = useDebounce((value: string) => {

@@ -4,12 +4,14 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const http = require("http");
+const { autoUpdater } = require("electron-updater");
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("disable-gpu");
 
 let mainWindow;
 let backendProcess;
+let updatesEnabled = false;
 
 const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
 const BACKEND_START_TIMEOUT_MS = 180000;
@@ -401,8 +403,106 @@ function startBackend() {
   return true;
 }
 
+function sendUpdateStatus(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update-status", payload);
+  }
+}
+
+function getUpdateServerUrl() {
+  const configPath = path.join(__dirname, "update-config.json");
+
+  if (!fs.existsSync(configPath)) {
+    return null;
+  }
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    const updateServerUrl = String(config.updateServerUrl ?? "").trim();
+
+    if (!updateServerUrl) {
+      return null;
+    }
+
+    return updateServerUrl.replace(/\/$/, "");
+  } catch (error) {
+    console.error("Failed to read update config:", error);
+    return null;
+  }
+}
+
+function setupAutoUpdater() {
+  if (process.env.NODE_ENV === "development") {
+    return;
+  }
+
+  const updateServerUrl = getUpdateServerUrl();
+
+  if (!updateServerUrl) {
+    console.warn("Update server URL not configured. Skipping auto-update.");
+    return;
+  }
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.setFeedURL({
+    provider: "generic",
+    url: updateServerUrl,
+  });
+  updatesEnabled = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    sendUpdateStatus({ status: "checking" });
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    sendUpdateStatus({
+      status: "available",
+      version: info.version,
+      releaseNotes: info.releaseNotes,
+    });
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    sendUpdateStatus({
+      status: "not-available",
+      version: info.version,
+    });
+  });
+
+  autoUpdater.on("error", (error) => {
+    sendUpdateStatus({
+      status: "error",
+      message: error.message,
+    });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    sendUpdateStatus({
+      status: "downloading",
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    sendUpdateStatus({
+      status: "downloaded",
+      version: info.version,
+    });
+  });
+
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((error) => {
+      console.error("Startup update check failed:", error);
+    });
+  }, 10000);
+}
+
 app.whenReady().then(async () => {
   createWindow();
+  setupAutoUpdater();
 
   if (process.env.NODE_ENV !== "development") {
     const alreadyReady = await waitForBackendReady(1000);
@@ -582,4 +682,56 @@ ipcMain.handle("get-user-credential", async (_event, emailInput) => {
     console.error("Failed to read credentials:", error);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle("get-app-version", async () => app.getVersion());
+
+ipcMain.handle("check-for-updates", async () => {
+  if (process.env.NODE_ENV === "development") {
+    return { success: false, error: "Updates are disabled in development" };
+  }
+
+  if (!updatesEnabled) {
+    return { success: false, error: "Update server is not configured" };
+  }
+
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return {
+      success: true,
+      updateInfo: result?.updateInfo ?? null,
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("download-update", async () => {
+  if (process.env.NODE_ENV === "development") {
+    return { success: false, error: "Updates are disabled in development" };
+  }
+
+  if (!updatesEnabled) {
+    return { success: false, error: "Update server is not configured" };
+  }
+
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("install-update", async () => {
+  if (process.env.NODE_ENV === "development") {
+    return { success: false, error: "Updates are disabled in development" };
+  }
+
+  if (!updatesEnabled) {
+    return { success: false, error: "Update server is not configured" };
+  }
+
+  autoUpdater.quitAndInstall(false, true);
+  return { success: true };
 });

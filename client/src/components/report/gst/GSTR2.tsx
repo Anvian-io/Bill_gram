@@ -131,7 +131,8 @@ export default function GSTR2({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
   const [filters, setFilters] = useState<PurchaseGSTFilters>({

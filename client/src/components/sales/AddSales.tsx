@@ -68,10 +68,7 @@ import {
   normalizeGstDetailsValue,
   getGstDetailsLabel,
 } from "@/store/dropdown_data/gst_details";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -942,7 +939,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   // --------------------------------------------------------------------
   const onSubmit = async (data: SalesFormData) => {
     const { phoneNo, ...payloadData } = data;
-    const filteredItems = payloadData.items.filter((item) => item.productId > 0);
+    const filteredItems = payloadData.items.filter(
+      (item) => item.productId > 0,
+    );
     if (filteredItems.length === 0) {
       toast.error("Add at least one product");
       return;
@@ -1056,7 +1055,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   };
 
   const getPreviewSaleId = () =>
-    Number(isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0);
+    Number(
+      isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0,
+    );
 
   const handleDownloadPdf = async () => {
     const idToPreview = getPreviewSaleId();
@@ -1116,8 +1117,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       return;
     }
 
-    const customerName =
-      findCustomerName(form.getValues("customerId")) || "—";
+    const customerName = findCustomerName(form.getValues("customerId")) || "—";
     const invoiceNo = generatedInvoiceNo || "Draft";
     const invoiceDate = form.getValues("invoiceDate") || "—";
     const rowsHtml = damageItems
@@ -1329,9 +1329,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             open={gstHover.open}
                             onOpenChange={gstHover.setOpen}
                             displayValue={
-                              field.value
-                                ? getGstDetailsLabel(field.value)
-                                : ""
+                              field.value ? getGstDetailsLabel(field.value) : ""
                             }
                             placeholder="Tax Details"
                             emptyMessage="No tax option found."
@@ -1354,7 +1352,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                     gstHover.setOpen(false);
                                   }}
                                 >
-                                  <span className="font-medium">{gst.type}</span>
+                                  <span className="font-medium">
+                                    {gst.type}
+                                  </span>
                                   <Check
                                     className={cn(
                                       "ml-auto h-4 w-4",
@@ -1464,47 +1464,49 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     <div ref={invoiceSearchSectionRef}>
                       <FormItem className="flex flex-col">
                         <InlineSearchField
-                        open={invoiceSearchHover.open}
-                        onOpenChange={invoiceSearchHover.setOpen}
-                        displayValue={invoiceSearchQuery}
-                        searchValue={invoiceSearchQuery}
-                        onSearchChange={setInvoiceSearchQuery}
-                        placeholder="Search Invoice"
-                        emptyMessage={
-                          isSearchingInvoice
-                            ? "Searching..."
-                            : "No invoice found."
-                        }
-                        shouldFilter={false}
-                        onMouseEnter={invoiceSearchHover.onMouseEnter}
-                        onMouseLeave={invoiceSearchHover.onMouseLeave}
-                        disabled={isSubmitting}
-                      >
-                        {!isSearchingInvoice &&
-                          invoiceSearchResults.length > 0 && (
-                            <CommandGroup>
-                              {invoiceSearchResults.map((sale) => (
-                                <CommandItem
-                                  key={sale.id}
-                                  value={sale.invoiceNo}
-                                  onSelect={() => handleLoadSalesInvoice(sale)}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">
-                                      {sale.invoiceNo}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {sale.customer?.personName} •{" "}
-                                      {new Date(
-                                        sale.invoiceDate,
-                                      ).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                      </InlineSearchField>
+                          open={invoiceSearchHover.open}
+                          onOpenChange={invoiceSearchHover.setOpen}
+                          displayValue={invoiceSearchQuery}
+                          searchValue={invoiceSearchQuery}
+                          onSearchChange={setInvoiceSearchQuery}
+                          placeholder="Search Invoice"
+                          emptyMessage={
+                            isSearchingInvoice
+                              ? "Searching..."
+                              : "No invoice found."
+                          }
+                          shouldFilter={false}
+                          onMouseEnter={invoiceSearchHover.onMouseEnter}
+                          onMouseLeave={invoiceSearchHover.onMouseLeave}
+                          disabled={isSubmitting}
+                        >
+                          {!isSearchingInvoice &&
+                            invoiceSearchResults.length > 0 && (
+                              <CommandGroup>
+                                {invoiceSearchResults.map((sale) => (
+                                  <CommandItem
+                                    key={sale.id}
+                                    value={sale.invoiceNo}
+                                    onSelect={() =>
+                                      handleLoadSalesInvoice(sale)
+                                    }
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">
+                                        {sale.invoiceNo}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {sale.customer?.personName} •{" "}
+                                        {new Date(
+                                          sale.invoiceDate,
+                                        ).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                        </InlineSearchField>
                       </FormItem>
                     </div>
                   )}
@@ -1753,9 +1755,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       <TableBody>
                         <AnimatePresence>
                           {items.map((item, index) => {
-                              const editable = isRowEditable(index);
-                              const isEntryRow = index === 0;
-                              return (
+                            const editable = isRowEditable(index);
+                            const isEntryRow = index === 0;
+                            return (
                               <motion.tr
                                 key={index}
                                 initial={{ opacity: 0, y: 10 }}
@@ -1766,7 +1768,6 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   !editable && "bg-muted/20",
                                 )}
                               >
-
                                 {/* Product Selection */}
                                 <TableCell>
                                   {editable ? (
@@ -1887,7 +1888,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.aQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.aQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -1913,7 +1916,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.fQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.fQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -1939,7 +1944,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                       disabled={isSubmitting}
                                     />
                                   ) : (
-                                    <span className="text-sm">{item.DQty ?? 0}</span>
+                                    <span className="text-sm">
+                                      {item.DQty ?? 0}
+                                    </span>
                                   )}
                                 </TableCell>
 
@@ -2080,7 +2087,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => openBatchModal(index)}
-                                        disabled={!item.productId || isSubmitting}
+                                        disabled={
+                                          !item.productId || isSubmitting
+                                        }
                                         className="h-7 w-7 p-0"
                                         title="Select Batch"
                                       >
@@ -2138,8 +2147,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   )}
                                 </TableCell>
                               </motion.tr>
-                              );
-                            })}
+                            );
+                          })}
                           {Array.from({ length: dummyRowCount }).map(
                             (_, dummyIndex) => (
                               <TableRow

@@ -72,7 +72,8 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
 
   // Filters state
   const [filters, setFilters] = useState<PurchaseGSTFilters>({

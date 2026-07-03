@@ -13,17 +13,25 @@
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run prisma:generate && npm run build",
     "build:electron": "electron-builder --win --x64",
+    "publish:update": "node scripts/publish-update.cjs",
+    "update-server:install": "cd update-server && npm install",
+    "update-server:dev": "cd update-server && npm run dev",
+    "update-server:start": "cd update-server && npm start",
     "dist": "npm run build",
     "package": "electron-builder --dir",
     "clean": "rimraf dist build client/dist server/dist",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install && cd ../update-server && npm install"
+  },
+  "dependencies": {
+    "all": "^0.0.0",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "wait-on": "^7.0.1",
+    "cross-env": "^7.0.3",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
-    "cross-env": "^7.0.3",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "wait-on": "^7.0.1"
   }
 }

@@ -53,7 +53,8 @@ export default function SalesHistory() {
   const { layoutMode } = useTheme();
   // State
   const [histories, setHistories] = useState<SalesReportHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);

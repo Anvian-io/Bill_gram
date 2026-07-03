@@ -62,7 +62,8 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
 
   const [filters, setFilters] = useState<PurchaseB2BFilters>({
     supplierId: undefined,

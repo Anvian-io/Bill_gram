@@ -26,7 +26,7 @@ import { createServer } from "http";
 import { notificationController } from "./controllers/Notification/notificationController.js"; // Add this
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Create HTTP server for WebSocket
 const server = createServer(app);

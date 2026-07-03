@@ -75,7 +75,8 @@ const parseHistoryFilters = (data: string) => {
 
 export default function GSTHistory() {
   const { layoutMode } = useTheme();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [sourceOpen, setSourceOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [rows, setRows] = useState<GSTReportHistory[]>([]);

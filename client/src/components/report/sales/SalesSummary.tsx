@@ -74,7 +74,8 @@ export default function SalesSummary() {
   const [areaOpen, setAreaOpen] = useState(false);
   const [vanOpen, setVanOpen] = useState(false);
   const [salesmanOpen, setSalesmanOpen] = useState(false);
-  const [productGroupOpen, setProductGroupOpen] = useState(false);
+  const [productGroupOpen, setProductGroupOpen] = useState(false);
+
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<SalesSummaryReportData | null>(
     null,

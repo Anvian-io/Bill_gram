@@ -5,11 +5,7 @@ import { createPortal } from "react-dom";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import {
-  Command,
-  CommandEmpty,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandList } from "@/components/ui/command";
 import {
   INLINE_SEARCH_PANEL_MIN_WIDTH,
   useFloatingPanelPosition,
@@ -121,12 +117,7 @@ export function InlineSearchField({
     if (open) {
       dismissOnLeave();
     }
-  }, [
-    cancelScheduledOpen,
-    dismissOnLeave,
-    onMouseLeave,
-    open,
-  ]);
+  }, [cancelScheduledOpen, dismissOnLeave, onMouseLeave, open]);
 
   React.useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
