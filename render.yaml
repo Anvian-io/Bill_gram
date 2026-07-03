@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: shopkeeper-update-server
+    runtime: node
+    rootDir: update-server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: UPLOAD_API_KEY
+        sync: false
+      - key: NODE_VERSION
+        value: "20"

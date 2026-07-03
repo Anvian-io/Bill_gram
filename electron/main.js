@@ -410,6 +410,12 @@ function sendUpdateStatus(payload) {
 }
 
 function getUpdateServerUrl() {
+  const envUrl = String(process.env.UPDATE_SERVER_URL ?? "").trim();
+
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
   const configPath = path.join(__dirname, "update-config.json");
 
   if (!fs.existsSync(configPath)) {
