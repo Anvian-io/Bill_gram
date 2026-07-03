@@ -36,6 +36,11 @@ function loadEnvFile(filePath) {
   return env;
 }
 
+function fail(message) {
+  console.error(message);
+  process.exitCode = 1;
+}
+
 async function verifyUpdateServer() {
   const fileEnv = loadEnvFile(envPath);
   const updateServerUrl = String(
@@ -45,8 +50,8 @@ async function verifyUpdateServer() {
     .replace(/\/$/, "");
 
   if (!updateServerUrl) {
-    console.error("Set UPDATE_SERVER_URL in .env");
-    process.exit(1);
+    fail("Set UPDATE_SERVER_URL in .env");
+    return;
   }
 
   const baseUrl = updateServerUrl.replace(/\/releases$/, "");
@@ -57,11 +62,10 @@ async function verifyUpdateServer() {
   const latestResponse = await fetch(latestUrl);
 
   if (!latestResponse.ok) {
-    console.error(
-      `\nlatest.yml is missing on the server (HTTP ${latestResponse.status}).`,
+    fail(
+      `\nlatest.yml is missing on the server (HTTP ${latestResponse.status}).\nRun: npm run build && npm run publish:update`,
     );
-    console.error("Run: npm run build && npm run publish:update");
-    process.exit(1);
+    return;
   }
 
   const latestText = await latestResponse.text();
@@ -76,15 +80,15 @@ async function verifyUpdateServer() {
     return;
   }
 
-  const installerUrl = `${updateServerUrl}/${encodeURIComponent(installerName).replace(/%20/g, "%20")}`;
+  const installerUrl = `${updateServerUrl}/${encodeURIComponent(installerName)}`;
   const installerResponse = await fetch(installerUrl, { method: "HEAD" });
+  await installerResponse.arrayBuffer().catch(() => null);
 
   if (!installerResponse.ok) {
-    console.error(
-      `\nInstaller missing on server (HTTP ${installerResponse.status}): ${installerName}`,
+    fail(
+      `\nInstaller missing on server (HTTP ${installerResponse.status}): ${installerName}\nRun: npm run upload:release`,
     );
-    console.error("Run: npm run upload:release");
-    process.exit(1);
+    return;
   }
 
   const infoResponse = await fetch(`${baseUrl}/api/info`);
@@ -94,6 +98,5 @@ async function verifyUpdateServer() {
 }
 
 verifyUpdateServer().catch((error) => {
-  console.error("Verification failed:", error.message);
-  process.exit(1);
+  fail(`Verification failed: ${error.message}`);
 });
