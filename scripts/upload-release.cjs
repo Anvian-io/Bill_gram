@@ -39,12 +39,42 @@ function loadEnvFile(filePath) {
 }
 
 function getReleaseFiles(sourceDir) {
-  const allowedExtensions = new Set([".exe", ".yml", ".blockmap"]);
-
   return fs
     .readdirSync(sourceDir)
-    .filter((file) => allowedExtensions.has(path.extname(file).toLowerCase()))
+    .filter((file) => {
+      const extension = path.extname(file).toLowerCase();
+
+      if (extension === ".exe" || extension === ".blockmap") {
+        return true;
+      }
+
+      return file === "latest.yml";
+    })
     .map((file) => path.join(sourceDir, file));
+}
+
+function pickSourceDir() {
+  const candidates = [distDir, releasesDir];
+
+  for (const dir of candidates) {
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
+
+    const files = getReleaseFiles(dir);
+    const hasYml = files.some((file) => path.basename(file) === "latest.yml");
+    const hasExe = files.some((file) => path.extname(file).toLowerCase() === ".exe");
+
+    if (hasYml && hasExe) {
+      return dir;
+    }
+  }
+
+  if (fs.existsSync(distDir)) {
+    return distDir;
+  }
+
+  return releasesDir;
 }
 
 async function uploadRelease() {
@@ -68,7 +98,7 @@ async function uploadRelease() {
     process.exit(1);
   }
 
-  const sourceDir = fs.existsSync(releasesDir) ? releasesDir : distDir;
+  const sourceDir = pickSourceDir();
 
   if (!fs.existsSync(sourceDir)) {
     console.error('No release files found. Run "npm run build" first.');
@@ -76,6 +106,16 @@ async function uploadRelease() {
   }
 
   const files = getReleaseFiles(sourceDir);
+  const hasLatestYml = files.some(
+    (file) => path.basename(file) === "latest.yml",
+  );
+
+  if (!hasLatestYml) {
+    console.error(
+      "latest.yml is missing. Run \"npm run build\" first — the app cannot check for updates without it.",
+    );
+    process.exit(1);
+  }
 
   if (files.length === 0) {
     console.error(`No .exe / .yml / .blockmap files found in ${sourceDir}`);

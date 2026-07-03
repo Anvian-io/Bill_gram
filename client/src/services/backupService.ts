@@ -116,7 +116,7 @@ export const backupService = {
       const fileNameMatch = disposition?.match(/filename="?([^"]+)"?/i);
       const fileName =
         fileNameMatch?.[1] ||
-        `shopkeeper-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+        `billgram-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
 
       const blob = new Blob([response.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);

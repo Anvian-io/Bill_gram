@@ -57,7 +57,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
-    service: "shopkeeper-update-server",
+    service: "bill-gram-update-server",
     releasesPath: "/releases",
   });
 });
@@ -122,7 +122,7 @@ app.post("/api/upload", upload.array("files"), (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Shopkeeper update server running on http://localhost:${port}`);
+  console.log(`Bill Gram update server running on http://localhost:${port}`);
   console.log(`Release files served from http://localhost:${port}/releases`);
   console.log(`Health check: http://localhost:${port}/health`);
 });

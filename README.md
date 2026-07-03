@@ -1,6 +1,6 @@
-# 🧾 Bill Gram — Shopkeeper Billing & Inventory Management
+# 🧾 Bill Gram — Billing & Inventory Management
 
-> A robust, offline-first **desktop billing and inventory management application** tailored for Indian shopkeepers and small businesses. Built as a cross-platform **Electron app**, it features a local React frontend, a Node.js backend, and a SQLite database.
+> A robust, offline-first **desktop billing and inventory management application** for small businesses. Built as a cross-platform **Electron app**, it features a local React frontend, a Node.js backend, and a SQLite database.
 
 ---
 
@@ -87,6 +87,6 @@ The installer will be generated in the `dist/` directory.
 ---
 
 <div align="center">
-  <p>Built with ❤️ for Indian shopkeepers</p>
+  <p>Built with ❤️ for small businesses</p>
   <p><strong>Electron</strong> · <strong>React</strong> · <strong>Node.js</strong> · <strong>Prisma</strong> · <strong>SQLite</strong></p>
 </div>

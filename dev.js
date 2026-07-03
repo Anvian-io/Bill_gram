@@ -1,7 +1,7 @@
 const { spawn } = require("child_process");
 const path = require("path");
 
-console.log("🚀 Starting Shopkeeper App in development mode...\n");
+console.log("🚀 Starting Bill Gram in development mode...\n");
 
 // Start client (React)
 const clientProcess = spawn("npm", ["run", "dev"], {

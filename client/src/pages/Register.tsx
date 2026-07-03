@@ -129,7 +129,7 @@ export default function Register() {
       if (!result.success) {
         throw new Error(
           result.error ||
-            "Nebula registration succeeded, but local BillGram account setup failed",
+            "Nebula registration succeeded, but local Bill Gram account setup failed",
         );
       }
 
@@ -233,7 +233,7 @@ export default function Register() {
           <div className="max-w-lg">
             <motion.div variants={itemVariants} className="mb-8">
               <h1 className="text-4xl font-bold text-foreground mb-4">
-                Join <span className="text-primary">BillGram</span> Today
+                Join <span className="text-primary">Bill Gram</span> Today
               </h1>
               <p className="text-lg text-muted-foreground">
                 Start managing your business efficiently. Create an account to

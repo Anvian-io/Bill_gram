@@ -24,31 +24,16 @@ const IST_OFFSET_MINUTES = 330;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const getShopkeeperDir = () => {
-  const appName = "Shopkeeper";
-  const platform = os.platform();
-  const homeDir = os.homedir();
-
-  switch (platform) {
-    case "win32":
-      return path.join(homeDir, "AppData", "Local", appName);
-    case "darwin":
-      return path.join(homeDir, "Library", "Application Support", appName);
-    case "linux":
-      return path.join(homeDir, ".config", appName);
-    default:
-      return path.join(homeDir, `.${appName.toLowerCase()}`);
-  }
-};
+const getBillGramDir = () => path.dirname(getDatabasePath());
 
 /**
- * Zip the Shopkeeper folder into a temp file
+ * Zip the Bill Gram data folder into a temp file
  * Returns { zipPath, fileName }
  */
-async function zipShopkeeperFolder() {
-  const sourceDir = getShopkeeperDir();
+async function zipBillGramFolder() {
+  const sourceDir = getBillGramDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const fileName = `shopkeeper-backup-${timestamp}.zip`;
+  const fileName = `billgram-backup-${timestamp}.zip`;
   const zipPath = path.join(os.tmpdir(), fileName);
 
   return new Promise((resolve, reject) => {
@@ -173,7 +158,7 @@ export async function performBackup(prisma, userId, trigger = "manual") {
 
   let zipPath = null;
   try {
-    const { zipPath: zp, fileName } = await zipShopkeeperFolder();
+    const { zipPath: zp, fileName } = await zipBillGramFolder();
     zipPath = zp;
 
     const { driveFileId, driveLink, fileSizeKb } = await uploadFileToDrive(
@@ -258,12 +243,12 @@ export const getGoogleAuthUrl = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/backup/download
- * Creates a zip of the current Shopkeeper data and returns it as a download.
+ * Creates a zip of the current Bill Gram data and returns it as a download.
  */
 export const downloadBackupZip = asyncHandler(async (req, res) => {
   let zipPath = null;
   try {
-    const { zipPath: zp, fileName } = await zipShopkeeperFolder();
+    const { zipPath: zp, fileName } = await zipBillGramFolder();
     zipPath = zp;
 
     res.download(zipPath, fileName, (err) => {
@@ -603,7 +588,7 @@ export const checkConnectivity = asyncHandler(async (req, res) => {
  * Shared restore logic for authenticated and pre-login restore flows.
  */
 async function restoreBackupFromUpload(prisma, file, userId = null) {
-  const targetDir = getShopkeeperDir();
+  const targetDir = getBillGramDir();
   const tmpZipPath = path.join(os.tmpdir(), `restore-${Date.now()}.zip`);
 
   try {
@@ -668,7 +653,7 @@ async function restoreBackupFromUpload(prisma, file, userId = null) {
 
 /**
  * POST /api/backup/restore
- * Accepts a zip file upload, extracts it to the Shopkeeper data folder
+ * Accepts a zip file upload, extracts it to the Bill Gram data folder
  */
 export const restoreFromUpload = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);

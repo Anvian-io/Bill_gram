@@ -234,7 +234,7 @@ export default function Login() {
           <div className="max-w-lg">
             <motion.div variants={itemVariants} className="mb-8">
               <h1 className="text-4xl font-bold text-foreground mb-4">
-                Welcome to <span className="text-primary">BillGram</span>
+                Welcome to <span className="text-primary">Bill Gram</span>
               </h1>
               <p className="text-lg text-muted-foreground">
                 Streamline your billing process with our intuitive dashboard.

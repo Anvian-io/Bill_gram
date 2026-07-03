@@ -537,7 +537,7 @@ const Restore_Backup: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Database className="h-3.5 w-3.5" />
                     <span>
-                      Backs up your entire <strong>Shopkeeper</strong> data
+                      Backs up your entire <strong>Bill Gram</strong> data
                       folder
                     </span>
                   </div>

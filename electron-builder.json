@@ -1,6 +1,6 @@
 {
-  "appId": "com.shopkeeper.app",
-  "productName": "Shopkeeper App",
+  "appId": "com.billgram.app",
+  "productName": "Bill Gram",
   "directories": {
     "output": "dist",
     "buildResources": "assets"

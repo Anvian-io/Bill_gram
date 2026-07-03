@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function getDatabasePath() {
-  const appName = "Shopkeeper";
+  const appName = "BillGram";
   let dbDir;
 
   const platform = os.platform();
@@ -35,7 +35,7 @@ function getDatabasePath() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  return path.join(dbDir, "shopkeeper.db");
+  return path.join(dbDir, "billgram.db");
 }
 
 async function main() {

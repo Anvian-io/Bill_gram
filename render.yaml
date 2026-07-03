@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: shopkeeper-update-server
+    name: bill-gram-update-server
     runtime: node
     rootDir: update-server
     buildCommand: npm install

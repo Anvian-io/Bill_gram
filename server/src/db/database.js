@@ -98,24 +98,36 @@ async function ensureSubscriptionExpiryColumn(client) {
  * Always use OS-specific AppData/Local directory
  */
 export function getDatabasePath() {
-  const appName = "Shopkeeper";
+  const appName = "BillGram";
+  const legacyAppName = "Shopkeeper";
   let dbDir;
 
   const platform = os.platform();
   const homeDir = os.homedir();
 
-  switch (platform) {
-    case "win32":
-      dbDir = path.join(homeDir, "AppData", "Local", appName);
-      break;
-    case "darwin":
-      dbDir = path.join(homeDir, "Library", "Application Support", appName);
-      break;
-    case "linux":
-      dbDir = path.join(homeDir, ".config", appName);
-      break;
-    default:
-      dbDir = path.join(homeDir, `.${appName.toLowerCase()}`);
+  const resolveDir = (name) => {
+    switch (platform) {
+      case "win32":
+        return path.join(homeDir, "AppData", "Local", name);
+      case "darwin":
+        return path.join(homeDir, "Library", "Application Support", name);
+      case "linux":
+        return path.join(homeDir, ".config", name);
+      default:
+        return path.join(homeDir, `.${name.toLowerCase()}`);
+    }
+  };
+
+  const newDbPath = path.join(resolveDir(appName), "billgram.db");
+  const legacyDbPath = path.join(resolveDir(legacyAppName), "shopkeeper.db");
+
+  if (fs.existsSync(newDbPath)) {
+    dbDir = path.dirname(newDbPath);
+  } else if (fs.existsSync(legacyDbPath)) {
+    dbDir = path.dirname(legacyDbPath);
+    return legacyDbPath;
+  } else {
+    dbDir = resolveDir(appName);
   }
 
   // Ensure directory exists
@@ -124,7 +136,7 @@ export function getDatabasePath() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  return path.join(dbDir, "shopkeeper.db");
+  return path.join(dbDir, "billgram.db");
 }
 
 /**

@@ -28,7 +28,7 @@ function getLoadingHtml(message = "Starting your workspace...") {
           http-equiv="Content-Security-Policy"
           content="default-src 'none'; style-src 'unsafe-inline';"
         />
-        <title>Shopkeeper</title>
+        <title>Bill Gram</title>
         <style>
           :root {
             color-scheme: light;
@@ -116,8 +116,8 @@ function getLoadingHtml(message = "Starting your workspace...") {
       </head>
       <body>
         <main>
-          <div class="mark">S</div>
-          <h1>Shopkeeper</h1>
+          <div class="mark">BG</div>
+          <h1>Bill Gram</h1>
           <p>${message}</p>
           <div class="loader" aria-hidden="true"></div>
         </main>
@@ -164,13 +164,7 @@ function createWindow() {
   });
 }
 
-/**
- * Get the database directory path based on platform
- * This matches the logic in database.js
- */
-function getDatabaseDirectory() {
-  const appName = "Shopkeeper";
-
+function resolveDataDirectory() {
   if (process.env.NODE_ENV === "development") {
     return path.join(__dirname, "../server/data");
   }
@@ -178,16 +172,57 @@ function getDatabaseDirectory() {
   const platform = os.platform();
   const homeDir = os.homedir();
 
-  switch (platform) {
-    case "win32": // Windows
-      return path.join(homeDir, "AppData", "Local", appName);
-    case "darwin": // macOS
-      return path.join(homeDir, "Library", "Application Support", appName);
-    case "linux": // Linux
-      return path.join(homeDir, ".config", appName);
-    default:
-      return path.join(homeDir, `.${appName.toLowerCase()}`);
+  const resolveDir = (name) => {
+    switch (platform) {
+      case "win32":
+        return path.join(homeDir, "AppData", "Local", name);
+      case "darwin":
+        return path.join(homeDir, "Library", "Application Support", name);
+      case "linux":
+        return path.join(homeDir, ".config", name);
+      default:
+        return path.join(homeDir, `.${name.toLowerCase()}`);
+    }
+  };
+
+  const newDir = resolveDir("BillGram");
+  const legacyDir = resolveDir("Shopkeeper");
+  const newDbPath = path.join(newDir, "billgram.db");
+  const legacyDbPath = path.join(legacyDir, "shopkeeper.db");
+
+  if (fs.existsSync(newDbPath)) {
+    return newDir;
   }
+
+  if (fs.existsSync(legacyDbPath)) {
+    return legacyDir;
+  }
+
+  return newDir;
+}
+
+function getDatabaseFilePath() {
+  if (process.env.NODE_ENV === "development") {
+    return path.join(resolveDataDirectory(), "shopkeeper.db");
+  }
+
+  const dbDir = resolveDataDirectory();
+  const legacyDbPath = path.join(dbDir, "shopkeeper.db");
+  const newDbPath = path.join(dbDir, "billgram.db");
+
+  if (fs.existsSync(legacyDbPath) && !fs.existsSync(newDbPath)) {
+    return legacyDbPath;
+  }
+
+  return newDbPath;
+}
+
+/**
+ * Get the database directory path based on platform
+ * This matches the logic in database.js
+ */
+function getDatabaseDirectory() {
+  return resolveDataDirectory();
 }
 
 function getCredentialDirectory() {
@@ -548,16 +583,12 @@ app.on("window-all-closed", () => {
 
 // IPC Handlers
 
-ipcMain.handle("get-database-location", async () => {
-  const dbDir = getDatabaseDirectory();
-  return path.join(dbDir, "shopkeeper.db");
-});
+ipcMain.handle("get-database-location", async () => getDatabaseFilePath());
 
 ipcMain.handle("backup-database", async () => {
   try {
-    const dbDir = getDatabaseDirectory();
-    const dbPath = path.join(dbDir, "shopkeeper.db");
-    const backupDir = path.join(app.getPath("documents"), "ShopkeeperBackups");
+    const dbPath = getDatabaseFilePath();
+    const backupDir = path.join(app.getPath("documents"), "BillGramBackups");
 
     // Check if database exists
     if (!fs.existsSync(dbPath)) {
@@ -582,7 +613,7 @@ ipcMain.handle("backup-database", async () => {
 ipcMain.handle("restore-database", async (event, backupPath) => {
   try {
     const dbDir = getDatabaseDirectory();
-    const dbPath = path.join(dbDir, "shopkeeper.db");
+    const dbPath = getDatabaseFilePath();
 
     if (!fs.existsSync(backupPath)) {
       return { success: false, error: "Backup file not found" };

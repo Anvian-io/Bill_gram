@@ -1,10 +1,10 @@
 nsis
 !include "MUI2.nsh"
 
-Name "Shopkeeper App"
-OutFile "ShopkeeperApp_Setup.exe"
-InstallDir "$PROGRAMFILES\ShopkeeperApp"
-InstallDirRegKey HKCU "Software\ShopkeeperApp" ""
+Name "Bill Gram"
+OutFile "BillGram_Setup.exe"
+InstallDir "$PROGRAMFILES\BillGram"
+InstallDirRegKey HKCU "Software\BillGram" ""
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -21,22 +21,22 @@ Section
   
   File /r "dist\win-unpacked\*"
   
-  CreateDirectory "$SMPROGRAMS\ShopkeeperApp"
-  CreateShortcut "$SMPROGRAMS\ShopkeeperApp\ShopkeeperApp.lnk" "$INSTDIR\ShopkeeperApp.exe"
-  CreateShortcut "$DESKTOP\ShopkeeperApp.lnk" "$INSTDIR\ShopkeeperApp.exe"
-  
-  WriteRegStr HKCU "Software\ShopkeeperApp" "" "$INSTDIR"
+  CreateDirectory "$SMPROGRAMS\BillGram"
+  CreateShortcut "$SMPROGRAMS\BillGram\BillGram.lnk" "$INSTDIR\BillGram.exe"
+  CreateShortcut "$DESKTOP\BillGram.lnk" "$INSTDIR\BillGram.exe"
+
+  WriteRegStr HKCU "Software\BillGram" "" "$INSTDIR"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 SectionEnd
 
 Section "Uninstall"
-  Delete "$SMPROGRAMS\ShopkeeperApp\ShopkeeperApp.lnk"
-  Delete "$DESKTOP\ShopkeeperApp.lnk"
-  RMDir "$SMPROGRAMS\ShopkeeperApp"
+  Delete "$SMPROGRAMS\BillGram\BillGram.lnk"
+  Delete "$DESKTOP\BillGram.lnk"
+  RMDir "$SMPROGRAMS\BillGram"
   
   RMDir /r "$INSTDIR"
   
-  DeleteRegKey HKCU "Software\ShopkeeperApp"
+  DeleteRegKey HKCU "Software\BillGram"
 SectionEnd
 
 
