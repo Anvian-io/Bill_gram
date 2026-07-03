@@ -1,4 +1,4 @@
-import { Download, RefreshCw, Rocket, X } from "lucide-react";
+import { Download, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useSoftwareUpdate } from "@/hooks/useSoftwareUpdate";
@@ -10,27 +10,18 @@ export default function SoftwareUpdateBanner() {
     currentVersion,
     availableVersion,
     progress,
-    errorMessage,
-    checkForUpdates,
     downloadUpdate,
     installUpdate,
-    dismissError,
   } = useSoftwareUpdate();
 
   if (!isElectron) {
     return null;
   }
 
-  if (state === "idle" && !errorMessage) {
-    return null;
-  }
-
   const showBanner =
-    state === "checking" ||
     state === "available" ||
     state === "downloading" ||
-    state === "downloaded" ||
-    state === "error";
+    state === "downloaded";
 
   if (!showBanner) {
     return null;
@@ -40,22 +31,15 @@ export default function SoftwareUpdateBanner() {
     <div className="sticky top-0 z-50 border-b border-teal-200 bg-teal-50 px-4 py-3 text-teal-950 shadow-sm dark:border-teal-900/40 dark:bg-teal-950/40 dark:text-teal-50">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          {state === "checking" && (
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Checking for software updates...
-            </p>
-          )}
-
           {state === "available" && (
             <>
               <p className="text-sm font-semibold">
-                Software update available
+                Update available
                 {availableVersion ? `: v${availableVersion}` : ""}
               </p>
               <p className="text-xs text-teal-800 dark:text-teal-200">
                 You are on v{currentVersion || "unknown"}. Download the update to
-                install without uninstalling the app.
+                install without reinstalling the app.
               </p>
             </>
           )}
@@ -80,12 +64,6 @@ export default function SoftwareUpdateBanner() {
               </p>
             </>
           )}
-
-          {state === "error" && (
-            <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-              {errorMessage}
-            </p>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -101,18 +79,6 @@ export default function SoftwareUpdateBanner() {
               <Rocket className="mr-2 h-4 w-4" />
               Restart and update
             </Button>
-          )}
-
-          {state === "error" && (
-            <>
-              <Button size="sm" variant="outline" onClick={checkForUpdates}>
-                Retry
-              </Button>
-              <Button size="sm" variant="ghost" onClick={dismissError}>
-                <X className="mr-2 h-4 w-4" />
-                Dismiss
-              </Button>
-            </>
           )}
         </div>
       </div>

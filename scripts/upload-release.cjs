@@ -94,7 +94,14 @@ async function uploadRelease() {
   }
 
   if (!uploadApiKey) {
-    console.error("Set UPLOAD_API_KEY in .env (same value as on Render)");
+    console.error("Set UPLOAD_API_KEY in .env (must match Render exactly)");
+    process.exit(1);
+  }
+
+  if (uploadApiKey === "change-this-to-a-strong-secret") {
+    console.error(
+      "UPLOAD_API_KEY is still the placeholder. Set a real secret in .env and on Render.",
+    );
     process.exit(1);
   }
 
@@ -144,6 +151,13 @@ async function uploadRelease() {
 
   if (!response.ok || !result.success) {
     console.error("Upload failed:", result.error || response.statusText);
+
+    if (response.status === 401) {
+      console.error(
+        "\nAPI key mismatch. UPLOAD_API_KEY in .env must exactly match Render Environment.",
+      );
+    }
+
     process.exit(1);
   }
 

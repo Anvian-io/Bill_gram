@@ -15,6 +15,7 @@
     "build:electron": "node scripts/prepare-update-config.cjs && electron-builder --win --x64",
     "publish:update": "node scripts/publish-update.cjs",
     "upload:release": "node scripts/upload-release.cjs",
+    "verify:update-server": "node scripts/verify-update-server.cjs",
     "update-server:install": "cd update-server && npm install",
     "update-server:dev": "cd update-server && npm run dev",
     "update-server:start": "cd update-server && npm start",

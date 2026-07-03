@@ -1,0 +1,7 @@
+# Keep latest.yml in git so Render always has it after redeploy.
+# Large installers are uploaded via npm run upload:release
+*.exe
+*.blockmap
+!latest.yml
+!.gitignore
+!.gitkeep

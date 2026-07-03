@@ -10,7 +10,9 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const releasesDir = path.join(__dirname, "../releases");
+const releasesDir = process.env.RELEASES_DIR
+  ? path.resolve(process.env.RELEASES_DIR)
+  : path.join(__dirname, "../releases");
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -64,14 +66,16 @@ app.get("/health", (_req, res) => {
 
 app.get("/api/info", (_req, res) => {
   const latest = readLatestVersion();
-  const files = fs
-    .readdirSync(releasesDir)
-    .filter((file) => !file.startsWith("."));
+  const files = fs.existsSync(releasesDir)
+    ? fs.readdirSync(releasesDir).filter((file) => !file.startsWith("."))
+    : [];
 
   res.json({
     latest,
     files,
     releasesUrl: `/releases`,
+    releasesDir,
+    uploadConfigured: Boolean(uploadApiKey),
   });
 });
 
@@ -122,7 +126,22 @@ app.post("/api/upload", upload.array("files"), (req, res) => {
 });
 
 app.listen(port, () => {
+  const hasLatest = fs.existsSync(path.join(releasesDir, "latest.yml"));
+
   console.log(`Bill Gram update server running on http://localhost:${port}`);
   console.log(`Release files served from http://localhost:${port}/releases`);
+  console.log(`Releases directory: ${releasesDir}`);
   console.log(`Health check: http://localhost:${port}/health`);
+
+  if (!hasLatest) {
+    console.warn(
+      "WARNING: latest.yml is missing. Run npm run publish:update from your dev machine.",
+    );
+  }
+
+  if (!uploadApiKey || uploadApiKey === "change-this-to-a-strong-secret") {
+    console.warn(
+      "WARNING: Set a strong UPLOAD_API_KEY on Render and in your local .env",
+    );
+  }
 });
