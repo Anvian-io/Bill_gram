@@ -4,8 +4,6 @@ import { User, LogOut,Wifi, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsDropdown } from "../Notifications/NotificationsDropdown";
 import { useNavigate } from "react-router-dom";
-// import { useTheme } from "../../contexts/ThemeProvider";
-
 
 // Define types
 interface TimeState {
@@ -38,7 +36,6 @@ export function Header({ isExpanded, pages }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  // const { theme } = useTheme();
   const [wsConnected] = useState(false);
 
   useEffect(() => {
@@ -145,50 +142,41 @@ export function Header({ isExpanded, pages }: HeaderProps) {
     navigate("/profile");
   };
 
+  const timeBlockClass =
+    "flex flex-col items-center app-shell-surface-highlight rounded-lg p-2 min-w-[3rem]";
+
   // Skeleton component for loading state
   const TimerSkeleton = () => (
     <div className="sm:flex items-center gap-2 hidden">
       {/* Date */}
       <div className="lg:flex-col items-center hidden lg:flex">
-        <span className="text-xs font-medium text-muted-foreground">{""}</span>
+        <span className="text-xs font-medium app-shell-surface-muted">{""}</span>
       </div>
 
       {/* Time blocks */}
       <div className="flex items-center gap-1">
         {/* Hours */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {"00"}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{"00"}</span>
         </div>
 
-        <div className="text-2xl font-bold text-sidebar-foreground animate-pulse">
-          :
-        </div>
+        <div className="text-2xl font-bold animate-pulse">:</div>
 
         {/* Minutes */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {"00"}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{"00"}</span>
         </div>
 
-        <div className="text-2xl font-bold text-sidebar-foreground animate-pulse">
-          :
-        </div>
+        <div className="text-2xl font-bold animate-pulse">:</div>
 
         {/* Seconds */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {"00"}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{"00"}</span>
         </div>
 
         {/* AM/PM skeleton */}
-        <div className="flex flex-col items-center bg-primary/20 rounded-lg p-2 min-w-[2.5rem] border-border ml-1">
-          <span className="text-sm font-bold text-sidebar-foreground">
-            {"AM"}
-          </span>
+        <div className="flex flex-col items-center app-shell-surface-highlight rounded-lg p-2 min-w-10 ml-1">
+          <span className="text-sm font-bold">{"AM"}</span>
         </div>
       </div>
     </div>
@@ -199,7 +187,7 @@ export function Header({ isExpanded, pages }: HeaderProps) {
     <div className="flex items-center gap-2">
       {/* Date */}
       <div className="lg:flex lg:flex-col items-center hidden">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-medium app-shell-surface-muted">
           {time.date}
         </span>
       </div>
@@ -207,39 +195,27 @@ export function Header({ isExpanded, pages }: HeaderProps) {
       {/* Time blocks */}
       <div className="sm:flex items-center gap-1 hidden">
         {/* Hours */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {time.hours}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{time.hours}</span>
         </div>
 
-        <div className="text-2xl font-bold text-sidebar-foreground animate-pulse">
-          :
-        </div>
+        <div className="text-2xl font-bold animate-pulse">:</div>
 
         {/* Minutes */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {time.minutes}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{time.minutes}</span>
         </div>
 
-        <div className="text-2xl font-bold text-sidebar-foreground animate-pulse">
-          :
-        </div>
+        <div className="text-2xl font-bold animate-pulse">:</div>
 
         {/* Seconds */}
-        <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[3rem] border-border">
-          <span className="text-lg font-bold text-sidebar-foreground">
-            {time.seconds}
-          </span>
+        <div className={timeBlockClass}>
+          <span className="text-lg font-bold">{time.seconds}</span>
         </div>
 
         {/* AM/PM box */}
-        <div className="flex flex-col items-center bg-primary/20 rounded-lg p-2 min-w-[2.5rem] border-border ml-1">
-          <span className="text-sm font-bold text-sidebar-foreground">
-            {time.ampm}
-          </span>
+        <div className="flex flex-col items-center app-shell-surface-highlight rounded-lg p-2 min-w-10 ml-1">
+          <span className="text-sm font-bold">{time.ampm}</span>
         </div>
       </div>
     </div>
@@ -247,13 +223,13 @@ export function Header({ isExpanded, pages }: HeaderProps) {
 
   return (
     <header
-      className={`h-16 transition-all duration-300 ease-in-out fixed top-0 left-0 z-30 flex items-center justify-between px-4 py-2 border-border border bg-sidebar ${
+      className={`h-16 transition-all duration-300 ease-in-out fixed top-0 left-0 z-30 flex items-center justify-between px-4 py-2 border app-shell-surface border-[var(--shell-surface-border)] ${
         isExpanded ? "sm:left-64" : "sm:left-16"
       } left-0 right-0`}
     >
       {/* Left - Heading */}
       <div className="flex items-center">
-        <h1 className="text-xl font-bold text-heading hidden md:block pr-4">
+        <h1 className="text-xl font-bold hidden md:block pr-4">
           {pages.length > 0 ? pages[pages.length - 1].label : "Dashboard"}
         </h1>
       </div>
@@ -275,20 +251,20 @@ export function Header({ isExpanded, pages }: HeaderProps) {
         {/* Profile with Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <Avatar
-            className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/15 cursor-pointer border border-sidebar-border"
+            className="app-shell-surface-highlight app-shell-surface-interactive w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer"
             onClick={handleAvatarClick}
           >
             <AvatarImage src="/profile.jpg" alt="@user" />
-            <AvatarFallback className="text-sm font-medium text-sidebar-foreground bg-primary/15">
+            <AvatarFallback className="text-sm font-medium app-shell-surface-highlight bg-transparent">
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </AvatarFallback>
           </Avatar>
 
           {/* Dropdown menu */}
           {showDropdown && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-50">
-              <div className="p-3 border-b border-sidebar-border">
-                <p className="font-medium text-sidebar-foreground">
+            <div className="absolute right-0 top-full mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+              <div className="p-3 border-b border-border">
+                <p className="font-medium text-popover-foreground">
                   {user?.name || "User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
@@ -298,14 +274,14 @@ export function Header({ isExpanded, pages }: HeaderProps) {
               <div className="p-1">
                 <button
                   onClick={handleProfile}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground hover:bg-primary/10 hover:text-primary rounded-md transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
                 >
                   <User size={16} />
                   Profile
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-primary/10 rounded-md transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                 >
                   <LogOut size={16} />
                   Logout

@@ -85,7 +85,6 @@ export function applyPrimaryTheme(
   root.style.setProperty("--chart-5", lighten(primaryColor, 0.65));
 
   root.style.setProperty("--toast-info-icon", primaryColor);
-  root.style.setProperty("--toast-info-border", lighten(primaryColor, 0.45));
   root.style.setProperty(
     "--toast-default-bg",
     isDark ? mix(primaryColor, "#4b5563", 0.55) : lighten(primaryColor, 0.35),
@@ -99,16 +98,115 @@ export function applyPrimaryTheme(
   ];
 
   if (isClassic) {
-    const classicHeader = mix(darken(primaryColor, 0.5), "#1e293b", 0.45);
     const classicTableHeader = mix(primaryColor, "#2c3e50", 0.55);
-    root.style.setProperty("--classic-header-bg", classicHeader);
+    root.style.setProperty("--classic-header-bg", classicTableHeader);
     root.style.setProperty("--classic-table-header", classicTableHeader);
-    root.style.setProperty("--sidebar", classicHeader);
+    root.style.setProperty("--sidebar", classicTableHeader);
     root.style.setProperty("--sidebar-accent", mix(primaryColor, "#ffffff", 0.22));
-    root.style.setProperty("--sidebar-border", darken(classicHeader, 0.12));
+    root.style.setProperty("--sidebar-border", darken(classicTableHeader, 0.12));
+    root.style.setProperty("--shell-surface-bg", classicTableHeader);
   } else {
     for (const prop of classicOnlyVars) {
       root.style.removeProperty(prop);
     }
   }
+
+  root.style.setProperty(
+    "--toast-info-bg",
+    isDark ? mix(primaryColor, "#1e293b", 0.4) : lighten(primaryColor, 0.58),
+  );
+  root.style.setProperty(
+    "--toast-info-text",
+    isDark ? lighten(primaryColor, 0.35) : darken(primaryColor, 0.25),
+  );
+  root.style.setProperty(
+    "--toast-info-border",
+    isDark ? mix(primaryColor, "#1e3a8a", 0.5) : lighten(primaryColor, 0.35),
+  );
+
+  applyShellTheme(root, primaryColor, accent, { isDark, isClassic });
+  applyTableTheme(root, primaryColor, { isDark });
+}
+
+function applyTableTheme(
+  root: HTMLElement,
+  primaryColor: string,
+  { isDark }: Pick<ApplyPrimaryThemeOptions, "isDark">,
+): void {
+  const borderBase = isDark ? "#374151" : "#e5e7eb";
+
+  root.style.setProperty(
+    "--table-outline-color",
+    mix(borderBase, primaryColor, isDark ? 0.9 : 0.92),
+  );
+  root.style.setProperty(
+    "--table-row-border-color",
+    mix(borderBase, primaryColor, isDark ? 0.92 : 0.94),
+  );
+  root.style.setProperty(
+    "--filter-border-color",
+    mix(borderBase, primaryColor, isDark ? 0.86 : 0.88),
+  );
+}
+
+function applyShellTheme(
+  root: HTMLElement,
+  primaryColor: string,
+  accent: string,
+  { isDark, isClassic }: ApplyPrimaryThemeOptions,
+): void {
+  const borderBase = isDark ? "#374151" : "#e5e7eb";
+  root.style.setProperty("--border", mix(primaryColor, borderBase, 0.86));
+  root.style.setProperty(
+    "--input",
+    isDark ? mix(primaryColor, "#1f2937", 0.88) : mix(primaryColor, borderBase, 0.92),
+  );
+
+  if (isClassic) {
+    const classicTableHeader = mix(primaryColor, "#2c3e50", 0.55);
+    const shellBorder = darken(classicTableHeader, 0.12);
+
+    root.style.setProperty("--shell-surface-bg", classicTableHeader);
+    root.style.setProperty("--shell-surface-border", shellBorder);
+    root.style.setProperty("--shell-surface-hover-bg", mix(primaryColor, "#ffffff", 0.18));
+    root.style.setProperty("--shell-surface-hover-fg", "#ffffff");
+    root.style.setProperty("--shell-surface-hover-border", mix(primaryColor, "#ffffff", 0.38));
+    root.style.setProperty("--shell-surface-active-bg", mix(primaryColor, "#ffffff", 0.28));
+    root.style.setProperty("--shell-surface-active-fg", "#ffffff");
+    root.style.setProperty("--shell-surface-active-border", lighten(primaryColor, 0.12));
+    root.style.setProperty(
+      "--shell-surface-highlight-bg",
+      mix("#ffffff", classicTableHeader, 0.14),
+    );
+    root.style.setProperty("--shell-surface-ring", lighten(primaryColor, 0.22));
+    return;
+  }
+
+  const shellBorder = isDark ? mix(primaryColor, accent, 0.42) : darken(accent, 0.1);
+
+  root.style.setProperty("--shell-surface-bg", accent);
+  root.style.setProperty("--shell-surface-border", shellBorder);
+  root.style.setProperty(
+    "--shell-surface-hover-bg",
+    isDark ? mix(primaryColor, accent, 0.32) : mix(primaryColor, accent, 0.58),
+  );
+  root.style.setProperty("--shell-surface-hover-fg", "#ffffff");
+  root.style.setProperty(
+    "--shell-surface-hover-border",
+    mix(primaryColor, shellBorder, 0.55),
+  );
+  root.style.setProperty(
+    "--shell-surface-active-bg",
+    isDark ? mix(primaryColor, "#000000", 0.38) : primaryColor,
+  );
+  root.style.setProperty("--shell-surface-active-fg", "#ffffff");
+  root.style.setProperty(
+    "--shell-surface-active-border",
+    isDark ? lighten(primaryColor, 0.15) : mix("#ffffff", primaryColor, 0.35),
+  );
+  root.style.setProperty(
+    "--shell-surface-highlight-bg",
+    mix(primaryColor, accent, isDark ? 0.18 : 0.14),
+  );
+  root.style.setProperty("--shell-surface-ring", primaryColor);
 }

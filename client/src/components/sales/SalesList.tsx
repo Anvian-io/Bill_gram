@@ -257,9 +257,9 @@ export default function Sales() {
           ? "all"
           : filterName === "gstDetails"
             ? undefined
-          : filterName === "fromDate" || filterName === "toDate"
-            ? undefined
-            : "",
+            : filterName === "fromDate" || filterName === "toDate"
+              ? undefined
+              : "",
     }));
 
     // Clear the corresponding input field
@@ -502,9 +502,7 @@ export default function Sales() {
   const getCustomerName = (id: string) => {
     if (id === "all") return "";
     const customer = customers.find((c) => c.id.toString() === id);
-    return customer
-      ? customer.companyName || customer.personName || ""
-      : "";
+    return customer ? customer.companyName || customer.personName || "" : "";
   };
 
   const getVanName = (id: string) => {
@@ -519,10 +517,10 @@ export default function Sales() {
     return salesman ? salesman.name : "";
   };
 
-    const handlePreview = (saleId: number) => {
-      setPreviewSaleId(saleId);
-      setIsPreviewOpen(true);
-    };
+  const handlePreview = (saleId: number) => {
+    setPreviewSaleId(saleId);
+    setIsPreviewOpen(true);
+  };
 
   return (
     <>
@@ -551,7 +549,9 @@ export default function Sales() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 Total sales:{" "}
-                <span className="font-medium text-foreground">{totalItems}</span>
+                <span className="font-medium text-foreground">
+                  {totalItems}
+                </span>
               </span>
               <Button
                 variant="outline"
@@ -780,7 +780,6 @@ export default function Sales() {
                           placeholder="Invoice Date To"
                           disabled={isLoading}
                         />
-
                       </div>
                     </div>
                   </CardContent>

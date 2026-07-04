@@ -157,6 +157,29 @@
 
   /* Toast border radius */
   --toast-border-radius: var(--radius);
+
+  /* Navbar / header — match table header (modern: accent) */
+  --shell-surface-bg: var(--accent);
+  --shell-surface-fg: var(--foreground);
+  --shell-surface-border: var(--border);
+  --shell-surface-muted-fg: var(--muted-foreground);
+  --shell-surface-hover-bg: color-mix(in srgb, var(--primary) 50%, var(--shell-surface-bg));
+  --shell-surface-hover-fg: #ffffff;
+  --shell-surface-hover-border: color-mix(in srgb, var(--primary) 40%, var(--shell-surface-border));
+  --shell-surface-active-bg: var(--primary);
+  --shell-surface-active-fg: #ffffff;
+  --shell-surface-active-border: color-mix(in srgb, #ffffff 30%, var(--primary));
+  --shell-surface-highlight-bg: color-mix(in srgb, var(--primary) 12%, var(--shell-surface-bg));
+  --shell-surface-ring: var(--primary);
+
+  /* Table & filter borders — thin, light, theme-tinted */
+  --table-outline-width: 1px;
+  --table-outline-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+  --table-row-border-width: 1px;
+  --table-row-border-color: color-mix(in srgb, var(--primary) 7%, var(--border));
+  --filter-border-width: 1px;
+  --filter-border-color: color-mix(in srgb, var(--primary) 14%, var(--border));
+  --filter-focus-ring-width: 1px;
 }
 
 .dark {
@@ -317,6 +340,129 @@
   --sidebar-border: #2c3944;
   --sidebar-accent: #528399;
   --sidebar-accent-foreground: #ffffff;
+
+  /* Navbar / header — match classic table header */
+  --shell-surface-bg: var(--classic-table-header);
+  --shell-surface-fg: #ffffff;
+  --shell-surface-border: var(--sidebar-border);
+  --shell-surface-muted-fg: rgba(255, 255, 255, 0.72);
+  --shell-surface-hover-bg: color-mix(in srgb, var(--primary) 22%, var(--shell-surface-bg));
+  --shell-surface-hover-fg: #ffffff;
+  --shell-surface-hover-border: color-mix(in srgb, #ffffff 35%, var(--shell-surface-border));
+  --shell-surface-active-bg: color-mix(in srgb, var(--primary) 32%, var(--shell-surface-bg));
+  --shell-surface-active-fg: #ffffff;
+  --shell-surface-active-border: color-mix(in srgb, var(--primary) 55%, #ffffff);
+  --shell-surface-highlight-bg: color-mix(in srgb, #ffffff 14%, var(--shell-surface-bg));
+  --shell-surface-ring: color-mix(in srgb, var(--primary) 70%, #ffffff);
+}
+
+.app-shell-surface {
+  background-color: var(--shell-surface-bg);
+  color: var(--shell-surface-fg);
+  border-color: var(--shell-surface-border);
+}
+
+.app-shell-surface-muted {
+  color: var(--shell-surface-muted-fg);
+}
+
+.app-shell-surface-highlight {
+  background-color: var(--shell-surface-highlight-bg);
+  border: 1px solid var(--shell-surface-border);
+}
+
+.app-shell-surface-interactive {
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    outline-color 0.2s ease;
+}
+
+.app-shell-surface-interactive:hover {
+  background-color: var(--shell-surface-hover-bg);
+  color: var(--shell-surface-hover-fg);
+  border-color: var(--shell-surface-hover-border);
+}
+
+.app-shell-surface-interactive:focus-visible {
+  outline: 2px solid var(--shell-surface-ring);
+  outline-offset: 1px;
+}
+
+.app-shell-nav-link {
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  color: var(--shell-surface-fg);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    outline-color 0.2s ease;
+}
+
+.app-shell-nav-link:hover {
+  background-color: var(--shell-surface-hover-bg);
+  color: var(--shell-surface-hover-fg);
+  border-color: var(--shell-surface-hover-border);
+}
+
+.app-shell-nav-link--active {
+  background-color: var(--shell-surface-active-bg);
+  color: var(--shell-surface-active-fg);
+  border-color: var(--shell-surface-active-border);
+  font-weight: 600;
+}
+
+.app-shell-nav-link:focus-visible {
+  outline: 2px solid var(--shell-surface-ring);
+  outline-offset: 1px;
+}
+
+.app-shell-btn {
+  border: 1px solid transparent !important;
+  color: var(--shell-surface-fg) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    outline-color 0.2s ease;
+}
+
+.app-shell-btn:hover {
+  background-color: var(--shell-surface-hover-bg) !important;
+  color: var(--shell-surface-hover-fg) !important;
+  border-color: var(--shell-surface-hover-border) !important;
+}
+
+.app-shell-btn:focus-visible {
+  outline: 2px solid var(--shell-surface-ring) !important;
+  outline-offset: 1px;
+}
+
+.app-shell-pin {
+  border: 1px solid transparent;
+  color: var(--shell-surface-muted-fg);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.app-shell-pin:hover {
+  background-color: var(--shell-surface-hover-bg);
+  color: var(--shell-surface-hover-fg);
+  border-color: var(--shell-surface-hover-border);
+}
+
+.app-shell-pin--active {
+  background-color: var(--shell-surface-active-bg);
+  color: var(--shell-surface-active-fg);
+  border-color: var(--shell-surface-active-border);
 }
 
 .classic-mode .classic-input {
@@ -349,7 +495,7 @@
   font-size: var(--table-font-size) !important;
   padding: var(--table-header-padding) !important;
   height: auto !important;
-  border: 1px solid #457083 !important;
+  border: var(--table-outline-width) solid var(--table-outline-color) !important;
   font-weight: 500;
   white-space: nowrap;
   text-align: center;
@@ -360,7 +506,7 @@
 .classic-mode .classic-table td {
   padding: 0 !important;
   font-size: var(--table-font-size);
-  border: 1px solid #d1d5db !important;
+  border: var(--table-row-border-width) solid var(--table-row-border-color) !important;
   height: var(--table-cell-height) !important;
 }
 .classic-mode .classic-table td input,
@@ -532,6 +678,12 @@
   --color-classic-table-header: var(--classic-table-header);
   --color-classic-footer-yellow: var(--classic-footer-yellow);
   --color-classic-footer-gray: var(--classic-footer-gray);
+
+  /* Shell surface (navbar / header) */
+  --color-shell-surface-bg: var(--shell-surface-bg);
+  --color-shell-surface-fg: var(--shell-surface-fg);
+  --color-shell-surface-border: var(--shell-surface-border);
+  --color-shell-surface-muted-fg: var(--shell-surface-muted-fg);
 }
 
 @layer base {
@@ -772,4 +924,94 @@ html {
 }
 .classic-mode .classic-summary .final-amount-block p.text-\[10px\] {
   display: none !important;
+}
+
+/* Sonner toast — theme-aware colors and top-center layout */
+[data-sonner-toaster][data-x-position="center"] {
+  left: 50% !important;
+  transform: translateX(-50%);
+}
+
+[data-sonner-toast] {
+  border-radius: var(--toast-border-radius) !important;
+  font-family: inherit;
+}
+
+[data-sonner-toast][data-type="success"] [data-description] {
+  color: var(--toast-success-text) !important;
+  opacity: 0.85;
+}
+
+[data-sonner-toast][data-type="error"] [data-description] {
+  color: var(--toast-error-text) !important;
+  opacity: 0.85;
+}
+
+[data-sonner-toast][data-type="warning"] [data-description] {
+  color: var(--toast-warning-text) !important;
+  opacity: 0.85;
+}
+
+[data-sonner-toast][data-type="info"] [data-description] {
+  color: var(--toast-info-text) !important;
+  opacity: 0.85;
+}
+
+[data-sonner-toast]:not([data-type]) {
+  background: var(--toast-default-bg) !important;
+  color: var(--toast-default-text) !important;
+  border-color: var(--toast-default-border) !important;
+}
+
+[data-sonner-toast]:not([data-type]) [data-description] {
+  color: var(--toast-default-text) !important;
+  opacity: 0.85;
+}
+
+/* Table outline, row borders, and filter controls — thin theme-tinted borders */
+[data-slot="card"]:has([data-slot="table"]),
+[data-slot="card"]:has([data-inline-search]) {
+  border-width: var(--table-outline-width) !important;
+  border-color: var(--table-outline-color) !important;
+  box-shadow: none;
+}
+
+[data-slot="table-head"] [data-slot="input"],
+[data-slot="table-head"] [data-inline-search-input],
+[data-slot="table-head"] [data-slot="select-trigger"],
+[data-slot="card"]:has([data-inline-search]) [data-slot="input"],
+[data-slot="card"]:has([data-inline-search]) [data-inline-search-input],
+[data-slot="card"]:has([data-inline-search]) [data-slot="select-trigger"],
+.table-filter-control {
+  border-width: var(--filter-border-width) !important;
+  border-color: var(--filter-border-color) !important;
+  box-shadow: none !important;
+}
+
+[data-slot="table-head"] [data-slot="input"]:focus-visible,
+[data-slot="table-head"] [data-inline-search-input]:focus-visible,
+[data-slot="table-head"] [data-slot="select-trigger"]:focus-visible,
+[data-slot="card"]:has([data-inline-search]) [data-slot="input"]:focus-visible,
+[data-slot="card"]:has([data-inline-search]) [data-inline-search-input]:focus-visible,
+[data-slot="card"]:has([data-inline-search]) [data-slot="select-trigger"]:focus-visible,
+.table-filter-control:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--filter-border-color)) !important;
+  --tw-ring-width: var(--filter-focus-ring-width);
+  --tw-ring-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  box-shadow: 0 0 0 var(--filter-focus-ring-width) var(--tw-ring-color) !important;
+}
+
+[data-slot="table-toolbar"] [data-slot="button"][data-variant="outline"],
+.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-9,
+.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-8 {
+  border-width: var(--filter-border-width) !important;
+  border-color: var(--filter-border-color) !important;
+  box-shadow: none !important;
+}
+
+[data-slot="table-toolbar"] [data-slot="button"][data-variant="outline"]:hover,
+.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-9:hover,
+.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-8:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--filter-border-color)) !important;
+  background-color: color-mix(in srgb, var(--primary) 6%, var(--background)) !important;
 }

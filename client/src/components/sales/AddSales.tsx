@@ -1957,6 +1957,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     >
                       <TableHeader>
                         <TableRow className="bg-secondary/50">
+                          <TableHead className="font-semibold w-10 text-center">
+                            #
+                          </TableHead>
                           <TableHead className="font-semibold">
                             Prod Code & Description
                           </TableHead>
@@ -1998,6 +2001,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                           {items.map((item, index) => {
                             const editable = isRowEditable(index);
                             const isEntryRow = index === 0;
+                            const rowNumber =
+                              index > 0 && item.productId > 0 ? index : null;
                             return (
                               <motion.tr
                                 key={index}
@@ -2009,6 +2014,17 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   !editable && "bg-muted/20",
                                 )}
                               >
+                                <TableCell className="text-center w-10">
+                                  {rowNumber !== null ? (
+                                    <span className="text-sm font-semibold text-muted-foreground">
+                                      {rowNumber}
+                                    </span>
+                                  ) : (
+                                    <span className="text-transparent select-none">
+                                      —
+                                    </span>
+                                  )}
+                                </TableCell>
                                 {/* Product Selection */}
                                 <TableCell>
                                   {editable ? (
@@ -2410,7 +2426,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                 key={`dummy-row-${dummyIndex}`}
                                 className="h-11 bg-muted/5 pointer-events-none"
                               >
-                                {Array.from({ length: 14 }).map(
+                                {Array.from({ length: 15 }).map(
                                   (_, cellIndex) => (
                                     <TableCell
                                       key={`dummy-cell-${dummyIndex}-${cellIndex}`}

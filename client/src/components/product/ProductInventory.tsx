@@ -168,9 +168,7 @@ export default function ProductInventory() {
   const [productGroupOpen, setProductGroupOpen] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [showMainFilter, setShowMainFilter] = useState(false);
-  const [lockingProductId, setLockingProductId] = useState<number | null>(
-    null,
-  );
+  const [lockingProductId, setLockingProductId] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Create debounced filter functions
@@ -604,7 +602,9 @@ export default function ProductInventory() {
         ),
       );
       toast.success(
-        nextLocked ? "Product locked successfully" : "Product unlocked successfully",
+        nextLocked
+          ? "Product locked successfully"
+          : "Product unlocked successfully",
       );
     } catch (error: any) {
       toast.error("Failed to update product lock", {
@@ -653,6 +653,7 @@ export default function ProductInventory() {
           {/* Toolbar */}
           <motion.div
             className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-1"
+            data-slot="table-toolbar"
             variants={itemVariants}
           >
             <p className="text-sm text-muted-foreground">
@@ -662,7 +663,9 @@ export default function ProductInventory() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 Total products:{" "}
-                <span className="font-medium text-foreground">{totalItems}</span>
+                <span className="font-medium text-foreground">
+                  {totalItems}
+                </span>
               </span>
               <Button
                 variant="outline"
@@ -859,7 +862,12 @@ export default function ProductInventory() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
-                  <Table className={cn("table-fixed", layoutMode === "classic" && "classic-table")}>
+                  <Table
+                    className={cn(
+                      "table-fixed",
+                      layoutMode === "classic" && "classic-table",
+                    )}
+                  >
                     <TableHeader>
                       <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                         <TableHead className="font-semibold w-[180px] max-w-[180px] whitespace-normal text-center">
@@ -1187,10 +1195,16 @@ export default function ProductInventory() {
                                       </motion.div>
                                     )}
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-medium truncate" title={product.productBrand}>
+                                      <p
+                                        className="font-medium truncate"
+                                        title={product.productBrand}
+                                      >
                                         {product.productBrand}
                                       </p>
-                                      <p className="text-xs text-muted-foreground truncate" title={product.productCode}>
+                                      <p
+                                        className="text-xs text-muted-foreground truncate"
+                                        title={product.productCode}
+                                      >
                                         {product.productCode}
                                       </p>
                                     </div>
@@ -1322,7 +1336,9 @@ export default function ProductInventory() {
                                       variant="outline"
                                       className={cn(
                                         "text-[10px] px-2 py-0.5 shrink-0",
-                                        product.isLocked || product.deleted || isLoading
+                                        product.isLocked ||
+                                          product.deleted ||
+                                          isLoading
                                           ? "opacity-50 cursor-not-allowed"
                                           : "cursor-pointer hover:bg-green-100 text-green-700 border-green-200",
                                       )}
@@ -1342,7 +1358,9 @@ export default function ProductInventory() {
                                       variant="outline"
                                       className={cn(
                                         "text-[10px] px-2 py-0.5 shrink-0",
-                                        product.isLocked || product.deleted || isLoading
+                                        product.isLocked ||
+                                          product.deleted ||
+                                          isLoading
                                           ? "opacity-50 cursor-not-allowed"
                                           : "cursor-pointer hover:bg-red-100 text-red-700 border-red-200",
                                       )}

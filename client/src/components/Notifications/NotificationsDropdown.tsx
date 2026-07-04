@@ -238,7 +238,7 @@ export function NotificationsDropdown() {
       <Button
         variant="ghost"
         size="icon"
-        className="w-10 h-10 rounded-lg flex items-center justify-center bg-hoverBg relative"
+        className="app-shell-btn app-shell-surface-highlight w-10 h-10 rounded-lg relative"
         onClick={() => setOpen(!open)}
       >
         <Bell className="h-5 w-5" />

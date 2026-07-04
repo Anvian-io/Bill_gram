@@ -123,20 +123,20 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             hidden sm:block
             fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out
             ${isExpanded ? "w-64" : "w-16"}
-            bg-sidebar border-r border-sidebar-border shadow-lg
+            app-shell-surface border-r border-[var(--shell-surface-border)] shadow-lg
           `}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex-shrink-0 flex items-center justify-start h-16 px-4 border-b border-border">
+            <div className="flex-shrink-0 flex items-center justify-start h-16 px-4 border-b border-[var(--shell-surface-border)]">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
-                  <Menu className="w-5 h-5 text-sidebar-foreground" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center app-shell-surface-highlight">
+                  <Menu className="w-5 h-5" />
                 </div>
                 <span
-                  className={`font-semibold text-lg text-sidebar-foreground transition-opacity duration-300 ${
+                  className={`font-semibold text-lg transition-opacity duration-300 ${
                     isExpanded ? "opacity-100" : "opacity-0"
                   }`}
                 >
@@ -159,14 +159,9 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                         <Link
                           to={item.href}
                           onClick={() => handleNavItemClick(item)}
-                          className={`
-                            flex items-center px-3 py-3 rounded-lg transition-all duration-200
-                            ${
-                              isActive
-                                ? "text-primary bg-primary/10 border border-primary/20"
-                                : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
-                            }
-                          `}
+                          className={`app-shell-nav-link px-3 py-3 rounded-lg ${
+                            isActive ? "app-shell-nav-link--active" : ""
+                          }`}
                         >
                           <Icon className="w-5 h-5 flex-shrink-0" />
                           <span
@@ -185,13 +180,9 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                           <button
                             onClick={(e) => togglePinItem(item.href, e)}
                             className={`
-                              absolute right-2 top-1/2 transform -translate-y-1/2
-                              p-1.5 rounded-md transition-all duration-200
-                              ${
-                                isPinned
-                                  ? "text-primary bg-primary/10"
-                                  : "text-sidebar-foreground/60 hover:text-primary hover:bg-primary/10"
-                              }
+                              app-shell-pin absolute right-2 top-1/2 transform -translate-y-1/2
+                              p-1.5 rounded-md
+                              ${isPinned ? "app-shell-pin--active" : ""}
                               opacity-100 group-hover:opacity-100
                               ${isExpanded ? "" : "hidden"}
                             `}
@@ -212,12 +203,12 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
             </div>
 
             {/* Footer - Fixed at bottom */}
-            <div className="flex-shrink-0 p-3 border-t border-border">
+            <div className="flex-shrink-0 p-3 border-t border-[var(--shell-surface-border)]">
               <Button
                 onClick={handleThemeChange}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-primary hover:bg-primary/10"
+                className="app-shell-btn w-full justify-start px-3 py-3 h-auto"
               >
                 {resolvedTheme === "dark" ? (
                   <Sun className="w-5 h-5" />
@@ -252,18 +243,18 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
 
           {/* Mobile Sidebar */}
           <nav
-            className={`fixed left-0 top-0 h-full w-64 z-50 bg-sidebar border-r border-sidebar-border shadow-lg transform transition-transform duration-300 ease-in-out ${
+            className={`fixed left-0 top-0 h-full w-64 z-50 app-shell-surface border-r border-[var(--shell-surface-border)] shadow-lg transform transition-transform duration-300 ease-in-out ${
               isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
             <div className="flex flex-col h-full">
               {/* Header with Close Button */}
-              <div className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b border-border">
+              <div className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b border-[var(--shell-surface-border)]">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
-                    <Menu className="w-5 h-5 text-sidebar-foreground" />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center app-shell-surface-highlight">
+                    <Menu className="w-5 h-5" />
                   </div>
-                  <span className="font-semibold text-lg text-sidebar-foreground">
+                  <span className="font-semibold text-lg">
                     Dashboard
                   </span>
                 </div>
@@ -271,7 +262,7 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                   onClick={toggleMobileMenu}
                   variant="ghost"
                   size="sm"
-                  className="p-2 hover:bg-primary/10 text-sidebar-foreground hover:text-primary"
+                  className="app-shell-btn p-2"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -291,14 +282,9 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                           <Link
                             to={item.href}
                             onClick={() => handleNavItemClick(item)}
-                            className={`
-                              flex items-center px-1 py-3 rounded-lg transition-all duration-200
-                              ${
-                                isActive
-                                  ? "text-primary bg-primary/10 border border-primary/20"
-                                  : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
-                              }
-                            `}
+                            className={`app-shell-nav-link px-1 py-3 rounded-lg ${
+                              isActive ? "app-shell-nav-link--active" : ""
+                            }`}
                           >
                             <Icon className="w-5 h-5 flex-shrink-0" />
                             <span className="ml-3 whitespace-nowrap">
@@ -309,15 +295,9 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
                           {/* Pin button - always visible on mobile */}
                           <button
                             onClick={(e) => togglePinItem(item.href, e)}
-                            className={`
-                              absolute right-2 top-1/2 transform -translate-y-1/2
-                              p-1.5 rounded-md transition-all duration-200
-                              ${
-                                isPinned
-                                  ? "text-primary bg-primary/10"
-                                  : "text-sidebar-foreground/60 hover:text-primary hover:bg-primary/10"
-                              }
-                            `}
+                            className={`app-shell-pin absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md ${
+                              isPinned ? "app-shell-pin--active" : ""
+                            }`}
                             title={isPinned ? "Unpin item" : "Pin item"}
                           >
                             {isPinned ? (
@@ -334,12 +314,12 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
               </div>
 
               {/* Footer - Fixed at bottom */}
-              <div className="flex-shrink-0 p-3 border-t border-border">
+              <div className="flex-shrink-0 p-3 border-t border-[var(--shell-surface-border)]">
                 <Button
                   onClick={handleThemeChange}
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start px-3 py-3 h-auto text-sidebar-foreground hover:text-primary hover:bg-primary/10"
+                  className="app-shell-btn w-full justify-start px-3 py-3 h-auto"
                 >
                   {resolvedTheme === "dark" ? (
                     <Sun className="w-5 h-5" />
@@ -358,11 +338,11 @@ export function Navbar({ children, isExpanded, setIsExpanded }: NavbarProps) {
         {/* Mobile Menu Button - only visible on mobile */}
         <Button
           onClick={toggleMobileMenu}
-          className="h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-sidebar-border bg-sidebar text-sidebar-foreground hover:bg-primary/10 hover:text-primary"
+          className="app-shell-btn h-16 w-16 rounded-none sm:hidden fixed top-0 left-0 z-30 p-2 border border-[var(--shell-surface-border)] app-shell-surface"
           variant="ghost"
           size="sm"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center app-shell-surface-highlight">
             <Menu className="w-5 h-5" />
           </div>
         </Button>

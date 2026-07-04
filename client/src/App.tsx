@@ -211,9 +211,9 @@ function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
+          <Toaster />
         </Router>
       </ThemeProvider>
-      <Toaster />
     </AuthProvider>
   );
 }

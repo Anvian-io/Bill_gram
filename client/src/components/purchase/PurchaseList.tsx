@@ -247,11 +247,11 @@ export default function Purchase() {
           ? "all"
           : filterName === "gstDetails"
             ? undefined
-          : filterName === "fromDate" || filterName === "toDate"
-            ? undefined
-            : filterName === "showDeleted"
-              ? false
-              : "",
+            : filterName === "fromDate" || filterName === "toDate"
+              ? undefined
+              : filterName === "showDeleted"
+                ? false
+                : "",
     }));
     // Clear input field
     switch (filterName) {
@@ -470,7 +470,9 @@ export default function Purchase() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 Total purchases:{" "}
-                <span className="font-medium text-foreground">{totalItems}</span>
+                <span className="font-medium text-foreground">
+                  {totalItems}
+                </span>
               </span>
               <Button
                 variant="outline"
@@ -663,7 +665,12 @@ export default function Purchase() {
             <Card className="mb-6 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
-                  <Table className={cn("table-fixed", layoutMode === "classic" && "classic-table")}>
+                  <Table
+                    className={cn(
+                      "table-fixed",
+                      layoutMode === "classic" && "classic-table",
+                    )}
+                  >
                     <TableHeader>
                       <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                         <TableHead className="font-semibold w-[120px] max-w-[120px] whitespace-normal text-center">
@@ -908,7 +915,9 @@ export default function Purchase() {
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[72px] max-w-[72px] px-1 align-top">
                                 <div
                                   className="text-xs text-muted-foreground truncate"
-                                  title={getGstDetailsLabel(purchase.gstDetails)}
+                                  title={getGstDetailsLabel(
+                                    purchase.gstDetails,
+                                  )}
                                 >
                                   {getGstDetailsLabel(purchase.gstDetails)}
                                 </div>
@@ -996,7 +1005,8 @@ export default function Purchase() {
                                     variant="outline"
                                     className={cn(
                                       "text-[10px] px-2 py-0.5 cursor-pointer shrink-0 hover:bg-secondary text-muted-foreground",
-                                      isLoading && "opacity-50 cursor-not-allowed",
+                                      isLoading &&
+                                        "opacity-50 cursor-not-allowed",
                                     )}
                                     onClick={() => {
                                       if (!isLoading) {
