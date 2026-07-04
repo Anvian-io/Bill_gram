@@ -89,8 +89,8 @@ export function ItemsPerPageSelect({
         aria-expanded={open}
         aria-label="Items per page"
         className={cn(
-          "table-filter-control flex h-9 w-20 items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-none outline-none",
-          "focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-1",
+          "table-filter-control flex h-9 w-20 items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-none outline-none transition-colors",
+          "focus-visible:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "dark:bg-input/30 dark:hover:bg-input/50",
         )}

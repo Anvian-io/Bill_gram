@@ -126,6 +126,54 @@ export function applyPrimaryTheme(
 
   applyShellTheme(root, primaryColor, accent, { isDark, isClassic });
   applyTableTheme(root, primaryColor, { isDark });
+  applyButtonTheme(root, primaryColor, accent, { isDark });
+}
+
+function getContrastForeground(hex: string): string {
+  const { r, g, b } = hexToRgb(hex);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? "#111827" : "#ffffff";
+}
+
+function applyButtonTheme(
+  root: HTMLElement,
+  primaryColor: string,
+  _accent: string,
+  { isDark }: Pick<ApplyPrimaryThemeOptions, "isDark">,
+): void {
+  const surface = isDark ? "#111827" : "#ffffff";
+  const lightHoverFg = lighten(primaryColor, isDark ? 0.32 : 0.42);
+
+  root.style.setProperty("--primary-foreground", getContrastForeground(primaryColor));
+  root.style.setProperty("--accent-foreground", getContrastForeground(_accent));
+  root.style.setProperty("--button-hover-fg", "#ffffff");
+
+  root.style.setProperty("--button-default-hover-bg", darken(primaryColor, 0.07));
+  root.style.setProperty("--button-default-hover-fg", "#ffffff");
+
+  root.style.setProperty(
+    "--button-outline-hover-bg",
+    isDark ? mix(primaryColor, "#000000", 0.3) : primaryColor,
+  );
+  root.style.setProperty("--button-outline-hover-fg", "#ffffff");
+  root.style.setProperty(
+    "--button-outline-hover-border",
+    isDark ? lighten(primaryColor, 0.14) : lighten(primaryColor, 0.22),
+  );
+
+  root.style.setProperty(
+    "--button-ghost-hover-bg",
+    isDark ? mix(primaryColor, "#000000", 0.4) : mix(primaryColor, surface, 0.52),
+  );
+  root.style.setProperty("--button-ghost-hover-fg", "#ffffff");
+
+  root.style.setProperty(
+    "--button-secondary-hover-bg",
+    isDark ? mix(primaryColor, "#374151", 0.5) : mix(primaryColor, "#f3f4f6", 0.42),
+  );
+  root.style.setProperty("--button-secondary-hover-fg", "#ffffff");
+
+  root.style.setProperty("--button-link-hover-fg", lightHoverFg);
 }
 
 function applyTableTheme(

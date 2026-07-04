@@ -180,6 +180,19 @@
   --filter-border-width: 1px;
   --filter-border-color: color-mix(in srgb, var(--primary) 14%, var(--border));
   --filter-focus-ring-width: 1px;
+
+  /* Button hover — theme-tinted with white / light text */
+  --button-hover-fg: #ffffff;
+  --button-default-hover-bg: color-mix(in srgb, var(--primary) 88%, #000000);
+  --button-default-hover-fg: #ffffff;
+  --button-outline-hover-bg: var(--primary);
+  --button-outline-hover-fg: #ffffff;
+  --button-outline-hover-border: color-mix(in srgb, #ffffff 25%, var(--primary));
+  --button-ghost-hover-bg: color-mix(in srgb, var(--primary) 48%, var(--background));
+  --button-ghost-hover-fg: #ffffff;
+  --button-secondary-hover-bg: color-mix(in srgb, var(--primary) 42%, var(--secondary));
+  --button-secondary-hover-fg: #ffffff;
+  --button-link-hover-fg: color-mix(in srgb, var(--primary) 65%, #ffffff);
 }
 
 .dark {
@@ -1009,9 +1022,51 @@ html {
   box-shadow: none !important;
 }
 
-[data-slot="table-toolbar"] [data-slot="button"][data-variant="outline"]:hover,
-.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-9:hover,
-.min-h-screen:has([data-slot="table"]) [data-slot="button"][data-variant="outline"].h-8:hover {
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--filter-border-color)) !important;
-  background-color: color-mix(in srgb, var(--primary) 6%, var(--background)) !important;
+/* Theme-aware button hover states */
+[data-slot="button"][data-variant="default"]:not(:disabled):not(.app-shell-btn):hover {
+  background-color: var(--button-default-hover-bg) !important;
+  color: var(--button-default-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="outline"]:not(:disabled):not(.app-shell-btn):hover,
+.table-filter-control:not(:disabled):hover {
+  background-color: var(--button-outline-hover-bg) !important;
+  color: var(--button-outline-hover-fg) !important;
+  border-color: var(--button-outline-hover-border) !important;
+}
+
+[data-slot="button"][data-variant="outline"]:not(:disabled):not(.app-shell-btn):hover svg,
+.table-filter-control:not(:disabled):hover svg {
+  color: var(--button-outline-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="ghost"]:not(:disabled):not(.app-shell-btn):hover {
+  background-color: var(--button-ghost-hover-bg) !important;
+  color: var(--button-ghost-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="ghost"]:not(:disabled):not(.app-shell-btn):hover svg {
+  color: var(--button-ghost-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="secondary"]:not(:disabled):not(.app-shell-btn):hover {
+  background-color: var(--button-secondary-hover-bg) !important;
+  color: var(--button-secondary-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="secondary"]:not(:disabled):not(.app-shell-btn):hover svg {
+  color: var(--button-secondary-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="link"]:not(:disabled):hover {
+  color: var(--button-link-hover-fg) !important;
+}
+
+[data-slot="button"][data-variant="outline"]:not(:disabled):focus-visible,
+[data-slot="button"][data-variant="ghost"]:not(:disabled):focus-visible,
+.table-filter-control:focus-visible {
+  border-color: var(--button-outline-hover-border) !important;
+  --tw-ring-width: var(--filter-focus-ring-width);
+  --tw-ring-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  box-shadow: 0 0 0 var(--filter-focus-ring-width) var(--tw-ring-color) !important;
 }
