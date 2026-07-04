@@ -109,6 +109,26 @@ export const purchaseService = {
     }
   },
 
+  async checkInvoiceNumber(
+    invoiceNo: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      const params = new URLSearchParams();
+      params.append("invoiceNo", invoiceNo);
+      const response = await apiClient.get<
+        ApiResponse<{ available: boolean }>
+      >(`/purchases/check-invoice?${params.toString()}`);
+      return {
+        available: response.data.data.available,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error checking invoice number:", message);
+      throw new Error(message);
+    }
+  },
+
   // Update purchase invoice
   async updatePurchase(id: number, data: PurchaseFormData): Promise<Purchase> {
     try {

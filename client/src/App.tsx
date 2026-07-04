@@ -31,6 +31,7 @@ import SoftwareUpdateBanner from "./components/SoftwareUpdateBanner";
 
 
 import { useEnterToNextField } from "./hooks/useEnterToNextField";
+import { useArrowKeyNavigation } from "./hooks/useArrowKeyNavigation";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -50,6 +51,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
   useEnterToNextField();
+  useArrowKeyNavigation();
 
   return (
     <AuthProvider>

@@ -8,6 +8,7 @@
   "files": [
     "client/dist/**/*",
     "electron/**/*",
+    "node_modules/koffi/**/*",
     "!server/**/*",
     "!**/*.map",
     "!**/*.log"

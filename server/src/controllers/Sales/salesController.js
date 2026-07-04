@@ -385,6 +385,64 @@ export const createSalesReturn = asyncHandler(async (req, res, next) => {
 });
 
 // --------------------------------------------------------------------
+// NEXT INVOICE NUMBER (preview for new sales)
+// --------------------------------------------------------------------
+export const getNextSalesInvoiceNumber = asyncHandler(async (req, res) => {
+  const isReturn = req.query.isReturn === "true";
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  const maxRecord = await prisma.salesInvoice.findFirst({
+    where: { deleted: false },
+    orderBy: { id: "desc" },
+    select: { id: true },
+  });
+
+  const nextId = (maxRecord?.id ?? 0) + 1;
+  const invoicePrefix = isReturn ? "SRET" : "SINV";
+  const nextInvoiceNo = `${invoicePrefix}-${nextId.toString().padStart(4, "0")}`;
+
+  return sendResponse(
+    res,
+    true,
+    { invoiceNo: nextInvoiceNo },
+    "Next invoice number",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
+// CHECK SALES INVOICE NUMBER UNIQUENESS
+// --------------------------------------------------------------------
+export const checkSalesInvoiceNumber = asyncHandler(async (req, res) => {
+  const { invoiceNo } = req.query;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  if (!invoiceNo || !String(invoiceNo).trim()) {
+    return sendResponse(
+      res,
+      true,
+      { available: true },
+      "Invoice number is available",
+      statusType.OK,
+    );
+  }
+
+  const existing = await prisma.salesInvoice.findFirst({
+    where: { invoiceNo: String(invoiceNo).trim(), deleted: false },
+  });
+
+  return sendResponse(
+    res,
+    true,
+    { available: !existing },
+    existing ? "Invoice number already exists" : "Invoice number is available",
+    statusType.OK,
+  );
+});
+
+// --------------------------------------------------------------------
 // 2. GET ALL SALES (with filters, pagination)
 // --------------------------------------------------------------------
 export const getAllSales = asyncHandler(async (req, res) => {
@@ -7916,4 +7974,6 @@ export const salesController = {
 
   getSalesBillPreview,
   downloadSalesBillPreviewPDF,
+  getNextSalesInvoiceNumber,
+  checkSalesInvoiceNumber,
 };

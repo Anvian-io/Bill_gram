@@ -52,6 +52,7 @@ import {
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { MasterFieldWithAdd } from "@/components/custom_ui/MasterFieldWithAdd";
 import { AppliedBatchSummaryBar } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import type { AppliedBatchSummary } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
@@ -80,7 +81,13 @@ import { productService } from "@/services/productService";
 import type { Purchase } from "@/types/purchase";
 import { useHoverOpen } from "@/hooks/useHoverOpen";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import { focusFieldById } from "@/lib/focusNavigation";
 import PurchaseInvoicePreview from "./PurchaseInvoicePreview";
+import SupplierForm, {
+  type SupplierFormData,
+} from "@/components/forms/SupplierForm";
+import { supplierService } from "@/services/supplierService";
+import { useDebounce } from "@/utils/debounce";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -230,6 +237,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
     null,
   );
+  const [manualInvoiceNo, setManualInvoiceNo] = useState("");
+  const [invoiceNoError, setInvoiceNoError] = useState<string | null>(null);
+  const [isCheckingInvoiceNo, setIsCheckingInvoiceNo] = useState(false);
+  const [supplierFormOpen, setSupplierFormOpen] = useState(false);
+  const [isMasterSubmitting, setIsMasterSubmitting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPurchaseId, setPreviewPurchaseId] = useState<number>(0);
 
@@ -586,7 +598,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       });
 
       setPendingBatchSelection(null);
-      focusField(`rate-${index}`, 350);
+      focusField(`aQty-${index}`, 350);
     }
   };
 
@@ -628,15 +640,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     index === 0 || editingRowIndex === index;
 
   const focusField = (fieldId: string, delay = 100) => {
-    setTimeout(() => {
-      const nextElement = document.getElementById(fieldId) as HTMLElement;
-      if (nextElement) {
-        nextElement.focus();
-        if (nextElement instanceof HTMLInputElement) {
-          nextElement.select();
-        }
-      }
-    }, delay);
+    focusFieldById(fieldId, delay);
   };
 
   const focusProductSearch = () => focusField("productSearch-0");
@@ -787,9 +791,67 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
   };
 
   // ----------------------------------------------------------------------
+  // Invoice number uniqueness (creation only)
+  // ----------------------------------------------------------------------
+  const checkInvoiceNoAvailability = async (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setInvoiceNoError(null);
+      setIsCheckingInvoiceNo(false);
+      return;
+    }
+
+    setIsCheckingInvoiceNo(true);
+    try {
+      const result = await purchaseService.checkInvoiceNumber(trimmed);
+      setInvoiceNoError(
+        result.available ? null : "Invoice number already exists",
+      );
+    } catch {
+      setInvoiceNoError("Could not verify invoice number");
+    } finally {
+      setIsCheckingInvoiceNo(false);
+    }
+  };
+
+  const debouncedCheckInvoiceNo = useDebounce(checkInvoiceNoAvailability, 400);
+
+  const handleManualInvoiceNoChange = (value: string) => {
+    setManualInvoiceNo(value);
+    setInvoiceNoError(null);
+    debouncedCheckInvoiceNo(value);
+  };
+
+  const handleSaveSupplier = async (data: SupplierFormData) => {
+    setIsMasterSubmitting(true);
+    try {
+      const created = await supplierService.createSupplier(data);
+      await refreshActiveLists();
+      form.setValue("supplierId", created.id, { shouldDirty: true });
+      form.clearErrors(["supplierId"]);
+      setSupplierFormOpen(false);
+      toast.success("Supplier created successfully");
+      focusField("productSearch-0");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create supplier");
+    } finally {
+      setIsMasterSubmitting(false);
+    }
+  };
+
+  // ----------------------------------------------------------------------
   // Form submission
   // ----------------------------------------------------------------------
   const onSubmit = async (data: PurchaseFormData) => {
+    if (isNew && manualInvoiceNo.trim() && invoiceNoError) {
+      toast.error(invoiceNoError);
+      return;
+    }
+    if (isNew && isCheckingInvoiceNo) {
+      toast.error("Please wait while invoice number is being verified");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const filteredItems = data.items.filter((item) => item.productId > 0);
@@ -798,9 +860,17 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
         setIsSubmitting(false);
         return;
       }
-      const payload = { ...data, items: filteredItems, boxUnit: 0 };
-      // @ts-ignore
-      delete payload.invoiceNo;
+      const payload: PurchaseFormData & { invoiceNo?: string } = {
+        ...data,
+        items: filteredItems,
+        boxUnit: 0,
+      };
+
+      if (isNew && manualInvoiceNo.trim()) {
+        payload.invoiceNo = manualInvoiceNo.trim();
+      } else if (!isEditMode) {
+        delete payload.invoiceNo;
+      }
 
       let response: PurchaseResponse;
 
@@ -857,6 +927,8 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     form.reset(defaultValues);
     setGeneratedPurchaseId(null);
     setGeneratedInvoiceNo(null);
+    setManualInvoiceNo("");
+    setInvoiceNoError(null);
     setEditingRowIndex(null);
     setAppliedBatchSummary(null);
     if (!isReturnMode) {
@@ -1136,6 +1208,40 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {isNew && (
+                    <FormItem>
+                      <FormControl>
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="manualInvoiceNo"
+                            value={manualInvoiceNo}
+                            onChange={(e) =>
+                              handleManualInvoiceNoChange(e.target.value)
+                            }
+                            placeholder="Invoice No."
+                            className={cn(
+                              "pl-10",
+                              invoiceNoError && "border-destructive",
+                            )}
+                            disabled={isSubmitting}
+                            aria-invalid={!!invoiceNoError}
+                          />
+                        </div>
+                      </FormControl>
+                      {isCheckingInvoiceNo && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Checking availability...
+                        </p>
+                      )}
+                      {invoiceNoError && (
+                        <p className="text-xs text-destructive mt-1">
+                          {invoiceNoError}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="invoiceDate"
@@ -1283,6 +1389,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                     render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
+                          <MasterFieldWithAdd
+                            onAdd={() => setSupplierFormOpen(true)}
+                            disabled={isSubmitting}
+                            addLabel="Add supplier"
+                          >
                           <InlineSearchField
                             inputId="supplierSearch"
                             open={supplierHover.open}
@@ -1338,6 +1449,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                               ))}
                             </CommandGroup>
                           </InlineSearchField>
+                          </MasterFieldWithAdd>
                         </FormControl>
                       </FormItem>
                     )}
@@ -1427,6 +1539,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                   {editable ? (
                                     <InlineSearchField
                                       inputId={`productSearch-${index}`}
+                                      enterNextFieldId={
+                                        item.productId && item.batchId
+                                          ? `aQty-${index}`
+                                          : undefined
+                                      }
                                       open={
                                         productOpen &&
                                         activeProductIndex === index
@@ -1696,6 +1813,11 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                         type="number"
                                         step="0.01"
                                         value={item.taxRate ?? 0}
+                                        data-enter-next={
+                                          item.batchId
+                                            ? `confirmProduct-${index}`
+                                            : undefined
+                                        }
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -1746,6 +1868,10 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                                         }
                                         className="h-7 w-7 p-0"
                                         title="Select Batch"
+                                        tabIndex={item.batchId ? -1 : undefined}
+                                        {...(item.batchId
+                                          ? { "data-skip-field-nav": true }
+                                          : {})}
                                       >
                                         <Layers className="h-3.5 w-3.5" />
                                       </Button>
@@ -2349,6 +2475,13 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
           purchaseId={previewPurchaseId}
+        />
+
+        <SupplierForm
+          open={supplierFormOpen}
+          onOpenChange={setSupplierFormOpen}
+          onSave={handleSaveSupplier}
+          isSubmitting={isMasterSubmitting}
         />
       </div>
     </div>

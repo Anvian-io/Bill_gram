@@ -116,6 +116,21 @@ export const salesService = {
     }
   },
 
+  async getNextInvoiceNumber(isReturn = false): Promise<string> {
+    try {
+      const params = new URLSearchParams();
+      if (isReturn) params.append("isReturn", "true");
+      const response = await apiClient.get<
+        ApiResponse<{ invoiceNo: string }>
+      >(`/sales/next-invoice?${params.toString()}`);
+      return response.data.data.invoiceNo;
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      console.error("Error fetching next invoice number:", message);
+      throw new Error(message);
+    }
+  },
+
   async updateSale(id: number, data: SalesFormData): Promise<Sales> {
     try {
       const response = await apiClient.put<ApiResponse<{ sales: Sales }>>(

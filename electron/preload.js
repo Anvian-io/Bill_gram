@@ -19,4 +19,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("update-status", listener);
     return () => ipcRenderer.removeListener("update-status", listener);
   },
+  moveCursorTo: (clientX, clientY) =>
+    ipcRenderer.invoke("move-cursor-to", { clientX, clientY }),
 });

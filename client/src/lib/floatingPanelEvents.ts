@@ -31,6 +31,10 @@ function trackPointerPosition(event: MouseEvent) {
 }
 
 function focusFieldUnderPointer() {
+  if (document.body.dataset.keyboardNavigating === "true") {
+    return;
+  }
+
   const stack = document.elementsFromPoint(lastPointerX, lastPointerY);
   for (const element of stack) {
     if (
@@ -75,6 +79,11 @@ export function setFloatingDropdownOpen(open: boolean) {
 
 export function isFloatingDropdownOpen(): boolean {
   return document.body.dataset.floatingDropdownOpen === "true";
+}
+
+export function updateLastPointerPosition(clientX: number, clientY: number) {
+  lastPointerX = clientX;
+  lastPointerY = clientY;
 }
 
 /** Keep modal open when interacting with portaled dropdown/calendar panels. */

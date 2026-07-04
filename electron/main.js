@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
+const { moveSystemCursor, resolveScreenPoint } = require("./moveCursor");
 const fs = require("fs");
 const os = require("os");
 const http = require("http");
@@ -753,6 +754,29 @@ ipcMain.handle("get-user-credential", async (_event, emailInput) => {
   } catch (error) {
     console.error("Failed to read credentials:", error);
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("move-cursor-to", async (event, { clientX, clientY }) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) {
+      return { success: false };
+    }
+
+    const screenPoint = resolveScreenPoint(win, clientX, clientY, screen);
+
+    win.webContents.sendInputEvent({
+      type: "mouseMove",
+      x: Math.round(clientX),
+      y: Math.round(clientY),
+    });
+
+    moveSystemCursor(screenPoint.x, screenPoint.y);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to move cursor:", error);
+    return { success: false };
   }
 });
 

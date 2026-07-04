@@ -48,6 +48,7 @@ import {
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
+import { MasterFieldWithAdd } from "@/components/custom_ui/MasterFieldWithAdd";
 import { AppliedBatchSummaryBar } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import type { AppliedBatchSummary } from "@/components/custom_ui/AppliedBatchSummaryBar";
 import { HoverDateInput } from "@/components/custom_ui/HoverDateInput";
@@ -83,7 +84,20 @@ import { productService } from "@/services/productService";
 import type { Sales } from "@/types/sales";
 import { useHoverOpen } from "@/hooks/useHoverOpen";
 import { CheckIsExpanded } from "@/utils/commonHelper";
+import { focusFieldById } from "@/lib/focusNavigation";
 import SalesInvoicePreview from "./SalesInvoicePreview";
+import AreaForm, { type AreaFormData } from "@/components/forms/AreaForm";
+import VanForm, { type VanFormData } from "@/components/forms/VanForm";
+import SalesmanForm, {
+  type SalesmanFormData,
+} from "@/components/forms/SalesmanForm";
+import CustomerForm, {
+  type CustomerFormData,
+} from "@/components/forms/CustomerForm";
+import { areaService } from "@/services/areaService";
+import { vanService } from "@/services/vanService";
+import { salesmanService } from "@/services/salesmanService";
+import { customerService } from "@/services/customerService";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -253,6 +267,12 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const [generatedInvoiceNo, setGeneratedInvoiceNo] = useState<string | null>(
     null,
   );
+  const [previewInvoiceNo, setPreviewInvoiceNo] = useState<string | null>(null);
+  const [areaFormOpen, setAreaFormOpen] = useState(false);
+  const [vanFormOpen, setVanFormOpen] = useState(false);
+  const [salesmanFormOpen, setSalesmanFormOpen] = useState(false);
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
+  const [isMasterSubmitting, setIsMasterSubmitting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewSaleId, setPreviewSaleId] = useState<number>(0);
 
@@ -353,6 +373,21 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       setSearchParams({ id: "new" }, { replace: true });
     }
   }, [idParam, isReturnMode, setSearchParams]);
+
+  const fetchPreviewInvoiceNo = async () => {
+    try {
+      const nextNo = await salesService.getNextInvoiceNumber(isReturnMode);
+      setPreviewInvoiceNo(nextNo);
+    } catch {
+      setPreviewInvoiceNo(null);
+    }
+  };
+
+  useEffect(() => {
+    if (isNew && !generatedInvoiceNo) {
+      void fetchPreviewInvoiceNo();
+    }
+  }, [isNew, isReturnMode, generatedInvoiceNo]);
 
   useEffect(() => {
     if (!invoiceSearchHover.open) return;
@@ -789,7 +824,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       });
 
       setPendingBatchSelection(null);
-      focusField(`rate-${index}`, 350);
+      focusField(`aQty-${index}`, 350);
     }
   };
 
@@ -831,15 +866,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     index === 0 || editingRowIndex === index;
 
   const focusField = (fieldId: string, delay = 100) => {
-    setTimeout(() => {
-      const nextElement = document.getElementById(fieldId) as HTMLElement;
-      if (nextElement) {
-        nextElement.focus();
-        if (nextElement instanceof HTMLInputElement) {
-          nextElement.select();
-        }
-      }
-    }, delay);
+    focusFieldById(fieldId, delay);
   };
 
   const focusProductSearch = () => focusField("productSearch-0");
@@ -1025,8 +1052,84 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     setGeneratedInvoiceNo(null);
     setEditingRowIndex(null);
     setAppliedBatchSummary(null);
+    void fetchPreviewInvoiceNo();
     if (!isReturnMode) {
       setSearchParams({ id: "new" }, { replace: true });
+    }
+  };
+
+  const handleSaveArea = async (data: AreaFormData) => {
+    setIsMasterSubmitting(true);
+    try {
+      const created = await areaService.createArea(data);
+      await refreshActiveLists();
+      form.setValue("areaId", created.id, { shouldDirty: true });
+      form.clearErrors(["areaId"]);
+      setAreaFormOpen(false);
+      toast.success("Area created successfully");
+      focusField("vanSearch");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create area");
+    } finally {
+      setIsMasterSubmitting(false);
+    }
+  };
+
+  const handleSaveVan = async (data: VanFormData) => {
+    setIsMasterSubmitting(true);
+    try {
+      const created = await vanService.createVan(data);
+      await refreshActiveLists();
+      form.setValue("vanId", created.id, { shouldDirty: true });
+      form.clearErrors(["vanId"]);
+      setVanFormOpen(false);
+      toast.success("Van created successfully");
+      focusField("salesmanSearch");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create van");
+    } finally {
+      setIsMasterSubmitting(false);
+    }
+  };
+
+  const handleSaveSalesman = async (data: SalesmanFormData) => {
+    setIsMasterSubmitting(true);
+    try {
+      const payload = {
+        ...data,
+        areaId: data.areaId ?? areaId ?? undefined,
+      };
+      const created = await salesmanService.createSalesman(payload);
+      await refreshActiveLists();
+      form.setValue("salesmanId", created.id, { shouldDirty: true });
+      form.clearErrors(["salesmanId"]);
+      setSalesmanFormOpen(false);
+      toast.success("Salesman created successfully");
+      focusField("customerSearch");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create salesman");
+    } finally {
+      setIsMasterSubmitting(false);
+    }
+  };
+
+  const handleSaveCustomer = async (data: CustomerFormData) => {
+    setIsMasterSubmitting(true);
+    try {
+      const payload = {
+        ...data,
+        areaId: data.areaId ?? areaId ?? null,
+      };
+      const created = await customerService.createCustomer(payload);
+      await refreshActiveLists();
+      handleCustomerSelect(created.id);
+      setCustomerFormOpen(false);
+      toast.success("Customer created successfully");
+      focusField("productSearch-0");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create customer");
+    } finally {
+      setIsMasterSubmitting(false);
     }
   };
 
@@ -1362,6 +1465,23 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {isNew && !generatedInvoiceNo && previewInvoiceNo && (
+                    <FormItem>
+                      <FormControl>
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="previewInvoiceNo"
+                            value={previewInvoiceNo}
+                            placeholder="Invoice No."
+                            className="pl-10"
+                            disabled
+                          />
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+
                   {/* Invoice Date */}
                   <FormField
                     control={form.control}
@@ -1455,6 +1575,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
+                          <MasterFieldWithAdd
+                            onAdd={() => setAreaFormOpen(true)}
+                            disabled={isSubmitting}
+                            addLabel="Add area"
+                          >
                           <InlineSearchField
                             inputId="areaSearch"
                             open={areaHover.open}
@@ -1467,7 +1592,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                             onMouseEnter={areaHover.onMouseEnter}
                             onMouseLeave={areaHover.onMouseLeave}
                             disabled={isSubmitting}
-                            onAfterEnterSelect={() => focusField("address")}
+                            onAfterEnterSelect={() => focusField("vanSearch")}
                           >
                             <CommandGroup>
                               {areas.map((area) => (
@@ -1476,7 +1601,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   value={`${area.id} ${area.name} ${area.city || ""}`}
                                   onSelect={() => {
                                     handleAreaSelect(area.id);
-                                    focusField("address");
+                                    focusField("vanSearch");
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -1502,6 +1627,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               ))}
                             </CommandGroup>
                           </InlineSearchField>
+                          </MasterFieldWithAdd>
                         </FormControl>
                       </FormItem>
                     )}
@@ -1605,6 +1731,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
+                          <MasterFieldWithAdd
+                            onAdd={() => setVanFormOpen(true)}
+                            disabled={isSubmitting}
+                            addLabel="Add van"
+                          >
                           <InlineSearchField
                             inputId="vanSearch"
                             open={vanHover.open}
@@ -1653,6 +1784,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               ))}
                             </CommandGroup>
                           </InlineSearchField>
+                          </MasterFieldWithAdd>
                         </FormControl>
                       </FormItem>
                     )}
@@ -1665,6 +1797,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
+                          <MasterFieldWithAdd
+                            onAdd={() => setSalesmanFormOpen(true)}
+                            disabled={isSubmitting || !areaId}
+                            addLabel="Add salesman"
+                          >
                           <InlineSearchField
                             inputId="salesmanSearch"
                             open={salesmanHover.open}
@@ -1720,6 +1857,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               ))}
                             </CommandGroup>
                           </InlineSearchField>
+                          </MasterFieldWithAdd>
                         </FormControl>
                       </FormItem>
                     )}
@@ -1732,6 +1870,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                     render={({ field, fieldState }) => (
                       <FormItem className="flex flex-col">
                         <FormControl>
+                          <MasterFieldWithAdd
+                            onAdd={() => setCustomerFormOpen(true)}
+                            disabled={isSubmitting || !areaId}
+                            addLabel="Add customer"
+                          >
                           <InlineSearchField
                             inputId="customerSearch"
                             open={customerHover.open}
@@ -1786,6 +1929,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                               ))}
                             </CommandGroup>
                           </InlineSearchField>
+                          </MasterFieldWithAdd>
                         </FormControl>
                       </FormItem>
                     )}
@@ -1870,6 +2014,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                   {editable ? (
                                     <InlineSearchField
                                       inputId={`productSearch-${index}`}
+                                      enterNextFieldId={
+                                        item.productId && item.batchId
+                                          ? `aQty-${index}`
+                                          : undefined
+                                      }
                                       open={
                                         productOpen &&
                                         activeProductIndex === index
@@ -2139,6 +2288,11 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         type="number"
                                         step="0.01"
                                         value={item.taxRate ?? 0}
+                                        data-enter-next={
+                                          item.batchId
+                                            ? `confirmProduct-${index}`
+                                            : undefined
+                                        }
                                         onChange={(e) =>
                                           handleItemChange(
                                             index,
@@ -2189,6 +2343,10 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         }
                                         className="h-7 w-7 p-0"
                                         title="Select Batch"
+                                        tabIndex={item.batchId ? -1 : undefined}
+                                        {...(item.batchId
+                                          ? { "data-skip-field-nav": true }
+                                          : {})}
                                       >
                                         <Layers className="h-3.5 w-3.5" />
                                       </Button>
@@ -2787,6 +2945,31 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
           saleId={previewSaleId}
+        />
+
+        <AreaForm
+          open={areaFormOpen}
+          onOpenChange={setAreaFormOpen}
+          onSave={handleSaveArea}
+          isSubmitting={isMasterSubmitting}
+        />
+        <VanForm
+          open={vanFormOpen}
+          onOpenChange={setVanFormOpen}
+          onSave={handleSaveVan}
+          isSubmitting={isMasterSubmitting}
+        />
+        <SalesmanForm
+          open={salesmanFormOpen}
+          onOpenChange={setSalesmanFormOpen}
+          onSave={handleSaveSalesman}
+          isSubmitting={isMasterSubmitting}
+        />
+        <CustomerForm
+          open={customerFormOpen}
+          onOpenChange={setCustomerFormOpen}
+          onSave={handleSaveCustomer}
+          isSubmitting={isMasterSubmitting}
         />
       </div>
     </div>

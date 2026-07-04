@@ -61,6 +61,9 @@ router.get("/history/:id/excel", purchaseController.downloadPurchaseReportHistor
 // Create a purchase return invoice
 router.post("/returns", purchaseController.createPurchaseReturn);
 
+// Invoice number uniqueness check (must be before /:id)
+router.get("/check-invoice", purchaseController.checkPurchaseInvoiceNumber);
+
 router.get("/:id/bill-preview", purchaseController.getPurchaseBillPreview);
 router.get("/:id/bill-preview/pdf", purchaseController.downloadPurchaseBillPreviewPDF);
 

@@ -80,6 +80,10 @@ router.get("/history/:id/excel", salesController.downloadSalesReportHistoryExcel
 // Create a sales return invoice
 router.post("/returns", salesController.createSalesReturn);
 
+// Next invoice number preview & uniqueness check (must be before /:id)
+router.get("/next-invoice", salesController.getNextSalesInvoiceNumber);
+router.get("/check-invoice", salesController.checkSalesInvoiceNumber);
+
 // Get single sales by ID
 router.get("/:id", salesController.getSaleById);
 

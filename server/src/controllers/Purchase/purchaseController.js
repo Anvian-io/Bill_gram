@@ -164,6 +164,23 @@ export const createPurchase = asyncHandler(async (req, res) => {
   //   );
   // }
 
+  // Verify invoice number uniqueness when provided at creation
+  if (invoiceNo && String(invoiceNo).trim()) {
+    const trimmedInvoiceNo = String(invoiceNo).trim();
+    const existingInvoice = await prisma.purchaseInvoice.findFirst({
+      where: { invoiceNo: trimmedInvoiceNo, deleted: false },
+    });
+    if (existingInvoice) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        "Invoice number already exists",
+        statusType.CONFLICT,
+      );
+    }
+  }
+
   // Validate each item
   for (const item of items) {
     if (
@@ -224,7 +241,7 @@ export const createPurchase = asyncHandler(async (req, res) => {
       // 1. Create invoice
       const invoice = await tx.purchaseInvoice.create({
         data: {
-          // invoiceNo,
+          invoiceNo: invoiceNo?.trim() || null,
           invoiceDate: new Date(invoiceDate),
           supplierId,
           gstDetails: normalizeGstDetails(gstDetails),
@@ -278,13 +295,22 @@ export const createPurchase = asyncHandler(async (req, res) => {
       return invoice;
     });
 
-    const paddedId = result.id.toString().padStart(4, "0");
-    const invoicePrefix = isReturn ? "PRET" : "INV";
+    const trimmedInvoiceNo = invoiceNo?.trim();
+    let updated;
 
-    const updated = await prisma.purchaseInvoice.update({
-      where: { id: result.id },
-      data: { invoiceNo: `${invoicePrefix}-${paddedId}` },
-    });
+    if (trimmedInvoiceNo) {
+      updated = await prisma.purchaseInvoice.findUnique({
+        where: { id: result.id },
+      });
+    } else {
+      const paddedId = result.id.toString().padStart(4, "0");
+      const invoicePrefix = isReturn ? "PRET" : "INV";
+
+      updated = await prisma.purchaseInvoice.update({
+        where: { id: result.id },
+        data: { invoiceNo: `${invoicePrefix}-${paddedId}` },
+      });
+    }
     await createNotification({
   title: isReturn ? "New Purchase Return Created" : "New Purchase Invoice Created",
   message: `${isReturn ? "Purchase return" : "Purchase invoice"} "${updated.invoiceNo}" has been created by ${req.user?.username || 'Admin'}`,
@@ -314,6 +340,37 @@ export const createPurchase = asyncHandler(async (req, res) => {
 export const createPurchaseReturn = asyncHandler(async (req, res, next) => {
   req.body = { ...req.body, status: "Return" };
   return createPurchase(req, res, next);
+});
+
+// --------------------------------------------------------------------
+// CHECK PURCHASE INVOICE NUMBER UNIQUENESS
+// --------------------------------------------------------------------
+export const checkPurchaseInvoiceNumber = asyncHandler(async (req, res) => {
+  const { invoiceNo } = req.query;
+  const prisma = getPrismaOrFail(res);
+  if (!prisma) return;
+
+  if (!invoiceNo || !String(invoiceNo).trim()) {
+    return sendResponse(
+      res,
+      true,
+      { available: true },
+      "Invoice number is available",
+      statusType.OK,
+    );
+  }
+
+  const existing = await prisma.purchaseInvoice.findFirst({
+    where: { invoiceNo: String(invoiceNo).trim(), deleted: false },
+  });
+
+  return sendResponse(
+    res,
+    true,
+    { available: !existing },
+    existing ? "Invoice number already exists" : "Invoice number is available",
+    statusType.OK,
+  );
 });
 
 // --------------------------------------------------------------------
@@ -5059,4 +5116,5 @@ export const purchaseController = {
   downloadPurchaseGSTMonthlyExcel,
   getPurchaseBillPreview,
   downloadPurchaseBillPreviewPDF,
+  checkPurchaseInvoiceNumber,
 };

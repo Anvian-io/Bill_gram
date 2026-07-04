@@ -36,6 +36,8 @@ export interface InlineSearchFieldProps {
   inputId?: string;
   /** Called after Enter selects the first dropdown item (for focus navigation). */
   onAfterEnterSelect?: () => void;
+  /** When dropdown is closed, Enter focuses this field id instead of the next DOM field. */
+  enterNextFieldId?: string;
   children: React.ReactNode;
 }
 
@@ -56,6 +58,7 @@ export function InlineSearchField({
   onMouseLeave,
   inputId,
   onAfterEnterSelect,
+  enterNextFieldId,
   children,
   ...ariaProps
 }: InlineSearchFieldProps & React.AriaAttributes) {
@@ -227,6 +230,7 @@ export function InlineSearchField({
           aria-expanded={open}
           aria-autocomplete="list"
           data-inline-search-input
+          data-enter-next={enterNextFieldId}
           value={inputValue}
           placeholder={placeholder}
           disabled={disabled}
@@ -251,6 +255,7 @@ export function InlineSearchField({
             }
             if (event.key === "Enter" && open) {
               event.preventDefault();
+              event.stopPropagation();
               selectFirstItem();
             }
           }}

@@ -37,6 +37,7 @@ export interface ElectronAPI {
   downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateStatus: (callback: (payload: UpdateStatusPayload) => void) => () => void;
+  moveCursorTo: (clientX: number, clientY: number) => Promise<{ success: boolean }>;
 }
 
 declare global {

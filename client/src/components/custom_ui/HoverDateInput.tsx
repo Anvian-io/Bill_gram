@@ -40,6 +40,10 @@ export function HoverDateInput({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const panelStyle = useFloatingPanelPosition(open, anchorRef, 4, portalTarget);
 
+  const closePicker = React.useCallback(() => {
+    setOpen(false);
+  }, []);
+
   const dismiss = React.useCallback(() => {
     setOpen(false);
     inputRef.current?.blur();
@@ -58,13 +62,6 @@ export function HoverDateInput({
     setOpen(true);
     requestAnimationFrame(() => {
       inputRef.current?.focus();
-      if (typeof inputRef.current?.showPicker === "function") {
-        try {
-          inputRef.current.showPicker();
-        } catch {
-          // Some browsers restrict showPicker without direct user gesture
-        }
-      }
     });
   }, [cancelDismiss, disabled]);
 
@@ -120,12 +117,22 @@ export function HoverDateInput({
       dismiss();
     };
 
+    const handleCloseRequest = () => {
+      closePicker();
+    };
+
+    const anchor = anchorRef.current;
+
     if (open) {
       document.addEventListener("mousedown", handlePointerDown);
     }
+    anchor?.addEventListener("hover-date-close", handleCloseRequest);
 
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [open, dismiss]);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      anchor?.removeEventListener("hover-date-close", handleCloseRequest);
+    };
+  }, [open, dismiss, closePicker]);
 
   const panel = open ? (
     <div
@@ -133,6 +140,7 @@ export function HoverDateInput({
       style={panelStyle}
       className="overflow-hidden rounded-md border bg-popover p-0 text-popover-foreground shadow-lg ring-1 ring-border/50"
       data-floating-panel
+      data-hover-date-panel
       onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={cancelDismiss}
       onMouseLeave={dismissOnLeave}
@@ -141,7 +149,6 @@ export function HoverDateInput({
         mode="single"
         selected={selectedDate}
         onSelect={handleCalendarSelect}
-        initialFocus
         disabled={disabled}
       />
     </div>
@@ -153,6 +160,7 @@ export function HoverDateInput({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       data-hover-date
+      data-hover-date-open={open ? "true" : undefined}
     >
       <div ref={anchorRef} className="relative">
         <Input
@@ -165,10 +173,6 @@ export function HoverDateInput({
           className={cn("pr-10", inputClassName)}
           onChange={(event) => onChange?.(event.target.value)}
           onBlur={onBlur}
-          onFocus={() => {
-            cancelDismiss();
-            setOpen(true);
-          }}
           {...props}
         />
         <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
