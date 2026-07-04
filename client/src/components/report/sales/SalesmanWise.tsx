@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -19,15 +19,8 @@ import { Search,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
@@ -64,6 +57,11 @@ import type {
 } from "@/types/sales-report";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import SalesmanWisePreviewModal from "./SalesmanWisePreviewModal";
+import { useReportRowSelection } from "@/hooks/useReportRowSelection";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
+
+const REPORT_PREVIEW_FETCH_LIMIT = 5000;
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -97,8 +95,6 @@ export default function SalesmanWise() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [pdfData, setPdfData] = useState<SalesmanWisePDFData | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfPage, setPdfPage] = useState(1);
-  const [pdfLimit] = useState(10);
 
   // Filters state
   const [filters, setFilters] = useState<SalesReportFilters>({
@@ -118,12 +114,15 @@ export default function SalesmanWise() {
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
-  // Pagination (client-side on groups)
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Selection
-  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const {
+    selectedRowIds,
+    handleSelectAll,
+    handleSelectRow,
+    applySelectedIds,
+    isAllSelected,
+    isSomeSelected,
+    clearSelection,
+  } = useReportRowSelection<SalesmanWiseReportItem>((item) => item.salesmanId);
 
   // Hooks
   const { customers, areas, vans, salesmen, groups } = useActiveLists();
@@ -242,7 +241,7 @@ export default function SalesmanWise() {
       };
       const data = await salesService.getSalesmanWiseReport(apiFilters);
       setReportData(data);
-      setCurrentPage(1);
+      clearSelection();
       setExpandedRows(new Set()); // collapse all on new data
     } catch (error) {
       console.error("Error fetching salesman-wise sales report:", error);
@@ -257,28 +256,26 @@ export default function SalesmanWise() {
     fetchReport();
   }, [filters]);
 
-  // --------------------------------------------------------------------
-  // PDF Data fetching
-  // --------------------------------------------------------------------
-  const fetchPDFData = async (page: number = 1) => {
+  const previewFilters = applySelectedIds({
+    fromDate: filters.fromDate,
+    toDate: filters.toDate,
+    invoiceNo: filters.invoiceNo || undefined,
+    customerId: filters.customerId,
+    gstDetails: filters.gstDetails,
+    areaId: filters.areaId,
+    vanId: filters.vanId,
+    productGroupId: filters.productGroupId,
+  });
+
+  const fetchPDFData = async () => {
     setPdfLoading(true);
     try {
       const data = await salesService.getSalesmanWisePDFData(
-        {
-          fromDate: filters.fromDate,
-          toDate: filters.toDate,
-          invoiceNo: filters.invoiceNo || undefined,
-          customerId: filters.customerId,
-          gstDetails: filters.gstDetails,
-          areaId: filters.areaId,
-          vanId: filters.vanId,
-          productGroupId: filters.productGroupId,
-        },
-        page,
-        pdfLimit,
+        previewFilters,
+        1,
+        REPORT_PREVIEW_FETCH_LIMIT,
       );
       setPdfData(data);
-      setPdfPage(data.pagination.currentPage);
     } catch {
       toast.error("Failed to load salesman-wise PDF data");
     } finally {
@@ -287,12 +284,8 @@ export default function SalesmanWise() {
   };
 
   const handleShowPDF = async () => {
-    await fetchPDFData(1);
+    await fetchPDFData();
     setIsPreviewOpen(true);
-  };
-
-  const handlePDFPageChange = (newPage: number) => {
-    fetchPDFData(newPage);
   };
 
   // --------------------------------------------------------------------
@@ -305,16 +298,8 @@ export default function SalesmanWise() {
       !(value instanceof Date && isNaN(value.getTime())),
   ).length;
 
-  // Pagination on groups
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return reportData.slice(start, end);
-  }, [reportData, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(reportData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
+  const { visibleItems, sentinelRef, hasMore, totalCount, visibleCount } =
+    useInfiniteScrollList(reportData);
 
   const getDisplayName = (
     list: Array<{ id: number; name: string }>,
@@ -332,23 +317,6 @@ export default function SalesmanWise() {
     return customer
       ? customer.companyName || customer.personName || `Customer ${id}`
       : "";
-  };
-
-  // Selection handlers
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(paginatedData.map(item => item.salesmanId));
-    } else {
-      setSelectedRowIds([]);
-    }
-  };
-
-  const handleSelectRow = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(prev => [...prev, id]);
-    } else {
-      setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
-    }
   };
 
     // --------------------------------------------------------------------
@@ -755,34 +723,16 @@ export default function SalesmanWise() {
             </div>
         </motion.div>
 
-        {/* Results Count and Pagination Controls */}
+        {/* Results Count */}
         <motion.div
           className="flex justify-between items-center mb-4"
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {reportData.length > 0 ? startIndex : 0} to {endIndex} of{" "}
-            {reportData.length} salesmen
+            Showing {visibleCount} of {totalCount} salesmen
+            {selectedRowIds.length > 0 && ` (${selectedRowIds.length} selected)`}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => setItemsPerPage(Number(value))}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* Report Table */}
@@ -796,8 +746,16 @@ export default function SalesmanWise() {
                       <TableHead className="w-10 text-center">
                         <Checkbox
                           className="report-checkbox"
-                          checked={selectedRowIds.length === paginatedData.length && paginatedData.length > 0}
-                          onCheckedChange={handleSelectAll}
+                          checked={
+                            isAllSelected(reportData)
+                              ? true
+                              : isSomeSelected(reportData)
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(checked as boolean, reportData)
+                          }
                         />
                       </TableHead>
                       <TableHead className="w-10"></TableHead>
@@ -856,7 +814,7 @@ export default function SalesmanWise() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedData.map((item, index) => (
+                        visibleItems.map((item, index) => (
                           <React.Fragment key={item.salesmanId}>
                             <motion.tr
                               custom={index}
@@ -954,24 +912,17 @@ export default function SalesmanWise() {
                   </TableBody>
                 </Table>
               </div>
+              {!isLoading && reportData.length > 0 && (
+                <ReportInfiniteScrollFooter
+                  sentinelRef={sentinelRef}
+                  hasMore={hasMore}
+                  loadedCount={visibleCount}
+                  totalCount={totalCount}
+                />
+              )}
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && reportData.length > 0 && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
 
       {/* Salesman Wise Preview Modal */}
@@ -979,9 +930,7 @@ export default function SalesmanWise() {
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         data={pdfData}
-        onPageChange={handlePDFPageChange}
-        currentPage={pdfPage}
-        filters={filters}
+        filters={previewFilters}
       />
     </motion.div>
   );

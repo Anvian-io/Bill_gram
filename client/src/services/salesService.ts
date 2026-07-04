@@ -8,6 +8,7 @@ import type {
   SalesBillPreviewData,
 } from "@/types/sales";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
+import { appendSalesReportFilters } from "@/lib/reportQueryParams";
 import type {
   SalesReportItem,
   SalesReportFilters,
@@ -173,32 +174,7 @@ export const salesService = {
   ): Promise<SalesReportItem[]> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<{ report: SalesReportItem[] }>
@@ -217,32 +193,7 @@ export const salesService = {
   ): Promise<AreaWiseReportItem[]> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<{ report: AreaWiseReportItem[] }>
@@ -261,29 +212,7 @@ export const salesService = {
   ): Promise<SalesmanWiseReportItem[]> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<{ report: SalesmanWiseReportItem[] }>
@@ -306,29 +235,7 @@ export const salesService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<ApiResponse<AreaWisePDFData>>(
         `/sales/area-pdf-data?${params.toString()}`,
@@ -351,29 +258,7 @@ export const salesService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<ApiResponse<SalesmanWisePDFData>>(
         `/sales/salesman-pdf-data?${params.toString()}`,
@@ -396,32 +281,7 @@ export const salesService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<ApiResponse<SalesSummaryReportData>>(
         `/sales/summary-pdf-data?${params.toString()}`,
@@ -438,32 +298,7 @@ export const salesService = {
   async downloadSalesSummaryPDF(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/sales-summary-report/pdf?${params.toString()}`,
@@ -483,31 +318,7 @@ export const salesService = {
   async downloadSalesSummaryExcel(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/sales-summary-report/excel?${params.toString()}`,
@@ -533,29 +344,7 @@ export const salesService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<SalesRegisterReportData>
@@ -572,29 +361,7 @@ export const salesService = {
   async downloadSalesRegisterPDF(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/sales-register-report/pdf?${params.toString()}`,
@@ -614,29 +381,7 @@ export const salesService = {
   async downloadSalesRegisterExcel(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/sales-register-report/excel?${params.toString()}`,
@@ -656,29 +401,7 @@ export const salesService = {
   async downloadAreaWisePDF(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/area-wise-report/pdf?${params.toString()}`,
@@ -698,29 +421,7 @@ export const salesService = {
   async downloadAreaWiseExcel(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      if (filters.salesmanId) {
-        params.append("salesmanId", filters.salesmanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/area-wise-report/excel?${params.toString()}`,
@@ -740,29 +441,7 @@ export const salesService = {
   async downloadSalesmanWisePDF(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/salesman-wise-report/pdf?${params.toString()}`,
@@ -782,29 +461,7 @@ export const salesService = {
   async downloadSalesmanWiseExcel(filters: SalesReportFilters): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-
-      if (filters.fromDate) {
-        params.append("fromDate", filters.fromDate.toISOString());
-      }
-      if (filters.toDate) {
-        params.append("toDate", filters.toDate.toISOString());
-      }
-      if (filters.invoiceNo) {
-        params.append("invoiceNo", filters.invoiceNo);
-      }
-      if (filters.customerId) {
-        params.append("customerId", filters.customerId.toString());
-      }
-      if (filters.areaId) {
-        params.append("areaId", filters.areaId.toString());
-      }
-      if (filters.vanId) {
-        params.append("vanId", filters.vanId.toString());
-      }
-      appendGstDetailsParam(params, filters.gstDetails);
-      if (filters.productGroupId) {
-        params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendSalesReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/sales/salesman-wise-report/excel?${params.toString()}`,

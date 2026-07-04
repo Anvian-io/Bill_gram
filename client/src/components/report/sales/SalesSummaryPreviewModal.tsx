@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,13 +25,13 @@ import { salesService } from "@/services/salesService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 interface SalesSummaryPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: SalesSummaryReportData | null;
-  onPageChange: (page: number) => void;
-  currentPage: number;
   isGeneratingPDF?: boolean;
   onGeneratePDF?: () => void;
   filters?: SalesReportFilters;
@@ -42,8 +41,6 @@ export default function SalesSummaryPreviewModal({
   isOpen,
   onClose,
   data,
-  onPageChange,
-  currentPage,
   isGeneratingPDF = false,
   onGeneratePDF,
   filters,
@@ -52,10 +49,14 @@ export default function SalesSummaryPreviewModal({
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
   const { layoutMode } = useTheme();
 
+  const products = data?.products ?? [];
+  const { visibleItems, sentinelRef, hasMore, visibleCount, totalCount } =
+    useInfiniteScrollList(products);
+
   if (!data) return null;
 
-  const { user, dateRange, invoiceRange, areas, products, pagination, totals } =
-    data;
+  const { user, dateRange, invoiceRange, areas, totals } = data;
+  const showTotals = !hasMore && totals;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -134,8 +135,6 @@ export default function SalesSummaryPreviewModal({
       setInternalGeneratingExcel(false);
     }
   };
-
-  const isLastPage = currentPage === pagination.totalPages;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -251,9 +250,8 @@ export default function SalesSummaryPreviewModal({
                   </TableRow>
                 ) : (
                   <>
-                    {products.map((product, idx) => {
-                      const serial =
-                        (currentPage - 1) * pagination.limit + idx + 1;
+                    {visibleItems.map((product, idx) => {
+                      const serial = idx + 1;
                       return (
                         <TableRow key={`${product.productCode}-${idx}`}>
                           <TableCell className="text-center px-2 py-1 text-sm">{serial}</TableCell>
@@ -283,9 +281,17 @@ export default function SalesSummaryPreviewModal({
                 )}
               </TableBody>
             </Table>
+            {products.length > 0 && (
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                loadedCount={visibleCount}
+                totalCount={totalCount}
+              />
+            )}
           </div>
           {/* Detailed Footer Summary Panel */}
-          {isLastPage && totals && (
+          {showTotals && totals && (
             <div className="grid grid-cols-3 gap-8 py-4 px-2 border-t border-b mb-4 text-sm font-medium">
               <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                 <div>Total :</div><div className="text-right">{totals.finalAmount.toFixed(2)}</div>
@@ -307,31 +313,9 @@ export default function SalesSummaryPreviewModal({
             </div>
           )}
 
-          {/* Footer */}
-          {pagination.totalPages > 1 && !isLastPage && (
-            <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
-              <span>{user.shop_name || "Your Shop"}</span>
-              <span>
-                Page {currentPage} of {pagination.totalPages}
-              </span>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className=""
-            >
-              <CustomPagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={onPageChange}
-              />
-            </motion.div>
-          )}
+          <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
+            <span>{user.shop_name || "Your Shop"}</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

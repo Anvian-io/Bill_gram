@@ -16,20 +16,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { AreaWisePDFData, SalesReportFilters } from "@/types/sales-report";
 import { salesService } from "@/services/salesService";
 import { toast } from "sonner";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 interface AreaWisePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: AreaWisePDFData | null;
-  onPageChange: (page: number) => void;
-  currentPage: number;
   filters?: SalesReportFilters;
 }
 
@@ -37,13 +36,15 @@ export default function AreaWisePreviewModal({
   isOpen,
   onClose,
   data,
-  onPageChange,
-  currentPage,
   filters,
 }: AreaWisePreviewModalProps) {
   const { layoutMode } = useTheme();
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
+
+  const areaData = data?.areaData ?? [];
+  const { visibleItems, sentinelRef, hasMore, visibleCount, totalCount } =
+    useInfiniteScrollList(areaData);
 
   if (!data) return null;
 
@@ -52,10 +53,11 @@ export default function AreaWisePreviewModal({
     dateRange,
     invoiceRange,
     areas,
-    areaData,
     pagination,
     grandTotals,
   } = data;
+
+  const showTotals = !hasMore && grandTotals;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -129,8 +131,6 @@ export default function AreaWisePreviewModal({
       setInternalGeneratingExcel(false);
     }
   };
-
-  const isLastPage = currentPage === pagination.totalPages;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -237,9 +237,8 @@ export default function AreaWisePreviewModal({
                   </TableRow>
                 ) : (
                   <>
-                    {areaData.map((area, idx) => {
-                      const serial =
-                        (currentPage - 1) * pagination.limit + idx + 1;
+                    {visibleItems.map((area, idx) => {
+                      const serial = idx + 1;
                       return (
                         <TableRow key={area.areaId}>
                           <TableCell className="text-center">
@@ -266,8 +265,7 @@ export default function AreaWisePreviewModal({
                         </TableRow>
                       );
                     })}
-                    {/* Total Row – only on the last page */}
-                    {isLastPage && grandTotals && (
+                    {showTotals && (
                       <TableRow className="font-bold border-t-2 bg-secondary/10">
                         <TableCell className="text-center">
                           Total {pagination.total} areas
@@ -294,33 +292,19 @@ export default function AreaWisePreviewModal({
                 )}
               </TableBody>
             </Table>
+            {areaData.length > 0 && (
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                loadedCount={visibleCount}
+                totalCount={totalCount}
+              />
+            )}
           </div>
 
-          {/* Footer */}
-          {pagination.totalPages > 1 && !isLastPage && (
-            <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
-              <span>{user.shop_name || "Your Shop"}</span>
-              <span>
-                Page {currentPage} of {pagination.totalPages}
-              </span>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className=""
-            >
-              <CustomPagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={onPageChange}
-              />
-            </motion.div>
-          )}
+          <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
+            <span>{user.shop_name || "Your Shop"}</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

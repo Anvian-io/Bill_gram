@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,24 +25,22 @@ import type {
 } from "@/types/purchase";
 import { purchaseService } from "@/services/purchaseService";
 import { toast } from "sonner";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 interface PurchaseRegisterPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: PurchaseRegisterData | null;
-  onPageChange: (page: number) => void;
-  currentPage: number;
-  isGeneratingPDF?: boolean; // external prop if parent handles PDF generation
-  onGeneratePDF?: () => void; // optional external handler
-  filters?: PurchaseReportFilters; // needed for internal downloads
+  isGeneratingPDF?: boolean;
+  onGeneratePDF?: () => void;
+  filters?: PurchaseReportFilters;
 }
 
 export default function PurchaseRegisterPreviewModal({
   isOpen,
   onClose,
   data,
-  onPageChange,
-  currentPage,
   isGeneratingPDF = false,
   onGeneratePDF,
   filters,
@@ -52,10 +49,14 @@ export default function PurchaseRegisterPreviewModal({
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
 
+  const invoices = data?.invoices ?? [];
+  const { visibleItems, sentinelRef, hasMore, visibleCount, totalCount } =
+    useInfiniteScrollList(invoices);
+
   if (!data) return null;
 
-  const { user, dateRange, invoiceRange, areas, invoices, pagination, totals } =
-    data;
+  const { user, dateRange, invoiceRange, areas, pagination, totals } = data;
+  const showTotals = !hasMore && totals;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -67,13 +68,11 @@ export default function PurchaseRegisterPreviewModal({
   };
 
   const handlePDFClick = async () => {
-    // If external handler is provided, use it
     if (onGeneratePDF) {
       onGeneratePDF();
       return;
     }
 
-    // Otherwise use internal download with filters
     if (!filters) {
       toast.error("Filters are missing. Cannot generate PDF.");
       return;
@@ -124,9 +123,6 @@ export default function PurchaseRegisterPreviewModal({
       setInternalGeneratingExcel(false);
     }
   };
-
-  // Determine if we are on the last page
-  const isLastPage = currentPage === pagination.totalPages;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -220,7 +216,6 @@ export default function PurchaseRegisterPreviewModal({
             <Table className={cn(layoutMode === "classic" && "classic-table", layoutMode === "classic" && "classic-table")}>
               <TableHeader className="bg-secondary/50 sticky top-0 z-10">
                 <TableRow>
-                  {/* <TableHead className="w-12 text-center">Sr.</TableHead> */}
                   <TableHead>Invoice No</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Supplier</TableHead>
@@ -242,39 +237,30 @@ export default function PurchaseRegisterPreviewModal({
                   </TableRow>
                 ) : (
                   <>
-                    {invoices.map((invoice, idx) => {
-                      const serial =
-                        (currentPage - 1) * pagination.limit + idx + 1;
-                      return (
-                        <TableRow key={`${invoice.invoiceNo}-${idx}`}>
-                          {/* <TableCell className="text-center">
-                            {serial}
-                          </TableCell> */}
-                          <TableCell className="font-mono w-10 font-medium">
-                            {invoice.invoiceNo}
-                          </TableCell>
-                          <TableCell className="max-w-24">
-                            {formatDate(invoice.invoiceDate)}
-                          </TableCell>
-                          <TableCell className="max-w-28">{invoice.supplierName}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{invoice.amount.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right max-w-40"></TableCell>
-                          <TableCell className="text-right"></TableCell>
-                          <TableCell className="text-right font-medium text-green-700">
-                            ₹{invoice.balance.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {/* Total Row – only on the last page */}
-                    {isLastPage && totals && (
+                    {visibleItems.map((invoice, idx) => (
+                      <TableRow key={`${invoice.invoiceNo}-${idx}`}>
+                        <TableCell className="font-mono w-10 font-medium">
+                          {invoice.invoiceNo}
+                        </TableCell>
+                        <TableCell className="max-w-24">
+                          {formatDate(invoice.invoiceDate)}
+                        </TableCell>
+                        <TableCell className="max-w-28">{invoice.supplierName}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{invoice.amount.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right max-w-40"></TableCell>
+                        <TableCell className="text-right"></TableCell>
+                        <TableCell className="text-right font-medium text-green-700">
+                          ₹{invoice.balance.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {showTotals && (
                       <TableRow className="font-bold border-t-2 bg-secondary/10">
                         <TableCell className="text-center">
                           Total {pagination.total} invoices
                         </TableCell>
-                        {/* <TableCell></TableCell> */}
                         <TableCell></TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right">
@@ -291,33 +277,19 @@ export default function PurchaseRegisterPreviewModal({
                 )}
               </TableBody>
             </Table>
+            {invoices.length > 0 && (
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                loadedCount={visibleCount}
+                totalCount={totalCount}
+              />
+            )}
           </div>
 
-          {/* Footer – shop name and page info (only shown if not on last page) */}
-          {pagination.totalPages > 1 && !isLastPage && (
-            <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
-              <span>{user.shop_name || "Your Shop"}</span>
-              <span>
-                Page {currentPage} of {pagination.totalPages}
-              </span>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className=""
-            >
-              <CustomPagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={onPageChange}
-              />
-            </motion.div>
-          )}
+          <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
+            <span>{user.shop_name || "Your Shop"}</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

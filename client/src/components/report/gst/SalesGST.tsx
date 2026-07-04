@@ -1,5 +1,5 @@
 import { useTheme } from "@/contexts/ThemeProvider";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -17,15 +17,8 @@ import { RefreshCw,
   Check,
   X,
 } from "lucide-react";
-import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
@@ -58,6 +51,8 @@ import type {
   SalesGSTFilters,
 } from "@/types/sales-report";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
+import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -67,9 +62,6 @@ import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 // ----------------------------------------------------------------------
 export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
   const { layoutMode } = useTheme();
-  // State
-  const [reportData, setReportData] = useState<SalesGSTInvoice[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -83,25 +75,58 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     toDate: undefined,
     sortBy: "invoiceDate",
     sortOrder: "desc",
-    page: 1,
-    limit: 10,
   });
 
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
-  // Pagination state from API
-  const [pagination, setPagination] = useState({
-    total: 0,
-    totalPages: 0,
-    currentPage: 1,
-    limit: 10,
-    hasNextPage: false,
-    hasPrevPage: false,
+  const { customers } = useActiveLists();
+
+  const filterResetKey = JSON.stringify({
+    customerId: filters.customerId,
+    gstDetails: filters.gstDetails,
+    fromDate: filters.fromDate?.toISOString(),
+    toDate: filters.toDate?.toISOString(),
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
   });
 
-  // Hooks
-  const { customers } = useActiveLists();
+  const {
+    items: reportData,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+    refresh,
+    total,
+    loadedCount,
+  } = useServerInfiniteScroll<SalesGSTInvoice>(
+    async (page) => {
+      try {
+        const response = await salesService.getSalesGST({
+          ...filters,
+          page,
+          limit: 50,
+        });
+        return {
+          items: response.sales,
+          pagination: {
+            hasNextPage: response.pagination.hasNextPage,
+            currentPage: response.pagination.currentPage,
+            total: response.pagination.total,
+          },
+        };
+      } catch (error) {
+        console.error("Error fetching sales GST data:", error);
+        toast.error("Failed to fetch sales GST data");
+        return {
+          items: [],
+          pagination: { hasNextPage: false, currentPage: page, total: 0 },
+        };
+      }
+    },
+    filterResetKey,
+  );
 
   // ----------------------------------------------------------------------
   // Input handlers
@@ -111,7 +136,6 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       fromDate: value ? new Date(`${value}T00:00:00`) : undefined,
-      page: 1,
     }));
   };
 
@@ -120,7 +144,6 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       toDate: value ? new Date(`${value}T00:00:00`) : undefined,
-      page: 1,
     }));
   };
 
@@ -128,7 +151,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
     field: K,
     value: SalesGSTFilters[K],
   ) => {
-    setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const clearFilters = () => {
@@ -139,8 +162,6 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
       toDate: undefined,
       sortBy: "invoiceDate",
       sortOrder: "desc",
-      page: 1,
-      limit: 10,
     });
     setFromDateValue(null);
     setToDateValue(null);
@@ -155,33 +176,10 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : prev[filterName],
-      page: 1,
     }));
     if (filterName === "fromDate") setFromDateValue(null);
     if (filterName === "toDate") setToDateValue(null);
   };
-
-  // ----------------------------------------------------------------------
-  // Fetch report data
-  // ----------------------------------------------------------------------
-  const fetchReport = async () => {
-    setIsLoading(true);
-    try {
-      const response = await salesService.getSalesGST(filters);
-      setReportData(response.sales);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error("Error fetching sales GST data:", error);
-      toast.error("Failed to fetch sales GST data");
-      setReportData([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, [filters]);
 
   // ----------------------------------------------------------------------
   // Download Excel
@@ -314,7 +312,7 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={fetchReport}
+                  onClick={refresh}
                   disabled={isLoading}
                 >
                   <RefreshCw
@@ -479,43 +477,13 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
         </motion.div>
 
         {/* Results Count */}
-        <motion.div
-          className="flex justify-between items-center mb-4"
-          variants={itemVariants}
-        >
+        <motion.div className="mb-4" variants={itemVariants}>
           <p className="text-sm text-muted-foreground">
-            Showing{" "}
-            {reportData.length > 0
-              ? (pagination.currentPage - 1) * pagination.limit + 1
-              : 0}{" "}
-            to{" "}
-            {Math.min(
-              pagination.currentPage * pagination.limit,
-              pagination.total,
-            )}{" "}
-            of {pagination.total} invoices
+            {loadedCount > 0
+              ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} invoices`
+              : "No invoices"}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={filters.limit?.toString()}
-              onValueChange={(value) =>
-                handleFilterChange("limit", Number(value))
-              }
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* Report Table */}
@@ -689,24 +657,16 @@ export default function SalesGST({ isCollapsed }: { isCollapsed: boolean }) {
                   </TableBody>
                 </Table>
               </div>
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                loadedCount={loadedCount}
+                totalCount={total}
+              />
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && reportData.length > 0 && pagination.totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={(page) => handleFilterChange("page", page)}
-            />
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

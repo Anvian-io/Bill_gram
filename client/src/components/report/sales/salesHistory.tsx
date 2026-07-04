@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -22,15 +22,7 @@ import { Search,
   User,
   Loader2, // Added for spinner
 } from "lucide-react";
-import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -48,19 +40,11 @@ import type {
   SalesReportHistoryFilters,
 } from "@/types/sales-report";
 import { format } from "date-fns";
+import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 export default function SalesHistory() {
   const { layoutMode } = useTheme();
-  // State
-  const [histories, setHistories] = useState<SalesReportHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-
-  // Download tracking state (new)
   const [downloadingIds, setDownloadingIds] = useState<Set<number>>(new Set());
 
   // Filter states
@@ -72,24 +56,62 @@ export default function SalesHistory() {
   >("all");
   const [typeOpen, setTypeOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [filters, setFilters] = useState<SalesReportHistoryFilters>({
-    page: 1,
-    limit: 10,
+  const [filters, setFilters] = useState<
+    Omit<SalesReportHistoryFilters, "page" | "limit">
+  >({
     search: "",
     fileName: "",
-    type: "", // empty string means no type filter
-    tab: "", // empty string means no tab filter
+    type: "",
+    tab: "",
     sortBy: "createdAt",
     sortOrder: "desc",
   });
 
+  const filterResetKey = JSON.stringify(filters);
+
+  const {
+    items: histories,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+    refresh,
+    total,
+    loadedCount,
+  } = useServerInfiniteScroll<SalesReportHistory>(
+    async (page) => {
+      try {
+        const response = await salesService.getSalesReportHistory({
+          ...filters,
+          page,
+          limit: 50,
+        });
+        return {
+          items: response.histories,
+          pagination: {
+            hasNextPage: response.pagination.hasNextPage,
+            currentPage: response.pagination.currentPage,
+            total: response.pagination.total,
+          },
+        };
+      } catch {
+        toast.error("Failed to fetch sales history");
+        return {
+          items: [],
+          pagination: { hasNextPage: false, currentPage: page, total: 0 },
+        };
+      }
+    },
+    filterResetKey,
+  );
+
   // Debounced search
   const debouncedSearch = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, search: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, search: value }));
   }, 300);
 
   const debouncedFileName = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, fileName: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, fileName: value }));
   }, 300);
 
   // Helper functions for download state (new)
@@ -104,30 +126,6 @@ export default function SalesHistory() {
       return next;
     });
   };
-
-  // Fetch history
-  const fetchHistory = async () => {
-    setIsLoading(true);
-    try {
-      const response = await salesService.getSalesReportHistory({
-        ...filters,
-        page: currentPage,
-        limit: itemsPerPage,
-      });
-      setHistories(response.histories);
-      setTotalPages(response.pagination.totalPages);
-      setTotalItems(response.pagination.total);
-    } catch (error) {
-      toast.error("Failed to fetch sales history");
-      setHistories([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, [filters, currentPage, itemsPerPage]);
 
   // Handlers
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,18 +145,15 @@ export default function SalesHistory() {
     setFilters((prev) => ({
       ...prev,
       type: newType === "all" ? "" : newType,
-      page: 1,
     }));
   };
 
   const handleTabChange = (value: string) => {
     const newTab = value as typeof tabFilter;
     setTabFilter(newTab);
-    // Map "all" to empty string for API
     setFilters((prev) => ({
       ...prev,
       tab: newTab === "all" ? "" : newTab,
-      page: 1,
     }));
   };
 
@@ -168,8 +163,6 @@ export default function SalesHistory() {
     setTypeFilter("all");
     setTabFilter("all");
     setFilters({
-      page: 1,
-      limit: itemsPerPage,
       search: "",
       fileName: "",
       type: "",
@@ -177,7 +170,6 @@ export default function SalesHistory() {
       sortBy: "createdAt",
       sortOrder: "desc",
     });
-    setCurrentPage(1);
   };
 
   const clearFilter = (field: keyof SalesReportHistoryFilters) => {
@@ -308,9 +300,6 @@ export default function SalesHistory() {
     }
   };
 
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-
   const getTypeLabel = (type: string) => {
     if (type === "all") return "";
     if (type === "pdf") return "PDF";
@@ -347,7 +336,7 @@ export default function SalesHistory() {
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={fetchHistory}
+                onClick={refresh}
                 disabled={isLoading}
               >
                 <RefreshCw
@@ -479,36 +468,13 @@ export default function SalesHistory() {
         </motion.div>
 
         {/* Results Info & Pagination Controls */}
-        <motion.div
-          className="flex justify-between items-center mb-4"
-          variants={itemVariants}
-        >
+        <motion.div className="mb-4" variants={itemVariants}>
           <p className="text-sm text-muted-foreground">
-            Showing {totalItems > 0 ? startIndex : 0} to {endIndex} of{" "}
-            {totalItems} records
+            {loadedCount > 0
+              ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} records`
+              : "No records"}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* History Table */}
@@ -685,24 +651,16 @@ export default function SalesHistory() {
                   </TableBody>
                 </Table>
               </div>
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                loadedCount={loadedCount}
+                totalCount={total}
+              />
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && histories.length > 0 && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

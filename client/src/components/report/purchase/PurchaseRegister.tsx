@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -8,34 +8,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search,
   X,
   RefreshCw,
   FileText,
-  ChevronsUpDown,
   Check,
 } from "lucide-react";
-import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   containerVariants,
@@ -48,12 +32,8 @@ import { useDebounce } from "@/utils/debounce";
 import { purchaseService } from "@/services/purchaseService";
 import { useActiveLists } from "@/hooks/useActiveLists";
 import {
-  Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
-  CommandList,
 } from "@/components/ui/command";
 import type {
   PurchaseReportItem,
@@ -62,6 +42,11 @@ import type {
 } from "@/types/purchase";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import PurchaseRegisterPreviewModal from "./PurchaseRegisterPreviewModal";
+import { useReportRowSelection } from "@/hooks/useReportRowSelection";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
+
+const REPORT_PREVIEW_FETCH_LIMIT = 5000;
 
 // ----------------------------------------------------------------------
 // Main Component
@@ -77,8 +62,6 @@ export default function PurchaseRegister() {
     null,
   );
   const [registerLoading, setRegisterLoading] = useState(false);
-  const [registerPage, setRegisterPage] = useState(1);
-  const [registerLimit] = useState(10);
 
   // Filters state
   const [filters, setFilters] = useState<PurchaseReportFilters>({
@@ -94,12 +77,15 @@ export default function PurchaseRegister() {
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
-  // Pagination (client-side)
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Selection
-  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const {
+    selectedRowIds,
+    handleSelectAll,
+    handleSelectRow,
+    applySelectedIds,
+    isAllSelected,
+    isSomeSelected,
+    clearSelection,
+  } = useReportRowSelection<PurchaseReportItem>((item) => item.id);
 
   // Hooks
   const { suppliers } = useActiveLists();
@@ -195,7 +181,7 @@ export default function PurchaseRegister() {
       };
       const data = await purchaseService.getPurchaseReport(apiFilters);
       setReportData(data);
-      setCurrentPage(1);
+      clearSelection();
     } catch (error) {
       console.error("Error fetching purchase report:", error);
       toast.error("Failed to fetch purchase report");
@@ -210,41 +196,6 @@ export default function PurchaseRegister() {
   }, [filters]);
 
   // --------------------------------------------------------------------
-  // Fetch register data for preview
-  // --------------------------------------------------------------------
-  const fetchRegister = async (page: number = 1) => {
-    setRegisterLoading(true);
-    try {
-      const data = await purchaseService.getPurchaseRegisterPDFData(
-        {
-          fromDate: filters.fromDate,
-          toDate: filters.toDate,
-          invoiceNo: filters.invoiceNo || undefined,
-          supplierId: filters.supplierId,
-          gstDetails: filters.gstDetails,
-        },
-        page,
-        registerLimit,
-      );
-      setRegisterData(data);
-      setRegisterPage(data.pagination.currentPage);
-    } catch {
-      toast.error("Failed to load register");
-    } finally {
-      setRegisterLoading(false);
-    }
-  };
-
-  const handleShowRegister = async () => {
-    await fetchRegister(1);
-    setIsPreviewOpen(true);
-  };
-
-  const handleRegisterPageChange = (newPage: number) => {
-    fetchRegister(newPage);
-  };
-
-  // --------------------------------------------------------------------
   // Helper functions
   // --------------------------------------------------------------------
   const activeFiltersCount = Object.entries(filters).filter(
@@ -254,16 +205,16 @@ export default function PurchaseRegister() {
       !(value instanceof Date && isNaN(value.getTime())),
   ).length;
 
-  // Pagination for main table
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return reportData.slice(start, end);
-  }, [reportData, currentPage, itemsPerPage]);
+  const { visibleItems, sentinelRef, hasMore, totalCount, visibleCount } =
+    useInfiniteScrollList(reportData);
 
-  const totalPages = Math.ceil(reportData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
+  const previewFilters = applySelectedIds({
+    fromDate: filters.fromDate,
+    toDate: filters.toDate,
+    invoiceNo: filters.invoiceNo || undefined,
+    supplierId: filters.supplierId,
+    gstDetails: filters.gstDetails,
+  });
 
   const getSupplierName = (id?: number) => {
     if (!id) return "";
@@ -285,21 +236,25 @@ export default function PurchaseRegister() {
     }
   };
 
-  // Selection handlers
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(paginatedData.map(item => item.id));
-    } else {
-      setSelectedRowIds([]);
+  const fetchRegister = async () => {
+    setRegisterLoading(true);
+    try {
+      const data = await purchaseService.getPurchaseRegisterPDFData(
+        previewFilters,
+        1,
+        REPORT_PREVIEW_FETCH_LIMIT,
+      );
+      setRegisterData(data);
+    } catch {
+      toast.error("Failed to load register");
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
-  const handleSelectRow = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(prev => [...prev, id]);
-    } else {
-      setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
-    }
+  const handleShowRegister = async () => {
+    await fetchRegister();
+    setIsPreviewOpen(true);
   };
 
     // --------------------------------------------------------------------
@@ -478,34 +433,16 @@ export default function PurchaseRegister() {
             </div>
         </motion.div>
 
-        {/* Results Count and Pagination Controls */}
+        {/* Results Count */}
         <motion.div
           className="flex justify-between items-center mb-4"
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {reportData.length > 0 ? startIndex : 0} to {endIndex} of{" "}
-            {reportData.length} invoices
+            Showing {visibleCount} of {totalCount} invoices
+            {selectedRowIds.length > 0 && ` (${selectedRowIds.length} selected)`}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => setItemsPerPage(Number(value))}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* Report Table */}
@@ -519,8 +456,16 @@ export default function PurchaseRegister() {
                       <TableHead className="w-10 text-center">
                         <Checkbox
                           className="report-checkbox"
-                          checked={selectedRowIds.length === paginatedData.length && paginatedData.length > 0}
-                          onCheckedChange={handleSelectAll}
+                          checked={
+                            isAllSelected(reportData)
+                              ? true
+                              : isSomeSelected(reportData)
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(checked as boolean, reportData)
+                          }
                         />
                       </TableHead>
                       <TableHead className="font-semibold">
@@ -549,9 +494,6 @@ export default function PurchaseRegister() {
                       {isLoading ? (
                         <motion.tr
                           key="loading"
-                          // initial={{ opacity: 0 }}
-                          // animate={{ opacity: 1 }}
-                          // exit={{ opacity: 0 }}
                         >
                           <TableCell colSpan={7} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
@@ -591,7 +533,7 @@ export default function PurchaseRegister() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedData.map((item, index) => (
+                        visibleItems.map((item, index) => (
                           <motion.tr
                             key={item.id}
                             custom={index}
@@ -646,24 +588,17 @@ export default function PurchaseRegister() {
                   </TableBody>
                 </Table>
               </div>
+              {!isLoading && reportData.length > 0 && (
+                <ReportInfiniteScrollFooter
+                  sentinelRef={sentinelRef}
+                  hasMore={hasMore}
+                  loadedCount={visibleCount}
+                  totalCount={totalCount}
+                />
+              )}
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && reportData.length > 0 && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
 
       {/* Preview Modal */}
@@ -671,9 +606,7 @@ export default function PurchaseRegister() {
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         data={registerData}
-        onPageChange={handleRegisterPageChange}
-        currentPage={registerPage}
-        filters={filters}
+        filters={previewFilters}
       />
     </motion.div>
   );

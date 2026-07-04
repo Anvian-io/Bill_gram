@@ -11,6 +11,7 @@ export interface SalesReportFilters {
   gstDetails?: string;
   productGroupId?: number;
   summaryType?: "sales_summary" | "loading_summary";
+  selectedIds?: number[];
 }
 
 // For SalesSummary (invoice level)

@@ -1,5 +1,5 @@
 import { useTheme } from "@/contexts/ThemeProvider";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -17,15 +17,8 @@ import { RefreshCw,
   Check,
   X,
 } from "lucide-react";
-import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
@@ -55,11 +48,11 @@ import {
 } from "@/components/ui/command";
 import type { PurchaseB2BFilters, PurchaseB2BRow } from "@/types/purchase";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
+import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
   const { layoutMode } = useTheme();
-  const [rows, setRows] = useState<PurchaseB2BRow[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -72,29 +65,64 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     toDate: undefined,
     sortBy: "invoiceDate",
     sortOrder: "desc",
-    page: 1,
-    limit: 10,
   });
 
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
-  const [pagination, setPagination] = useState({
-    total: 0,
-    totalPages: 0,
-    currentPage: 1,
-    limit: 10,
-    hasNextPage: false,
-    hasPrevPage: false,
+  const { suppliers } = useActiveLists();
+
+  const filterResetKey = JSON.stringify({
+    supplierId: filters.supplierId,
+    gstDetails: filters.gstDetails,
+    fromDate: filters.fromDate?.toISOString(),
+    toDate: filters.toDate?.toISOString(),
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
   });
 
-  const { suppliers } = useActiveLists();
+  const {
+    items: rows,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+    refresh,
+    total,
+    loadedCount,
+  } = useServerInfiniteScroll<PurchaseB2BRow>(
+    async (page) => {
+      try {
+        const response = await purchaseService.getPurchaseB2B({
+          ...filters,
+          page,
+          limit: 50,
+        });
+        return {
+          items: response.rows,
+          pagination: {
+            hasNextPage: response.pagination.hasNextPage,
+            currentPage: response.pagination.currentPage,
+            total: response.pagination.total,
+          },
+        };
+      } catch (error) {
+        console.error("Error fetching B2B report:", error);
+        toast.error("Failed to fetch B2B report");
+        return {
+          items: [],
+          pagination: { hasNextPage: false, currentPage: page, total: 0 },
+        };
+      }
+    },
+    filterResetKey,
+  );
 
   const handleFilterChange = <K extends keyof PurchaseB2BFilters>(
     field: K,
     value: PurchaseB2BFilters[K],
   ) => {
-    setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFromDateChange = (value: string | null) => {
@@ -102,7 +130,6 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       fromDate: value ? new Date(`${value}T00:00:00`) : undefined,
-      page: 1,
     }));
   };
 
@@ -111,7 +138,6 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     setFilters((prev) => ({
       ...prev,
       toDate: value ? new Date(`${value}T00:00:00`) : undefined,
-      page: 1,
     }));
   };
 
@@ -124,7 +150,6 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
           : filterName === "fromDate" || filterName === "toDate"
             ? undefined
             : prev[filterName],
-      page: 1,
     }));
 
     if (filterName === "fromDate") setFromDateValue(null);
@@ -139,31 +164,10 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
       toDate: undefined,
       sortBy: "invoiceDate",
       sortOrder: "desc",
-      page: 1,
-      limit: 10,
     });
     setFromDateValue(null);
     setToDateValue(null);
   };
-
-  const fetchReport = async () => {
-    setIsLoading(true);
-    try {
-      const response = await purchaseService.getPurchaseB2B(filters);
-      setRows(response.rows);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error("Error fetching B2B report:", error);
-      toast.error("Failed to fetch B2B report");
-      setRows([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, [filters]);
 
   const handleDownloadExcel = async () => {
     setIsDownloading(true);
@@ -267,7 +271,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
                 </Button>
               </motion.div>
               <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-                <Button variant="outline" className="gap-2" onClick={fetchReport} disabled={isLoading}>
+                <Button variant="outline" className="gap-2" onClick={refresh} disabled={isLoading}>
                   <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
@@ -376,31 +380,13 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
           </Card>
         </motion.div>
 
-        <motion.div className="flex justify-between items-center mb-4" variants={itemVariants}>
+        <motion.div className="mb-4" variants={itemVariants}>
           <p className="text-sm text-muted-foreground">
-            Showing {rows.length > 0 ? (pagination.currentPage - 1) * pagination.limit + 1 : 0} to{" "}
-            {Math.min(pagination.currentPage * pagination.limit, pagination.total)} of{" "}
-            {pagination.total} invoices
+            {loadedCount > 0
+              ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} invoices`
+              : "No invoices"}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={filters.limit?.toString()}
-              onValueChange={(value) => handleFilterChange("limit", Number(value))}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -484,19 +470,16 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
                   </TableBody>
                 </Table>
               </div>
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                loadedCount={loadedCount}
+                totalCount={total}
+              />
             </CardContent>
           </Card>
         </motion.div>
-
-        {!isLoading && rows.length > 0 && pagination.totalPages > 1 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <CustomPagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={(page) => handleFilterChange("page", page)}
-            />
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

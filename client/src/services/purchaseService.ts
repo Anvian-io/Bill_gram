@@ -20,6 +20,7 @@ import type {
   PurchaseBillPreviewData,
 } from "@/types/purchase";
 import { getApiErrorMessage } from "@/utils/apiErrorhelper";
+import { appendPurchaseReportFilters } from "@/lib/reportQueryParams";
 
 const appendGstDetailsParam = (
   params: URLSearchParams,
@@ -176,25 +177,7 @@ export const purchaseService = {
   ): Promise<PurchaseReportItem[]> {
     try {
       const params = new URLSearchParams();
-
-      if (filters) {
-        if (filters.fromDate) {
-          params.append("fromDate", filters.fromDate.toISOString());
-        }
-        if (filters.toDate) {
-          params.append("toDate", filters.toDate.toISOString());
-        }
-        if (filters.invoiceNo) {
-          params.append("invoiceNo", filters.invoiceNo);
-        }
-        if (filters.supplierId) {
-          params.append("supplierId", filters.supplierId.toString());
-        }
-        appendGstDetailsParam(params, filters.gstDetails);
-        if (filters.productGroupId) {
-          params.append("productGroupId", filters.productGroupId.toString());
-        }
-      }
+      appendPurchaseReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<{ report: PurchaseReportItem[] }>
@@ -215,19 +198,7 @@ export const purchaseService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-        if (filters.productGroupId)
-          params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendPurchaseReportFilters(params, filters);
 
       const response = await apiClient.get<
         ApiResponse<PurchaseSummaryReportData>
@@ -246,18 +217,7 @@ export const purchaseService = {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-        if (filters.productGroupId)
-          params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendPurchaseReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/purchases/purchase-summary-report/pdf?${params.toString()}`,
@@ -275,18 +235,7 @@ export const purchaseService = {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-        if (filters.productGroupId)
-          params.append("productGroupId", filters.productGroupId.toString());
-      }
+      appendPurchaseReportFilters(params, filters);
 
       const response = await apiClient.get<Blob>(
         `/purchases/purchase-summary-report/excel?${params.toString()}`,
@@ -310,17 +259,7 @@ export const purchaseService = {
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-      }
+      appendPurchaseReportFilters(params, filters);
 
       const response = await apiClient.get<ApiResponse<PurchaseRegisterData>>(
         `/purchases/register-pdf-data?${params.toString()}`,
@@ -338,16 +277,7 @@ export const purchaseService = {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-      }
+      appendPurchaseReportFilters(params, filters);
       const response = await apiClient.get<Blob>(
         `/purchases/purchase-register-report/pdf?${params.toString()}`,
         { responseType: "blob" },
@@ -365,16 +295,7 @@ export const purchaseService = {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (filters) {
-        if (filters.fromDate)
-          params.append("fromDate", filters.fromDate.toISOString());
-        if (filters.toDate)
-          params.append("toDate", filters.toDate.toISOString());
-        if (filters.invoiceNo) params.append("invoiceNo", filters.invoiceNo);
-        if (filters.supplierId)
-          params.append("supplierId", filters.supplierId.toString());
-        appendGstDetailsParam(params, filters.gstDetails);
-      }
+      appendPurchaseReportFilters(params, filters);
       const response = await apiClient.get<Blob>(
         `/purchases/purchase-register-report/excel?${params.toString()}`,
         { responseType: "blob" },

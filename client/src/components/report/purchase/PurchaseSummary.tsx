@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -17,15 +17,8 @@ import { Search,
   ChevronsUpDown,
   Check,
 } from "lucide-react";
-import { CustomPagination, CustomDateInput } from "@/components/custom_ui";
+import { CustomDateInput } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
@@ -62,6 +55,11 @@ import type {
 } from "@/types/purchase";
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import PurchaseSummaryPreviewModal from "./PurchaseSummaryPreviewModal";
+import { useReportRowSelection } from "@/hooks/useReportRowSelection";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
+
+const REPORT_PREVIEW_FETCH_LIMIT = 5000;
 
 // ----------------------------------------------------------------------
 // Date Utilities (same as Purchase component)
@@ -80,8 +78,6 @@ export default function PurchaseSummary() {
   const [summaryData, setSummaryData] =
     useState<PurchaseSummaryReportData | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryPage, setSummaryPage] = useState(1);
-  const [summaryLimit] = useState(10); // can be same as itemsPerPage or independent
 
   // Filters state
   const [filters, setFilters] = useState<PurchaseReportFilters>({
@@ -98,12 +94,15 @@ export default function PurchaseSummary() {
   const [fromDateValue, setFromDateValue] = useState<string | null>(null);
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
-  // Pagination (client-side)
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Selection
-  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const {
+    selectedRowIds,
+    handleSelectAll,
+    handleSelectRow,
+    applySelectedIds,
+    isAllSelected,
+    isSomeSelected,
+    clearSelection,
+  } = useReportRowSelection<PurchaseReportItem>((item) => item.id);
 
   // Hooks
   const { suppliers, groups } = useActiveLists(); // assuming groups is available
@@ -201,7 +200,7 @@ export default function PurchaseSummary() {
       };
       const data = await purchaseService.getPurchaseReport(apiFilters);
       setReportData(data);
-      setCurrentPage(1); // reset to first page on new data
+      clearSelection();
     } catch (error) {
       console.error("Error fetching purchase report:", error);
       toast.error("Failed to fetch purchase report");
@@ -225,16 +224,18 @@ export default function PurchaseSummary() {
       !(value instanceof Date && isNaN(value.getTime())),
   ).length;
 
-  // Pagination
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return reportData.slice(start, end);
-  }, [reportData, currentPage, itemsPerPage]);
+  // Infinite scroll
+  const { visibleItems, sentinelRef, hasMore, totalCount, visibleCount } =
+    useInfiniteScrollList(reportData);
 
-  const totalPages = Math.ceil(reportData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, reportData.length);
+  const previewFilters = applySelectedIds({
+    fromDate: filters.fromDate,
+    toDate: filters.toDate,
+    invoiceNo: filters.invoiceNo || undefined,
+    supplierId: filters.supplierId,
+    gstDetails: filters.gstDetails,
+    productGroupId: filters.productGroupId,
+  });
 
   const getSupplierName = (id?: number) => {
     if (!id) return "";
@@ -262,24 +263,15 @@ export default function PurchaseSummary() {
     }
   };
 
-  // Function to fetch summary data
-  const fetchSummary = async (page: number = 1) => {
+  const fetchSummary = async () => {
     setSummaryLoading(true);
     try {
       const data = await purchaseService.getPurchaseSummaryReportPDFData(
-        {
-          fromDate: filters.fromDate,
-          toDate: filters.toDate,
-          invoiceNo: filters.invoiceNo || undefined,
-          supplierId: filters.supplierId,
-          gstDetails: filters.gstDetails,
-          productGroupId: filters.productGroupId,
-        },
-        page,
-        summaryLimit,
+        previewFilters,
+        1,
+        REPORT_PREVIEW_FETCH_LIMIT,
       );
       setSummaryData(data);
-      setSummaryPage(data.pagination.currentPage);
     } catch {
       toast.error("Failed to load summary");
     } finally {
@@ -289,30 +281,8 @@ export default function PurchaseSummary() {
 
   // Handler for Show button
   const handleShowSummary = async () => {
-    await fetchSummary(1);
+    await fetchSummary();
     setIsPreviewOpen(true);
-  };
-
-  // Handler for modal page change
-  const handleSummaryPageChange = (newPage: number) => {
-    fetchSummary(newPage);
-  };
-
-  // Selection handlers
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(paginatedData.map(item => item.id));
-    } else {
-      setSelectedRowIds([]);
-    }
-  };
-
-  const handleSelectRow = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedRowIds(prev => [...prev, id]);
-    } else {
-      setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
-    }
   };
 
     // --------------------------------------------------------------------
@@ -549,34 +519,16 @@ export default function PurchaseSummary() {
             </div>
         </motion.div>
 
-        {/* Results Count and Pagination Controls */}
+        {/* Results Count */}
         <motion.div
           className="flex justify-between items-center mb-4"
           variants={itemVariants}
         >
           <p className="text-sm text-muted-foreground">
-            Showing {reportData.length > 0 ? startIndex : 0} to {endIndex} of{" "}
-            {reportData.length} invoices
+            Showing {visibleCount} of {totalCount} invoices
+            {selectedRowIds.length > 0 && ` (${selectedRowIds.length} selected)`}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => setItemsPerPage(Number(value))}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* Report Table */}
@@ -590,8 +542,16 @@ export default function PurchaseSummary() {
                       <TableHead className="w-10 text-center">
                         <Checkbox
                           className="report-checkbox"
-                          checked={selectedRowIds.length === paginatedData.length && paginatedData.length > 0}
-                          onCheckedChange={handleSelectAll}
+                          checked={
+                            isAllSelected(reportData)
+                              ? true
+                              : isSomeSelected(reportData)
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(checked as boolean, reportData)
+                          }
                         />
                       </TableHead>
                       <TableHead className="font-semibold">
@@ -653,7 +613,7 @@ export default function PurchaseSummary() {
                           </TableCell>
                         </motion.tr>
                       ) : (
-                        paginatedData.map((item, index) => (
+                        visibleItems.map((item, index) => (
                           <motion.tr
                             key={item.id}
                             custom={index}
@@ -703,32 +663,23 @@ export default function PurchaseSummary() {
                   </TableBody>
                 </Table>
               </div>
+              {!isLoading && reportData.length > 0 && (
+                <ReportInfiniteScrollFooter
+                  sentinelRef={sentinelRef}
+                  hasMore={hasMore}
+                  loadedCount={visibleCount}
+                  totalCount={totalCount}
+                />
+              )}
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && reportData.length > 0 && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
       <PurchaseSummaryPreviewModal
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         data={summaryData}
-        onPageChange={handleSummaryPageChange}
-        currentPage={summaryPage}
-        filters={filters} // pass filters for internal download
+        filters={previewFilters}
       />
     </motion.div>
   );

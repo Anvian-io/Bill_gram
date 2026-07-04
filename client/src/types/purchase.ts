@@ -220,6 +220,7 @@ export interface PurchaseReportFilters {
   supplierId?: number | undefined;
   gstDetails?: string;
   productGroupId?: number | undefined;
+  selectedIds?: number[];
 }
 
 // Add/update these interfaces

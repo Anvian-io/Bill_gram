@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -19,15 +19,7 @@ import { Search,
   FileSpreadsheet,
   Loader2,
 } from "lucide-react";
-import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -46,6 +38,8 @@ import type {
   GSTReportHistory,
   GSTReportHistoryFilters,
 } from "@/types/sales-report";
+import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 const reportLabelMap: Record<string, string> = {
   gst: "Sales GST",
@@ -75,19 +69,56 @@ const parseHistoryFilters = (data: string) => {
 
 export default function GSTHistory() {
   const { layoutMode } = useTheme();
-  const [isLoading, setIsLoading] = useState(false);
 
   const [sourceOpen, setSourceOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [rows, setRows] = useState<GSTReportHistory[]>([]);
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | "sales" | "purchase">("all");
   const [reportFilter, setReportFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [downloadingIds, setDownloadingIds] = useState<Set<number>>(new Set());
+
+  const filterResetKey = JSON.stringify({ search, source, reportFilter });
+
+  const {
+    items: rows,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+    refresh,
+    total,
+    loadedCount,
+  } = useServerInfiniteScroll<GSTReportHistory>(
+    async (page) => {
+      try {
+        const filters: GSTReportHistoryFilters = {
+          page,
+          limit: 50,
+          search: search || "",
+          source: source === "all" ? "" : source,
+          reportKey: reportFilter === "all" ? "" : (reportFilter as GSTReportHistoryFilters["reportKey"]),
+          sortBy: "createdAt",
+          sortOrder: "desc",
+        };
+        const response = await gstHistoryService.getGSTReportHistory(filters);
+        return {
+          items: response.histories || [],
+          pagination: {
+            hasNextPage: response.pagination.hasNextPage,
+            currentPage: response.pagination.currentPage,
+            total: response.pagination.total,
+          },
+        };
+      } catch {
+        toast.error("Failed to fetch GST history");
+        return {
+          items: [],
+          pagination: { hasNextPage: false, currentPage: page, total: 0 },
+        };
+      }
+    },
+    filterResetKey,
+  );
 
   const startDownload = (id: number) => {
     setDownloadingIds((prev) => new Set(prev).add(id));
@@ -99,36 +130,6 @@ export default function GSTHistory() {
       return next;
     });
   };
-
-  const fetchHistory = async () => {
-    setIsLoading(true);
-    try {
-      const filters: GSTReportHistoryFilters = {
-        page: currentPage,
-        limit: itemsPerPage,
-        search: search || "",
-        source: source === "all" ? "" : source,
-        reportKey: reportFilter === "all" ? "" : (reportFilter as any),
-        sortBy: "createdAt",
-        sortOrder: "desc",
-      };
-      const response = await gstHistoryService.getGSTReportHistory(filters);
-      setRows(response.histories || []);
-      setTotalPages(response.pagination.totalPages);
-      setTotalItems(response.pagination.total);
-    } catch (error) {
-      toast.error("Failed to fetch GST history");
-      setRows([]);
-      setTotalPages(1);
-      setTotalItems(0);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, [source, reportFilter, currentPage, itemsPerPage, search]);
 
   const downloadBlob = (blob: Blob, fileName: string) => {
     const url = window.URL.createObjectURL(blob);
@@ -213,9 +214,6 @@ export default function GSTHistory() {
             { value: "purchase-monthly-gst", label: "Purchase Monthly GST" },
           ];
 
-  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-
   const getSourceLabel = (value: "all" | "sales" | "purchase") => {
     if (value === "all") return "";
     if (value === "sales") return "Sales";
@@ -239,7 +237,7 @@ export default function GSTHistory() {
           <div className="flex justify-between gap-4">
             
             <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-              <Button variant="outline" className="gap-2" onClick={fetchHistory} disabled={isLoading}>
+              <Button variant="outline" className="gap-2" onClick={refresh} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
@@ -262,9 +260,9 @@ export default function GSTHistory() {
                             disabled={isLoading}
                           >
                             <CommandGroup>
-                              <CommandItem value="all" onSelect={() => { setSource("all"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>All</CommandItem>
-                              <CommandItem value="sales" onSelect={() => { setSource("sales"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>Sales</CommandItem>
-                              <CommandItem value="purchase" onSelect={() => { setSource("purchase"); setReportFilter("all"); setCurrentPage(1); setSourceOpen(false); }}>Purchase</CommandItem>
+                              <CommandItem value="all" onSelect={() => { setSource("all"); setReportFilter("all"); setSourceOpen(false); }}>All</CommandItem>
+                              <CommandItem value="sales" onSelect={() => { setSource("sales"); setReportFilter("all"); setSourceOpen(false); }}>Sales</CommandItem>
+                              <CommandItem value="purchase" onSelect={() => { setSource("purchase"); setReportFilter("all"); setSourceOpen(false); }}>Purchase</CommandItem>
                             </CommandGroup>
                           </InlineSearchField>
                         </div>
@@ -285,7 +283,6 @@ export default function GSTHistory() {
                                   value={opt.value}
                                   onSelect={() => {
                                     setReportFilter(opt.value);
-                                    setCurrentPage(1);
                                     setReportOpen(false);
                                   }}
                                 >
@@ -305,7 +302,6 @@ export default function GSTHistory() {
                               value={search}
                               onChange={(e) => {
                                 setSearch(e.target.value);
-                                setCurrentPage(1);
                               }}
                             />
                             {search && (
@@ -315,7 +311,6 @@ export default function GSTHistory() {
                                 className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                                 onClick={() => {
                                   setSearch("");
-                                  setCurrentPage(1);
                                 }}
                               >
                                 <X className="h-4 w-4" />
@@ -329,30 +324,12 @@ export default function GSTHistory() {
           </Card>
         </motion.div>
 
-        <motion.div className="flex justify-between items-center mb-4" variants={itemVariants}>
+        <motion.div className="mb-4" variants={itemVariants}>
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {totalItems} records
+            {loadedCount > 0
+              ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} records`
+              : "No records"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -450,19 +427,16 @@ export default function GSTHistory() {
                   </TableBody>
                 </Table>
               </div>
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                loadedCount={loadedCount}
+                totalCount={total}
+              />
             </CardContent>
           </Card>
         </motion.div>
-
-        {!isLoading && totalItems > 0 && totalPages > 1 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

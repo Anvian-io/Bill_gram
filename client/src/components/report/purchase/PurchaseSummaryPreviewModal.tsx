@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CustomPagination } from "@/components/custom_ui";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,24 +25,22 @@ import type {
 } from "@/types/purchase";
 import { purchaseService } from "@/services/purchaseService";
 import { toast } from "sonner";
+import { useInfiniteScrollList } from "@/hooks/useInfiniteScrollList";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 
 interface PurchaseSummaryPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: PurchaseSummaryReportData | null;
-  onPageChange: (page: number) => void;
-  currentPage: number;
-  isGeneratingPDF?: boolean; // external prop if parent handles PDF generation
-  onGeneratePDF?: () => void; // optional external handler
-  filters?: PurchaseReportFilters; // needed for internal downloads
+  isGeneratingPDF?: boolean;
+  onGeneratePDF?: () => void;
+  filters?: PurchaseReportFilters;
 }
 
 export default function PurchaseSummaryPreviewModal({
   isOpen,
   onClose,
   data,
-  onPageChange,
-  currentPage,
   isGeneratingPDF = false,
   onGeneratePDF,
   filters,
@@ -52,10 +49,14 @@ export default function PurchaseSummaryPreviewModal({
   const [internalGeneratingPDF, setInternalGeneratingPDF] = useState(false);
   const [internalGeneratingExcel, setInternalGeneratingExcel] = useState(false);
 
+  const products = data?.products ?? [];
+  const { visibleItems, sentinelRef, hasMore, visibleCount, totalCount } =
+    useInfiniteScrollList(products);
+
   if (!data) return null;
 
-  const { user, dateRange, invoiceRange, areas, products, pagination, totals } =
-    data;
+  const { user, dateRange, invoiceRange, areas, pagination, totals } = data;
+  const showTotals = !hasMore && totals;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -136,9 +137,6 @@ export default function PurchaseSummaryPreviewModal({
       setInternalGeneratingExcel(false);
     }
   };
-
-  // Determine if we are on the last page
-  const isLastPage = currentPage === pagination.totalPages;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -258,9 +256,8 @@ export default function PurchaseSummaryPreviewModal({
                   </TableRow>
                 ) : (
                   <>
-                    {products.map((product, idx) => {
-                      const serial =
-                        (currentPage - 1) * pagination.limit + idx + 1;
+                    {visibleItems.map((product, idx) => {
+                      const serial = idx + 1;
                       return (
                         <TableRow key={`${product.productCode}-${idx}`}>
                           <TableCell className="text-center">
@@ -306,7 +303,7 @@ export default function PurchaseSummaryPreviewModal({
                       );
                     })}
                     {/* Total Row – only on the last page */}
-                    {isLastPage && totals && (
+                    {showTotals && (
                       <TableRow className="font-bold border-t-2 bg-secondary/10">
                         <TableCell className="text-center">
                           Total {pagination.total} products
@@ -342,33 +339,19 @@ export default function PurchaseSummaryPreviewModal({
                 )}
               </TableBody>
             </Table>
+            {products.length > 0 && (
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                loadedCount={visibleCount}
+                totalCount={totalCount}
+              />
+            )}
           </div>
 
-          {/* Footer (unchanged) */}
-          {pagination.totalPages > 1 && !isLastPage && (
-            <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
-              <span>{user.shop_name || "Your Shop"}</span>
-              <span>
-                Page {currentPage} of {pagination.totalPages}
-              </span>
-            </div>
-          )}
-
-          {/* Pagination (unchanged) */}
-          {pagination.totalPages > 1 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className=""
-            >
-              <CustomPagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={onPageChange}
-              />
-            </motion.div>
-          )}
+          <div className="flex justify-between items-center text-sm text-muted-foreground mt-2 pb-6">
+            <span>{user.shop_name || "Your Shop"}</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

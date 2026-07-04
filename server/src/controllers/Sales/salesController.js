@@ -8,6 +8,7 @@ import {
 import { createNotification } from "../../utils/notificationHelper.js";
 import { groupByMonth } from "./salesHelper.js";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
+import { appendSelectedIdsCondition } from "../../utils/reportQueryHelpers.js";
 import ejs from "ejs";
 import puppeteer from "puppeteer";
 import path from "path";
@@ -1500,6 +1501,8 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
     vanId,
     salesmanId,
     productGroupId,
+    selectedIds,
+
     page = 1,
     limit = 10,
   } = req.query;
@@ -1548,6 +1551,8 @@ export const getSalesSummaryReportPDFData = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
   const where = { AND: andConditions };
 
@@ -1739,7 +1744,10 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
     vanId,
     salesmanId,
     productGroupId,
-  } = req.query;
+
+    selectedIds,
+
+    } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -1779,6 +1787,8 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
   const where = { AND: andConditions };
 
@@ -2029,7 +2039,10 @@ export const downloadSalesSummaryReportExcel = asyncHandler(
       vanId,
       salesmanId,
       productGroupId,
-    } = req.query;
+
+      selectedIds,
+
+      } = req.query;
 
     const prisma = getPrismaOrFail(res);
     if (!prisma) return;
@@ -2069,6 +2082,8 @@ export const downloadSalesSummaryReportExcel = asyncHandler(
         },
       });
     }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
     const where = { AND: andConditions };
 
@@ -2428,6 +2443,8 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
     areaId,
     vanId,
     salesmanId,
+    selectedIds,
+
     page = 1,
     limit = 10,
   } = req.query;
@@ -2468,6 +2485,8 @@ export const getSalesRegisterPDFData = asyncHandler(async (req, res) => {
     }
     andConditions.push({ invoiceDate: dateFilter });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
   const where = { AND: andConditions };
 
@@ -2601,7 +2620,10 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
     areaId,
     vanId,
     salesmanId,
-  } = req.query;
+
+    selectedIds,
+
+    } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -2633,6 +2655,8 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
     }
     andConditions.push({ invoiceDate: dateFilter });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
   const where = { AND: andConditions };
 
@@ -2823,7 +2847,10 @@ export const downloadSalesRegisterReportExcel = asyncHandler(
       areaId,
       vanId,
       salesmanId,
-    } = req.query;
+
+      selectedIds,
+
+      } = req.query;
 
     const prisma = getPrismaOrFail(res);
     if (!prisma) return;
@@ -2855,6 +2882,8 @@ export const downloadSalesRegisterReportExcel = asyncHandler(
       }
       andConditions.push({ invoiceDate: dateFilter });
     }
+  appendSelectedIdsCondition(andConditions, selectedIds, "id");
+
 
     const where = { AND: andConditions };
 
@@ -3137,6 +3166,8 @@ export const getAreaWisePDFData = asyncHandler(async (req, res) => {
     vanId,
     salesmanId,
     productGroupId,
+    selectedIds,
+
     page = 1,
     limit = 10,
   } = req.query;
@@ -3184,6 +3215,8 @@ export const getAreaWisePDFData = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "areaId");
+
 
   const where = { AND: andConditions };
 
@@ -3371,7 +3404,10 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
     vanId,
     salesmanId,
     productGroupId,
-  } = req.query;
+
+    selectedIds,
+
+    } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -3410,6 +3446,8 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "areaId");
+
 
   const where = { AND: andConditions };
 
@@ -3651,7 +3689,10 @@ export const downloadAreaWiseReportExcel = asyncHandler(async (req, res) => {
     vanId,
     salesmanId,
     productGroupId,
-  } = req.query;
+
+    selectedIds,
+
+    } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -3690,6 +3731,8 @@ export const downloadAreaWiseReportExcel = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "areaId");
+
 
   const where = { AND: andConditions };
 
@@ -4011,6 +4054,8 @@ export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
     areaId,
     vanId,
     productGroupId,
+    selectedIds,
+
     page = 1,
     limit = 10,
   } = req.query;
@@ -4058,6 +4103,8 @@ export const getSalesmanWisePDFData = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "salesmanId");
+
 
   const where = { AND: andConditions };
 
@@ -4245,7 +4292,10 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
     areaId,
     vanId,
     productGroupId,
-  } = req.query;
+
+    selectedIds,
+
+    } = req.query;
 
   const prisma = getPrismaOrFail(res);
   if (!prisma) return;
@@ -4284,6 +4334,8 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
       },
     });
   }
+  appendSelectedIdsCondition(andConditions, selectedIds, "salesmanId");
+
 
   const where = { AND: andConditions };
 
@@ -4524,7 +4576,10 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
       areaId,
       vanId,
       productGroupId,
-    } = req.query;
+
+      selectedIds,
+
+      } = req.query;
 
     const prisma = getPrismaOrFail(res);
     if (!prisma) return;
@@ -4563,6 +4618,8 @@ export const downloadSalesmanWiseReportExcel = asyncHandler(
         },
       });
     }
+  appendSelectedIdsCondition(andConditions, selectedIds, "salesmanId");
+
 
     const where = { AND: andConditions };
 

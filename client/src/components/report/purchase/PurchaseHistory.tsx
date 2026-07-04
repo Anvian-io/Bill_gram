@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -19,15 +19,7 @@ import { Search,
   FileSpreadsheet,
   Loader2,
 } from "lucide-react";
-import { CustomPagination } from "@/components/custom_ui";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -44,19 +36,12 @@ import type {
   PurchaseReportHistory,
   PurchaseReportHistoryFilters,
 } from "@/types/purchase";
+import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
+import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
 import { format } from "date-fns";
 
 export default function PurchaseHistory() {
   const { layoutMode } = useTheme();
-  // State
-  const [histories, setHistories] = useState<PurchaseReportHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-
   // Download tracking state
   const [downloadingIds, setDownloadingIds] = useState<Set<number>>(new Set());
 
@@ -65,15 +50,53 @@ export default function PurchaseHistory() {
   const [fileNameInput, setFileNameInput] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "pdf" | "excel">("all");
   const [typeOpen, setTypeOpen] = useState(false);
-  const [filters, setFilters] = useState<PurchaseReportHistoryFilters>({
-    page: 1,
-    limit: 10,
+  const [filters, setFilters] = useState<
+    Omit<PurchaseReportHistoryFilters, "page" | "limit">
+  >({
     search: "",
     fileName: "",
-    type: "", // empty string means no type filter
+    type: "",
     sortBy: "createdAt",
     sortOrder: "desc",
   });
+
+  const filterResetKey = JSON.stringify(filters);
+
+  const {
+    items: histories,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+    refresh,
+    total,
+    loadedCount,
+  } = useServerInfiniteScroll<PurchaseReportHistory>(
+    async (page) => {
+      try {
+        const response = await purchaseService.getPurchaseReportHistory({
+          ...filters,
+          page,
+          limit: 50,
+        });
+        return {
+          items: response.histories,
+          pagination: {
+            hasNextPage: response.pagination.hasNextPage,
+            currentPage: response.pagination.currentPage,
+            total: response.pagination.total,
+          },
+        };
+      } catch {
+        toast.error("Failed to fetch purchase history");
+        return {
+          items: [],
+          pagination: { hasNextPage: false, currentPage: page, total: 0 },
+        };
+      }
+    },
+    filterResetKey,
+  );
 
   // Helper functions for download state
   const startDownload = (id: number) => {
@@ -90,36 +113,12 @@ export default function PurchaseHistory() {
 
   // Debounced search
   const debouncedSearch = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, search: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, search: value }));
   }, 300);
 
   const debouncedFileName = useDebounce((value: string) => {
-    setFilters((prev) => ({ ...prev, fileName: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, fileName: value }));
   }, 300);
-
-  // Fetch history
-  const fetchHistory = async () => {
-    setIsLoading(true);
-    try {
-      const response = await purchaseService.getPurchaseReportHistory({
-        ...filters,
-        page: currentPage,
-        limit: itemsPerPage,
-      });
-      setHistories(response.histories);
-      setTotalPages(response.pagination.totalPages);
-      setTotalItems(response.pagination.total);
-    } catch (error) {
-      toast.error("Failed to fetch purchase history");
-      setHistories([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, [filters, currentPage, itemsPerPage]);
 
   // Handlers
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +138,6 @@ export default function PurchaseHistory() {
     setFilters((prev) => ({
       ...prev,
       type: newType === "all" ? "" : newType,
-      page: 1,
     }));
   };
 
@@ -148,15 +146,12 @@ export default function PurchaseHistory() {
     setFileNameInput("");
     setTypeFilter("all");
     setFilters({
-      page: 1,
-      limit: itemsPerPage,
       search: "",
       fileName: "",
       type: "",
       sortBy: "createdAt",
       sortOrder: "desc",
     });
-    setCurrentPage(1);
   };
 
   const clearFilter = (field: keyof PurchaseReportHistoryFilters) => {
@@ -233,9 +228,6 @@ export default function PurchaseHistory() {
     }
   };
 
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-
   const getTypeLabel = (type: string) => {
     if (type === "all") return "";
     if (type === "pdf") return "PDF";
@@ -267,7 +259,7 @@ export default function PurchaseHistory() {
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={fetchHistory}
+                onClick={refresh}
                 disabled={isLoading}
               >
                 <RefreshCw
@@ -367,37 +359,13 @@ export default function PurchaseHistory() {
           </Card>
         </motion.div>
 
-        {/* Results Info & Pagination Controls */}
-        <motion.div
-          className="flex justify-between items-center mb-4"
-          variants={itemVariants}
-        >
+        <motion.div className="mb-4" variants={itemVariants}>
           <p className="text-sm text-muted-foreground">
-            Showing {totalItems > 0 ? startIndex : 0} to {endIndex} of{" "}
-            {totalItems} records
+            {loadedCount > 0
+              ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} records`
+              : "No records"}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </motion.div>
 
         {/* History Table */}
@@ -562,24 +530,16 @@ export default function PurchaseHistory() {
                   </TableBody>
                 </Table>
               </div>
+              <ReportInfiniteScrollFooter
+                sentinelRef={sentinelRef}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                loadedCount={loadedCount}
+                totalCount={total}
+              />
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Pagination */}
-        {!isLoading && histories.length > 0 && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <CustomPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

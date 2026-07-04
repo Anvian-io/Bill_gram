@@ -13,6 +13,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import ExcelJS from "exceljs";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
+import { appendSelectedIdsCondition } from "../../utils/reportQueryHelpers.js";
 import { groupByMonth } from "./purchaseHelper.js";
 import QRCode from "qrcode";
 
@@ -1075,6 +1076,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
       productGroupId,
       page = 1,
       limit = 10,
+      selectedIds,
     } = req.query;
 
     const prisma = getPrismaOrFail(res);
@@ -1116,6 +1118,7 @@ export const getPurchaseSummaryReport_pdf_data = asyncHandler(
         },
       });
     }
+    appendSelectedIdsCondition(andConditions, selectedIds);
     const where = { AND: andConditions };
 
     // 2. Get actual min and max invoice dates
@@ -1302,6 +1305,7 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(
       supplierId,
       gstDetails,
       productGroupId,
+      selectedIds,
     } = req.query;
 
     const prisma = getPrismaOrFail(res);
@@ -1337,6 +1341,7 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(
         },
       });
     }
+    appendSelectedIdsCondition(andConditions, selectedIds);
     const where = { AND: andConditions };
 
     // 2. Get date ranges
@@ -1586,6 +1591,7 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
       supplierId,
       gstDetails,
       productGroupId,
+      selectedIds,
     } = req.query;
 
     const prisma = getPrismaOrFail(res);
@@ -1621,6 +1627,7 @@ export const downloadPurchaseSummaryReportExcel = asyncHandler(
         },
       });
     }
+    appendSelectedIdsCondition(andConditions, selectedIds);
     const where = { AND: andConditions };
 
     // 2. Get date ranges
@@ -1974,6 +1981,7 @@ export const getPurchaseRegisterPDFData = asyncHandler(async (req, res) => {
     gstDetails,
     page = 1,
     limit = 10,
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -2009,6 +2017,7 @@ export const getPurchaseRegisterPDFData = asyncHandler(async (req, res) => {
     andConditions.push({ invoiceDate: dateFilter });
   }
 
+  appendSelectedIdsCondition(andConditions, selectedIds);
   const where = { AND: andConditions };
 
   // 2. Get actual min and max invoice dates
@@ -4339,6 +4348,7 @@ export const downloadPurchaseRegisterPDF = asyncHandler(async (req, res) => {
     invoiceNo = "",
     supplierId,
     gstDetails,
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -4368,6 +4378,7 @@ export const downloadPurchaseRegisterPDF = asyncHandler(async (req, res) => {
     andConditions.push({ invoiceDate: dateFilter });
   }
 
+  appendSelectedIdsCondition(andConditions, selectedIds);
   const where = { AND: andConditions };
 
   // 2. Get date ranges
@@ -4536,6 +4547,7 @@ export const downloadPurchaseRegisterExcel = asyncHandler(async (req, res) => {
     invoiceNo = "",
     supplierId,
     gstDetails,
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -4565,6 +4577,7 @@ export const downloadPurchaseRegisterExcel = asyncHandler(async (req, res) => {
     andConditions.push({ invoiceDate: dateFilter });
   }
 
+  appendSelectedIdsCondition(andConditions, selectedIds);
   const where = { AND: andConditions };
 
   // 2. Get date ranges
