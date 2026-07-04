@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Copy,
   KeyRound,
@@ -12,19 +12,19 @@ import {
   Clock,
   ShieldCheck,
   Zap,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   generateAdminToken,
   getAllUsers,
   registerUser,
   type RegisteredUser,
-} from "@/lib/api";
-import { clearStoredAdminAuth, getStoredAdminAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/lib/api';
+import { clearStoredAdminAuth, getStoredAdminAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // ─── Section heading component ────────────────────────────────────────────────
 const SectionHeading = ({
@@ -40,9 +40,9 @@ const SectionHeading = ({
     <div
       className="flex h-10 w-10 items-center justify-center rounded-xl"
       style={{
-        background: "rgba(99,102,241,0.18)",
-        color: "#818cf8",
-        border: "1px solid rgba(99,102,241,0.3)",
+        background: 'rgba(99,102,241,0.18)',
+        color: '#818cf8',
+        border: '1px solid rgba(99,102,241,0.3)',
       }}
     >
       {icon}
@@ -59,7 +59,7 @@ const SectionHeading = ({
 // ─── Styled card shell ────────────────────────────────────────────────────────
 const Panel = ({
   children,
-  className = "",
+  className = '',
   glow = false,
 }: {
   children: React.ReactNode;
@@ -69,12 +69,12 @@ const Panel = ({
   <div
     className={`rounded-3xl p-7 ${className}`}
     style={{
-      background: "rgba(10,8,28,0.78)",
-      border: `1px solid ${glow ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.07)"}`,
-      backdropFilter: "blur(18px)",
+      background: 'rgba(10,8,28,0.78)',
+      border: `1px solid ${glow ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.07)'}`,
+      backdropFilter: 'blur(18px)',
       boxShadow: glow
-        ? "0 0 40px rgba(99,102,241,0.1), 0 24px 60px -16px rgba(0,0,0,0.7)"
-        : "0 24px 60px -16px rgba(0,0,0,0.7)",
+        ? '0 0 40px rgba(99,102,241,0.1), 0 24px 60px -16px rgba(0,0,0,0.7)'
+        : '0 24px 60px -16px rgba(0,0,0,0.7)',
     }}
   >
     {children}
@@ -103,8 +103,8 @@ const TokenDisplay = ({
       <div
         className="flex h-28 items-center justify-center rounded-2xl"
         style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px dashed rgba(255,255,255,0.1)",
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px dashed rgba(255,255,255,0.1)',
         }}
       >
         <p className="text-sm text-slate-500">
@@ -121,8 +121,8 @@ const TokenDisplay = ({
       className="relative overflow-hidden rounded-2xl p-4"
       style={{
         background:
-          "linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.08))",
-        border: "1px solid rgba(99,102,241,0.35)",
+          'linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.08))',
+        border: '1px solid rgba(99,102,241,0.35)',
       }}
     >
       {/* Glow sweep */}
@@ -130,14 +130,14 @@ const TokenDisplay = ({
         className="pointer-events-none absolute inset-0 opacity-20"
         style={{
           background:
-            "linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)",
+            'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)',
         }}
-        animate={{ x: ["-100%", "200%"] }}
+        animate={{ x: ['-100%', '200%'] }}
         transition={{
           duration: 3,
           repeat: Infinity,
           repeatDelay: 2,
-          ease: "easeInOut",
+          ease: 'easeInOut',
         }}
       />
 
@@ -145,7 +145,7 @@ const TokenDisplay = ({
         <div className="mb-2 flex items-center justify-between">
           <span
             className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-            style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc" }}
+            style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}
           >
             <Zap className="h-2.5 w-2.5" />
             Active Token
@@ -156,10 +156,10 @@ const TokenDisplay = ({
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
             style={{
               background: copied
-                ? "rgba(16,185,129,0.15)"
-                : "rgba(99,102,241,0.15)",
-              color: copied ? "#34d399" : "#818cf8",
-              border: `1px solid ${copied ? "rgba(52,211,153,0.3)" : "rgba(99,102,241,0.3)"}`,
+                ? 'rgba(16,185,129,0.15)'
+                : 'rgba(99,102,241,0.15)',
+              color: copied ? '#34d399' : '#818cf8',
+              border: `1px solid ${copied ? 'rgba(52,211,153,0.3)' : 'rgba(99,102,241,0.3)'}`,
             }}
           >
             <AnimatePresence mode="wait">
@@ -205,7 +205,7 @@ const TokenDisplay = ({
 const Field = ({
   id,
   label,
-  type = "text",
+  type = 'text',
   value,
   onChange,
   placeholder,
@@ -266,7 +266,7 @@ const UserRow = ({ user, index }: { user: RegisteredUser; index: number }) => (
     <td className="px-3 py-3.5">
       <span
         className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-        style={{ background: "rgba(99,102,241,0.12)", color: "#a5b4fc" }}
+        style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc' }}
       >
         {user.registeredBy}
       </span>
@@ -286,14 +286,14 @@ const AdminPage = () => {
   const [usersLoading, setUsersLoading] = useState(true);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
-  const [tokenExpiryDays, setTokenExpiryDays] = useState("30");
-  const [latestToken, setLatestToken] = useState("");
-  const [latestTokenExpiry, setLatestTokenExpiry] = useState("");
+  const [tokenExpiryDays, setTokenExpiryDays] = useState('30');
+  const [latestToken, setLatestToken] = useState('');
+  const [latestTokenExpiry, setLatestTokenExpiry] = useState('');
   const [form, setForm] = useState({
-    email: "",
-    name: "",
-    phoneNumber: "",
-    token: "",
+    email: '',
+    name: '',
+    phoneNumber: '',
+    token: '',
   });
 
   const setFormField = (key: keyof typeof form) => (value: string) =>
@@ -307,11 +307,11 @@ const AdminPage = () => {
       setUsers(response.users);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to load users";
+        error instanceof Error ? error.message : 'Unable to load users';
       toast.error(message);
-      if (message.toLowerCase().includes("session")) {
+      if (message.toLowerCase().includes('session')) {
         clearStoredAdminAuth();
-        navigate("/login", { replace: true });
+        navigate('/login', { replace: true });
       }
     } finally {
       setUsersLoading(false);
@@ -320,7 +320,7 @@ const AdminPage = () => {
 
   useEffect(() => {
     if (!auth) {
-      navigate("/login", { replace: true });
+      navigate('/login', { replace: true });
       return;
     }
     void loadUsers();
@@ -337,11 +337,11 @@ const AdminPage = () => {
       );
       setLatestToken(response.token.token);
       setLatestTokenExpiry(response.token.expiresAt);
-      setFormField("token")(response.token.token);
+      setFormField('token')(response.token.token);
       toast.success(response.message);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to generate token",
+        error instanceof Error ? error.message : 'Unable to generate token',
       );
     } finally {
       setTokenLoading(false);
@@ -360,11 +360,11 @@ const AdminPage = () => {
         token: form.token.trim(),
       });
       toast.success(response.message);
-      setForm({ email: "", name: "", phoneNumber: "", token: "" });
+      setForm({ email: '', name: '', phoneNumber: '', token: '' });
       await loadUsers();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to register user",
+        error instanceof Error ? error.message : 'Unable to register user',
       );
     } finally {
       setRegisterLoading(false);
@@ -373,7 +373,7 @@ const AdminPage = () => {
 
   const handleLogout = () => {
     clearStoredAdminAuth();
-    navigate("/login", { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -398,7 +398,7 @@ const AdminPage = () => {
                 <div
                   className="flex h-12 w-12 items-center justify-center rounded-2xl"
                   style={{
-                    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                   }}
                 >
                   <Boxes className="h-6 w-6 text-white" />
@@ -411,9 +411,9 @@ const AdminPage = () => {
                     <span
                       className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
                       style={{
-                        background: "rgba(16,185,129,0.12)",
-                        color: "#34d399",
-                        border: "1px solid rgba(52,211,153,0.2)",
+                        background: 'rgba(16,185,129,0.12)',
+                        color: '#34d399',
+                        border: '1px solid rgba(52,211,153,0.2)',
                       }}
                     >
                       <motion.span
@@ -425,10 +425,10 @@ const AdminPage = () => {
                     </span>
                   </div>
                   <h1 className="mt-1 font-display text-2xl font-extrabold text-foreground">
-                    Nebula Billing Control Center
+                    Bill Gram Control Center
                   </h1>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Signed in as{" "}
+                    Signed in as{' '}
                     <span className="font-semibold text-foreground">
                       {auth?.email}
                     </span>
@@ -441,13 +441,13 @@ const AdminPage = () => {
                 <div className="hidden items-center gap-3 sm:flex">
                   {[
                     {
-                      label: "Users",
-                      value: usersLoading ? "—" : users.length,
+                      label: 'Users',
+                      value: usersLoading ? '—' : users.length,
                       icon: <Users className="h-3.5 w-3.5" />,
                     },
                     {
-                      label: "Session",
-                      value: "Active",
+                      label: 'Session',
+                      value: 'Active',
                       icon: <ShieldCheck className="h-3.5 w-3.5" />,
                     },
                   ].map((stat) => (
@@ -455,8 +455,8 @@ const AdminPage = () => {
                       key={stat.label}
                       className="flex items-center gap-2 rounded-xl px-3 py-2"
                       style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
                       }}
                     >
                       <span className="text-primary/60">{stat.icon}</span>
@@ -486,14 +486,14 @@ const AdminPage = () => {
         </motion.div>
 
         {/* ── MAIN GRID ── */}
-        <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <div className="flex justify-center items-center">
           {/* ── Token Generator ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.5 }}
           >
-            <Panel>
+            <Panel className="w-full sm:w-[400px] md:w-[480px] lg:w-[560px] xl:w-[640px]">
               <div className="mb-6">
                 <SectionHeading
                   icon={<KeyRound className="h-5 w-5" />}
@@ -515,8 +515,8 @@ const AdminPage = () => {
                 <Button
                   className="h-11 w-full gap-2 rounded-xl text-sm font-bold"
                   style={{
-                    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                    boxShadow: "0 4px 20px rgba(99,102,241,0.3)",
+                    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                    boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
                   }}
                   onClick={handleGenerateToken}
                   disabled={tokenLoading}
@@ -528,7 +528,7 @@ const AdminPage = () => {
                         transition={{
                           duration: 1,
                           repeat: Infinity,
-                          ease: "linear",
+                          ease: 'linear',
                         }}
                         className="inline-block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
                       />
@@ -547,7 +547,7 @@ const AdminPage = () => {
                   expiry={latestTokenExpiry}
                   onCopy={async () => {
                     await navigator.clipboard.writeText(latestToken);
-                    toast.success("Token copied to clipboard");
+                    toast.success('Token copied to clipboard');
                   }}
                 />
               </div>
@@ -555,7 +555,7 @@ const AdminPage = () => {
           </motion.div>
 
           {/* ── Register User ── */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.5 }}
@@ -641,7 +641,7 @@ const AdminPage = () => {
                 </Button>
               </form>
             </Panel>
-          </motion.div>
+          </motion.div> */}
         </div>
 
         {/* ── Users Table ── */}
@@ -657,8 +657,8 @@ const AdminPage = () => {
                 title="Registered Users"
                 subtitle={
                   usersLoading
-                    ? "Loading…"
-                    : `${users.length} user${users.length !== 1 ? "s" : ""} on record`
+                    ? 'Loading…'
+                    : `${users.length} user${users.length !== 1 ? 's' : ''} on record`
                 }
               />
               <Button
@@ -669,7 +669,7 @@ const AdminPage = () => {
                 disabled={usersLoading}
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${usersLoading ? "animate-spin" : ""}`}
+                  className={`h-3.5 w-3.5 ${usersLoading ? 'animate-spin' : ''}`}
                 />
                 Refresh
               </Button>
@@ -677,17 +677,17 @@ const AdminPage = () => {
 
             <div
               className="overflow-hidden rounded-2xl"
-              style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <table className="w-full text-left">
                 <thead>
                   <tr
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      background: 'rgba(255,255,255,0.03)',
+                      borderBottom: '1px solid rgba(255,255,255,0.06)',
                     }}
                   >
-                    {["Name", "Email", "Phone", "Registered By", "Created"].map(
+                    {['Name', 'Email', 'Phone', 'Registered By', 'Created'].map(
                       (h) => (
                         <th
                           key={h}
@@ -715,7 +715,7 @@ const AdminPage = () => {
                                 transition={{
                                   duration: 1,
                                   repeat: Infinity,
-                                  ease: "linear",
+                                  ease: 'linear',
                                 }}
                                 className="inline-block h-4 w-4 rounded-full border-2 border-slate-700 border-t-slate-400"
                               />

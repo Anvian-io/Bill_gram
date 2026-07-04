@@ -1,20 +1,20 @@
-import { motion } from "framer-motion";
-import { Boxes } from "lucide-react";
+import { motion } from 'framer-motion';
+import { Boxes } from 'lucide-react';
 
 const groups = {
   Product: [
-    { label: "Modules", href: "#features" },
-    { label: "Preview", href: "#preview" },
-    { label: "Workflow", href: "#workflow" },
+    { label: 'Modules', href: '#features' },
+    { label: 'Preview', href: '#preview' },
+    { label: 'Workflow', href: '#workflow' },
   ],
   Explore: [
-    { label: "Proof", href: "#proof" },
-    { label: "Testimonials", href: "#testimonials" },
-    { label: "FAQ", href: "#faq" },
+    { label: 'Proof', href: '#proof' },
+    { label: 'Testimonials', href: '#testimonials' },
+    { label: 'FAQ', href: '#faq' },
   ],
   Action: [
-    { label: "Download", href: "#download" },
-    { label: "Top of page", href: "#hero" },
+    { label: 'Download', href: '#download' },
+    { label: 'Top of page', href: '#hero' },
   ],
 };
 
@@ -29,13 +29,18 @@ export const Footer = () => {
                 <Boxes className="h-5 w-5" />
               </div>
               <div>
-                <p className="font-display text-lg font-bold text-foreground">Nebula Billing</p>
-                <p className="text-xs text-muted-foreground">Desktop operations platform</p>
+                <p className="font-display text-lg font-bold text-foreground">
+                  Bill Gram
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Desktop operations platform
+                </p>
               </div>
             </div>
             <p className="max-w-md text-sm leading-7 text-text-secondary">
-              A product website for a business app should explain the real workflow clearly. This
-              footer keeps the message simple: billing, stock, GST, master data, and backups in one place.
+              A product website for a business app should explain the real
+              workflow clearly. This footer keeps the message simple: billing,
+              stock, GST, master data, and backups in one place.
             </p>
           </div>
 
@@ -61,7 +66,10 @@ export const Footer = () => {
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border/70 pt-8 text-sm text-muted-foreground md:flex-row md:items-center">
-          <p>Copyright {new Date().getFullYear()} Nebula Billing. Built for clearer business operations.</p>
+          <p>
+            Copyright {new Date().getFullYear()} Bill Gram. Built for clearer
+            business operations.
+          </p>
           <p>Billing / Inventory / Reports / GST / Backup</p>
         </div>
       </div>

@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Boxes, Menu, X } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Boxes, Menu, X } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 const navLinks = [
-  { label: "Modules", href: "#features" },
-  { label: "Preview", href: "#preview" },
-  { label: "Workflow", href: "#workflow" },
-  { label: "Proof", href: "#proof" },
-  { label: "FAQ", href: "#faq" },
+  { label: 'Modules', href: '#features' },
+  { label: 'Preview', href: '#preview' },
+  { label: 'Workflow', href: '#workflow' },
+  { label: 'Proof', href: '#proof' },
+  { label: 'FAQ', href: '#faq' },
 ];
 
 export const Navbar = () => {
@@ -18,17 +18,21 @@ export const Navbar = () => {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
       className="fixed left-0 right-0 top-0 z-50 border-b border-border/70 bg-background/75 backdrop-blur-2xl"
-    > 
+    >
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
         <a href="#hero" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
             <Boxes className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-display text-base font-bold text-foreground">Nebula Billing</p>
-            <p className="text-xs text-muted-foreground">Billing, stock, GST, and reporting</p>
+            <p className="font-display text-base font-bold text-foreground">
+              Bill Gram
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Billing, stock, GST, and reporting
+            </p>
           </div>
         </a>
 
@@ -60,7 +64,7 @@ export const Navbar = () => {
             type="button"
             onClick={() => setIsOpen((open) => !open)}
             className="glass-card flex h-10 w-10 items-center justify-center rounded-xl"
-            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-label={isOpen ? 'Close menu' : 'Open menu'}
           >
             {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

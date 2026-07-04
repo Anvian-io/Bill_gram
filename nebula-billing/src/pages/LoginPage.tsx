@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Boxes,
@@ -9,20 +9,20 @@ import {
   Lock,
   Fingerprint,
   CheckCircle2,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-import { requestOtp, verifyOtp } from "@/lib/api";
-import { getStoredAdminAuth, setStoredAdminAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { requestOtp, verifyOtp } from '@/lib/api';
+import { getStoredAdminAuth, setStoredAdminAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp";
+} from '@/components/ui/input-otp';
 
 const OTP_LENGTH = 6;
 
@@ -41,27 +41,27 @@ const SecurityBadge = ({
   <motion.div
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
-    transition={{ delay, duration: 0.5, ease: "easeOut" }}
+    transition={{ delay, duration: 0.5, ease: 'easeOut' }}
     className="flex items-center gap-3 rounded-2xl px-4 py-3"
     style={{
       background: active
-        ? "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))"
-        : "rgba(255,255,255,0.04)",
-      border: `1px solid ${active ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.08)"}`,
+        ? 'linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))'
+        : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${active ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
     }}
   >
     <div
       className="flex h-8 w-8 items-center justify-center rounded-xl"
       style={{
-        background: active ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)",
-        color: active ? "#818cf8" : "#64748b",
+        background: active ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.06)',
+        color: active ? '#818cf8' : '#64748b',
       }}
     >
       {icon}
     </div>
     <span
       className="text-sm font-medium"
-      style={{ color: active ? "#c7d2fe" : "#64748b" }}
+      style={{ color: active ? '#c7d2fe' : '#64748b' }}
     >
       {label}
     </span>
@@ -90,13 +90,13 @@ const LockOrb = ({ unlocked }: { unlocked: boolean }) => (
           duration: 2.5,
           delay: i * 0.7,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: 'easeInOut',
         }}
       />
     ))}
     <motion.div
       className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl"
-      style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+      style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}
       animate={unlocked ? { rotate: [0, -8, 8, 0], scale: [1, 1.1, 1] } : {}}
       transition={{ duration: 0.5 }}
     >
@@ -138,16 +138,16 @@ const particles = Array.from({ length: 14 }, (_, i) => ({
 // ─── Login Page ───────────────────────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [requestedEmail, setRequestedEmail] = useState("");
-  const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState('');
+  const [requestedEmail, setRequestedEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [requestingOtp, setRequestingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [developmentOtp, setDevelopmentOtp] = useState("");
+  const [developmentOtp, setDevelopmentOtp] = useState('');
   const [unlocked, setUnlocked] = useState(false);
 
   useEffect(() => {
-    if (getStoredAdminAuth()) navigate("/AdminPage", { replace: true });
+    if (getStoredAdminAuth()) navigate('/AdminPage', { replace: true });
   }, [navigate]);
 
   const emailStepReady = useMemo(
@@ -161,12 +161,12 @@ const LoginPage = () => {
     try {
       const response = await requestOtp(email.trim());
       setRequestedEmail(email.trim().toLowerCase());
-      setDevelopmentOtp(response.otp ?? "");
-      setOtp("");
+      setDevelopmentOtp(response.otp ?? '');
+      setOtp('');
       toast.success(response.message);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to request OTP",
+        error instanceof Error ? error.message : 'Unable to request OTP',
       );
     } finally {
       setRequestingOtp(false);
@@ -185,10 +185,10 @@ const LoginPage = () => {
       });
       setUnlocked(true);
       toast.success(response.message);
-      setTimeout(() => navigate("/AdminPage", { replace: true }), 800);
+      setTimeout(() => navigate('/AdminPage', { replace: true }), 800);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to verify OTP",
+        error instanceof Error ? error.message : 'Unable to verify OTP',
       );
     } finally {
       setVerifyingOtp(false);
@@ -220,7 +220,7 @@ const LoginPage = () => {
             duration: p.duration,
             delay: p.delay,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: 'easeInOut',
           }}
         />
       ))}
@@ -240,7 +240,7 @@ const LoginPage = () => {
                 <Boxes className="h-5 w-5" />
               </div>
               <span className="font-display text-lg font-bold text-foreground">
-                Nebula Billing
+                Bill Gram
               </span>
             </motion.div>
 
@@ -321,11 +321,11 @@ const LoginPage = () => {
             <div
               className="w-full rounded-3xl p-8"
               style={{
-                background: "rgba(10,8,28,0.82)",
-                border: "1px solid rgba(99,102,241,0.2)",
-                backdropFilter: "blur(20px)",
+                background: 'rgba(10,8,28,0.82)',
+                border: '1px solid rgba(99,102,241,0.2)',
+                backdropFilter: 'blur(20px)',
                 boxShadow:
-                  "0 32px 80px -24px rgba(0,0,0,0.8), 0 0 0 1px rgba(99,102,241,0.08) inset",
+                  '0 32px 80px -24px rgba(0,0,0,0.8), 0 0 0 1px rgba(99,102,241,0.08) inset',
               }}
             >
               {/* Card header */}
@@ -345,7 +345,7 @@ const LoginPage = () => {
 
               {/* Step indicator */}
               <div className="mb-8 flex items-center gap-2">
-                {["Email", "OTP", "Access"].map((step, i) => {
+                {['Email', 'OTP', 'Access'].map((step, i) => {
                   const done =
                     i === 0
                       ? emailStepReady || unlocked
@@ -366,24 +366,24 @@ const LoginPage = () => {
                           style={{
                             background:
                               done || current
-                                ? "rgba(99,102,241,0.8)"
-                                : "rgba(255,255,255,0.06)",
-                            color: done || current ? "white" : "#475569",
+                                ? 'rgba(99,102,241,0.8)'
+                                : 'rgba(255,255,255,0.06)',
+                            color: done || current ? 'white' : '#475569',
                             border: current
-                              ? "1px solid rgba(165,180,252,0.5)"
-                              : "1px solid transparent",
+                              ? '1px solid rgba(165,180,252,0.5)'
+                              : '1px solid transparent',
                           }}
                         >
-                          {done ? "✓" : i + 1}
+                          {done ? '✓' : i + 1}
                         </div>
                         <span
                           className="text-xs font-medium transition-colors duration-300"
                           style={{
                             color: current
-                              ? "#c7d2fe"
+                              ? '#c7d2fe'
                               : done
-                                ? "#818cf8"
-                                : "#475569",
+                                ? '#818cf8'
+                                : '#475569',
                           }}
                         >
                           {step}
@@ -394,8 +394,8 @@ const LoginPage = () => {
                           className="h-px w-8 transition-all duration-500"
                           style={{
                             background: done
-                              ? "rgba(99,102,241,0.6)"
-                              : "rgba(255,255,255,0.08)",
+                              ? 'rgba(99,102,241,0.6)'
+                              : 'rgba(255,255,255,0.08)',
                           }}
                         />
                       )}
@@ -434,7 +434,7 @@ const LoginPage = () => {
                           onChange={(e) => setEmail(e.target.value)}
                           required
                           className="h-13 rounded-xl border-white/10 bg-white/5 pl-11 text-sm text-foreground placeholder:text-slate-500 focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
-                          style={{ height: "52px" }}
+                          style={{ height: '52px' }}
                         />
                       </div>
                       <p className="text-[11px] text-slate-500">
@@ -447,9 +447,9 @@ const LoginPage = () => {
                       disabled={requestingOtp}
                       className="h-13 w-full gap-2 rounded-xl text-base font-bold"
                       style={{
-                        height: "52px",
-                        background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                        boxShadow: "0 4px 24px rgba(99,102,241,0.35)",
+                        height: '52px',
+                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        boxShadow: '0 4px 24px rgba(99,102,241,0.35)',
                       }}
                     >
                       <KeyRound className="h-4 w-4" />
@@ -460,14 +460,14 @@ const LoginPage = () => {
                             transition={{
                               duration: 1,
                               repeat: Infinity,
-                              ease: "linear",
+                              ease: 'linear',
                             }}
                             className="inline-block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
                           />
                           Verifying email…
                         </span>
                       ) : (
-                        "Send OTP"
+                        'Send OTP'
                       )}
                     </Button>
                   </motion.form>
@@ -486,8 +486,8 @@ const LoginPage = () => {
                     <div
                       className="flex items-center justify-between rounded-2xl px-4 py-3"
                       style={{
-                        background: "rgba(99,102,241,0.1)",
-                        border: "1px solid rgba(99,102,241,0.25)",
+                        background: 'rgba(99,102,241,0.1)',
+                        border: '1px solid rgba(99,102,241,0.25)',
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -506,9 +506,9 @@ const LoginPage = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setRequestedEmail("");
-                          setDevelopmentOtp("");
-                          setOtp("");
+                          setRequestedEmail('');
+                          setDevelopmentOtp('');
+                          setOtp('');
                         }}
                         className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary/80 transition-colors hover:bg-primary/10"
                       >
@@ -550,8 +550,8 @@ const LoginPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="rounded-2xl p-4"
                         style={{
-                          background: "rgba(16,185,129,0.07)",
-                          border: "1px solid rgba(16,185,129,0.25)",
+                          background: 'rgba(16,185,129,0.07)',
+                          border: '1px solid rgba(16,185,129,0.25)',
                         }}
                       >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">
@@ -572,14 +572,14 @@ const LoginPage = () => {
                       disabled={verifyingOtp || otp.length !== OTP_LENGTH}
                       className="h-13 w-full gap-2 rounded-xl text-base font-bold"
                       style={{
-                        height: "52px",
+                        height: '52px',
                         background:
                           otp.length === OTP_LENGTH
-                            ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                            ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
                             : undefined,
                         boxShadow:
                           otp.length === OTP_LENGTH
-                            ? "0 4px 24px rgba(99,102,241,0.35)"
+                            ? '0 4px 24px rgba(99,102,241,0.35)'
                             : undefined,
                       }}
                     >
@@ -590,7 +590,7 @@ const LoginPage = () => {
                             transition={{
                               duration: 1,
                               repeat: Infinity,
-                              ease: "linear",
+                              ease: 'linear',
                             }}
                             className="inline-block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
                           />
