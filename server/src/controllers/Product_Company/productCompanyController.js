@@ -19,12 +19,12 @@ export const createProductCompany = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!name || !contactPerson || !email || !phone || !address) {
+  if (!name) {
     return sendResponse(
       res,
       false,
       null,
-      "Name, contact person, email, phone, and address are required",
+      "Company name is required",
       statusType.BAD_REQUEST,
     );
   }

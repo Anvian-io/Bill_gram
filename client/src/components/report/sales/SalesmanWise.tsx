@@ -335,26 +335,8 @@ export default function SalesmanWise() {
           className="flex flex-col gap-6 mb-6 w-full"
           variants={headerVariants}
         >
-          <div className="flex justify-between gap-4">
-            
-
-            {/* Action Buttons */}
+          <div className="flex justify-end gap-4">
             <motion.div className="flex items-center gap-3">
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleShowPDF}
-                  disabled={isLoading || reportData.length === 0 || pdfLoading}
-                >
-                  <FileText className="h-4 w-4" />
-                  {pdfLoading ? "Loading..." : "Show"}
-                </Button>
-              </motion.div>
               <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
@@ -717,6 +699,22 @@ export default function SalesmanWise() {
                             placeholder="To Date"
                             disabled={isLoading}
                           />
+                        </div>
+
+                        <div className="ml-auto flex items-end">
+                          <Button
+                            variant="outline"
+                            className="gap-2 h-8"
+                            onClick={handleShowPDF}
+                            disabled={
+                              isLoading ||
+                              reportData.length === 0 ||
+                              pdfLoading
+                            }
+                          >
+                            <FileText className="h-4 w-4" />
+                            {pdfLoading ? "Loading..." : "Show"}
+                          </Button>
                         </div>
                       </div>
               </div>

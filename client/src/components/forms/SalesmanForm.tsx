@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,23 +20,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
-import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { FormActiveStatusField } from "@/components/custom_ui/FormActiveStatusField";
-import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useActiveLists } from "@/hooks/useActiveLists";
 
-// Define the form schema with areaId
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  phoneNo: z.string().min(10, {
-    message: "Phone number must be at least 10 digits.",
-  }),
+  phoneNo: z.string().optional(),
   email: z.string().email().or(z.literal("")).optional(),
-  areaId: z.number().optional(),
   status: z.boolean(),
 });
 
@@ -64,28 +55,22 @@ export default function SalesmanForm({
   onSave,
   isSubmitting = false,
 }: SalesmanFormProps) {
-  const { areas } = useActiveLists();
-  const [areaOpen, setAreaOpen] = useState(false);
-
   const form = useForm<SalesmanFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phoneNo: "",
       email: "",
-      areaId: undefined,
       status: true,
     },
   });
 
-  // Reset form when editingSalesman changes
   useEffect(() => {
     if (editingSalesman) {
       form.reset({
         name: editingSalesman.name,
         phoneNo: editingSalesman.phoneNo,
         email: editingSalesman.email || "",
-        areaId: editingSalesman.areaId || undefined,
         status: editingSalesman.status,
       });
     } else {
@@ -93,17 +78,10 @@ export default function SalesmanForm({
         name: "",
         phoneNo: "",
         email: "",
-        areaId: undefined,
         status: true,
       });
     }
   }, [editingSalesman, form]);
-
-  const getAreaName = (id: number | null | undefined) => {
-    if (!id) return "Select Area";
-    const area = areas.find((a) => a.id === id);
-    return area ? area.name : "Select Area";
-  };
 
   const onSubmit = (data: SalesmanFormData) => {
     onSave(data, editingSalesman?.id);
@@ -119,7 +97,7 @@ export default function SalesmanForm({
           <DialogDescription>
             {editingSalesman
               ? "Update the salesman's details."
-              : "Add a new salesman to your sales team with contact information and area."}
+              : "Add a new salesman to your sales team."}
           </DialogDescription>
         </DialogHeader>
 
@@ -153,7 +131,7 @@ export default function SalesmanForm({
                 name="phoneNo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number *</FormLabel>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="+91 9876543210"
@@ -166,67 +144,24 @@ export default function SalesmanForm({
                 )}
               />
 
-              {/* Area - Command Dropdown */}
               <FormField
                 control={form.control}
-                name="areaId"
+                name="email"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Area</FormLabel>
-                    <InlineSearchField
-                      open={areaOpen}
-                      onOpenChange={setAreaOpen}
-                      displayValue={getAreaName(field.value)}
-                      placeholder="Search area..."
-                      emptyMessage="No area found."
-                      disabled={isSubmitting}
-                    >
-                      <CommandGroup>
-                        {areas.map((area) => (
-                          <CommandItem
-                            key={area.id}
-                            value={area.id.toString()}
-                            onSelect={() => {
-                              field.onChange(area.id);
-                              setAreaOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                field.value === area.id
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {area.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </InlineSearchField>
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="john@example.com"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email Address</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="john@example.com"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

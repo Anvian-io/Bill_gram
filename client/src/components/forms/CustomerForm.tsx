@@ -47,9 +47,7 @@ const formSchema = z.object({
   companyName: z.string().min(2, {
     message: "Company name must be at least 2 characters.",
   }),
-  personName: z.string().min(2, {
-    message: "Person name must be at least 2 characters.",
-  }),
+  personName: z.string().optional(),
   phoneNo: z.string().min(10, {
     message: "Phone number must be at least 10 digits.",
   }),
@@ -169,12 +167,12 @@ export default function CustomerForm({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {editingCustomer ? "Edit Customer" : "Add New Customer"}
+            {editingCustomer ? "Edit Shop" : "Add New Shop"}
           </DialogTitle>
           <DialogDescription>
             {editingCustomer
-              ? "Update customer information."
-              : "Add a new customer to your database with contact information."}
+              ? "Update shop information."
+              : "Add a new shop to your database with contact information."}
           </DialogDescription>
         </DialogHeader>
 
@@ -210,7 +208,7 @@ export default function CustomerForm({
                 name="personName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Person *</FormLabel>
+                    <FormLabel>Contact Person</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., Mr. Sharma"

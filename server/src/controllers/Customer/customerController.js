@@ -23,12 +23,12 @@ export const createCustomer = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!companyName || !personName || !phoneNo || !address) {
+  if (!companyName || !phoneNo || !address) {
     return sendResponse(
       res,
       false,
       null,
-      "Company name, person name, phone number, and address are required",
+      "Company name, phone number, and address are required",
       statusType.BAD_REQUEST,
     );
   }
@@ -58,7 +58,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
   const customer = await prisma.customer.create({
     data: {
       companyName,
-      personName,
+      personName: personName || "",
       phoneNo,
       email: email || "",
       customerType: customerType || null,

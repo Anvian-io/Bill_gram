@@ -29,13 +29,7 @@ import { Plus,
 import { CustomPagination } from "@/components/custom_ui";
 import { FilterStatusField } from "@/components/custom_ui/FilterStatusField";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ItemsPerPageSelect } from "@/components/custom_ui/ItemsPerPageSelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -533,7 +527,7 @@ export default function CustomerComponent() {
           <div className="flex justify-between gap-4">
             {/* Title */}
             <div>
-              <h1 className="text-3xl font-bold text-heading">Customers</h1>
+              <h1 className="text-3xl font-bold text-heading">Shops</h1>
             </div>
 
             {/* Search Bar */}
@@ -915,21 +909,11 @@ export default function CustomerComponent() {
           </p>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Items per page:</div>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => setItemsPerPage(Number(value))}
+            <ItemsPerPageSelect
+              value={itemsPerPage}
+              onChange={setItemsPerPage}
               disabled={isLoading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
         </motion.div>
 

@@ -28,9 +28,7 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Supplier name must be at least 2 characters.",
   }),
-  phoneNo: z.string().min(10, {
-    message: "Phone number must be at least 10 digits.",
-  }),
+  phoneNo: z.string().optional(),
   email: z.string().email().or(z.literal("")).optional(),
   address: z.string().optional(),
   gstIN: z
@@ -150,7 +148,7 @@ export default function SupplierForm({
                 name="phoneNo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number *</FormLabel>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="+91 9876543210"

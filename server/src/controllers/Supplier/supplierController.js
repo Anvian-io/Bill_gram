@@ -11,12 +11,12 @@ export const createSupplier = asyncHandler(async (req, res) => {
   const { name, phoneNo, email, address, gstIN, status = true } = req.body;
 
   // Validate required fields
-  if (!name || !phoneNo) {
+  if (!name) {
     return sendResponse(
       res,
       false,
       null,
-      "Supplier name and phone number are required",
+      "Supplier name is required",
       statusType.BAD_REQUEST,
     );
   }
@@ -25,20 +25,22 @@ export const createSupplier = asyncHandler(async (req, res) => {
   if (!prisma) return;
 
   // Check if supplier with same phone number already exists
-  const existingSupplier = await prisma.supplier.findFirst({
-    where: {
-      phoneNo,
-    },
-  });
+  if (phoneNo) {
+    const existingSupplier = await prisma.supplier.findFirst({
+      where: {
+        phoneNo,
+      },
+    });
 
-  if (existingSupplier) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      `Supplier with this phone number already exists`,
-      statusType.CONFLICT,
-    );
+    if (existingSupplier) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Supplier with this phone number already exists`,
+        statusType.CONFLICT,
+      );
+    }
   }
 
   // Check if GSTIN already exists (if provided)
@@ -64,7 +66,7 @@ export const createSupplier = asyncHandler(async (req, res) => {
   const supplier = await prisma.supplier.create({
     data: {
       name,
-      phoneNo,
+      phoneNo: phoneNo || "",
       email: email || "",
       address: address || null,
       gstIN: gstIN || null,

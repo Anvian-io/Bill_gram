@@ -2835,14 +2835,14 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                       className="h-9 gap-1 px-2 font-semibold text-xs"
                       onClick={handleSaveAndPrint}
                       disabled={isSubmitting || isPrinting}
-                      aria-label="DM print"
-                      title="Save & Print"
+                      aria-label="Save and Print"
+                      title="Save and Print"
                     >
                       {isPrinting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
-                          DM
+                          Save and Print
                           <Printer className="h-4 w-4" />
                         </>
                       )}

@@ -98,7 +98,7 @@ export default function MasterInventory() {
     },
     {
       id: "customer",
-      label: "Customer",
+      label: "Shops",
       icon: <UserCircle className="h-5 w-5" />,
       component: <Customer />,
       // badge: 156,

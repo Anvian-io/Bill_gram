@@ -324,28 +324,8 @@ export default function SalesRegister() {
           className="flex flex-col gap-6 mb-6 w-full"
           variants={headerVariants}
         >
-          <div className="flex justify-between gap-4">
-            
-
-            {/* Action Buttons */}
+          <div className="flex justify-end gap-4">
             <motion.div className="flex items-center gap-3">
-              <motion.div
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleShowRegister}
-                  disabled={
-                    isLoading || reportData.length === 0 || registerLoading
-                  }
-                >
-                  <FileText className="h-4 w-4" />
-                  {registerLoading ? "Loading..." : "Show"}
-                </Button>
-              </motion.div>
               <motion.div
                 variants={buttonVariants}
                 whileHover="hover"
@@ -647,6 +627,22 @@ export default function SalesRegister() {
                             disabled={isLoading}
                           />
                         </div>
+
+                        <div className="ml-auto flex items-end">
+                          <Button
+                            variant="outline"
+                            className="gap-2 h-8"
+                            onClick={handleShowRegister}
+                            disabled={
+                              isLoading ||
+                              reportData.length === 0 ||
+                              registerLoading
+                            }
+                          >
+                            <FileText className="h-4 w-4" />
+                            {registerLoading ? "Loading..." : "Show"}
+                          </Button>
+                        </div>
                       </div>
               </div>
             </div>
@@ -703,9 +699,6 @@ export default function SalesRegister() {
                       <TableHead className="font-semibold text-right">
                         Cheque (₹)
                       </TableHead>
-                      <TableHead className="font-semibold text-right">
-                        Balance (₹)
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -717,7 +710,7 @@ export default function SalesRegister() {
                           // animate={{ opacity: 1 }}
                           // exit={{ opacity: 0 }}
                         >
-                          <TableCell colSpan={7} className="text-center py-12">
+                          <TableCell colSpan={6} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -734,7 +727,7 @@ export default function SalesRegister() {
                           exit={{ opacity: 0 }}
                         >
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -805,9 +798,6 @@ export default function SalesRegister() {
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
                               —
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              ₹{item.totalAmount.toFixed(2)}
                             </TableCell>
                           </motion.tr>
                         ))

@@ -14,60 +14,22 @@ import { dirname } from "path";
 import ExcelJS from "exceljs";
 import { formatDateForFilename } from "../../helper/commonHelper.js";
 import { appendSelectedIdsCondition } from "../../utils/reportQueryHelpers.js";
+import {
+  appendGstDetailsCondition,
+  getGstDetailsFilterValue,
+  normalizeGstDetails,
+} from "../../utils/gstDetailsFilter.js";
 import { groupByMonth } from "./purchaseHelper.js";
 import QRCode from "qrcode";
 
-const DEFAULT_GST_DETAILS_ID = "1";
 const GST_DETAILS_LABELS = {
   0: "Both",
   1: "With GST",
   2: "Without GST",
 };
 
-const normalizeGstDetails = (value) => {
-  if (value === undefined || value === null || value === "") {
-    return DEFAULT_GST_DETAILS_ID;
-  }
-
-  const normalizedValue = String(value).trim().toLowerCase();
-  const valueMap = {
-    "0": "0",
-    "1": "1",
-    "2": "2",
-    both: "0",
-    "with gst": "1",
-    "without gst": "2",
-    "against gst": "1",
-    "with gst and without gst": "0",
-    "with gst & without gst": "0",
-  };
-
-  return valueMap[normalizedValue] ?? DEFAULT_GST_DETAILS_ID;
-};
-
 const getGstDetailsLabel = (value) =>
   GST_DETAILS_LABELS[normalizeGstDetails(value)] || GST_DETAILS_LABELS[1];
-
-const getGstDetailsFilterValue = (value) => {
-  if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    String(value).trim().toLowerCase() === "all"
-  ) {
-    return null;
-  }
-
-  return normalizeGstDetails(value);
-};
-
-const appendGstDetailsCondition = (andConditions, value) => {
-  const normalizedGstDetails = getGstDetailsFilterValue(value);
-  if (normalizedGstDetails !== null) {
-    andConditions.push({ gstDetails: normalizedGstDetails });
-  }
-  return normalizedGstDetails;
-};
 /**
  * Helper: Update batch stock
  * @param {PrismaClient} prisma

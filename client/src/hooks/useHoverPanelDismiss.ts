@@ -1,4 +1,5 @@
 import { useCallback, useRef, type RefObject } from "react";
+import { HOVER_DISMISS_DELAY_MS } from "@/hooks/hoverTiming";
 
 function isPointerOverElements(
   anchorRef: RefObject<HTMLElement | null>,
@@ -31,11 +32,16 @@ export function useHoverPanelDismiss(
   onDismiss: () => void,
 ) {
   const rafRef = useRef<number | null>(null);
+  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelDismiss = useCallback(() => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+    }
+    if (dismissTimeoutRef.current !== null) {
+      clearTimeout(dismissTimeoutRef.current);
+      dismissTimeoutRef.current = null;
     }
   }, []);
 
@@ -43,9 +49,12 @@ export function useHoverPanelDismiss(
     cancelDismiss();
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      if (!isPointerOverElements(anchorRef, panelRef)) {
-        onDismiss();
-      }
+      dismissTimeoutRef.current = setTimeout(() => {
+        dismissTimeoutRef.current = null;
+        if (!isPointerOverElements(anchorRef, panelRef)) {
+          onDismiss();
+        }
+      }, HOVER_DISMISS_DELAY_MS);
     });
   }, [anchorRef, panelRef, cancelDismiss, onDismiss]);
 

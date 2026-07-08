@@ -218,14 +218,13 @@ export default function SalesRegisterPreviewModal({
                   <TableHead className="text-right">Amount (₹)</TableHead>
                   <TableHead className="text-right">Cash (₹)</TableHead>
                   <TableHead className="text-right">Cheque (₹)</TableHead>
-                  <TableHead className="text-right">Balance (₹)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoices.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={7}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No invoices found for the selected filters.
@@ -256,9 +255,6 @@ export default function SalesRegisterPreviewModal({
                           <TableCell className="text-right text-muted-foreground">
                             {invoice.cheque || "—"}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{invoice.balance.toFixed(2)}
-                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -272,9 +268,6 @@ export default function SalesRegisterPreviewModal({
                         </TableCell>
                         <TableCell className="text-right">—</TableCell>
                         <TableCell className="text-right">—</TableCell>
-                        <TableCell className="text-right">
-                          ₹{totals.totalAmount.toFixed(2)}
-                        </TableCell>
                       </TableRow>
                     )}
                   </>

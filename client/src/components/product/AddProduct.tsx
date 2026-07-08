@@ -11,6 +11,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
+const fieldLabelClass = "text-xs font-normal text-muted-foreground";
 import { Input } from "@/components/ui/input";
 import { bindNumberField } from "@/lib/numberInput";
 import { Textarea } from "@/components/ui/textarea";
@@ -236,6 +238,19 @@ export default function AddProduct() {
   const batches = form.watch("batches");
   const gstRate = form.watch("gstRate");
   const watchedValues = form.watch();
+
+  useEffect(() => {
+    if (batches.length === 1) {
+      const onlyBatch = batches[0];
+      if (onlyBatch && !onlyBatch.isPinned) {
+        form.setValue(
+          "batches",
+          [{ ...onlyBatch, isPinned: true }],
+          { shouldDirty: false },
+        );
+      }
+    }
+  }, [batches.length, batches[0]?.isPinned, form]);
 
   // Initialize URL with ?id=new if no id is present
   useEffect(() => {
@@ -813,9 +828,10 @@ export default function AddProduct() {
                       name="productCode"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Product Code *</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Product Code *"
+                              placeholder="Enter product code"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -830,9 +846,10 @@ export default function AddProduct() {
                       name="productBrand"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Product Brand *</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Product Brand *"
+                              placeholder="Enter product brand"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -847,9 +864,10 @@ export default function AddProduct() {
                       name="description"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Description *</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Description *"
+                              placeholder="Enter description"
                               className="min-h-[80px]"
                               {...field}
                               disabled={isSubmitting}
@@ -865,9 +883,10 @@ export default function AddProduct() {
                       name="hsnSacCode"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>HSN/SAC Code *</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="HSN/SAC Code *"
+                              placeholder="Enter HSN/SAC code"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -882,6 +901,7 @@ export default function AddProduct() {
                       name="goodsServices"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Goods / Services *</FormLabel>
                           <FormControl>
                             <RadioGroup
                               onValueChange={field.onChange}
@@ -924,11 +944,12 @@ export default function AddProduct() {
                         name="weight"
                         render={({ field }) => (
                           <FormItem>
+                            <FormLabel className={fieldLabelClass}>Weight *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="Weight *"
+                                placeholder="Enter weight"
                                 {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
@@ -944,6 +965,7 @@ export default function AddProduct() {
                         name="unitId"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
+                            <FormLabel className={fieldLabelClass}>Unit *</FormLabel>
                             <FormControl>
                           <InlineSearchField
                             open={unitIdOpen}
@@ -951,7 +973,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                       ? findUnitName(field.value)
                                       : ""}
-                            placeholder="Unit *"
+                            placeholder="Select unit"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -1000,6 +1022,7 @@ export default function AddProduct() {
                       name="productGroupId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
+                          <FormLabel className={fieldLabelClass}>Product Group *</FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={productGroupIdOpen}
@@ -1007,7 +1030,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                     ? findGroupName(field.value)
                                     : ""}
-                            placeholder="Product Group *"
+                            placeholder="Select product group"
                             emptyMessage="No group found."
                             disabled={isSubmitting}
                           >
@@ -1159,9 +1182,10 @@ export default function AddProduct() {
                       name="productShortName"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Product Short Name *</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Product Short Name *"
+                              placeholder="Enter short name"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -1177,6 +1201,7 @@ export default function AddProduct() {
                       name="productCompanyId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
+                          <FormLabel className={fieldLabelClass}>Product Company *</FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={productCompanyIdOpen}
@@ -1184,7 +1209,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                     ? findCompanyName(field.value)
                                     : ""}
-                            placeholder="Product Company *"
+                            placeholder="Select product company"
                             emptyMessage="No company found."
                             disabled={isSubmitting}
                           >
@@ -1224,6 +1249,7 @@ export default function AddProduct() {
                         name="purchaseUnit"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
+                            <FormLabel className={fieldLabelClass}>Purchase Unit *</FormLabel>
                             <FormControl>
                           <InlineSearchField
                             open={purchaseUnitOpen}
@@ -1231,7 +1257,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                       ? findUnitName(parseInt(field.value))
                                       : ""}
-                            placeholder="Purchase Unit *"
+                            placeholder="Select purchase unit"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -1278,11 +1304,12 @@ export default function AddProduct() {
                         name="conversionFactor"
                         render={({ field }) => (
                           <FormItem>
+                            <FormLabel className={fieldLabelClass}>Conversion Factor *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="Conversion Factor *"
+                                placeholder="Enter conversion factor"
                                 {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
@@ -1298,6 +1325,7 @@ export default function AddProduct() {
                       name="pricePerPcs"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>Price per PCS *</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1306,7 +1334,7 @@ export default function AddProduct() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="Price per PCS *"
+                                placeholder="Enter price per PCS"
                                 {...bindNumberField(field)}
                                 className="pl-8"
                                 disabled={isSubmitting}
@@ -1324,6 +1352,7 @@ export default function AddProduct() {
                       name="saleUnit"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
+                          <FormLabel className={fieldLabelClass}>Sale Unit *</FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={saleUnitOpen}
@@ -1331,7 +1360,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                     ? findUnitName(parseInt(field.value))
                                     : ""}
-                            placeholder="Sale Unit *"
+                            placeholder="Select sale unit"
                             emptyMessage="No unit found."
                             disabled={isSubmitting}
                           >
@@ -1370,10 +1399,11 @@ export default function AddProduct() {
                         name="cartonPack"
                         render={({ field }) => (
                           <FormItem>
+                            <FormLabel className={fieldLabelClass}>Carton Pack *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
-                                placeholder="Carton Pack *"
+                                placeholder="Enter carton pack"
                                 {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
@@ -1388,9 +1418,10 @@ export default function AddProduct() {
                         name="innerPack"
                         render={({ field }) => (
                           <FormItem>
+                            <FormLabel className={fieldLabelClass}>Inner Pack</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Inner Pack"
+                                placeholder="Enter inner pack"
                                 {...field}
                                 value={field.value || ""}
                                 disabled={isSubmitting}
@@ -1587,6 +1618,7 @@ export default function AddProduct() {
                       name="gstApplicability"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
+                          <FormLabel className={fieldLabelClass}>GST Applicability *</FormLabel>
                           <FormControl>
                           <InlineSearchField
                             open={gstApplicabilityOpen}
@@ -1594,7 +1626,7 @@ export default function AddProduct() {
                             displayValue={field.value
                                     ? findGstApplicabilityLabel(field.value)
                                     : ""}
-                            placeholder="GST Applicability *"
+                            placeholder="Select GST applicability"
                             emptyMessage="No option found."
                             disabled={isSubmitting}
                           >
@@ -1632,6 +1664,7 @@ export default function AddProduct() {
                       name="gstRate"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>GST Rate (%) *</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1640,7 +1673,7 @@ export default function AddProduct() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="GST Rate (%) *"
+                                placeholder="Enter GST rate"
                                 {...bindNumberField(field)}
                                 className="pl-9"
                                 disabled={isSubmitting}
@@ -1657,6 +1690,7 @@ export default function AddProduct() {
                       name="cessRate"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>CESS Rate (%)</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
@@ -1665,7 +1699,7 @@ export default function AddProduct() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="CESS Rate (%)"
+                                placeholder="Enter CESS rate"
                                 {...bindNumberField(field)}
                                 className="pl-9"
                                 disabled={isSubmitting}
@@ -1682,9 +1716,10 @@ export default function AddProduct() {
                       name="hsnChapter"
                       render={({ field }) => (
                         <FormItem>
+                          <FormLabel className={fieldLabelClass}>HSN Chapter</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="HSN Chapter"
+                              placeholder="Enter HSN chapter"
                               {...field}
                               disabled={isSubmitting}
                             />
@@ -1852,16 +1887,18 @@ export default function AddProduct() {
                         {/* Batch Information */}
                         <div className="space-y-3">
                           <div>
+                            <label className={fieldLabelClass}>Batch No. *</label>
                             <Input
                               value={batch.bNo}
                               onChange={(e) =>
                                 handleBatchChange(index, "bNo", e.target.value)
                               }
-                              placeholder="Batch No. *"
+                              placeholder="Enter batch number"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
+                            <label className={fieldLabelClass}>Barcode *</label>
                             <Input
                               value={batch.barcode}
                               onChange={(e) =>
@@ -1871,7 +1908,7 @@ export default function AddProduct() {
                                   e.target.value,
                                 )
                               }
-                              placeholder="Barcode *"
+                              placeholder="Enter barcode"
                               disabled={isSubmitting}
                             />
                           </div>
@@ -1879,27 +1916,34 @@ export default function AddProduct() {
 
                         {/* Dates */}
                         <div className="space-y-3">
-                          <CustomDateInput
-                            value={batch.mfgDate}
-                            onChange={(value) =>
-                              handleBatchChange(index, "mfgDate", value)
-                            }
-                            placeholder="MFG Date"
-                            disabled={isSubmitting}
-                          />
-                          <CustomDateInput
-                            value={batch.expDate}
-                            onChange={(value) =>
-                              handleBatchChange(index, "expDate", value)
-                            }
-                            placeholder="EXP Date"
-                            disabled={isSubmitting}
-                          />
+                          <div>
+                            <label className={fieldLabelClass}>MFG Date</label>
+                            <CustomDateInput
+                              value={batch.mfgDate}
+                              onChange={(value) =>
+                                handleBatchChange(index, "mfgDate", value)
+                              }
+                              placeholder="Select MFG date"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <div>
+                            <label className={fieldLabelClass}>EXP Date</label>
+                            <CustomDateInput
+                              value={batch.expDate}
+                              onChange={(value) =>
+                                handleBatchChange(index, "expDate", value)
+                              }
+                              placeholder="Select EXP date"
+                              disabled={isSubmitting}
+                            />
+                          </div>
                         </div>
 
                         {/* Pricing */}
                         <div className="space-y-3">
                           <div>
+                            <label className={fieldLabelClass}>Purchase Rate *</label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1915,13 +1959,14 @@ export default function AddProduct() {
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
-                                placeholder="Purchase Rate *"
+                                placeholder="Enter purchase rate"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
                             </div>
                           </div>
                           <div>
+                            <label className={fieldLabelClass}>Sale Rate *</label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1937,7 +1982,7 @@ export default function AddProduct() {
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
-                                placeholder="Sale Rate *"
+                                placeholder="Enter sale rate"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />
@@ -1948,6 +1993,7 @@ export default function AddProduct() {
                         {/* Stock & MRP */}
                         <div className="space-y-3">
                           <div>
+                            <label className={fieldLabelClass}>Opening Stock *</label>
                             <Input
                               type="number"
                               value={batch.openingStock}
@@ -1958,11 +2004,12 @@ export default function AddProduct() {
                                   parseInt(e.target.value) || 0,
                                 )
                               }
-                              placeholder="Opening Stock *"
+                              placeholder="Enter opening stock"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
+                            <label className={fieldLabelClass}>MRP *</label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                                 ₹
@@ -1978,7 +2025,7 @@ export default function AddProduct() {
                                     parseFloat(e.target.value) || 0,
                                   )
                                 }
-                                placeholder="MRP *"
+                                placeholder="Enter MRP"
                                 className="pl-8"
                                 disabled={isSubmitting}
                               />

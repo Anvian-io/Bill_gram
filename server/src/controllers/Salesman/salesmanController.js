@@ -11,12 +11,12 @@ export const createSalesman = asyncHandler(async (req, res) => {
   const { name, phoneNo, email, areaId, status = true } = req.body;
 
   // Validate required fields
-  if (!name || !phoneNo || !areaId) {
+  if (!name) {
     return sendResponse(
       res,
       false,
       null,
-      "Name, phone number, and area are required",
+      "Name is required",
       statusType.BAD_REQUEST,
     );
   }
@@ -25,30 +25,31 @@ export const createSalesman = asyncHandler(async (req, res) => {
   if (!prisma) return;
 
   // Check if salesman with same phone number already exists
-  const existingSalesman = await prisma.salesman.findFirst({
-    where: {
-      phoneNo,
-      // deleted: false,
-    },
-  });
+  if (phoneNo) {
+    const existingSalesman = await prisma.salesman.findFirst({
+      where: {
+        phoneNo,
+      },
+    });
 
-  if (existingSalesman) {
-    return sendResponse(
-      res,
-      false,
-      null,
-      `Salesman with this phone number already exists`,
-      statusType.CONFLICT,
-    );
+    if (existingSalesman) {
+      return sendResponse(
+        res,
+        false,
+        null,
+        `Salesman with this phone number already exists`,
+        statusType.CONFLICT,
+      );
+    }
   }
 
   // Create salesman
   const salesman = await prisma.salesman.create({
     data: {
       name,
-      phoneNo,
+      phoneNo: phoneNo || "",
       email: email || "",
-      areaId: parseInt(areaId),
+      areaId: areaId ? parseInt(areaId) : null,
       status,
     },
     select: {

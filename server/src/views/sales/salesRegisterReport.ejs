@@ -110,7 +110,7 @@ thead th {
 <!-- HEADER (repeats every page but styled like old layout) -->
 
 <tr>
-<td colspan="8">
+<td colspan="7">
 
 <div class="report-header">
   <h1>Sales Register</h1>
@@ -145,7 +145,6 @@ thead th {
   <th>Amount</th>
   <th>Cash</th>
   <th>Cheque</th>
-  <th>Balance</th>
 </tr>
 
 </thead>
@@ -162,7 +161,6 @@ thead th {
   <td class="right">₹<%= inv.amount.toFixed(2) %></td>
   <td class="right"><%= inv.cash || '—' %></td>
   <td class="right"><%= inv.cheque || '—' %></td>
-  <td class="right">₹<%= inv.balance.toFixed(2) %></td>
 </tr>
 
 <% }) %>
@@ -174,7 +172,6 @@ thead th {
   <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
   <td></td>
   <td></td>
-  <td class="right">₹<%= totals.totalAmount.toFixed(2) %></td>
 </tr>
 
 <% } %>

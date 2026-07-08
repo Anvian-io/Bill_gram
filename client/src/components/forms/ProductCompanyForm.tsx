@@ -29,19 +29,11 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Company name must be at least 2 characters.",
   }),
-  contactPerson: z.string().min(2, {
-    message: "Contact person name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  phone: z.string().min(5, {
-    message: "Phone number must be at least 5 characters.",
-  }),
-  website: z.string().url().or(z.literal("")).optional(),
-  address: z.string().min(5, {
-    message: "Address must be at least 5 characters.",
-  }),
+  contactPerson: z.string().optional(),
+  email: z.string().email().or(z.literal("")).optional(),
+  phone: z.string().optional(),
+  website: z.string().optional(),
+  address: z.string().optional(),
   status: z.boolean(),
 });
 
@@ -153,7 +145,7 @@ export default function ProductCompanyForm({
                 name="contactPerson"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Person *</FormLabel>
+                    <FormLabel>Contact Person</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., John Smith"
@@ -173,7 +165,7 @@ export default function ProductCompanyForm({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email *</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., contact@company.com"
@@ -191,7 +183,7 @@ export default function ProductCompanyForm({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone *</FormLabel>
+                    <FormLabel>Phone</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., +1 (555) 123-4567"
@@ -228,7 +220,7 @@ export default function ProductCompanyForm({
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address *</FormLabel>
+                  <FormLabel>Address</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Full company address"

@@ -17,49 +17,11 @@ import { dirname } from "path";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
 
-const DEFAULT_GST_DETAILS_ID = "1";
-
-const normalizeGstDetails = (value) => {
-  if (value === undefined || value === null || value === "") {
-    return DEFAULT_GST_DETAILS_ID;
-  }
-
-  const normalizedValue = String(value).trim().toLowerCase();
-  const valueMap = {
-    "0": "0",
-    "1": "1",
-    "2": "2",
-    both: "0",
-    "with gst": "1",
-    "without gst": "2",
-    "against gst": "1",
-    "with gst and without gst": "0",
-    "with gst & without gst": "0",
-  };
-
-  return valueMap[normalizedValue] ?? DEFAULT_GST_DETAILS_ID;
-};
-
-const getGstDetailsFilterValue = (value) => {
-  if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    String(value).trim().toLowerCase() === "all"
-  ) {
-    return null;
-  }
-
-  return normalizeGstDetails(value);
-};
-
-const appendGstDetailsCondition = (andConditions, value) => {
-  const normalizedGstDetails = getGstDetailsFilterValue(value);
-  if (normalizedGstDetails !== null) {
-    andConditions.push({ gstDetails: normalizedGstDetails });
-  }
-  return normalizedGstDetails;
-};
+import {
+  appendGstDetailsCondition,
+  normalizeGstDetails,
+  getGstDetailsFilterValue,
+} from "../../utils/gstDetailsFilter.js";
 /**
  * Helper: Update batch stock (decrement for sales)
  * @param {PrismaClient} prisma

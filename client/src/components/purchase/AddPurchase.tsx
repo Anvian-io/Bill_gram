@@ -1035,6 +1035,56 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     }
   };
 
+  const handleSaveAndPrint = async () => {
+    setIsPrinting(true);
+    try {
+      const existingId = getPreviewPurchaseId();
+      if (existingId > 0 && !isDirty) {
+        const blob =
+          await purchaseService.downloadPurchaseBillPreviewPDF(existingId);
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => printWindow.print();
+        }
+        return;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        form.handleSubmit(
+          async (data) => {
+            try {
+              await onSubmit(data);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          },
+          (errors) => {
+            console.error("Form validation errors:", errors);
+            reject(new Error("Validation failed"));
+          },
+        )();
+      });
+
+      await new Promise((r) => setTimeout(r, 300));
+      const savedId = getPreviewPurchaseId();
+      if (savedId > 0) {
+        const blob =
+          await purchaseService.downloadPurchaseBillPreviewPDF(savedId);
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => printWindow.print();
+        }
+      }
+    } catch {
+      // Error already handled above
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const handleDmPrint = () => {
     const damageItems = items.filter(
       (item) => item.productId > 0 && Number(item.DQty ?? 0) > 0,
@@ -2354,27 +2404,18 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
                       variant="outline"
                       size="sm"
                       className="h-9 gap-1 px-2 font-semibold text-xs"
-                      onClick={handleDmPrint}
-                      disabled={isSubmitting}
-                      aria-label="DM print"
-                      title="DM Print"
-                    >
-                      DM
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={handlePrintBill}
+                      onClick={handleSaveAndPrint}
                       disabled={isSubmitting || isPrinting}
-                      aria-label="Print invoice"
-                      title="Print"
+                      aria-label="Save and Print"
+                      title="Save and Print"
                     >
                       {isPrinting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Printer className="h-4 w-4" />
+                        <>
+                          Save and Print
+                          <Printer className="h-4 w-4" />
+                        </>
                       )}
                     </Button>
                     <Button

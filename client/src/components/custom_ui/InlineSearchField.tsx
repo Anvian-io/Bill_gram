@@ -78,7 +78,7 @@ export function InlineSearchField({
   const panelStyle = useFloatingPanelPosition(
     open,
     anchorRef,
-    4,
+    0,
     portalTarget,
     panelMinWidth,
   );
@@ -182,17 +182,61 @@ export function InlineSearchField({
   const isInvalid = ariaProps["aria-invalid"] === true;
 
   const selectFirstItem = React.useCallback(() => {
+    const selectedItem = panelRef.current?.querySelector(
+      "[cmdk-item][data-selected='true']:not([data-disabled='true'])",
+    ) as HTMLElement | null;
     const firstItem = panelRef.current?.querySelector(
       "[cmdk-item]:not([data-disabled='true'])",
     ) as HTMLElement | null;
-    if (firstItem) {
-      firstItem.click();
+    const itemToSelect = selectedItem ?? firstItem;
+    if (itemToSelect) {
+      itemToSelect.click();
     }
     closeDropdown();
     if (onAfterEnterSelect) {
       requestAnimationFrame(() => onAfterEnterSelect());
     }
   }, [closeDropdown, onAfterEnterSelect]);
+
+  const getDropdownItems = React.useCallback(() => {
+    return Array.from(
+      panelRef.current?.querySelectorAll(
+        "[cmdk-item]:not([data-disabled='true'])",
+      ) ?? [],
+    ) as HTMLElement[];
+  }, []);
+
+  const navigateDropdownItem = React.useCallback(
+    (direction: "up" | "down") => {
+      const items = getDropdownItems();
+      if (items.length === 0) return;
+
+      const selectedIndex = items.findIndex(
+        (item) => item.getAttribute("data-selected") === "true",
+      );
+      let nextIndex = selectedIndex;
+
+      if (direction === "down") {
+        nextIndex =
+          selectedIndex === -1 ? 0 : Math.min(selectedIndex + 1, items.length - 1);
+      } else {
+        nextIndex =
+          selectedIndex === -1 ? items.length - 1 : Math.max(selectedIndex - 1, 0);
+      }
+
+      items.forEach((item, index) => {
+        if (index === nextIndex) {
+          item.setAttribute("data-selected", "true");
+          item.setAttribute("aria-selected", "true");
+          item.scrollIntoView({ block: "nearest" });
+        } else {
+          item.setAttribute("data-selected", "false");
+          item.setAttribute("aria-selected", "false");
+        }
+      });
+    },
+    [getDropdownItems],
+  );
 
   const panel = open ? (
     <div
@@ -226,6 +270,7 @@ export function InlineSearchField({
           ref={inputRef}
           id={inputId}
           alwaysEditable
+          data-no-hover-focus
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
@@ -251,6 +296,21 @@ export function InlineSearchField({
             if (event.key === "Escape") {
               closeDropdown();
               inputRef.current?.blur();
+              return;
+            }
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!open) {
+                openDropdown();
+                requestAnimationFrame(() => {
+                  navigateDropdownItem(
+                    event.key === "ArrowDown" ? "down" : "up",
+                  );
+                });
+                return;
+              }
+              navigateDropdownItem(event.key === "ArrowDown" ? "down" : "up");
               return;
             }
             if (event.key === "Enter" && open) {

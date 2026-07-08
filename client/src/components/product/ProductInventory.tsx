@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -113,6 +114,7 @@ function DateInfoBadge({
 
 export default function ProductInventory() {
   const { layoutMode } = useTheme();
+  const [, setSearchParams] = useSearchParams();
   // State for products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -517,10 +519,9 @@ export default function ProductInventory() {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Handle Add Product - Open Modal
+  // Handle Add Product - navigate to add product page
   const handleAddProduct = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
+    setSearchParams({ id: "new" }, { replace: true });
   };
 
   // Handle Edit Product
@@ -679,13 +680,14 @@ export default function ProductInventory() {
               </Button>
               <Button
                 variant="outline"
-                size="icon"
-                className="h-9 w-9"
+                size="sm"
+                className="h-9 gap-1.5 px-3"
                 onClick={handleAddProduct}
                 disabled={isLoading}
                 aria-label="Add product"
               >
                 <Plus className="h-4 w-4" />
+                Add Product
               </Button>
               <Button
                 variant="outline"

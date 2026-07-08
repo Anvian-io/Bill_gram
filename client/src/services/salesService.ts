@@ -134,11 +134,11 @@ export const salesService = {
 
   async updateSale(id: number, data: SalesFormData): Promise<Sales> {
     try {
-      const response = await apiClient.put<ApiResponse<{ sales: Sales }>>(
+      const response = await apiClient.put<ApiResponse<{ sale: Sales }>>(
         `/sales/${id}`,
         data,
       );
-      return response.data.data.sales;
+      return response.data.data.sale;
     } catch (error) {
       const message = getApiErrorMessage(error);
       console.error("Error updating sale:", message);
