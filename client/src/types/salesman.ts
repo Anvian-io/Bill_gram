@@ -12,7 +12,7 @@ export interface Salesman {
 
 export interface SalesmanFormData {
   name: string;
-  phoneNo: string;
+  phoneNo?: string;
   email?: string;
   areaId?: number | null;
   status: boolean;

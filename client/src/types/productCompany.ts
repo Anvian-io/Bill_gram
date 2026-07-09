@@ -15,11 +15,11 @@ export interface ProductCompany {
 
 export interface ProductCompanyFormData {
   name: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
   website?: string;
-  address: string;
+  address?: string;
   status: boolean;
 }
 

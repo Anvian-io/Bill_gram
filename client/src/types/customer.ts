@@ -20,7 +20,7 @@ export interface Customer {
 
 export interface CustomerFormData {
   companyName: string;
-  personName: string;
+  personName?: string;
   phoneNo: string;
   email?: string;
   customerType?: string;

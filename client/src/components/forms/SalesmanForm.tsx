@@ -28,6 +28,7 @@ const formSchema = z.object({
   }),
   phoneNo: z.string().optional(),
   email: z.string().email().or(z.literal("")).optional(),
+  areaId: z.number().nullable().optional(),
   status: z.boolean(),
 });
 
@@ -61,6 +62,7 @@ export default function SalesmanForm({
       name: "",
       phoneNo: "",
       email: "",
+      areaId: null,
       status: true,
     },
   });
@@ -71,6 +73,7 @@ export default function SalesmanForm({
         name: editingSalesman.name,
         phoneNo: editingSalesman.phoneNo,
         email: editingSalesman.email || "",
+        areaId: editingSalesman.areaId ?? null,
         status: editingSalesman.status,
       });
     } else {
@@ -78,6 +81,7 @@ export default function SalesmanForm({
         name: "",
         phoneNo: "",
         email: "",
+        areaId: null,
         status: true,
       });
     }

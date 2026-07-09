@@ -13,7 +13,7 @@ export interface Supplier {
 
 export interface SupplierFormData {
   name: string;
-  phoneNo: string;
+  phoneNo?: string;
   email?: string;
   address?: string;
   gstIN?: string;

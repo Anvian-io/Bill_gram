@@ -29,7 +29,7 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Group name must be at least 2 characters.",
   }),
-  description: z.string().optional(),
+  description: z.string(),
   status: z.boolean(),
 });
 
