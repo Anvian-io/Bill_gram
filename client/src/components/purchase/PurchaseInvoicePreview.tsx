@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CustomPagination } from "@/components/custom_ui";
 import { getFullImageUrl } from "@/utils/imageUtils";
 import { toast } from "sonner";
+import { normalizeGstDetailsValue } from "@/store/dropdown_data/gst_details";
 
 interface Props {
   open: boolean;
@@ -156,10 +157,9 @@ export default function PurchaseInvoicePreview({
   const totalGst = purchase.tax || 0;
   const roundOff = 0;
   const finalAmount = purchase.finalAmount || 0;
-  const gstValue = String(purchase.gstDetails || "").toLowerCase();
-  const isWithGst =
-    gstValue === "1" || gstValue.includes("with") || gstValue.includes("against");
-  const invoiceTitle = isWithGst ? "Tax Invoice" : "Purchase Challan";
+  const normalizedGstValue = normalizeGstDetailsValue(purchase.gstDetails);
+  const isWithGst = normalizedGstValue === "1";
+  const invoiceTitle = isWithGst ? "Tax Invoice" : "Purchase Chalaan";
 
   const handleDownloadPdf = async () => {
     if (!purchaseId || downloadingPdf) return;

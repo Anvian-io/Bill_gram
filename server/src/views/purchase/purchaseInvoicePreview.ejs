@@ -261,9 +261,9 @@
     const totalGst = Number(purchase.tax || 0);
     const roundOff = 0;
     const finalAmount = Number(purchase.finalAmount || 0);
-    const gstValue = String(purchase.gstDetails || '').toLowerCase();
-    const isWithGst = gstValue === '1' || gstValue.includes('with') || gstValue.includes('against');
-    const invoiceTitle = isWithGst ? 'Tax Invoice' : 'Purchase Challan';
+    const gstValue = String(purchase.gstDetails || "").trim().toLowerCase();
+    const isWithGst = gstValue === "1" || gstValue === "with gst" || gstValue === "against gst";
+    const invoiceTitle = isWithGst ? "Tax Invoice" : "Purchase Chalaan";
 
     const formatAmount = (val) => (Number(val) || 0).toFixed(2);
     const formatDate = (d) => {

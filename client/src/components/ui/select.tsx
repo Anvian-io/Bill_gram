@@ -94,6 +94,7 @@ function HoverSelect({
   }, [isOpen]);
 
   const handleMouseEnter = React.useCallback(() => {
+    if (document.body.dataset.modalBlockingHover === "true") return;
     cancelDismiss();
     scheduleOpen(openSelect);
   }, [cancelDismiss, openSelect, scheduleOpen]);

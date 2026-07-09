@@ -16,6 +16,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
+import { launchPdfBrowser } from "../../utils/pdfBrowser.js";
 
 import {
   appendGstDetailsCondition,
@@ -1935,7 +1936,7 @@ export const downloadSalesSummaryReportPDF = asyncHandler(async (req, res) => {
   });
 
   // 13. Generate PDF with Puppeteer
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -2745,7 +2746,7 @@ export const downloadSalesRegisterReportPDF = asyncHandler(async (req, res) => {
   });
 
   // 11. Generate PDF with Puppeteer
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -3588,7 +3589,7 @@ export const downloadAreaWiseReportPDF = asyncHandler(async (req, res) => {
   });
 
   // 13. Generate PDF
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -4474,7 +4475,7 @@ export const downloadSalesmanWiseReportPDF = asyncHandler(async (req, res) => {
   });
 
   // 13. Generate PDF
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -5056,7 +5057,7 @@ export const downloadSalesReportHistoryPDF = asyncHandler(async (req, res) => {
   });
 
   // Generate PDF
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -7909,7 +7910,7 @@ export const downloadSalesBillPreviewPDF = asyncHandler(async (req, res) => {
     formatAmount: (value) => Number(value || 0).toFixed(2),
   });
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 

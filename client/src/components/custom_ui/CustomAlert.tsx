@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useEffect, useRef } from "react";
 
 interface CustomAlertProps {
   open: boolean;
@@ -34,6 +35,16 @@ export function CustomAlert({
   showCancel = true,
   className,
 }: CustomAlertProps) {
+  const actionButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.dataset.modalBlockingHover = "true";
+    return () => {
+      delete document.body.dataset.modalBlockingHover;
+    };
+  }, [open]);
+
   const handleNext = () => {
     onNext();
     onOpenChange(false);
@@ -41,7 +52,19 @@ export function CustomAlert({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className={className}>
+      <AlertDialogContent
+        className={className}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          actionButtonRef.current?.focus();
+        }}
+        onKeyDownCapture={(event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          event.stopPropagation();
+          handleNext();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className="text-heading">
             {mainText}
@@ -57,6 +80,7 @@ export function CustomAlert({
             </AlertDialogCancel>
           )}
           <AlertDialogAction
+            ref={actionButtonRef}
             onClick={handleNext}
             className={
               variant === "destructive"

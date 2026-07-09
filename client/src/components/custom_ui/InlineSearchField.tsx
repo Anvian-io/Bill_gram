@@ -105,11 +105,13 @@ export function InlineSearchField({
 
   const openDropdown = React.useCallback(() => {
     if (disabled) return;
+    if (document.body.dataset.modalBlockingHover === "true") return;
     setOpen(true);
     focusInput();
   }, [disabled, focusInput, setOpen]);
 
   const handleMouseEnter = React.useCallback(() => {
+    if (document.body.dataset.modalBlockingHover === "true") return;
     cancelDismiss();
     onMouseEnter?.();
     scheduleOpen(openDropdown);

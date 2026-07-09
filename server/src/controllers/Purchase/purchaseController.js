@@ -21,6 +21,7 @@ import {
 } from "../../utils/gstDetailsFilter.js";
 import { groupByMonth } from "./purchaseHelper.js";
 import QRCode from "qrcode";
+import { launchPdfBrowser } from "../../utils/pdfBrowser.js";
 
 const GST_DETAILS_LABELS = {
   0: "Both",
@@ -1490,7 +1491,7 @@ export const downloadPurchaseSummaryReportPDF = asyncHandler(
     });
 
     // 13. Generate PDF with Puppeteer
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await launchPdfBrowser(puppeteer);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -2259,7 +2260,7 @@ export const downloadPurchaseReportHistoryPDF = asyncHandler(
     });
 
     // Generate PDF
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await launchPdfBrowser(puppeteer);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -4451,7 +4452,7 @@ export const downloadPurchaseRegisterPDF = asyncHandler(async (req, res) => {
   });
 
   // 10. Generate PDF with Puppeteer
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -5021,7 +5022,7 @@ export const downloadPurchaseBillPreviewPDF = asyncHandler(async (req, res) => {
     formatAmount: (value) => Number(value || 0).toFixed(2),
   });
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchPdfBrowser(puppeteer);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
 

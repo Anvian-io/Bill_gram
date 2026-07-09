@@ -53,14 +53,20 @@ export function useHoverFocusInput(
     }
   }, [skip]);
 
+  const isHoverBlockedByModal = React.useCallback(() => {
+    return document.body.dataset.modalBlockingHover === "true";
+  }, []);
+
   const handleMouseEnter = React.useCallback(() => {
     if (options?.disabled) return;
+    if (isHoverBlockedByModal()) return;
 
     scheduleOpen(() => {
+      if (isHoverBlockedByModal()) return;
       if (document.body.dataset.floatingDropdownOpen === "true") return;
       if (!skip) setHoverActive(true);
     });
-  }, [options?.disabled, scheduleOpen, skip]);
+  }, [isHoverBlockedByModal, options?.disabled, scheduleOpen, skip]);
 
   const handleMouseLeave = React.useCallback(() => {
     cancelScheduledOpen();
