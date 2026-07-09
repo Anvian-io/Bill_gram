@@ -205,6 +205,9 @@
     const totalGst = Number(sale.tax || 0);
     const roundOff = 0;
     const finalAmount = Number(sale.finalAmount || 0);
+    const gstValue = String(sale.gstDetails || "").toLowerCase();
+    const isWithGst = gstValue === "1" || gstValue.includes("with") || gstValue.includes("against");
+    const invoiceTitle = isWithGst ? "Tax Invoice" : "Sales Challan";
   %>
 
   <div class="invoice">
@@ -242,7 +245,7 @@
     </div>
 
     <div class="title-row">
-      <h3>Tax Invoice</h3>
+      <h3><%= invoiceTitle %></h3>
       <p class="inv-meta">Inv. No. : <%= sale.invoiceNo || "" %> | Date : <%= formatDate(sale.invoiceDate) %></p>
     </div>
 
@@ -331,8 +334,8 @@
 
     <div class="remarks-sign">
       <div class="remarks">
-        <p>Cheque Return Charges Rs.500/-</p>
         <p>Remarks : <%= sale.remarks || "" %></p>
+        <p>Cheque Return Charges Rs.500/-</p>
         <p style="margin-top: 8px; font-size: 10px;">
           We hereby certify that our Registration Certificate under the GST Act 2017 is in force on the date on
           which sale of this goods specified in this Tax Invoice is made by us and that the transaction of sale

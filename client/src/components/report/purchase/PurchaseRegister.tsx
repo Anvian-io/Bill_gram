@@ -283,6 +283,21 @@ export default function PurchaseRegister() {
                 <Button
                   variant="outline"
                   className="gap-2"
+                  onClick={handleShowRegister}
+                  disabled={isLoading || reportData.length === 0 || registerLoading}
+                >
+                  <FileText className="h-4 w-4" />
+                  {registerLoading ? "Loading..." : "Show"}
+                </Button>
+              </motion.div>
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Button
+                  variant="outline"
+                  className="gap-2"
                   onClick={fetchReport}
                   disabled={isLoading}
                 >
@@ -409,21 +424,6 @@ export default function PurchaseRegister() {
                           />
                         </div>
 
-                        <div className="ml-auto flex items-end">
-                          <Button
-                            variant="outline"
-                            className="gap-2 h-8"
-                            onClick={handleShowRegister}
-                            disabled={
-                              isLoading ||
-                              reportData.length === 0 ||
-                              registerLoading
-                            }
-                          >
-                            <FileText className="h-4 w-4" />
-                            {registerLoading ? "Loading..." : "Show"}
-                          </Button>
-                        </div>
                       </div>
               </div>
             </div>

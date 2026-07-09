@@ -58,7 +58,6 @@ export function useHoverFocusInput(
 
     scheduleOpen(() => {
       if (document.body.dataset.floatingDropdownOpen === "true") return;
-      ref.current?.focus();
       if (!skip) setHoverActive(true);
     });
   }, [options?.disabled, scheduleOpen, skip]);

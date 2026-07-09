@@ -346,6 +346,21 @@ export default function AreaWise() {
                 <Button
                   variant="outline"
                   className="gap-2"
+                  onClick={handleShowPDF}
+                  disabled={isLoading || reportData.length === 0 || pdfLoading}
+                >
+                  <FileText className="h-4 w-4" />
+                  {pdfLoading ? "Loading..." : "Show"}
+                </Button>
+              </motion.div>
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Button
+                  variant="outline"
+                  className="gap-2"
                   onClick={fetchReport}
                   disabled={isLoading}
                 >
@@ -702,21 +717,6 @@ export default function AreaWise() {
                           />
                         </div>
 
-                        <div className="ml-auto flex items-end">
-                          <Button
-                            variant="outline"
-                            className="gap-2 h-8"
-                            onClick={handleShowPDF}
-                            disabled={
-                              isLoading ||
-                              reportData.length === 0 ||
-                              pdfLoading
-                            }
-                          >
-                            <FileText className="h-4 w-4" />
-                            {pdfLoading ? "Loading..." : "Show"}
-                          </Button>
-                        </div>
                       </div>
               </div>
             </div>

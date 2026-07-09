@@ -156,6 +156,10 @@ export default function PurchaseInvoicePreview({
   const totalGst = purchase.tax || 0;
   const roundOff = 0;
   const finalAmount = purchase.finalAmount || 0;
+  const gstValue = String(purchase.gstDetails || "").toLowerCase();
+  const isWithGst =
+    gstValue === "1" || gstValue.includes("with") || gstValue.includes("against");
+  const invoiceTitle = isWithGst ? "Tax Invoice" : "Purchase Challan";
 
   const handleDownloadPdf = async () => {
     if (!purchaseId || downloadingPdf) return;
@@ -251,7 +255,7 @@ export default function PurchaseInvoicePreview({
           </div>
 
           <div className="flex justify-between items-center border-t border-b border-gray-400 py-2 px-4">
-            <h3 className="text-lg font-bold uppercase">Tax Invoice</h3>
+            <h3 className="text-lg font-bold uppercase">{invoiceTitle}</h3>
             <p className="text-base font-semibold">
               Inv. No. : {purchase.invoiceNo} | Date : {invoiceDate}
             </p>
@@ -436,8 +440,8 @@ export default function PurchaseInvoicePreview({
 
           <div className="flex justify-between border-t border-gray-400 mt-2">
             <div className="w-2/3 p-2 text-xs">
-              <p>Cheque Return Charges Rs.500/-</p>
               <p>Remarks : {purchase.remarks || ""}</p>
+              <p>Cheque Return Charges Rs.500/-</p>
               <p className="mt-2 text-[10px] leading-4">
                 We hereby certify that our Registration Certificate under the GST
                 Act 2017 is in force on the date on which sale of this goods

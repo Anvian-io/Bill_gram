@@ -54,9 +54,6 @@ export function isVisible(el: HTMLElement) {
 export function shouldSkipEnterNavigation(target: HTMLElement) {
   if (target.closest("[data-no-enter-next]")) return true;
 
-  const tagName = target.tagName.toLowerCase();
-  if (tagName === "textarea") return true;
-
   if (
     target.getAttribute("role") === "combobox" &&
     target.getAttribute("aria-expanded") === "true"
@@ -200,7 +197,8 @@ export function focusElementWithCursor(el: HTMLElement) {
   el.focus({ preventScroll: false });
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
     try {
-      el.select();
+      const valueLength = el.value?.length ?? 0;
+      el.setSelectionRange(valueLength, valueLength);
     } catch {
       // date inputs may not support select in some browsers
     }

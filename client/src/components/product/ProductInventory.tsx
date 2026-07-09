@@ -526,8 +526,7 @@ export default function ProductInventory() {
 
   // Handle Edit Product
   const handleEditProduct = async (product: Product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
+    setSearchParams({ id: product.id.toString() }, { replace: true });
   };
 
   // Handle Delete Product
@@ -584,7 +583,7 @@ export default function ProductInventory() {
   // Refresh data
   const handleRefresh = () => {
     fetchProducts();
-    toast.info("Refreshing product data...");
+    // toast.info("Refreshing product data...");
   };
 
   const handleToggleLock = async (product: Product) => {
@@ -1094,15 +1093,8 @@ export default function ProductInventory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <AnimatePresence>
                         {isLoading ? (
-                          <motion.tr
-                            key="loading"
-                            // initial={{ opacity: 0 }}
-                            // animate={{ opacity: 1 }}
-                            // exit={{ opacity: 0 }}
-                            // transition={{ duration: 0.3 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={10}
                               className="text-center py-12"
@@ -1114,31 +1106,16 @@ export default function ProductInventory() {
                                 </p>
                               </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : displayProducts.length === 0 ? (
-                          <motion.tr
-                            key="no-data"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={10}
                               className="text-center py-8 text-muted-foreground"
                             >
-                              <motion.div
-                                className="flex flex-col items-center justify-center"
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
-                              >
+                              <div className="flex flex-col items-center justify-center">
                                 <Package className="h-12 w-12 text-muted-foreground/50 mb-2" />
                                 <p>No products found matching your filters.</p>
-                                <motion.div
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                >
                                   <Button
                                     variant="link"
                                     onClick={clearFilters}
@@ -1146,10 +1123,9 @@ export default function ProductInventory() {
                                   >
                                     Clear all filters
                                   </Button>
-                                </motion.div>
-                              </motion.div>
+                              </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : (
                           displayProducts.map((product, index) => {
                             const totalOpeningStock =
@@ -1158,18 +1134,9 @@ export default function ProductInventory() {
                             const status = getProductStatus(totalOpeningStock);
 
                             return (
-                              <motion.tr
+                              <TableRow
                                 key={product.id}
-                                custom={index}
-                                initial="hidden"
-                                animate="visible"
-                                whileHover="hover"
-                                variants={rowVariants}
                                 className="group border"
-                                layout
-                                transition={{
-                                  layout: { duration: 0.3 },
-                                }}
                               >
                                 <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[180px] max-w-[180px] whitespace-normal align-top">
                                   <div className="flex items-center gap-3 min-w-0">
@@ -1399,11 +1366,10 @@ export default function ProductInventory() {
                                     </Badge>
                                   </div>
                                 </TableCell>
-                              </motion.tr>
+                              </TableRow>
                             );
                           })
                         )}
-                      </AnimatePresence>
                     </TableBody>
                   </Table>
                 </div>

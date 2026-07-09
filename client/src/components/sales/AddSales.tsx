@@ -293,6 +293,12 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   );
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [cartonPackWarningOpen, setCartonPackWarningOpen] = useState(false);
+  const [cartonPackWarningText, setCartonPackWarningText] = useState("");
+  const [duplicateProductAlertOpen, setDuplicateProductAlertOpen] =
+    useState(false);
+  const [duplicateProductAlertText, setDuplicateProductAlertText] =
+    useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -871,6 +877,13 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
   const focusProductSearch = () => focusField("productSearch-0");
 
+  const proceedAddProductRow = () => {
+    setEditingRowIndex(null);
+    setAppliedBatchSummary(null);
+    addProductRow();
+    focusProductSearch();
+  };
+
   const confirmProductRow = () => {
     const item = items[0];
     if (!item?.productId) {
@@ -885,10 +898,21 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       toast.error("Please enter quantity");
       return;
     }
-    setEditingRowIndex(null);
-    setAppliedBatchSummary(null);
-    addProductRow();
-    focusProductSearch();
+    const product = item.productId ? findProduct(item.productId) : undefined;
+    const cartonPack = Number(item.cartonPack || product?.cartonPack || 0);
+    const aQty = Number(item.aQty || 0);
+    if (cartonPack > 0 && aQty > 0 && aQty % cartonPack !== 0) {
+      const lowerMultiple = Math.floor(aQty / cartonPack) * cartonPack;
+      const upperMultiple = lowerMultiple + cartonPack;
+      const addQty = upperMultiple - aQty;
+      const removeQty = aQty - lowerMultiple;
+      setCartonPackWarningText(
+        `A Qty must be multiple of carton pack (${cartonPack}). Add ${addQty} or remove ${removeQty}.`,
+      );
+      setCartonPackWarningOpen(true);
+      return;
+    }
+    proceedAddProductRow();
   };
 
   const addProductRow = () => {
@@ -958,9 +982,29 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     }
   };
 
+  const getDuplicateProductInfo = (index: number, productId: number) => {
+    return items.find(
+      (item, itemIndex) => itemIndex !== index && item.productId === productId,
+    );
+  };
+
   const handleProductSelect = (index: number, productId: number) => {
     const product = findProduct(productId);
     if (product) {
+      const duplicateItem = getDuplicateProductInfo(index, product.id);
+      if (duplicateItem) {
+        const duplicateIndex = items.findIndex(
+          (item, itemIndex) =>
+            itemIndex !== index && item.productId === product.id,
+        );
+        setDuplicateProductAlertText(
+          `${product.productBrand || product.description || product.productCode} is already added in row ${duplicateIndex + 1} with A Qty: ${duplicateItem.aQty ?? 0}.`,
+        );
+        setDuplicateProductAlertOpen(true);
+        setProductOpen(false);
+        setActiveProductIndex(null);
+        return;
+      }
       setAppliedBatchSummary(null);
       setPendingBatchSelection({
         index,
@@ -2941,6 +2985,30 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
           onNext={handleDeleteSale}
           variant="destructive"
           showCancel={true}
+        />
+        <CustomAlert
+          open={cartonPackWarningOpen}
+          onOpenChange={setCartonPackWarningOpen}
+          mainText="Carton Pack Warning"
+          subText={cartonPackWarningText}
+          nextButtonText="OK"
+          cancelButtonText="Cancel"
+          onNext={() => {
+            setCartonPackWarningOpen(false);
+            proceedAddProductRow();
+          }}
+          variant="default"
+          showCancel={true}
+        />
+        <CustomAlert
+          open={duplicateProductAlertOpen}
+          onOpenChange={setDuplicateProductAlertOpen}
+          mainText="Duplicate Product"
+          subText={duplicateProductAlertText}
+          nextButtonText="OK"
+          onNext={() => setDuplicateProductAlertOpen(false)}
+          variant="default"
+          showCancel={false}
         />
 
         {/* Batch Selection Modal */}

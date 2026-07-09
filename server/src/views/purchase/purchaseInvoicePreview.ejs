@@ -261,6 +261,9 @@
     const totalGst = Number(purchase.tax || 0);
     const roundOff = 0;
     const finalAmount = Number(purchase.finalAmount || 0);
+    const gstValue = String(purchase.gstDetails || '').toLowerCase();
+    const isWithGst = gstValue === '1' || gstValue.includes('with') || gstValue.includes('against');
+    const invoiceTitle = isWithGst ? 'Tax Invoice' : 'Purchase Challan';
 
     const formatAmount = (val) => (Number(val) || 0).toFixed(2);
     const formatDate = (d) => {
@@ -319,7 +322,7 @@
 
     <!-- TITLE + INV NUMBER, DATE, SALESMAN -->
     <div class="title-row">
-      <span class="title">Tax Invoice</span>
+      <span class="title"><%= invoiceTitle %></span>
       <div class="inv-meta">
         <strong>Inv. No. :</strong> <%= purchase.invoiceNo || '10911' %> &nbsp;&nbsp;
         <strong>Inv Date :</strong> <%= formatDate(purchase.invoiceDate) || '02 Mar 2026' %> &nbsp;&nbsp;
@@ -401,8 +404,8 @@
     <!-- FOOTER : CHEQUE CHARGES + REMARKS + SIGNATURE -->
     <div class="footer-split">
       <div class="remarks-box">
-        <div class="cheque-note">Cheque Return Charges Rs.500/-</div>
         <div><strong>Remarks :</strong> <%= purchase.remarks || '' %></div>
+        <div class="cheque-note">Cheque Return Charges Rs.500/-</div>
         <div style="margin-top: 10px; font-size: 9.5px; line-height: 1.3;">
           We hereby certify that our Registration Certificate under the GST Act 2017 is in force on the date on which sale of this goods specified in this Tax Invoice is made by us and that the transaction of sale covered by this Tax invoice has been effected by us & it shall be accounted for in the turnover of sales while filing of return and the due tax, if any payable on the sale has been paid or shall be paid.
         </div>

@@ -111,12 +111,9 @@ export function InlineSearchField({
 
   const handleMouseEnter = React.useCallback(() => {
     cancelDismiss();
-    if (openProp !== undefined) {
-      onMouseEnter?.();
-      return;
-    }
+    onMouseEnter?.();
     scheduleOpen(openDropdown);
-  }, [cancelDismiss, onMouseEnter, openDropdown, openProp, scheduleOpen]);
+  }, [cancelDismiss, onMouseEnter, openDropdown, scheduleOpen]);
 
   const handleMouseLeave = React.useCallback(() => {
     cancelScheduledOpen();

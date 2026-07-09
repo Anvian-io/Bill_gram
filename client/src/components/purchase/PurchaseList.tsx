@@ -1,5 +1,6 @@
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -102,6 +103,7 @@ function DateInfoBadge({
 // ----------------------------------------------------------------------
 export default function Purchase() {
   const { layoutMode } = useTheme();
+  const navigate = useNavigate();
   // State
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -332,16 +334,7 @@ export default function Purchase() {
   };
 
   const handleEditPurchase = async (purchase: Purchase) => {
-    try {
-      setIsLoading(true);
-      const fullPurchase = await purchaseService.getPurchase(purchase.id);
-      setEditingPurchase(fullPurchase);
-      setIsModalOpen(true);
-    } catch (error) {
-      toast.error("Failed to load purchase details");
-    } finally {
-      setIsLoading(false);
-    }
+    navigate(`/purchase?tab=add&id=${purchase.id}`);
   };
 
   const confirmDeletePurchase = (purchase: Purchase) => {
@@ -791,14 +784,8 @@ export default function Purchase() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <AnimatePresence>
                         {isLoading ? (
-                          <motion.tr
-                            key="loading"
-                            // initial={{ opacity: 0 }}
-                            // animate={{ opacity: 1 }}
-                            // exit={{ opacity: 0 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={11}
                               className="text-center py-12"
@@ -810,23 +797,14 @@ export default function Purchase() {
                                 </p>
                               </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : purchases.length === 0 ? (
-                          <motion.tr
-                            key="no-data"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={11}
                               className="text-center py-8 text-muted-foreground"
                             >
-                              <motion.div
-                                className="flex flex-col items-center justify-center"
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                              >
+                              <div className="flex flex-col items-center justify-center">
                                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50 mb-2" />
                                 <p>No purchases found matching your filters.</p>
                                 <Button
@@ -836,20 +814,14 @@ export default function Purchase() {
                                 >
                                   Clear all filters
                                 </Button>
-                              </motion.div>
+                              </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : (
-                          purchases.map((purchase, index) => (
-                            <motion.tr
+                          purchases.map((purchase) => (
+                            <TableRow
                               key={purchase.id}
-                              custom={index}
-                              initial="hidden"
-                              animate="visible"
-                              whileHover="hover"
-                              variants={rowVariants}
                               className="group border"
-                              layout
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[120px] max-w-[120px] whitespace-normal align-top">
                                 <div
@@ -1018,10 +990,9 @@ export default function Purchase() {
                                   </Badge>
                                 </div>
                               </TableCell>
-                            </motion.tr>
+                            </TableRow>
                           ))
                         )}
-                      </AnimatePresence>
                     </TableBody>
                   </Table>
                 </div>

@@ -47,6 +47,12 @@ export default function Purchase() {
   };
 
   useEffect(() => {
+    if (searchParams.has("id")) {
+      setActiveTab("add");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
     return () => window.removeEventListener("resize", updateIndicator);

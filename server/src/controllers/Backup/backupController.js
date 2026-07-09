@@ -21,6 +21,8 @@ import {
 import { getDatabasePath, closeDatabase, initializeDatabase } from "../../db/database.js";
 
 const IST_OFFSET_MINUTES = 330;
+const BACKUP_WEB_REDIRECT = process.env.BACKUP_WEB_REDIRECT || "http://localhost:5173/backup";
+const BACKUP_APP_REDIRECT = process.env.BACKUP_APP_REDIRECT || "billgram://backup";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -294,21 +296,39 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
 
   const { code, error } = req.query;
 
+  const sendOAuthCompletePage = (params) => {
+    const query = new URLSearchParams(params).toString();
+    const appUrl = `${BACKUP_APP_REDIRECT}?${query}`;
+    const webUrl = `${BACKUP_WEB_REDIRECT}?${query}`;
+    return res.status(200).send(`<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Google Drive Connection</title></head>
+<body style="font-family: Arial, sans-serif; padding: 24px;">
+  <h3>Returning to Bill Gram...</h3>
+  <p>If the app does not open automatically, <a href="${webUrl}">click here</a>.</p>
+  <script>
+    window.location.href = "${appUrl}";
+    setTimeout(function () {
+      window.location.href = "${webUrl}";
+    }, 1200);
+  </script>
+</body>
+</html>`);
+  };
+
   if (error) {
-    return res.redirect(
-      `http://localhost:5173/backup?error=${encodeURIComponent(error)}`
-    );
+    return sendOAuthCompletePage({ error });
   }
 
   if (!code) {
-    return res.redirect(`http://localhost:5173/backup?error=missing_code`);
+    return sendOAuthCompletePage({ error: "missing_code" });
   }
 
   // We need the user id — passed as 'state' param or from session
   // Since this route is outside verifyUser, we use the 'state' query param
   const userId = parseInt(req.query.state);
   if (!userId || isNaN(userId)) {
-    return res.redirect(`http://localhost:5173/backup?error=invalid_state`);
+    return sendOAuthCompletePage({ error: "invalid_state" });
   }
 
   try {
@@ -337,12 +357,10 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
       },
     });
 
-    return res.redirect(`http://localhost:5173/backup?connected=true`);
+    return sendOAuthCompletePage({ connected: "true" });
   } catch (err) {
     console.error("OAuth callback error:", err);
-    return res.redirect(
-      `http://localhost:5173/backup?error=${encodeURIComponent(err.message)}`
-    );
+    return sendOAuthCompletePage({ error: err.message || "oauth_failed" });
   }
 });
 

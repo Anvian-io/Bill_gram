@@ -974,15 +974,8 @@ export default function Sales() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <AnimatePresence>
                         {isLoading ? (
-                          <motion.tr
-                            key="loading"
-                            // initial={{ opacity: 0 }}
-                            // animate={{ opacity: 1 }}
-                            // exit={{ opacity: 0 }}
-                            // transition={{ duration: 0.3 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={11}
                               className="text-center py-12"
@@ -994,31 +987,16 @@ export default function Sales() {
                                 </p>
                               </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : sales.length === 0 ? (
-                          <motion.tr
-                            key="no-data"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                          >
+                          <TableRow>
                             <TableCell
                               colSpan={11}
                               className="text-center py-8 text-muted-foreground"
                             >
-                              <motion.div
-                                className="flex flex-col items-center justify-center"
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
-                              >
+                              <div className="flex flex-col items-center justify-center">
                                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50 mb-2" />
                                 <p>No sales found matching your filters.</p>
-                                <motion.div
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                >
                                   <Button
                                     variant="link"
                                     onClick={clearFilters}
@@ -1026,22 +1004,14 @@ export default function Sales() {
                                   >
                                     Clear all filters
                                   </Button>
-                                </motion.div>
-                              </motion.div>
+                              </div>
                             </TableCell>
-                          </motion.tr>
+                          </TableRow>
                         ) : (
-                          sales.map((sale, index) => (
-                            <motion.tr
+                          sales.map((sale) => (
+                            <TableRow
                               key={sale.id}
-                              custom={index}
-                              initial="hidden"
-                              animate="visible"
-                              whileHover="hover"
-                              variants={rowVariants}
                               className="group border"
-                              layout
-                              transition={{ layout: { duration: 0.3 } }}
                             >
                               <TableCell className="group-hover:bg-secondary/30 cursor-pointer w-[120px] max-w-[120px] align-top">
                                 <div
@@ -1194,10 +1164,9 @@ export default function Sales() {
                                   </Badge>
                                 </div>
                               </TableCell>
-                            </motion.tr>
+                            </TableRow>
                           ))
                         )}
-                      </AnimatePresence>
                     </TableBody>
                   </Table>
                 </div>
