@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require("electron");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const { spawn, execFileSync } = require("child_process");
 const { moveSystemCursor, resolveScreenPoint } = require("./moveCursor");
 const fs = require("fs");
@@ -835,4 +836,126 @@ ipcMain.handle("install-update", async () => {
 
   autoUpdater.quitAndInstall(false, true);
   return { success: true };
+});
+
+ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
+  const rawDocumentName =
+    typeof options.documentName === "string" ? options.documentName.trim() : "";
+  const safeDocumentName = (
+    rawDocumentName || `billgram-print-${Date.now()}`
+  )
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 120);
+  const pdfPath = path.join(
+    app.getPath("temp"),
+    safeDocumentName.toLowerCase().endsWith(".pdf")
+      ? safeDocumentName
+      : `${safeDocumentName}.pdf`,
+  );
+  const printOptions = {
+    silent: Boolean(options.silent),
+    printBackground: true,
+  };
+
+  let printWindow;
+
+  try {
+    const pdfBuffer = Buffer.from(pdfArrayBuffer);
+    fs.writeFileSync(pdfPath, pdfBuffer);
+
+    printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    await new Promise((resolve, reject) => {
+      printWindow.webContents.once("did-finish-load", resolve);
+      printWindow.webContents.once("did-fail-load", (_evt, _code, description) => {
+        reject(new Error(description || "Failed to load PDF for printing"));
+      });
+      void printWindow.loadURL(pathToFileURL(pdfPath).href);
+    });
+
+    // Allow Chromium's built-in PDF viewer to finish rendering.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    if (printOptions.silent) {
+      const printers = await printWindow.webContents.getPrintersAsync();
+      if (printers.length === 0) {
+        throw new Error("No printer is available");
+      }
+
+      const defaultPrinter = printers.find((printer) => printer.isDefault);
+      const defaultPrinterText = [
+        defaultPrinter?.name,
+        defaultPrinter?.displayName,
+        defaultPrinter?.description,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const isVirtualPdfPrinter =
+        defaultPrinterText.includes("print to pdf") ||
+        defaultPrinterText.includes("xps") ||
+        defaultPrinterText.includes("onenote");
+
+      if (isVirtualPdfPrinter) {
+        const fileName = path.basename(pdfPath);
+        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+          title: "Save Print Output As",
+          defaultPath: path.join(app.getPath("downloads"), fileName),
+          filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+        });
+
+        if (canceled || !filePath) {
+          throw new Error("Print canceled");
+        }
+
+        fs.writeFileSync(filePath, pdfBuffer);
+        printWindow.destroy();
+        try {
+          fs.unlinkSync(pdfPath);
+        } catch {
+          // ignore cleanup errors
+        }
+        return { success: true, path: filePath };
+      }
+
+      if (defaultPrinter?.name) {
+        printOptions.deviceName = defaultPrinter.name;
+      }
+    }
+
+    return await new Promise((resolve) => {
+      printWindow.webContents.print(
+        printOptions,
+        (success, failureReason) => {
+          printWindow.destroy();
+          try {
+            fs.unlinkSync(pdfPath);
+          } catch {
+            // ignore cleanup errors
+          }
+          resolve({
+            success,
+            error: success ? undefined : failureReason || "Print failed",
+          });
+        },
+      );
+    });
+  } catch (error) {
+    if (printWindow && !printWindow.isDestroyed()) {
+      printWindow.destroy();
+    }
+    try {
+      fs.unlinkSync(pdfPath);
+    } catch {
+      // ignore cleanup errors
+    }
+    return { success: false, error: error.message };
+  }
 });

@@ -1003,6 +1003,13 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
           : generatedPurchaseId || 0,
     );
 
+  const getPrintDocumentName = (id: number) => {
+    const safeInvoiceNo = (generatedInvoiceNo || `purchase-${id}`)
+      .toString()
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    return `purchase-invoice-${safeInvoiceNo}.pdf`;
+  };
+
   const handleDeletePurchase = async () => {
     if (!isEditMode || !purchaseId) return;
     setIsDeleting(true);
@@ -1083,7 +1090,10 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       if (existingId > 0 && !isDirty) {
         const blob =
           await purchaseService.downloadPurchaseBillPreviewPDF(existingId);
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, {
+          silent: true,
+          documentName: getPrintDocumentName(existingId),
+        });
         return;
       }
 
@@ -1109,10 +1119,16 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       if (savedId > 0) {
         const blob =
           await purchaseService.downloadPurchaseBillPreviewPDF(savedId);
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, {
+          silent: true,
+          documentName: getPrintDocumentName(savedId),
+        });
       }
-    } catch {
-      // Error already handled above
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to print";
+      if (message !== "Print canceled") {
+        toast.error(message);
+      }
     } finally {
       setIsPrinting(false);
     }

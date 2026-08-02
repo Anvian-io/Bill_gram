@@ -38,6 +38,10 @@ export interface ElectronAPI {
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateStatus: (callback: (payload: UpdateStatusPayload) => void) => () => void;
   moveCursorTo: (clientX: number, clientY: number) => Promise<{ success: boolean }>;
+  printPdf: (
+    pdfArrayBuffer: ArrayBuffer,
+    options?: { silent?: boolean; documentName?: string },
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

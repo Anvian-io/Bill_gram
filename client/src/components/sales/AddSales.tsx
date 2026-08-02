@@ -1222,6 +1222,13 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       isReturnMode ? generatedSaleId || 0 : saleId || generatedSaleId || 0,
     );
 
+  const getPrintDocumentName = (id: number) => {
+    const safeInvoiceNo = (generatedInvoiceNo || `sale-${id}`)
+      .toString()
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    return `sales-invoice-${safeInvoiceNo}.pdf`;
+  };
+
   const handleDownloadPdf = async () => {
     const idToPreview = getPreviewSaleId();
     if (idToPreview <= 0) {
@@ -1276,7 +1283,10 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       if (existingId > 0 && !isDirty) {
         const blob =
           await salesService.downloadSalesBillPreviewPDF(existingId);
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, {
+          silent: true,
+          documentName: getPrintDocumentName(existingId),
+        });
         return;
       }
 
@@ -1304,10 +1314,16 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       const savedId = getPreviewSaleId();
       if (savedId > 0) {
         const blob = await salesService.downloadSalesBillPreviewPDF(savedId);
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, {
+          silent: true,
+          documentName: getPrintDocumentName(savedId),
+        });
       }
-    } catch {
-      // Error already handled above
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to print";
+      if (message !== "Print canceled") {
+        toast.error(message);
+      }
     } finally {
       setIsPrinting(false);
     }

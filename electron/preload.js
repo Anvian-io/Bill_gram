@@ -21,4 +21,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   moveCursorTo: (clientX, clientY) =>
     ipcRenderer.invoke("move-cursor-to", { clientX, clientY }),
+  printPdf: (pdfArrayBuffer, options) =>
+    ipcRenderer.invoke("print-pdf", pdfArrayBuffer, options),
 });

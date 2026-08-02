@@ -1,43 +1,32 @@
 /**
- * Opens the browser/Electron print dialog for a PDF blob without using window.open,
- * which avoids Electron routing blob: URLs to shell.openExternal.
+ * Prints a PDF blob.
+ * In Electron, delegates to the main process so webContents.print() is used.
  */
-export function printPdfBlob(blob: Blob): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    iframe.src = url;
+export async function printPdfBlob(
+  blob: Blob,
+  options: { silent?: boolean; documentName?: string } = {},
+): Promise<void> {
+  if (window.electronAPI?.isElectron && window.electronAPI.printPdf) {
+    const result = await window.electronAPI.printPdf(
+      await blob.arrayBuffer(),
+      options,
+    );
+    if (!result.success) {
+      throw new Error(result.error || "Print failed");
+    }
+    return;
+  }
 
-    const cleanup = () => {
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        iframe.remove();
-      }, 1000);
-    };
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, "_blank");
+  if (!printWindow) {
+    URL.revokeObjectURL(url);
+    throw new Error("Unable to open print preview");
+  }
 
-    iframe.onload = () => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        cleanup();
-        resolve();
-      } catch (err) {
-        cleanup();
-        reject(err);
-      }
-    };
-
-    iframe.onerror = () => {
-      cleanup();
-      reject(new Error("Failed to load PDF for printing"));
-    };
-
-    document.body.appendChild(iframe);
-  });
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 }
