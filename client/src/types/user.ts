@@ -24,6 +24,7 @@ export interface UpdateProfileData {
   notification?: boolean;
   sound?: boolean;
   company_logo?: string | null;
+  signature?: string | null;
   upi_id?: string | null;
   company_name?: string | null;
   address?: string | null;

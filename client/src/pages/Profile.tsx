@@ -42,7 +42,6 @@ import {
   Signature, // added for signature icon
   Palette,
   Type,
-  LayoutDashboard,
 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import { userService } from "@/services/userService";
@@ -94,10 +93,6 @@ const Profile: React.FC = () => {
     setFontFamily,
     fontSize,
     setFontSize,
-    layoutMode,
-    setLayoutMode,
-    tableSize,
-    setTableSize,
   } = useTheme();
 
   // Get user from localStorage
@@ -251,11 +246,8 @@ const Profile: React.FC = () => {
         updateData.signature = signatureFilename;
       }
 
-      // Add user ID
-      updateData.userId = user.id; // or user._id
-
       // 4. Send update request (only if there are changes)
-      if (Object.keys(updateData).length > 1 || updateData.userId) {
+      if (Object.keys(updateData).length > 0) {
         const updatedUser = await userService.updateProfile(updateData);
 
         // Update localStorage
@@ -804,7 +796,8 @@ const Profile: React.FC = () => {
 
               <Separator className="my-4" />
 
-              {/* Layout Mode */}
+              {/*
+              Layout Mode and Table Density settings are intentionally hidden.
               <div>
                 <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
@@ -835,7 +828,6 @@ const Profile: React.FC = () => {
 
               <Separator className="my-4" />
 
-              {/* Table Density */}
               <div>
                 <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
@@ -855,6 +847,7 @@ const Profile: React.FC = () => {
                   Adjust the height and padding of table rows to fit more or less data on your screen.
                 </p>
               </div>
+              */}
 
             </CardContent>
           </Card>

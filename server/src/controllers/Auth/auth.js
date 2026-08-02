@@ -16,6 +16,7 @@ router.get("/check", authController.check);
 
 router.patch(
   "/profile",
+  authController.authenticateToken,
   authController.updateProfile,
 );  // <-- new route
 

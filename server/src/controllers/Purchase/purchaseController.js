@@ -22,6 +22,10 @@ import {
 import { groupByMonth } from "./purchaseHelper.js";
 import QRCode from "qrcode";
 import { launchPdfBrowser } from "../../utils/pdfBrowser.js";
+import {
+  applySharedCompanyProfile,
+  getSharedCompanyProfile,
+} from "../../utils/sharedCompanyProfile.js";
 
 const GST_DETAILS_LABELS = {
   0: "Both",
@@ -3051,12 +3055,7 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
         select: { name: true },
       })
     : null;
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -3314,12 +3313,7 @@ export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
         select: { name: true },
       })
     : null;
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -3693,12 +3687,7 @@ export const downloadGSTR2Excel = asyncHandler(async (req, res) => {
         select: { name: true },
       })
     : null;
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -4144,12 +4133,7 @@ export const downloadPurchaseGSTMonthlyExcel = asyncHandler(async (req, res) => 
   worksheet.getCell("A1").font = { bold: true, size: 14 };
   worksheet.getCell("A1").alignment = { horizontal: "left" };
 
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -4845,6 +4829,9 @@ const getPurchaseBillPreviewPayload = async (prisma, purchaseId) => {
   });
 
   if (!purchase) return null;
+
+  const sharedProfile = await getSharedCompanyProfile(prisma);
+  purchase.user = applySharedCompanyProfile(purchase.user, sharedProfile);
 
   const taxBreakdownMap = new Map();
   (purchase.items || []).forEach((item) => {

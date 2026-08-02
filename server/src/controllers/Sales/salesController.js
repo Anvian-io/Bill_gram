@@ -17,6 +17,10 @@ import { dirname } from "path";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
 import { launchPdfBrowser } from "../../utils/pdfBrowser.js";
+import {
+  applySharedCompanyProfile,
+  getSharedCompanyProfile,
+} from "../../utils/sharedCompanyProfile.js";
 
 import {
   appendGstDetailsCondition,
@@ -5975,12 +5979,7 @@ export const downloadSalesB2CExcel = asyncHandler(async (req, res) => {
   worksheet.getCell("B1").font = { bold: true, size: 14 };
   worksheet.getCell("B1").alignment = { horizontal: "left" };
 
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
   worksheet.getCell("B2").value = reportUser?.company_name || reportUser?.shop_name || "N/A";
   worksheet.getCell("A3").value = "Summary B2CS";
   worksheet.getCell("B3").value = `FROM: ${formatDate(fromDate)}`;
@@ -6230,12 +6229,7 @@ export const downloadSalesGSTExcel = asyncHandler(async (req, res) => {
         select: { companyName: true, personName: true },
       })
     : null;
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -6612,12 +6606,7 @@ export const downloadGSTR1Excel = asyncHandler(async (req, res) => {
         select: { companyName: true, personName: true },
       })
     : null;
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
 
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
@@ -7051,12 +7040,7 @@ export const downloadHSNSummaryExcel = asyncHandler(async (req, res) => {
   worksheet.getCell("A1").font = { bold: true, size: 14 };
   worksheet.getCell("A1").alignment = { horizontal: "left" };
 
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
   worksheet.getCell("A3").value = `Source: ${normalizedSource.toUpperCase()}`;
@@ -7509,12 +7493,7 @@ export const downloadSalesGSTMonthlyExcel = asyncHandler(async (req, res) => {
   worksheet.getCell("A1").font = { bold: true, size: 14 };
   worksheet.getCell("A1").alignment = { horizontal: "left" };
 
-  const reportUser = req.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { company_name: true, shop_name: true },
-      })
-    : null;
+  const reportUser = await getSharedCompanyProfile(prisma);
   worksheet.getCell("A2").value =
     `Company Name: ${reportUser?.company_name || reportUser?.shop_name || "N/A"}`;
   worksheet.getCell("A3").value = `From Date: ${formatDate(fromDate)}`;
@@ -7732,6 +7711,9 @@ const getSalesBillPreviewPayload = async (prisma, saleId) => {
   });
 
   if (!sale) return null;
+
+  const sharedProfile = await getSharedCompanyProfile(prisma);
+  sale.user = applySharedCompanyProfile(sale.user, sharedProfile);
 
   const taxBreakdownMap = new Map();
   (sale.items || []).forEach((item) => {

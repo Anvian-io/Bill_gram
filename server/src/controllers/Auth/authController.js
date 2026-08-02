@@ -8,6 +8,12 @@ import {
 } from "../../utils/index.js";
 import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
 import { createNotification as createNotificationHelper } from "../../utils/notificationHelper.js";
+import {
+  applySharedCompanyProfile,
+  getSharedCompanyProfile,
+  pickSharedCompanyProfile,
+  propagateSharedCompanyProfile,
+} from "../../utils/sharedCompanyProfile.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const SUBSCRIPTION_TEST_DURATION_DAYS = 0;
@@ -338,8 +344,11 @@ export const login = asyncHandler(async (req, res) => {
     maxAge: sessionMaxAge,
   });
 
+  const sharedProfile = await getSharedCompanyProfile(prisma);
+  const userWithSharedProfile = applySharedCompanyProfile(user, sharedProfile);
+
   // Remove password from response
-  const { password: _, ...userWithoutPassword } = user;
+  const { password: _, ...userWithoutPassword } = userWithSharedProfile;
 
   return sendResponse(
     res,
@@ -417,7 +426,16 @@ export const check = asyncHandler(async (req, res) => {
       );
     }
 
-    return sendResponse(res, true, { user }, "Token is valid", statusType.OK);
+    const sharedProfile = await getSharedCompanyProfile(prisma);
+    const userWithSharedProfile = applySharedCompanyProfile(user, sharedProfile);
+
+    return sendResponse(
+      res,
+      true,
+      { user: userWithSharedProfile },
+      "Token is valid",
+      statusType.OK,
+    );
   } catch (error) {
     console.error("Auth check error:", error);
 
@@ -609,7 +627,7 @@ export const authenticateToken = asyncHandler(async (req, res, next) => {
  */
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  // const userId = req.user.id; // from authenticateToken middleware
+  const userId = req.user.id;
   const {
     username,
     email,
@@ -622,7 +640,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
     upi_id,
     company_name,
     address,
-    userId,
   } = req.body;
 
   const prisma = getPrismaOrFail(res);
@@ -725,6 +742,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
     }
   }
 
+  const sharedProfileUpdate = pickSharedCompanyProfile(updateData);
+
   // Perform update
   const updatedUser = await prisma.user.update({
     where: { id: userId },
@@ -747,11 +766,19 @@ export const updateProfile = asyncHandler(async (req, res) => {
     },
   });
 
+  await propagateSharedCompanyProfile(prisma, sharedProfileUpdate);
+
+  const sharedProfile = await getSharedCompanyProfile(prisma);
+  const updatedUserWithSharedProfile = applySharedCompanyProfile(
+    updatedUser,
+    sharedProfile,
+  );
+
   // Convert stored filename to public URL
   const userWithImageUrl = {
-    ...updatedUser,
-    company_logo: getImageUrl(updatedUser.company_logo),
-    signature: getImageUrl(updatedUser.signature),
+    ...updatedUserWithSharedProfile,
+    company_logo: getImageUrl(updatedUserWithSharedProfile.company_logo),
+    signature: getImageUrl(updatedUserWithSharedProfile.signature),
   };
 
   return sendResponse(
