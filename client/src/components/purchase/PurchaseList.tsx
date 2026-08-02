@@ -334,7 +334,7 @@ export default function Purchase() {
   };
 
   const handleEditPurchase = async (purchase: Purchase) => {
-    navigate(`/purchase?tab=add&id=${purchase.id}`);
+    navigate(`/purchases?tab=add&id=${purchase.id}`);
   };
 
   const confirmDeletePurchase = (purchase: Purchase) => {

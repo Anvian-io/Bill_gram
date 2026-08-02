@@ -98,6 +98,7 @@ import { areaService } from "@/services/areaService";
 import { vanService } from "@/services/vanService";
 import { salesmanService } from "@/services/salesmanService";
 import { customerService } from "@/services/customerService";
+import { printPdfBlob } from "@/utils/printPdf";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -1258,11 +1259,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
     setIsPrinting(true);
     try {
       const blob = await salesService.downloadSalesBillPreviewPDF(idToPreview);
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => printWindow.print();
-      }
+      await printPdfBlob(blob);
     } catch {
       toast.error("Failed to open print preview");
     } finally {
@@ -1279,11 +1276,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       if (existingId > 0 && !isDirty) {
         const blob =
           await salesService.downloadSalesBillPreviewPDF(existingId);
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => printWindow.print();
-        }
+        await printPdfBlob(blob);
         return;
       }
 
@@ -1311,11 +1304,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       const savedId = getPreviewSaleId();
       if (savedId > 0) {
         const blob = await salesService.downloadSalesBillPreviewPDF(savedId);
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => printWindow.print();
-        }
+        await printPdfBlob(blob);
       }
     } catch {
       // Error already handled above

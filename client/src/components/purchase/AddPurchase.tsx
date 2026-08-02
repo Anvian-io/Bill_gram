@@ -88,6 +88,7 @@ import SupplierForm, {
 } from "@/components/forms/SupplierForm";
 import { supplierService } from "@/services/supplierService";
 import { useDebounce } from "@/utils/debounce";
+import { printPdfBlob } from "@/utils/printPdf";
 
 // ----------------------------------------------------------------------
 // Types & Interfaces
@@ -1067,11 +1068,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
     try {
       const blob =
         await purchaseService.downloadPurchaseBillPreviewPDF(idToPreview);
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => printWindow.print();
-      }
+      await printPdfBlob(blob);
     } catch {
       toast.error("Failed to open print preview");
     } finally {
@@ -1086,11 +1083,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       if (existingId > 0 && !isDirty) {
         const blob =
           await purchaseService.downloadPurchaseBillPreviewPDF(existingId);
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => printWindow.print();
-        }
+        await printPdfBlob(blob);
         return;
       }
 
@@ -1116,11 +1109,7 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       if (savedId > 0) {
         const blob =
           await purchaseService.downloadPurchaseBillPreviewPDF(savedId);
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => printWindow.print();
-        }
+        await printPdfBlob(blob);
       }
     } catch {
       // Error already handled above

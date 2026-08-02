@@ -162,8 +162,11 @@ function createWindow() {
   );
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: "deny" };
+    if (/^https?:\/\//i.test(url)) {
+      shell.openExternal(url);
+      return { action: "deny" };
+    }
+    return { action: "allow" };
   });
 }
 
