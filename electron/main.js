@@ -21,6 +21,8 @@ const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
 const BACKEND_START_TIMEOUT_MS = 180000;
 const BACKEND_POLL_INTERVAL_MS = 1000;
 const BACKEND_LOG_FILE = "backend-startup.log";
+const INSTALL_SETUP_STATE_FILE = "install-setup-state.json";
+const RUN_PRISMA_SCRIPTS_ON_EXISTING_INSTALL = false;
 
 function getLoadingHtml(message = "Starting your workspace...") {
   return `
@@ -298,6 +300,61 @@ function appendBackendLog(message) {
   }
 }
 
+function getInstallSetupStatePath() {
+  return path.join(app.getPath("userData"), INSTALL_SETUP_STATE_FILE);
+}
+
+function readInstallSetupState() {
+  const statePath = getInstallSetupStatePath();
+
+  if (!fs.existsSync(statePath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(statePath, "utf-8"));
+  } catch (error) {
+    appendBackendLog(`Failed to read install setup state: ${error.message}`);
+    return {};
+  }
+}
+
+function shouldRunInstallSetup() {
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+
+  const state = readInstallSetupState();
+  const isFirstInstall = state.firstInstallSetupCompleted !== true;
+
+  if (isFirstInstall) {
+    return true;
+  }
+
+  return RUN_PRISMA_SCRIPTS_ON_EXISTING_INSTALL;
+}
+
+function markInstallSetupComplete() {
+  if (process.env.NODE_ENV === "development") {
+    return;
+  }
+
+  const statePath = getInstallSetupStatePath();
+  const state = {
+    firstInstallSetupCompleted: true,
+    lastSetupVersion: app.getVersion(),
+    completedAt: new Date().toISOString(),
+  };
+
+  try {
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
+    appendBackendLog(`Install setup marked complete for v${app.getVersion()}`);
+  } catch (error) {
+    appendBackendLog(`Failed to write install setup state: ${error.message}`);
+  }
+}
+
 function checkBackendHealth() {
   return new Promise((resolve) => {
     const request = http.get(BACKEND_HEALTH_URL, (response) => {
@@ -400,10 +457,14 @@ function startBackend() {
   const dbDir = getDatabaseDirectory();
   console.log("Database directory:", dbDir);
   appendBackendLog(`Database directory: ${dbDir}`);
+  const runInstallSetup = shouldRunInstallSetup();
+  appendBackendLog(`Run install setup scripts: ${runInstallSetup}`);
 
   const backendEnv = {
     ...process.env,
     NODE_ENV: process.env.NODE_ENV || "production",
+    BILLGRAM_RUN_INSTALL_SETUP: runInstallSetup ? "true" : "false",
+    BILLGRAM_APP_VERSION: app.getVersion(),
   };
 
   if (production) {
@@ -604,6 +665,7 @@ app.whenReady().then(async () => {
       return;
     }
 
+    markInstallSetupComplete();
     loadFrontend();
   }
 

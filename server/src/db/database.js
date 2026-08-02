@@ -79,6 +79,16 @@ function runPrismaMigrations() {
   console.log("✅ Database migrations applied");
 }
 
+function shouldRunInstallSetupScripts() {
+  const configuredValue = process.env.BILLGRAM_RUN_INSTALL_SETUP;
+
+  if (configuredValue === undefined) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  return String(configuredValue).trim().toLowerCase() === "true";
+}
+
 async function ensureSubscriptionExpiryColumn(client) {
   const columns = await client.$queryRawUnsafe(`PRAGMA table_info("users")`);
   const hasSubscriptionExpiryColumn = columns.some(
@@ -156,11 +166,17 @@ export async function initializeDatabase() {
     process.env.DATABASE_URL = databaseUrl;
     console.log(`🔗 DATABASE_URL: ${databaseUrl}`);
 
-    // Regenerate client so schema changes (e.g. new columns) are available at runtime
-    runPrismaGenerate();
+    if (shouldRunInstallSetupScripts()) {
+      console.log("Running install setup scripts...");
 
-    // Apply pending Prisma migrations (creates schema on first run)
-    runPrismaMigrations();
+      // Regenerate client so schema changes (e.g. new columns) are available at runtime
+      runPrismaGenerate();
+
+      // Apply pending Prisma migrations (creates schema on first run)
+      runPrismaMigrations();
+    } else {
+      console.log("Skipping install setup scripts for faster startup");
+    }
 
     // Initialize Prisma Client
     prisma = new PrismaClient({
