@@ -46,6 +46,8 @@ class WebSocketService {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 10;
   private isConnecting: boolean = false;
+  private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
+  private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private onNotificationCallback: ((notification: Notification) => void) | null = null;
   private onConnectionChangeCallback: ((connected: boolean) => void) | null = null;
 
@@ -67,7 +69,6 @@ class WebSocketService {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('No token available for WebSocket connection');
       return;
     }
 
@@ -78,7 +79,6 @@ class WebSocketService {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         if (this.onConnectionChangeCallback) {
@@ -99,21 +99,19 @@ class WebSocketService {
           if (data.type === 'notification') {
             if (this.onNotificationCallback) {
               this.onNotificationCallback(data.data);
-            }
-          } else if (data.type === 'pong') {
-            console.log('Heartbeat received');
-          } else if (data.type === 'connected') {
-            console.log(data.message);
           }
+        } else if (data.type === 'pong') {
+        } else if (data.type === 'connected') {
+        }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
         this.isConnecting = false;
         this.ws = null;
+        this.stopHeartbeat();
         
         if (this.onConnectionChangeCallback) {
           this.onConnectionChangeCallback(false);
@@ -136,14 +134,17 @@ class WebSocketService {
 
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
-    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
 
-    setTimeout(() => {
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+    }
+
+    this.reconnectTimeoutId = setTimeout(() => {
+      this.reconnectTimeoutId = null;
       this.connect();
     }, this.reconnectInterval * this.reconnectAttempts);
   }
@@ -155,15 +156,31 @@ class WebSocketService {
   }
 
   private startHeartbeat(): void {
+    this.stopHeartbeat();
+
     // Send ping every 30 seconds to keep connection alive
-    setInterval(() => {
+    this.heartbeatIntervalId = setInterval(() => {
       if (this.isConnected()) {
         this.sendPing();
       }
     }, 30000);
   }
 
+  private stopHeartbeat(): void {
+    if (this.heartbeatIntervalId) {
+      clearInterval(this.heartbeatIntervalId);
+      this.heartbeatIntervalId = null;
+    }
+  }
+
   disconnect(): void {
+    this.stopHeartbeat();
+
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
