@@ -42,7 +42,7 @@ export default function SoftwareUpdateSettings() {
             Check for Updates
           </CardTitle>
           <CardDescription>
-            Check if a newer version of Bill Gram is available and install it here.
+            Check if a newer version of BillGram is available and install it here.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">

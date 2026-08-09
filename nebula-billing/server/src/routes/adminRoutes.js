@@ -59,13 +59,13 @@ const sendRegistrationEmail = async ({ email, name, password, expiresAt }) => {
   await transporter.sendMail({
     from: `"${env.senderName}" <${env.senderEmail}>`,
     to: email,
-    subject: "Bill Gram account credentials",
-    text: `Hello ${name}, your Bill Gram account is ready. Email: ${email}. Password: ${password}. Access valid until ${expiryLabel}.`,
+    subject: "BillGram account credentials",
+    text: `Hello ${name}, your BillGram account is ready. Email: ${email}. Password: ${password}. Access valid until ${expiryLabel}.`,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-        <h2 style="margin-bottom: 8px;">Bill Gram Account Details</h2>
+        <h2 style="margin-bottom: 8px;">BillGram Account Details</h2>
         <p>Hello ${name},</p>
-        <p>Your Bill Gram account has been created successfully.</p>
+        <p>Your BillGram account has been created successfully.</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Password:</strong> ${password}</p>
         <p><strong>Access valid until:</strong> ${expiryLabel}</p>

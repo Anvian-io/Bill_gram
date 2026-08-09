@@ -38,5 +38,5 @@ export const env = {
   sendinblueUser: process.env.SENDINBLUE_USER ?? "",
   sendinbluePassword: process.env.SENDINBLUE_PASSWORD ?? "",
   senderEmail: process.env.SENDER_EMAIL ?? "",
-  senderName: process.env.SENDER_NAME ?? "Bill Gram",
+  senderName: process.env.SENDER_NAME ?? "BillGram",
 };

@@ -34,7 +34,7 @@ function getLoadingHtml(message = "Starting your workspace...") {
           http-equiv="Content-Security-Policy"
           content="default-src 'none'; style-src 'unsafe-inline';"
         />
-        <title>Bill Gram</title>
+        <title>BillGram</title>
         <style>
           :root {
             color-scheme: light;
@@ -123,7 +123,7 @@ function getLoadingHtml(message = "Starting your workspace...") {
       <body>
         <main>
           <div class="mark">BG</div>
-          <h1>Bill Gram</h1>
+          <h1>BillGram</h1>
           <p>${message}</p>
           <div class="loader" aria-hidden="true"></div>
         </main>

@@ -28,7 +28,7 @@ export const Navbar = () => {
           </div>
           <div>
             <p className="font-display text-base font-bold text-foreground">
-              Bill Gram
+              BillGram
             </p>
             <p className="text-xs text-muted-foreground">
               Billing, stock, GST, and reporting

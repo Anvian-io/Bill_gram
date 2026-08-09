@@ -39,11 +39,11 @@ export const sendOtpEmail = async ({ email, otp, expiresInMinutes }) => {
   await transporter.sendMail({
     from: `"${env.senderName}" <${env.senderEmail}>`,
     to: email,
-    subject: "Bill Gram admin login OTP",
-    text: `Your Bill Gram OTP is ${otp}. It will expire in ${expiresInMinutes} minutes.`,
+    subject: "BillGram admin login OTP",
+    text: `Your BillGram OTP is ${otp}. It will expire in ${expiresInMinutes} minutes.`,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-        <h2 style="margin-bottom: 8px;">Bill Gram Admin Login</h2>
+        <h2 style="margin-bottom: 8px;">BillGram Admin Login</h2>
         <p>Your one-time password is:</p>
         <div style="font-size: 32px; font-weight: 700; letter-spacing: 6px; margin: 16px 0; color: #0f766e;">
           ${otp}

@@ -425,7 +425,7 @@ const AdminPage = () => {
                     </span>
                   </div>
                   <h1 className="mt-1 font-display text-2xl font-extrabold text-foreground">
-                    Bill Gram Control Center
+                    BillGram Control Center
                   </h1>
                   <p className="mt-0.5 text-sm text-text-secondary">
                     Signed in as{' '}

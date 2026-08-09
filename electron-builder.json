@@ -1,6 +1,6 @@
 {
   "appId": "com.billgram.app",
-  "productName": "Bill Gram",
+  "productName": "BillGram",
   "directories": {
     "output": "dist",
     "buildResources": "assets"

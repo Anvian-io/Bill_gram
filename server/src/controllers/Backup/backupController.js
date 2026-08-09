@@ -29,7 +29,7 @@ const BACKUP_APP_REDIRECT = process.env.BACKUP_APP_REDIRECT || "billgram://backu
 const getBillGramDir = () => path.dirname(getDatabasePath());
 
 /**
- * Zip the Bill Gram data folder into a temp file
+ * Zip the BillGram data folder into a temp file
  * Returns { zipPath, fileName }
  */
 async function zipBillGramFolder() {
@@ -245,7 +245,7 @@ export const getGoogleAuthUrl = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/backup/download
- * Creates a zip of the current Bill Gram data and returns it as a download.
+ * Creates a zip of the current BillGram data and returns it as a download.
  */
 export const downloadBackupZip = asyncHandler(async (req, res) => {
   let zipPath = null;
@@ -304,7 +304,7 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
 <html>
 <head><meta charset="utf-8"><title>Google Drive Connection</title></head>
 <body style="font-family: Arial, sans-serif; padding: 24px;">
-  <h3>Returning to Bill Gram...</h3>
+  <h3>Returning to BillGram...</h3>
   <p>If the app does not open automatically, <a href="${webUrl}">click here</a>.</p>
   <script>
     window.location.href = "${appUrl}";
@@ -671,7 +671,7 @@ async function restoreBackupFromUpload(prisma, file, userId = null) {
 
 /**
  * POST /api/backup/restore
- * Accepts a zip file upload, extracts it to the Bill Gram data folder
+ * Accepts a zip file upload, extracts it to the BillGram data folder
  */
 export const restoreFromUpload = asyncHandler(async (req, res) => {
   const prisma = getPrismaOrFail(res);

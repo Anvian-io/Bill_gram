@@ -128,7 +128,7 @@ app.post("/api/upload", upload.array("files"), (req, res) => {
 app.listen(port, () => {
   const hasLatest = fs.existsSync(path.join(releasesDir, "latest.yml"));
 
-  console.log(`Bill Gram update server running on http://localhost:${port}`);
+  console.log(`BillGram update server running on http://localhost:${port}`);
   console.log(`Release files served from http://localhost:${port}/releases`);
   console.log(`Releases directory: ${releasesDir}`);
   console.log(`Health check: http://localhost:${port}/health`);

@@ -240,7 +240,7 @@ const LoginPage = () => {
                 <Boxes className="h-5 w-5" />
               </div>
               <span className="font-display text-lg font-bold text-foreground">
-                Bill Gram
+                BillGram
               </span>
             </motion.div>
 

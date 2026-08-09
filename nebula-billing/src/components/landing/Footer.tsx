@@ -30,7 +30,7 @@ export const Footer = () => {
               </div>
               <div>
                 <p className="font-display text-lg font-bold text-foreground">
-                  Bill Gram
+                  BillGram
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Desktop operations platform
@@ -67,7 +67,7 @@ export const Footer = () => {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border/70 pt-8 text-sm text-muted-foreground md:flex-row md:items-center">
           <p>
-            Copyright {new Date().getFullYear()} Bill Gram. Built for clearer
+            Copyright {new Date().getFullYear()} BillGram. Built for clearer
             business operations.
           </p>
           <p>Billing / Inventory / Reports / GST / Backup</p>

@@ -1,7 +1,7 @@
 nsis
 !include "MUI2.nsh"
 
-Name "Bill Gram"
+Name "BillGram"
 OutFile "BillGram_Setup.exe"
 InstallDir "$PROGRAMFILES\BillGram"
 InstallDirRegKey HKCU "Software\BillGram" ""

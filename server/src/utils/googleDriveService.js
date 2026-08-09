@@ -6,7 +6,7 @@ const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
-const DRIVE_FOLDER_NAME = "Bill Gram Backups";
+const DRIVE_FOLDER_NAME = "BillGram Backups";
 const BACKUP_FILE_PREFIX = "billgram-backup-";
 
 /**
@@ -78,7 +78,7 @@ export async function getGoogleUserEmail(oAuth2Client) {
 }
 
 /**
- * Find or create the "Bill Gram Backups" folder in Google Drive
+ * Find or create the "BillGram Backups" folder in Google Drive
  */
 async function getOrCreateBackupFolder(drive) {
   // Search for existing folder

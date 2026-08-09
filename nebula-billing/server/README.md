@@ -1,4 +1,4 @@
-# Bill Gram Server
+# BillGram Server
 
 Endpoints included:
 
