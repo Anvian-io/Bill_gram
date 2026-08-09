@@ -93,6 +93,7 @@ interface ProductWithFactors {
   cartonPack: number;
   conversionFactor: number;
   productBrand: string;
+  productShortName?: string | null;
 }
 
 // ----------------------------------------------------------------------
@@ -360,7 +361,9 @@ export default function PurchaseForm({
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
-      ? `${product.productCode}, ${product.productBrand}`
+      ? `${product.productCode}, ${
+          product.productShortName || product.productBrand
+        }`
       : "Select product";
   };
 
@@ -635,8 +638,7 @@ export default function PurchaseForm({
   };
 
   // Determine if form should be read‑only (editing a non‑pending invoice)
-  const isReadOnly =
-    editingPurchase && editingPurchase.status !== "Pending" ? true : false;
+  const isReadOnly = false;
 
   // --------------------------------------------------------------------
   // Render
@@ -940,7 +942,7 @@ export default function PurchaseForm({
                                         {products.map((product) => (
                                           <CommandItem
                                             key={product.id}
-                                            value={`${product.id} ${product.productCode} ${product.productBrand}`}
+                                            value={`${product.id} ${product.productCode} ${product.productShortName || ""} ${product.productBrand}`}
                                             onSelect={() => {
                                               handleProductSelect(
                                                 index,
@@ -953,7 +955,8 @@ export default function PurchaseForm({
                                                 {product.productCode}
                                               </span>
                                               <span className="text-xs text-muted-foreground">
-                                                {product.productBrand}
+                                                {product.productShortName ||
+                                                  product.productBrand}
                                               </span>
                                             </div>
                                             <Check

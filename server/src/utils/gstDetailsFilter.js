@@ -60,10 +60,16 @@ export const getGstDetailsFilterValue = (value) => {
   return normalizeGstDetails(value);
 };
 
+export const getGstDetailsMatchingValues = (value) => {
+  const normalizedGstDetails = getGstDetailsFilterValue(value);
+  if (normalizedGstDetails === null) return null;
+  return GST_FILTER_VALUE_MAP[normalizedGstDetails] || null;
+};
+
 export const appendGstDetailsCondition = (andConditions, value) => {
   const normalizedGstDetails = getGstDetailsFilterValue(value);
   if (normalizedGstDetails !== null) {
-    const matchingValues = GST_FILTER_VALUE_MAP[normalizedGstDetails];
+    const matchingValues = getGstDetailsMatchingValues(value);
     if (matchingValues?.length) {
       andConditions.push({ gstDetails: { in: matchingValues } });
     }

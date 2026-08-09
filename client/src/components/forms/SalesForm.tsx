@@ -96,6 +96,7 @@ interface ProductWithFactors {
   cartonPack: number;
   conversionFactor: number;
   productBrand: string;
+  productShortName?: string | null;
 }
 
 interface Customer {
@@ -507,7 +508,9 @@ export default function SalesForm({
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
-      ? `${product.productCode}, ${product.productBrand}`
+      ? `${product.productCode}, ${
+          product.productShortName || product.productBrand
+        }`
       : "Select product";
   };
 
@@ -760,8 +763,7 @@ export default function SalesForm({
     toast.error("Please fix all validation errors before submitting.");
   };
 
-  const isReadOnly =
-    editingSales && editingSales.status !== "Pending" ? true : false;
+  const isReadOnly = false;
 
   // --------------------------------------------------------------------
   // Render
@@ -1334,7 +1336,7 @@ export default function SalesForm({
                                         {products.map((product) => (
                                           <CommandItem
                                             key={product.id}
-                                            value={`${product.id} ${product.productCode} ${product.description}`}
+                                            value={`${product.id} ${product.productCode} ${product.productShortName || ""} ${product.description}`}
                                             onSelect={() => {
                                               handleProductSelect(
                                                 index,
@@ -1347,7 +1349,8 @@ export default function SalesForm({
                                                 {product.productCode}
                                               </span>
                                               <span className="text-xs text-muted-foreground">
-                                                {product.productBrand}
+                                                {product.productShortName ||
+                                                  product.productBrand}
                                               </span>
                                             </div>
                                             <Check

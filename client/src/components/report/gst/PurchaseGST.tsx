@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RefreshCw,
   FileSpreadsheet,
   ChevronsUpDown,
@@ -53,6 +54,7 @@ import type {
 import GstDetailsFilter from "@/components/common/GstDetailsFilter";
 import { useServerInfiniteScroll } from "@/hooks/useServerInfiniteScroll";
 import ReportInfiniteScrollFooter from "@/components/report/shared/ReportInfiniteScrollFooter";
+import { useReportRowSelection } from "@/hooks/useReportRowSelection";
 
 // ----------------------------------------------------------------------
 // Date Utilities
@@ -73,7 +75,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
-    sortBy: "invoiceDate",
+    sortBy: "invoiceNo",
     sortOrder: "desc",
   });
 
@@ -81,6 +83,16 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   const [toDateValue, setToDateValue] = useState<string | null>(null);
 
   const { suppliers } = useActiveLists();
+
+  const {
+    selectedRowIds,
+    handleSelectAll,
+    handleSelectRow,
+    applySelectedIds,
+    isAllSelected,
+    isSomeSelected,
+    clearSelection,
+  } = useReportRowSelection<PurchaseGSTInvoice>((item) => item.purchaseId);
 
   const filterResetKey = JSON.stringify({
     supplierId: filters.supplierId,
@@ -152,6 +164,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     value: PurchaseGSTFilters[K],
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
+    clearSelection();
   };
 
   const clearFilters = () => {
@@ -160,11 +173,12 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
       gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
-      sortBy: "invoiceDate",
+      sortBy: "invoiceNo",
       sortOrder: "desc",
     });
     setFromDateValue(null);
     setToDateValue(null);
+    clearSelection();
   };
 
   const clearFilter = (filterName: keyof PurchaseGSTFilters) => {
@@ -179,6 +193,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
     }));
     if (filterName === "fromDate") setFromDateValue(null);
     if (filterName === "toDate") setToDateValue(null);
+    clearSelection();
   };
 
   // ----------------------------------------------------------------------
@@ -187,14 +202,14 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
   const handleDownloadExcel = async () => {
     setIsDownloading(true);
     try {
-      const blob = await purchaseService.downloadPurchaseGSTExcel({
+      const blob = await purchaseService.downloadPurchaseGSTExcel(applySelectedIds({
         supplierId: filters.supplierId,
         gstDetails: filters.gstDetails,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder,
-      });
+      }));
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -481,6 +496,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
             {loadedCount > 0
               ? `Loaded ${loadedCount}${total ? ` of ${total}` : ""} invoices`
               : "No invoices"}
+            {selectedRowIds.length > 0 && ` (${selectedRowIds.length} selected)`}
             {activeFiltersCount > 0 && " (filtered)"}
           </p>
         </motion.div>
@@ -494,6 +510,21 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
                 <Table className="">
                   <TableHeader>
                     <TableRow className="bg-secondary/50">
+                      <TableHead className="w-10 text-center">
+                        <Checkbox
+                          className="report-checkbox"
+                          checked={
+                            isAllSelected(reportData)
+                              ? true
+                              : isSomeSelected(reportData)
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(checked as boolean, reportData)
+                          }
+                        />
+                      </TableHead>
                       <TableHead className="font-semibold">
                         Invoice No
                       </TableHead>
@@ -544,7 +575,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
                           // animate={{ opacity: 1 }}
                           // exit={{ opacity: 0 }}
                         >
-                          <TableCell colSpan={14} className="text-center py-12">
+                          <TableCell colSpan={15} className="text-center py-12">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
                               <p className="text-muted-foreground">
@@ -561,7 +592,7 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
                           exit={{ opacity: 0 }}
                         >
                           <TableCell
-                            colSpan={14}
+                            colSpan={15}
                             className="text-center py-8 text-muted-foreground"
                           >
                             <motion.div
@@ -594,9 +625,25 @@ export default function PurchaseGST({ isCollapsed }: { isCollapsed: boolean }) {
                               visible: { opacity: 1, y: 0 },
                               hover: { backgroundColor: "rgba(0,0,0,0.02)" },
                             }}
-                            className="group border"
+                            className={cn(
+                              "group border",
+                              selectedRowIds.includes(item.purchaseId) &&
+                                "report-row-selected",
+                            )}
                             layout
                           >
+                            <TableCell className="text-center">
+                              <Checkbox
+                                className="report-checkbox"
+                                checked={selectedRowIds.includes(item.purchaseId)}
+                                onCheckedChange={(checked) =>
+                                  handleSelectRow(
+                                    item.purchaseId,
+                                    checked as boolean,
+                                  )
+                                }
+                              />
+                            </TableCell>
                             <TableCell className="font-mono font-medium text-primary">
                               {item.invoiceId}
                             </TableCell>

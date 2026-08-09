@@ -31,6 +31,15 @@ const appendGstDetailsParam = (
   }
 };
 
+const appendSelectedIdsParam = (
+  params: URLSearchParams,
+  selectedIds?: number[],
+) => {
+  if (selectedIds && selectedIds.length > 0) {
+    params.append("selectedIds", selectedIds.join(","));
+  }
+};
+
 export const purchaseService = {
   // Get all purchases with pagination & filters
   async getPurchases(
@@ -386,6 +395,7 @@ export const purchaseService = {
           params.append("toDate", filters.toDate.toISOString());
         if (filters.sortBy) params.append("sortBy", filters.sortBy);
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+        appendSelectedIdsParam(params, filters.selectedIds);
       }
 
       const response = await apiClient.get<ApiResponse<PurchaseGSTResponse>>(
@@ -414,6 +424,7 @@ export const purchaseService = {
           params.append("toDate", filters.toDate.toISOString());
         if (filters.sortBy) params.append("sortBy", filters.sortBy);
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+        appendSelectedIdsParam(params, filters.selectedIds);
       }
 
       const response = await apiClient.get<Blob>(
@@ -476,6 +487,7 @@ export const purchaseService = {
           params.append("toDate", filters.toDate.toISOString());
         if (filters.sortBy) params.append("sortBy", filters.sortBy);
         if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+        appendSelectedIdsParam(params, filters.selectedIds);
       }
 
       const response = await apiClient.get<Blob>(

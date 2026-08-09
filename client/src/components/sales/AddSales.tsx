@@ -112,6 +112,7 @@ interface ProductWithFactors {
   cartonPack: number;
   conversionFactor: number;
   productBrand: string;
+  productShortName?: string | null;
 }
 
 interface Customer {
@@ -674,7 +675,9 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   const findProductName = (productId: number) => {
     const product = findProduct(productId);
     return product
-      ? `${product.productCode}, ${product.productBrand}`
+      ? `${product.productCode}, ${
+          product.productShortName || product.productBrand
+        }`
       : "Select product";
   };
 
@@ -870,7 +873,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
   // Row management
   // --------------------------------------------------------------------
   const isRowEditable = (index: number) =>
-    index === 0 || editingRowIndex === index;
+    isEditMode || index === 0 || editingRowIndex === index;
 
   const focusField = (fieldId: string, delay = 100) => {
     focusFieldById(fieldId, delay);
@@ -914,6 +917,14 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
       return;
     }
     proceedAddProductRow();
+  };
+
+  const handleConfirmProductRow = (index: number) => {
+    if (index === 0) {
+      confirmProductRow();
+      return;
+    }
+    setEditingRowIndex(null);
   };
 
   const addProductRow = () => {
@@ -2109,7 +2120,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         {products.map((product) => (
                                           <CommandItem
                                             key={product.id}
-                                            value={`${product.id} ${product.productCode} ${product.description}`}
+                                            value={`${product.id} ${product.productCode} ${product.productShortName || ""} ${product.description}`}
                                             onSelect={() => {
                                               handleProductSelect(
                                                 index,
@@ -2122,7 +2133,8 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                                 {product.productCode}
                                               </span>
                                               <span className="text-xs text-muted-foreground">
-                                                {product.productBrand}
+                                                {product.productShortName ||
+                                                  product.productBrand}
                                               </span>
                                             </div>
                                             <Check
@@ -2396,7 +2408,7 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
 
                                 {/* Actions */}
                                 <TableCell>
-                                  {isEntryRow ? (
+                                  {editable ? (
                                     <div className="flex gap-1">
                                       <Button
                                         type="button"
@@ -2420,13 +2432,19 @@ export default function AddSales({ mode = "sale" }: AddSalesProps) {
                                         type="button"
                                         variant="default"
                                         size="sm"
-                                        onClick={confirmProductRow}
+                                        onClick={() =>
+                                          handleConfirmProductRow(index)
+                                        }
                                         onKeyDown={(e) =>
                                           handleConfirmKeyDown(e, index)
                                         }
                                         disabled={isSubmitting}
                                         className="h-7 w-7 p-0"
-                                        title="Add product"
+                                        title={
+                                          isEntryRow
+                                            ? "Add product"
+                                            : "Done editing"
+                                        }
                                       >
                                         <Check className="h-3.5 w-3.5" />
                                       </Button>

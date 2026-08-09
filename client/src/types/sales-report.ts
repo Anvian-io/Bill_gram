@@ -406,6 +406,7 @@ export interface SalesGSTFilters {
   toDate?: Date;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  selectedIds?: number[];
   page?: number;
   limit?: number;
 }

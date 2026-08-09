@@ -39,6 +39,15 @@ const appendGstDetailsParam = (
   }
 };
 
+const appendSelectedIdsParam = (
+  params: URLSearchParams,
+  selectedIds?: number[],
+) => {
+  if (selectedIds && selectedIds.length > 0) {
+    params.append("selectedIds", selectedIds.join(","));
+  }
+};
+
 export const salesService = {
   async getSales(
     page: number = 1,
@@ -504,6 +513,7 @@ export const salesService = {
       if (filters.sortOrder) {
         params.append("sortOrder", filters.sortOrder);
       }
+      appendSelectedIdsParam(params, filters.selectedIds);
 
       const response = await apiClient.get<ApiResponse<SalesGSTResponse>>(
         `/sales/sales-gst?${params.toString()}`,
@@ -539,6 +549,7 @@ export const salesService = {
       if (filters.sortOrder) {
         params.append("sortOrder", filters.sortOrder);
       }
+      appendSelectedIdsParam(params, filters.selectedIds);
 
       const response = await apiClient.get<Blob>(
         `/sales/gst/excel?${params.toString()}`,
@@ -607,6 +618,7 @@ export const salesService = {
       if (filters.sortOrder) {
         params.append("sortOrder", filters.sortOrder);
       }
+      appendSelectedIdsParam(params, filters.selectedIds);
 
       const response = await apiClient.get<Blob>(
         `/sales/gstr1/excel?${params.toString()}`,

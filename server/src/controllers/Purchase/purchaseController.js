@@ -16,6 +16,7 @@ import { formatDateForFilename } from "../../helper/commonHelper.js";
 import { appendSelectedIdsCondition } from "../../utils/reportQueryHelpers.js";
 import {
   appendGstDetailsCondition,
+  getGstDetailsMatchingValues,
   getGstDetailsFilterValue,
   normalizeGstDetails,
 } from "../../utils/gstDetailsFilter.js";
@@ -2516,8 +2517,9 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
     gstDetails,
     fromDate,
     toDate,
-    sortBy = "invoiceDate",
+    sortBy = "invoiceNo",
     sortOrder = "desc",
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -2536,6 +2538,7 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
     andConditions.push({ supplierId: parseInt(supplierId) });
   }
   appendGstDetailsCondition(andConditions, gstDetails);
+  appendSelectedIdsCondition(andConditions, selectedIds);
 
   // Date range filter
   if (fromDate || toDate) {
@@ -2565,7 +2568,7 @@ export const getPurchaseWithGST = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceNo"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -2789,8 +2792,9 @@ export const getPurchaseB2B = asyncHandler(async (req, res) => {
     gstDetails,
     fromDate,
     toDate,
-    sortBy = "invoiceDate",
+    sortBy = "invoiceNo",
     sortOrder = "desc",
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -2807,6 +2811,7 @@ export const getPurchaseB2B = asyncHandler(async (req, res) => {
     andConditions.push({ supplierId: parseInt(supplierId) });
   }
   appendGstDetailsCondition(andConditions, gstDetails);
+  appendSelectedIdsCondition(andConditions, selectedIds);
   if (fromDate || toDate) {
     const dateFilter = {};
     if (fromDate) {
@@ -2832,7 +2837,7 @@ export const getPurchaseB2B = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceNo"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -2928,8 +2933,9 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
     gstDetails,
     fromDate,
     toDate,
-    sortBy = "invoiceDate",
+    sortBy = "invoiceNo",
     sortOrder = "desc",
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -2943,6 +2949,7 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
     andConditions,
     gstDetails,
   );
+  appendSelectedIdsCondition(andConditions, selectedIds);
   if (fromDate || toDate) {
     const dateFilter = {};
     if (fromDate) {
@@ -2968,7 +2975,7 @@ export const downloadPurchaseB2BExcel = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceNo"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -3207,8 +3214,9 @@ export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
     gstDetails,
     fromDate,
     toDate,
-    sortBy = "invoiceDate",
+    sortBy = "invoiceNo",
     sortOrder = "desc",
+    selectedIds,
   } = req.query;
 
   const prisma = getPrismaOrFail(res);
@@ -3223,6 +3231,7 @@ export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
     andConditions,
     gstDetails,
   );
+  appendSelectedIdsCondition(andConditions, selectedIds);
 
   if (fromDate || toDate) {
     const dateFilter = {};
@@ -3249,7 +3258,7 @@ export const downloadPurchaseGSTExcel = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceNo"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -3548,7 +3557,7 @@ export const downloadGSTR2Excel = asyncHandler(async (req, res) => {
     gstDetails,
     fromDate,
     toDate,
-    sortBy = "invoiceDate",
+    sortBy = "invoiceNo",
     sortOrder = "desc",
   } = req.query;
 
@@ -3590,7 +3599,7 @@ export const downloadGSTR2Excel = asyncHandler(async (req, res) => {
     "updatedAt",
   ];
   const orderBy = {
-    [validSortFields.includes(sortBy) ? sortBy : "invoiceDate"]:
+    [validSortFields.includes(sortBy) ? sortBy : "invoiceNo"]:
       sortOrder === "asc" ? "asc" : "desc",
   };
 
@@ -3880,8 +3889,9 @@ export const getPurchaseGSTMonthly = asyncHandler(async (req, res) => {
     },
   };
   const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
-  if (normalizedGstDetails !== null) {
-    where.gstDetails = normalizedGstDetails;
+  const gstDetailsMatchingValues = getGstDetailsMatchingValues(gstDetails);
+  if (gstDetailsMatchingValues) {
+    where.gstDetails = { in: gstDetailsMatchingValues };
   }
 
   // Fetch all invoices in date range with related data
@@ -4029,8 +4039,9 @@ export const downloadPurchaseGSTMonthlyExcel = asyncHandler(async (req, res) => 
     },
   };
   const normalizedGstDetails = getGstDetailsFilterValue(gstDetails);
-  if (normalizedGstDetails !== null) {
-    where.gstDetails = normalizedGstDetails;
+  const gstDetailsMatchingValues = getGstDetailsMatchingValues(gstDetails);
+  if (gstDetailsMatchingValues) {
+    where.gstDetails = { in: gstDetailsMatchingValues };
   }
 
   const invoices = await prisma.purchaseInvoice.findMany({

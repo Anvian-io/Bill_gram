@@ -139,7 +139,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
     gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
-    sortBy: "invoiceDate",
+    sortBy: "invoiceNo",
     sortOrder: "desc",
   });
   const { customers } = useActiveLists();
@@ -242,7 +242,7 @@ export default function GSTR1({ isCollapsed }: { isCollapsed: boolean }) {
       gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
-      sortBy: "invoiceDate",
+      sortBy: "invoiceNo",
       sortOrder: "desc",
     });
     setFromDateValue(null);

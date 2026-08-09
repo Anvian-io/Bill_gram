@@ -515,6 +515,9 @@ export default function ProductInventory() {
     return unit ? unit.symbol : "";
   };
 
+  const getProductDisplayName = (product: Product) =>
+    product.productShortName || product.productBrand || product.productCode;
+
   // Calculate start and end index for display
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
@@ -1132,6 +1135,8 @@ export default function ProductInventory() {
                               product.totalOpeningStock ||
                               calculateTotalOpeningStock(product);
                             const status = getProductStatus(totalOpeningStock);
+                            const productDisplayName =
+                              getProductDisplayName(product);
 
                             return (
                               <TableRow
@@ -1150,7 +1155,7 @@ export default function ProductInventory() {
                                           src={getFullImageUrl(
                                             product.mainImage,
                                           )}
-                                          alt={product.productBrand}
+                                          alt={productDisplayName}
                                           className="h-full w-full object-cover"
                                         />
                                       </motion.div>
@@ -1166,9 +1171,9 @@ export default function ProductInventory() {
                                     <div className="min-w-0 flex-1">
                                       <p
                                         className="font-medium truncate"
-                                        title={product.productBrand}
+                                        title={productDisplayName}
                                       >
-                                        {product.productBrand}
+                                        {productDisplayName}
                                       </p>
                                       <p
                                         className="text-xs text-muted-foreground truncate"
@@ -1464,7 +1469,7 @@ export default function ProductInventory() {
         mainText="Delete Product"
         subText={
           productToDelete
-            ? `Are you sure you want to delete "${productToDelete.productBrand}"? This action cannot be undone.`
+            ? `Are you sure you want to delete "${getProductDisplayName(productToDelete)}"? This action cannot be undone.`
             : "This action cannot be undone."
         }
         nextButtonText="Delete"

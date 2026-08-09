@@ -63,7 +63,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
     gstDetails: undefined,
     fromDate: undefined,
     toDate: undefined,
-    sortBy: "invoiceDate",
+    sortBy: "invoiceNo",
     sortOrder: "desc",
   });
 
@@ -162,7 +162,7 @@ export default function B2B({ isCollapsed }: { isCollapsed: boolean }) {
       gstDetails: undefined,
       fromDate: undefined,
       toDate: undefined,
-      sortBy: "invoiceDate",
+      sortBy: "invoiceNo",
       sortOrder: "desc",
     });
     setFromDateValue(null);
