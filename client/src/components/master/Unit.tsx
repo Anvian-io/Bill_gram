@@ -41,6 +41,7 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
+  useInitialAnimationFlag,
 } from "../FramerVariants";
 import { unitService } from "@/services/unitService";
 import { type Unit, type UnitFormData } from "@/types/unit";
@@ -63,6 +64,7 @@ interface UnitsResponse {
 
 export default function UnitComponent() {
   const { layoutMode } = useTheme();
+  const shouldAnimateRows = useInitialAnimationFlag();
   // State for units
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -679,7 +681,7 @@ export default function UnitComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence initial={shouldAnimateRows}>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
@@ -700,7 +702,7 @@ export default function UnitComponent() {
                       ) : displayUnits.length === 0 ? (
                         <motion.tr
                           key="no-data"
-                          initial={{ opacity: 0 }}
+                          initial={shouldAnimateRows ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
@@ -711,7 +713,11 @@ export default function UnitComponent() {
                           >
                             <motion.div
                               className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
+                              initial={
+                                shouldAnimateRows
+                                  ? { scale: 0.9, opacity: 0 }
+                                  : false
+                              }
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ delay: 0.1 }}
                             >
@@ -737,7 +743,7 @@ export default function UnitComponent() {
                           <motion.tr
                             key={unit.id}
                             custom={index}
-                            initial="hidden"
+                            initial={shouldAnimateRows ? "hidden" : false}
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}

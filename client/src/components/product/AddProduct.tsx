@@ -67,7 +67,6 @@ import { CustomDateInput } from "@/components/custom_ui/CustomDateInput";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckIsExpanded } from "@/utils/commonHelper";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Define the schema for form validation
 const productSchema = z.object({
@@ -647,88 +646,12 @@ export default function AddProduct() {
   // Determine if new product button should be visible
   const canShowNewProduct = isEditMode;
 
-  // Skeleton Loading Component
-  const SkeletonCard = () => (
-    <Card>
-      <CardContent className="p-4 space-y-4">
-        <Skeleton className="h-6 w-32 mb-4" />
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const SkeletonBatch = () => (
-    <div className="mb-4 border rounded-lg overflow-hidden bg-card">
-      <div className="bg-muted/50 px-4 py-3 border-b">
-        <Skeleton className="h-5 w-32" />
-      </div>
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className={`mx-auto ${
-          CheckIsExpanded()
-            ? "max-w-5xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-9xl"
-            : "max-w-9xl lg:max-w-5xl xl:max-w-8xl 2xl:max-w-10xl"
-        }`}>
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div>
-                <Skeleton className="h-8 w-48 mb-2" />
-                <Skeleton className="h-4 w-64" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-24" />
-            </div>
-          </div>
-
-          {/* Main Grid Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="space-y-4">
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-            <div className="space-y-4">
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-            <div className="space-y-4">
-              <SkeletonCard />
-            </div>
-          </div>
-
-          {/* Batch Section Skeleton */}
-          <div className="border-t pt-6 mt-6">
-            <Skeleton className="h-7 w-32 mb-4" />
-            <SkeletonBatch />
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="flex items-center gap-3 rounded-md border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Loading product details...
         </div>
       </div>
     );

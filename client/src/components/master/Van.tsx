@@ -41,6 +41,7 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
+  useInitialAnimationFlag,
 } from "../FramerVariants";
 import { vanService } from "@/services/vanService";
 import { type Van, type VanFilters } from "@/types/van";
@@ -63,6 +64,7 @@ interface VansResponse {
 
 export default function VanComponent() {
   const { layoutMode } = useTheme();
+  const shouldAnimateRows = useInitialAnimationFlag();
   // State for vans
   const [vans, setVans] = useState<Van[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -769,7 +771,7 @@ export default function VanComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence initial={shouldAnimateRows}>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
@@ -790,7 +792,7 @@ export default function VanComponent() {
                       ) : displayVans.length === 0 ? (
                         <motion.tr
                           key="no-data"
-                          initial={{ opacity: 0 }}
+                          initial={shouldAnimateRows ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
@@ -801,7 +803,11 @@ export default function VanComponent() {
                           >
                             <motion.div
                               className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
+                              initial={
+                                shouldAnimateRows
+                                  ? { scale: 0.9, opacity: 0 }
+                                  : false
+                              }
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ delay: 0.1 }}
                             >
@@ -827,7 +833,7 @@ export default function VanComponent() {
                           <motion.tr
                             key={van.id}
                             custom={index}
-                            initial="hidden"
+                            initial={shouldAnimateRows ? "hidden" : false}
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}

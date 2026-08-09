@@ -45,6 +45,7 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
+  useInitialAnimationFlag,
 } from "../FramerVariants";
 import { accountService } from "@/services/accountService";
 import { type Account, type AccountFilters } from "@/types/account";
@@ -67,6 +68,7 @@ interface AccountsResponse {
 
 export default function AccountComponent() {
   const { layoutMode } = useTheme();
+  const shouldAnimateRows = useInitialAnimationFlag();
   // State for accounts
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -679,7 +681,7 @@ export default function AccountComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence initial={shouldAnimateRows}>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
@@ -700,7 +702,7 @@ export default function AccountComponent() {
                       ) : displayAccounts.length === 0 ? (
                         <motion.tr
                           key="no-data"
-                          initial={{ opacity: 0 }}
+                          initial={shouldAnimateRows ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
@@ -711,7 +713,11 @@ export default function AccountComponent() {
                           >
                             <motion.div
                               className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
+                              initial={
+                                shouldAnimateRows
+                                  ? { scale: 0.9, opacity: 0 }
+                                  : false
+                              }
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ delay: 0.1 }}
                             >
@@ -737,7 +743,7 @@ export default function AccountComponent() {
                           <motion.tr
                             key={account.id}
                             custom={index}
-                            initial="hidden"
+                            initial={shouldAnimateRows ? "hidden" : false}
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}

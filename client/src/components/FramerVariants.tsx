@@ -1,3 +1,15 @@
+import { useEffect, useRef } from "react";
+
+export function useInitialAnimationFlag() {
+  const hasRenderedRef = useRef(false);
+
+  useEffect(() => {
+    hasRenderedRef.current = true;
+  }, []);
+
+  return !hasRenderedRef.current;
+}
+
 // Animation variants
 export const containerVariants = {
   hidden: { opacity: 0 },

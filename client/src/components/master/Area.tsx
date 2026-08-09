@@ -40,6 +40,7 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
+  useInitialAnimationFlag,
 } from "../FramerVariants";
 import { areaService } from "@/services/areaService";
 import { type Area, type AreaFilters } from "@/types/area";
@@ -62,6 +63,7 @@ interface AreasResponse {
 
 export default function AreaComponent() {
   const { layoutMode } = useTheme();
+  const shouldAnimateRows = useInitialAnimationFlag();
   // State for areas
   const [areas, setAreas] = useState<Area[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -724,7 +726,7 @@ export default function AreaComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence initial={shouldAnimateRows}>
                       {isLoading ? (
                         <motion.tr
                           key="loading"
@@ -745,7 +747,7 @@ export default function AreaComponent() {
                       ) : displayAreas.length === 0 ? (
                         <motion.tr
                           key="no-data"
-                          initial={{ opacity: 0 }}
+                          initial={shouldAnimateRows ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
@@ -756,7 +758,11 @@ export default function AreaComponent() {
                           >
                             <motion.div
                               className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
+                              initial={
+                                shouldAnimateRows
+                                  ? { scale: 0.9, opacity: 0 }
+                                  : false
+                              }
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ delay: 0.1 }}
                             >
@@ -782,7 +788,7 @@ export default function AreaComponent() {
                           <motion.tr
                             key={area.id}
                             custom={index}
-                            initial="hidden"
+                            initial={shouldAnimateRows ? "hidden" : false}
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}

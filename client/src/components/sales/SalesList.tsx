@@ -35,7 +35,6 @@ import { cn } from "@/lib/utils";
 import {
   containerVariants,
   itemVariants,
-  rowVariants,
 } from "../FramerVariants";
 import { toast } from "sonner";
 import { refreshActiveLists } from "@/utils/refreshActiveLists";

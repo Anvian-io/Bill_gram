@@ -35,7 +35,6 @@ import { cn } from "@/lib/utils";
 import {
   containerVariants,
   itemVariants,
-  rowVariants,
   badgeVariants,
 } from "@/components/FramerVariants";
 import { toast } from "sonner";

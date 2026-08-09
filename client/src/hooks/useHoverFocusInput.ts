@@ -1,23 +1,12 @@
 import * as React from "react";
-import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
-
-const SKIP_HOVER_FOCUS_TYPES = new Set([
-  "checkbox",
-  "radio",
-  "file",
-  "hidden",
-  "submit",
-  "button",
-  "reset",
-]);
 
 export function shouldSkipHoverFocus(
   type?: string,
   props?: { alwaysEditable?: boolean; "data-no-hover-focus"?: boolean },
 ): boolean {
-  if (props?.alwaysEditable || props?.["data-no-hover-focus"]) return true;
-  if (type && SKIP_HOVER_FOCUS_TYPES.has(type)) return true;
-  return false;
+  void type;
+  void props;
+  return true;
 }
 
 export function useHoverFocusInput(
@@ -32,7 +21,6 @@ export function useHoverFocusInput(
   const skip = shouldSkipHoverFocus(type, options);
   const [hoverActive, setHoverActive] = React.useState(false);
   const ref = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
 
   const isEditable =
     skip || options?.disabled
@@ -53,25 +41,13 @@ export function useHoverFocusInput(
     }
   }, [skip]);
 
-  const isHoverBlockedByModal = React.useCallback(() => {
-    return document.body.dataset.modalBlockingHover === "true";
+  const handleMouseEnter = React.useCallback(() => {
+    return;
   }, []);
 
-  const handleMouseEnter = React.useCallback(() => {
-    if (options?.disabled) return;
-    if (isHoverBlockedByModal()) return;
-
-    scheduleOpen(() => {
-      if (isHoverBlockedByModal()) return;
-      if (document.body.dataset.floatingDropdownOpen === "true") return;
-      if (!skip) setHoverActive(true);
-    });
-  }, [isHoverBlockedByModal, options?.disabled, scheduleOpen, skip]);
-
   const handleMouseLeave = React.useCallback(() => {
-    cancelScheduledOpen();
-    deactivate();
-  }, [cancelScheduledOpen, deactivate]);
+    return;
+  }, []);
 
   const handleFocus = React.useCallback(() => {
     if (!skip) setHoverActive(true);

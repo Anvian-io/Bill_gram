@@ -6,40 +6,10 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const DropdownMenuHoverContext = React.createContext<{
-  handleMouseEnter: () => void;
-  handleMouseLeave: () => void;
-} | null>(null);
-
 function DropdownMenu({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  const [open, setOpen] = React.useState(false);
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const handleMouseEnter = React.useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  }, []);
-
-  const handleMouseLeave = React.useCallback(() => {
-    timeoutRef.current = setTimeout(() => {
-      setOpen(false);
-    }, 150);
-  }, []);
-
-  return (
-    <DropdownMenuHoverContext.Provider value={{ handleMouseEnter, handleMouseLeave }}>
-      <DropdownMenuPrimitive.Root 
-        open={props.open !== undefined ? props.open : open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          props.onOpenChange?.(o);
-        }}
-        {...props} 
-      />
-    </DropdownMenuHoverContext.Provider>
-  )
+  return <DropdownMenuPrimitive.Root {...props} />
 }
 
 function DropdownMenuPortal({
@@ -53,12 +23,9 @@ function DropdownMenuPortal({
 function DropdownMenuTrigger({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  const hoverCtx = React.useContext(DropdownMenuHoverContext);
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
-      onMouseEnter={hoverCtx?.handleMouseEnter}
-      onMouseLeave={hoverCtx?.handleMouseLeave}
       {...props}
     />
   )
@@ -69,14 +36,11 @@ function DropdownMenuContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
-  const hoverCtx = React.useContext(DropdownMenuHoverContext);
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
-        onMouseEnter={hoverCtx?.handleMouseEnter}
-        onMouseLeave={hoverCtx?.handleMouseLeave}
         className={cn(
           "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
           className

@@ -46,6 +46,7 @@ import {
   headerVariants,
   buttonVariants,
   badgeVariants,
+  useInitialAnimationFlag,
 } from "../FramerVariants";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { customerService } from "@/services/customerService";
@@ -73,6 +74,7 @@ interface CustomersResponse {
 
 export default function CustomerComponent() {
   const { layoutMode } = useTheme();
+  const shouldAnimateRows = useInitialAnimationFlag();
   // State for customers
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -941,7 +943,7 @@ export default function CustomerComponent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <AnimatePresence>
+                    <AnimatePresence initial={shouldAnimateRows}>
                       {isLoading ? (
                         <motion.tr key="loading">
                           <TableCell colSpan={9} className="text-center py-12">
@@ -956,7 +958,7 @@ export default function CustomerComponent() {
                       ) : displayCustomers.length === 0 ? (
                         <motion.tr
                           key="no-data"
-                          initial={{ opacity: 0 }}
+                          initial={shouldAnimateRows ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
@@ -967,7 +969,11 @@ export default function CustomerComponent() {
                           >
                             <motion.div
                               className="flex flex-col items-center justify-center"
-                              initial={{ scale: 0.9, opacity: 0 }}
+                              initial={
+                                shouldAnimateRows
+                                  ? { scale: 0.9, opacity: 0 }
+                                  : false
+                              }
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ delay: 0.1 }}
                             >
@@ -993,7 +999,7 @@ export default function CustomerComponent() {
                           <motion.tr
                             key={customer.id}
                             custom={index}
-                            initial="hidden"
+                            initial={shouldAnimateRows ? "hidden" : false}
                             animate="visible"
                             whileHover="hover"
                             variants={rowVariants}

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 
 const DEFAULT_OPTIONS = [5, 10, 20, 50] as const;
 
@@ -23,7 +22,6 @@ export function ItemsPerPageSelect({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
 
   const clearCloseTimeout = useCallback(() => {
     if (closeTimeoutRef.current) {
@@ -31,12 +29,6 @@ export function ItemsPerPageSelect({
       closeTimeoutRef.current = null;
     }
   }, []);
-
-  const openMenu = useCallback(() => {
-    if (disabled) return;
-    clearCloseTimeout();
-    setOpen(true);
-  }, [clearCloseTimeout, disabled]);
 
   const closeMenu = useCallback(() => {
     clearCloseTimeout();
@@ -70,13 +62,7 @@ export function ItemsPerPageSelect({
     <div
       ref={containerRef}
       className={cn("relative w-fit", className)}
-      onMouseEnter={() => {
-        if (!disabled) {
-          scheduleOpen(openMenu);
-        }
-      }}
       onMouseLeave={() => {
-        cancelScheduledOpen();
         if (open) {
           scheduleClose();
         }

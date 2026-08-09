@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useFloatingPanelPosition } from "@/hooks/useFloatingPanelPosition";
-import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
-import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 
 interface CustomDateInputProps {
   value: string | null | undefined;
@@ -37,31 +35,25 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
     inputRef.current?.blur();
   }, []);
 
-  const { cancelDismiss, dismissOnLeave } = useHoverPanelDismiss(
-    anchorRef,
-    panelRef,
-    dismiss,
-  );
-  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
-
   const openCalendar = useCallback(() => {
     if (disabled) return;
-    cancelDismiss();
     setCalendarOpen(true);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [cancelDismiss, disabled]);
+  }, [disabled]);
 
-  const handleMouseEnter = () => {
-    cancelDismiss();
-    scheduleOpen(openCalendar);
-  };
-
-  const handleMouseLeave = () => {
-    cancelScheduledOpen();
-    if (calendarOpen) {
-      dismissOnLeave();
-    }
-  };
+  const closeCalendarAfterBlur = useCallback(() => {
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (anchorRef.current?.contains(activeElement) ||
+          panelRef.current?.contains(activeElement))
+      ) {
+        return;
+      }
+      setCalendarOpen(false);
+    });
+  }, []);
 
   const parseDateFromString = (str: string): Date | null => {
     if (!str.trim()) return null;
@@ -183,8 +175,6 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
       className="overflow-hidden rounded-md border bg-popover p-0 text-popover-foreground shadow-lg ring-1 ring-border/50"
       data-floating-panel
       onMouseDown={(event) => event.preventDefault()}
-      onMouseEnter={cancelDismiss}
-      onMouseLeave={dismissOnLeave}
     >
       <Calendar
         mode="single"
@@ -201,8 +191,6 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
       {label && <label className="text-sm font-medium block">{label}</label>}
       <div
         className="flex gap-2"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         data-hover-date
       >
         <div ref={anchorRef} className="relative flex-1">
@@ -215,10 +203,7 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
             className="pr-10"
             disabled={disabled}
             data-hover-date-input
-            onFocus={() => {
-              cancelDismiss();
-              setCalendarOpen(true);
-            }}
+            onFocus={openCalendar}
             onBlur={() => {
               if (inputValue && !value) {
                 const parsedDate = parseDateFromString(inputValue);
@@ -228,6 +213,7 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
                   });
                 }
               }
+              closeCalendarAfterBlur();
             }}
           />
           <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

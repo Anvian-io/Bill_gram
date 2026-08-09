@@ -10,8 +10,6 @@ import {
   INLINE_SEARCH_PANEL_MIN_WIDTH,
   useFloatingPanelPosition,
 } from "@/hooks/useFloatingPanelPosition";
-import { useHoverPanelDismiss } from "@/hooks/useHoverPanelDismiss";
-import { useHoverOpenDelay } from "@/hooks/useHoverOpenDelay";
 import {
   resolvePortalContainer,
   setFloatingDropdownOpen,
@@ -62,6 +60,9 @@ export function InlineSearchField({
   children,
   ...ariaProps
 }: InlineSearchFieldProps & React.AriaAttributes) {
+  void onMouseEnter;
+  void onMouseLeave;
+
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [internalSearch, setInternalSearch] = React.useState("");
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
@@ -96,34 +97,11 @@ export function InlineSearchField({
     setSearchValue("");
   }, [setOpen, setSearchValue]);
 
-  const { cancelDismiss, dismissOnLeave } = useHoverPanelDismiss(
-    anchorRef,
-    panelRef,
-    closeDropdown,
-  );
-  const { scheduleOpen, cancelScheduledOpen } = useHoverOpenDelay();
-
   const openDropdown = React.useCallback(() => {
     if (disabled) return;
-    if (document.body.dataset.modalBlockingHover === "true") return;
     setOpen(true);
     focusInput();
   }, [disabled, focusInput, setOpen]);
-
-  const handleMouseEnter = React.useCallback(() => {
-    if (document.body.dataset.modalBlockingHover === "true") return;
-    cancelDismiss();
-    onMouseEnter?.();
-    scheduleOpen(openDropdown);
-  }, [cancelDismiss, onMouseEnter, openDropdown, scheduleOpen]);
-
-  const handleMouseLeave = React.useCallback(() => {
-    cancelScheduledOpen();
-    onMouseLeave?.();
-    if (open) {
-      dismissOnLeave();
-    }
-  }, [cancelScheduledOpen, dismissOnLeave, onMouseLeave, open]);
 
   React.useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
@@ -244,8 +222,6 @@ export function InlineSearchField({
       className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg ring-1 ring-border/50"
       data-inline-search-panel
       data-floating-panel
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={dismissOnLeave}
     >
       <Command shouldFilter={shouldFilter}>
         <CommandList className="max-h-[240px]">
@@ -259,8 +235,6 @@ export function InlineSearchField({
   return (
     <div
       className={cn("relative w-full", className)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       data-inline-search
       data-inline-search-open={open ? "true" : undefined}
     >
