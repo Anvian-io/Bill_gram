@@ -81,7 +81,7 @@ export interface Product {
   productCompany: ProductCompany | null;
   saleUnit: string | null;
   cartonPack: number;
-  innerPack: string | null;
+  innerPack: number | null;
   packagingBasic: boolean;
   packagingMRP: boolean;
   insuranceTaxBasic: boolean;
@@ -128,7 +128,7 @@ export interface ProductFormData {
   productCompanyId: number;
   saleUnit: string;
   cartonPack: number;
-  innerPack?: string;
+  innerPack?: number;
 
   // Packaging & Insurance Tax
   packagingBasic: boolean;

@@ -97,7 +97,7 @@ const productSchema = z.object({
   productCompanyId: z.coerce.number().min(1, "Product company is required"),
   saleUnit: z.string().min(1, "Sale unit is required"),
   cartonPack: z.coerce.number().positive("Carton pack must be positive"),
-  innerPack: z.string().optional(),
+  innerPack: z.coerce.number().min(0, "Inner pack cannot be negative").optional(),
 
   // Packaging
   packagingBasic: z.boolean().default(false),
@@ -173,7 +173,7 @@ const defaultValues: ProductFormData = {
   productCompanyId: 0,
   saleUnit: "",
   cartonPack: 0,
-  innerPack: "",
+  innerPack: 0,
   packagingBasic: true,
   packagingMRP: false,
   insuranceTaxBasic: true,
@@ -221,7 +221,7 @@ const sampleData: ProductFormData = {
   productCompanyId: 1,
   saleUnit: "2",
   cartonPack: 0,
-  innerPack: "6 units per inner pack",
+  innerPack: 6,
   packagingBasic: true,
   packagingMRP: true,
   insuranceTaxBasic: false,
@@ -364,7 +364,7 @@ export default function ProductFormModal({
         productCompanyId: editingProduct.productCompanyId || 0,
         saleUnit: editingProduct.saleUnit || "",
         cartonPack: editingProduct.cartonPack ?? 0,
-        innerPack: editingProduct.innerPack || "",
+        innerPack: editingProduct.innerPack ?? 0,
         packagingBasic: editingProduct.packagingBasic,
         packagingMRP: editingProduct.packagingMRP,
         insuranceTaxBasic: editingProduct.insuranceTaxBasic,
@@ -1269,9 +1269,9 @@ export default function ProductFormModal({
                           <FormItem>
                             <FormControl>
                               <Input
+                                type="number"
                                 placeholder="Inner Pack"
-                                {...field}
-                                value={field.value || ""}
+                                {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
                             </FormControl>

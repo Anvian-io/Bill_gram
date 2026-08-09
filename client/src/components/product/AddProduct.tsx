@@ -92,7 +92,7 @@ const productSchema = z.object({
   productCompanyId: z.coerce.number().min(1, "Product company is required"),
   saleUnit: z.string().min(1, "Sale unit is required"),
   cartonPack: z.coerce.number().positive("Carton pack must be positive"),
-  innerPack: z.string().optional(),
+  innerPack: z.coerce.number().min(0, "Inner pack cannot be negative").optional(),
 
   // Packaging
   packagingBasic: z.boolean().default(false),
@@ -160,7 +160,7 @@ const defaultValues: FormData = {
   productCompanyId: 0,
   saleUnit: "",
   cartonPack: 0,
-  innerPack: "",
+  innerPack: 0,
   packagingBasic: true,
   packagingMRP: false,
   insuranceTaxBasic: true,
@@ -311,7 +311,7 @@ export default function AddProduct() {
       productCompanyId: productData.productCompanyId || 0,
       saleUnit: productData.saleUnit || "",
       cartonPack: productData.cartonPack ?? 0,
-      innerPack: productData.innerPack || "",
+      innerPack: productData.innerPack ?? 0,
       packagingBasic: productData.packagingBasic,
       packagingMRP: productData.packagingMRP,
       insuranceTaxBasic: productData.insuranceTaxBasic,
@@ -1344,9 +1344,9 @@ export default function AddProduct() {
                             <FormLabel className={fieldLabelClass}>Inner Pack</FormLabel>
                             <FormControl>
                               <Input
+                                type="number"
                                 placeholder="Enter inner pack"
-                                {...field}
-                                value={field.value || ""}
+                                {...bindNumberField(field)}
                                 disabled={isSubmitting}
                               />
                             </FormControl>

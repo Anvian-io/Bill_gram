@@ -1,15 +1,22 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require("electron");
-const path = require("path");
-const { pathToFileURL } = require("url");
-const { spawn, execFileSync } = require("child_process");
-const { moveSystemCursor, resolveScreenPoint } = require("./moveCursor");
-const fs = require("fs");
-const os = require("os");
-const http = require("http");
-const { autoUpdater } = require("electron-updater");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  dialog,
+  screen,
+} = require('electron');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const { spawn, execFileSync } = require('child_process');
+const { moveSystemCursor, resolveScreenPoint } = require('./moveCursor');
+const fs = require('fs');
+const os = require('os');
+const http = require('http');
+const { autoUpdater } = require('electron-updater');
 
 app.disableHardwareAcceleration();
-app.commandLine.appendSwitch("disable-gpu");
+app.commandLine.appendSwitch('disable-gpu');
 
 let mainWindow;
 let backendProcess;
@@ -17,14 +24,14 @@ let updatesEnabled = false;
 let lastUpdateStatus = null;
 let frontendUpdateCheckScheduled = false;
 
-const BACKEND_HEALTH_URL = "http://127.0.0.1:3001/api/health";
+const BACKEND_HEALTH_URL = 'http://127.0.0.1:3001/api/health';
 const BACKEND_START_TIMEOUT_MS = 180000;
 const BACKEND_POLL_INTERVAL_MS = 1000;
-const BACKEND_LOG_FILE = "backend-startup.log";
-const INSTALL_SETUP_STATE_FILE = "install-setup-state.json";
-const RUN_PRISMA_SCRIPTS_ON_EXISTING_INSTALL = false;
+const BACKEND_LOG_FILE = 'backend-startup.log';
+const INSTALL_SETUP_STATE_FILE = 'install-setup-state.json';
+const RUN_PRISMA_SCRIPTS_ON_EXISTING_INSTALL = true;
 
-function getLoadingHtml(message = "Starting your workspace...") {
+function getLoadingHtml(message = 'Starting your workspace...') {
   return `
     <!doctype html>
     <html>
@@ -141,13 +148,13 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, "../assets/icon.ico"),
+    icon: path.join(__dirname, '../assets/icon.ico'),
     show: true,
   });
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     loadFrontend();
     mainWindow.webContents.openDevTools();
   } else {
@@ -158,24 +165,24 @@ function createWindow() {
 
   // Log any load failures
   mainWindow.webContents.on(
-    "did-fail-load",
+    'did-fail-load',
     (event, errorCode, errorDescription) => {
-      console.error("Failed to load:", errorCode, errorDescription);
+      console.error('Failed to load:', errorCode, errorDescription);
     },
   );
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) {
       shell.openExternal(url);
-      return { action: "deny" };
+      return { action: 'deny' };
     }
-    return { action: "allow" };
+    return { action: 'allow' };
   });
 }
 
 function resolveDataDirectory() {
-  if (process.env.NODE_ENV === "development") {
-    return path.join(__dirname, "../server/data");
+  if (process.env.NODE_ENV === 'development') {
+    return path.join(__dirname, '../server/data');
   }
 
   const platform = os.platform();
@@ -183,21 +190,21 @@ function resolveDataDirectory() {
 
   const resolveDir = (name) => {
     switch (platform) {
-      case "win32":
-        return path.join(homeDir, "AppData", "Local", name);
-      case "darwin":
-        return path.join(homeDir, "Library", "Application Support", name);
-      case "linux":
-        return path.join(homeDir, ".config", name);
+      case 'win32':
+        return path.join(homeDir, 'AppData', 'Local', name);
+      case 'darwin':
+        return path.join(homeDir, 'Library', 'Application Support', name);
+      case 'linux':
+        return path.join(homeDir, '.config', name);
       default:
         return path.join(homeDir, `.${name.toLowerCase()}`);
     }
   };
 
-  const newDir = resolveDir("BillGram");
-  const legacyDir = resolveDir("Shopkeeper");
-  const newDbPath = path.join(newDir, "billgram.db");
-  const legacyDbPath = path.join(legacyDir, "shopkeeper.db");
+  const newDir = resolveDir('BillGram');
+  const legacyDir = resolveDir('Shopkeeper');
+  const newDbPath = path.join(newDir, 'shopkeeper.db');
+  const legacyDbPath = path.join(legacyDir, 'shopkeeper.db');
 
   if (fs.existsSync(newDbPath)) {
     return newDir;
@@ -211,13 +218,13 @@ function resolveDataDirectory() {
 }
 
 function getDatabaseFilePath() {
-  if (process.env.NODE_ENV === "development") {
-    return path.join(resolveDataDirectory(), "shopkeeper.db");
+  if (process.env.NODE_ENV === 'development') {
+    return path.join(resolveDataDirectory(), 'shopkeeper.db');
   }
 
   const dbDir = resolveDataDirectory();
-  const legacyDbPath = path.join(dbDir, "shopkeeper.db");
-  const newDbPath = path.join(dbDir, "billgram.db");
+  const legacyDbPath = path.join(dbDir, 'shopkeeper.db');
+  const newDbPath = path.join(dbDir, 'shopkeeper.db');
 
   if (fs.existsSync(legacyDbPath) && !fs.existsSync(newDbPath)) {
     return legacyDbPath;
@@ -235,15 +242,15 @@ function getDatabaseDirectory() {
 }
 
 function getCredentialDirectory() {
-  if (process.env.NODE_ENV === "development") {
-    return path.join(__dirname, "../client");
+  if (process.env.NODE_ENV === 'development') {
+    return path.join(__dirname, '../client');
   }
 
-  return path.join(app.getPath("userData"), "client");
+  return path.join(app.getPath('userData'), 'client');
 }
 
 function getCredentialStorePath() {
-  return path.join(getCredentialDirectory(), "registered-credentials.json");
+  return path.join(getCredentialDirectory(), 'registered-credentials.json');
 }
 
 function ensureCredentialDirectory() {
@@ -262,11 +269,11 @@ function readCredentialStore() {
   }
 
   try {
-    const raw = fs.readFileSync(storePath, "utf-8");
+    const raw = fs.readFileSync(storePath, 'utf-8');
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed?.users) ? parsed : { users: [] };
   } catch (error) {
-    console.error("Failed to read credential store:", error);
+    console.error('Failed to read credential store:', error);
     return { users: [] };
   }
 }
@@ -274,7 +281,7 @@ function readCredentialStore() {
 function writeCredentialStore(store) {
   ensureCredentialDirectory();
   const storePath = getCredentialStorePath();
-  fs.writeFileSync(storePath, JSON.stringify(store, null, 2), "utf-8");
+  fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf-8');
   return storePath;
 }
 
@@ -283,7 +290,7 @@ function delay(ms) {
 }
 
 function getBackendLogPath() {
-  return path.join(app.getPath("userData"), BACKEND_LOG_FILE);
+  return path.join(app.getPath('userData'), BACKEND_LOG_FILE);
 }
 
 function appendBackendLog(message) {
@@ -293,15 +300,15 @@ function appendBackendLog(message) {
     fs.appendFileSync(
       logPath,
       `[${new Date().toISOString()}] ${message}${os.EOL}`,
-      "utf-8",
+      'utf-8',
     );
   } catch (error) {
-    console.error("Failed to write backend startup log:", error);
+    console.error('Failed to write backend startup log:', error);
   }
 }
 
 function getInstallSetupStatePath() {
-  return path.join(app.getPath("userData"), INSTALL_SETUP_STATE_FILE);
+  return path.join(app.getPath('userData'), INSTALL_SETUP_STATE_FILE);
 }
 
 function readInstallSetupState() {
@@ -312,7 +319,7 @@ function readInstallSetupState() {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(statePath, "utf-8"));
+    return JSON.parse(fs.readFileSync(statePath, 'utf-8'));
   } catch (error) {
     appendBackendLog(`Failed to read install setup state: ${error.message}`);
     return {};
@@ -320,7 +327,7 @@ function readInstallSetupState() {
 }
 
 function shouldRunInstallSetup() {
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     return true;
   }
 
@@ -335,7 +342,7 @@ function shouldRunInstallSetup() {
 }
 
 function markInstallSetupComplete() {
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     return;
   }
 
@@ -348,7 +355,7 @@ function markInstallSetupComplete() {
 
   try {
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
-    fs.writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
     appendBackendLog(`Install setup marked complete for v${app.getVersion()}`);
   } catch (error) {
     appendBackendLog(`Failed to write install setup state: ${error.message}`);
@@ -367,7 +374,7 @@ function checkBackendHealth() {
       resolve(false);
     });
 
-    request.on("error", () => {
+    request.on('error', () => {
       resolve(false);
     });
   });
@@ -378,14 +385,14 @@ function loadFrontend() {
     return;
   }
 
-  if (process.env.NODE_ENV === "development") {
-    mainWindow.loadURL("http://localhost:5173");
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:5173');
     return;
   }
 
-  const indexPath = path.join(__dirname, "../client/dist/index.html");
-  console.log("Loading frontend from:", indexPath);
-  console.log("File exists:", fs.existsSync(indexPath));
+  const indexPath = path.join(__dirname, '../client/dist/index.html');
+  console.log('Loading frontend from:', indexPath);
+  console.log('File exists:', fs.existsSync(indexPath));
   mainWindow.loadFile(indexPath);
   scheduleUpdateCheckAfterFrontendLoad();
 }
@@ -394,7 +401,7 @@ function showStartupError(message) {
   const fullMessage = `${message}\n\nStartup log:\n${getBackendLogPath()}`;
 
   if (!mainWindow || mainWindow.isDestroyed()) {
-    dialog.showErrorBox("Backend Error", fullMessage);
+    dialog.showErrorBox('Backend Error', fullMessage);
     return;
   }
 
@@ -403,7 +410,7 @@ function showStartupError(message) {
       getLoadingHtml(`${message} Please restart the app.`),
     )}`,
   );
-  dialog.showErrorBox("Backend Error", fullMessage);
+  dialog.showErrorBox('Backend Error', fullMessage);
 }
 
 async function waitForBackendReady(timeoutMs = BACKEND_START_TIMEOUT_MS) {
@@ -425,79 +432,79 @@ function startBackend() {
   let backendCwd;
   let command;
   let args;
-  const production = process.env.NODE_ENV !== "development";
+  const production = process.env.NODE_ENV !== 'development';
 
   if (!production) {
-    backendPath = path.join(__dirname, "../server/src/server.js");
-    backendCwd = path.join(__dirname, "../server");
-    command = "node";
+    backendPath = path.join(__dirname, '../server/src/server.js');
+    backendCwd = path.join(__dirname, '../server');
+    command = 'node';
     args = [backendPath];
   } else {
-    const bundledServerDir = path.join(process.resourcesPath, "server");
-    backendPath = path.join(bundledServerDir, "src/server.js");
+    const bundledServerDir = path.join(process.resourcesPath, 'server');
+    backendPath = path.join(bundledServerDir, 'src/server.js');
     backendCwd = bundledServerDir;
     command = process.execPath;
     args = [backendPath];
   }
 
-  console.log("Starting backend from:", backendPath);
+  console.log('Starting backend from:', backendPath);
   appendBackendLog(`Starting backend from: ${backendPath}`);
   appendBackendLog(`Backend working directory: ${backendCwd}`);
 
   if (!fs.existsSync(backendPath)) {
-    console.error("Backend file not found at:", backendPath);
+    console.error('Backend file not found at:', backendPath);
     appendBackendLog(`Backend file not found at: ${backendPath}`);
     dialog.showErrorBox(
-      "Backend Error",
+      'Backend Error',
       `Backend server file not found at: ${backendPath}`,
     );
     return false;
   }
 
   const dbDir = getDatabaseDirectory();
-  console.log("Database directory:", dbDir);
+  console.log('Database directory:', dbDir);
   appendBackendLog(`Database directory: ${dbDir}`);
   const runInstallSetup = shouldRunInstallSetup();
   appendBackendLog(`Run install setup scripts: ${runInstallSetup}`);
 
   const backendEnv = {
     ...process.env,
-    NODE_ENV: process.env.NODE_ENV || "production",
-    BILLGRAM_RUN_INSTALL_SETUP: runInstallSetup ? "true" : "false",
+    NODE_ENV: process.env.NODE_ENV || 'production',
+    BILLGRAM_RUN_INSTALL_SETUP: runInstallSetup ? 'true' : 'false',
     BILLGRAM_APP_VERSION: app.getVersion(),
   };
 
   if (production) {
-    backendEnv.ELECTRON_RUN_AS_NODE = "1";
+    backendEnv.ELECTRON_RUN_AS_NODE = '1';
   }
 
   backendProcess = spawn(command, args, {
     cwd: backendCwd,
     windowsHide: true,
     env: backendEnv,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   backendProcess.unref();
 
-  backendProcess.stdout?.on("data", (data) => {
+  backendProcess.stdout?.on('data', (data) => {
     appendBackendLog(data.toString().trimEnd());
   });
 
-  backendProcess.stderr?.on("data", (data) => {
+  backendProcess.stderr?.on('data', (data) => {
     appendBackendLog(data.toString().trimEnd());
   });
 
-  backendProcess.on("error", (err) => {
-    console.error("Failed to start backend:", err);
+  backendProcess.on('error', (err) => {
+    console.error('Failed to start backend:', err);
     appendBackendLog(`Failed to start backend: ${err.stack || err.message}`);
     dialog.showErrorBox(
-      "Backend Error",
+      'Backend Error',
       `Failed to start backend server.\n\nStartup log:\n${getBackendLogPath()}`,
     );
   });
 
-  backendProcess.on("exit", (code, signal) => {
+  backendProcess.on('exit', (code, signal) => {
     appendBackendLog(`Backend exited with code ${code}, signal ${signal}`);
     if (code !== 0) {
       console.error(`Backend exited with code ${code}`);
@@ -511,7 +518,7 @@ function sendUpdateStatus(payload) {
   lastUpdateStatus = payload;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("update-status", payload);
+    mainWindow.webContents.send('update-status', payload);
   }
 }
 
@@ -525,9 +532,9 @@ function scheduleUpdateCheckAfterFrontendLoad() {
   const runCheck = () => {
     setTimeout(() => {
       autoUpdater.checkForUpdates().catch((error) => {
-        console.error("Update check failed:", error);
+        console.error('Update check failed:', error);
         sendUpdateStatus({
-          status: "error",
+          status: 'error',
           message: error.message,
         });
       });
@@ -539,7 +546,7 @@ function scheduleUpdateCheckAfterFrontendLoad() {
   }
 
   if (mainWindow.webContents.isLoading()) {
-    mainWindow.webContents.once("did-finish-load", runCheck);
+    mainWindow.webContents.once('did-finish-load', runCheck);
     return;
   }
 
@@ -547,96 +554,96 @@ function scheduleUpdateCheckAfterFrontendLoad() {
 }
 
 function getUpdateServerUrl() {
-  const envUrl = String(process.env.UPDATE_SERVER_URL ?? "").trim();
+  const envUrl = String(process.env.UPDATE_SERVER_URL ?? '').trim();
 
   if (envUrl) {
-    return envUrl.replace(/\/$/, "");
+    return envUrl.replace(/\/$/, '');
   }
 
-  const configPath = path.join(__dirname, "update-config.json");
+  const configPath = path.join(__dirname, 'update-config.json');
 
   if (!fs.existsSync(configPath)) {
     return null;
   }
 
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    const updateServerUrl = String(config.updateServerUrl ?? "").trim();
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const updateServerUrl = String(config.updateServerUrl ?? '').trim();
 
     if (!updateServerUrl) {
       return null;
     }
 
-    return updateServerUrl.replace(/\/$/, "");
+    return updateServerUrl.replace(/\/$/, '');
   } catch (error) {
-    console.error("Failed to read update config:", error);
+    console.error('Failed to read update config:', error);
     return null;
   }
 }
 
 function setupAutoUpdater() {
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     return;
   }
 
   const updateServerUrl = getUpdateServerUrl();
 
   if (!updateServerUrl) {
-    console.warn("Update server URL not configured. Skipping auto-update.");
+    console.warn('Update server URL not configured. Skipping auto-update.');
     return;
   }
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
 
-  if (process.platform === "win32") {
+  if (process.platform === 'win32') {
     autoUpdater.verifyUpdateCodeSignature = async () => null;
   }
 
   autoUpdater.setFeedURL({
-    provider: "generic",
+    provider: 'generic',
     url: updateServerUrl,
   });
   updatesEnabled = true;
 
-  autoUpdater.on("checking-for-update", () => {
-    sendUpdateStatus({ status: "checking" });
+  autoUpdater.on('checking-for-update', () => {
+    sendUpdateStatus({ status: 'checking' });
   });
 
-  autoUpdater.on("update-available", (info) => {
+  autoUpdater.on('update-available', (info) => {
     sendUpdateStatus({
-      status: "available",
+      status: 'available',
       version: info.version,
       releaseNotes: info.releaseNotes,
     });
   });
 
-  autoUpdater.on("update-not-available", (info) => {
+  autoUpdater.on('update-not-available', (info) => {
     sendUpdateStatus({
-      status: "not-available",
+      status: 'not-available',
       version: info.version,
     });
   });
 
-  autoUpdater.on("error", (error) => {
+  autoUpdater.on('error', (error) => {
     sendUpdateStatus({
-      status: "error",
+      status: 'error',
       message: error.message,
     });
   });
 
-  autoUpdater.on("download-progress", (progress) => {
+  autoUpdater.on('download-progress', (progress) => {
     sendUpdateStatus({
-      status: "downloading",
+      status: 'downloading',
       percent: progress.percent,
       transferred: progress.transferred,
       total: progress.total,
     });
   });
 
-  autoUpdater.on("update-downloaded", (info) => {
+  autoUpdater.on('update-downloaded', (info) => {
     sendUpdateStatus({
-      status: "downloaded",
+      status: 'downloaded',
       version: info.version,
     });
   });
@@ -646,7 +653,7 @@ app.whenReady().then(async () => {
   createWindow();
   setupAutoUpdater();
 
-  if (process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== 'development') {
     const alreadyReady = await waitForBackendReady(1000);
 
     if (!alreadyReady) {
@@ -661,7 +668,7 @@ app.whenReady().then(async () => {
     const backendReady = await waitForBackendReady();
 
     if (!backendReady) {
-      showStartupError("The backend server did not finish starting.");
+      showStartupError('The backend server did not finish starting.');
       return;
     }
 
@@ -669,13 +676,13 @@ app.whenReady().then(async () => {
     loadFrontend();
   }
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     if (backendProcess) {
       backendProcess.kill();
     }
@@ -685,40 +692,40 @@ app.on("window-all-closed", () => {
 
 // IPC Handlers
 
-ipcMain.handle("get-database-location", async () => getDatabaseFilePath());
+ipcMain.handle('get-database-location', async () => getDatabaseFilePath());
 
-ipcMain.handle("backup-database", async () => {
+ipcMain.handle('backup-database', async () => {
   try {
     const dbPath = getDatabaseFilePath();
-    const backupDir = path.join(app.getPath("documents"), "BillGramBackups");
+    const backupDir = path.join(app.getPath('documents'), 'BillGramBackups');
 
     // Check if database exists
     if (!fs.existsSync(dbPath)) {
-      return { success: false, error: "Database file not found" };
+      return { success: false, error: 'Database file not found' };
     }
 
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupPath = path.join(backupDir, `backup-${timestamp}.db`);
 
     fs.copyFileSync(dbPath, backupPath);
     return { success: true, path: backupPath };
   } catch (error) {
-    console.error("Backup failed:", error);
+    console.error('Backup failed:', error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle("restore-database", async (event, backupPath) => {
+ipcMain.handle('restore-database', async (event, backupPath) => {
   try {
     const dbDir = getDatabaseDirectory();
     const dbPath = getDatabaseFilePath();
 
     if (!fs.existsSync(backupPath)) {
-      return { success: false, error: "Backup file not found" };
+      return { success: false, error: 'Backup file not found' };
     }
 
     // Create a backup of current database before restoring
@@ -745,12 +752,12 @@ ipcMain.handle("restore-database", async (event, backupPath) => {
       throw restoreError;
     }
   } catch (error) {
-    console.error("Restore failed:", error);
+    console.error('Restore failed:', error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle("open-database-folder", async () => {
+ipcMain.handle('open-database-folder', async () => {
   try {
     const dbDir = getDatabaseDirectory();
     shell.openPath(dbDir);
@@ -760,16 +767,18 @@ ipcMain.handle("open-database-folder", async () => {
   }
 });
 
-ipcMain.handle("save-user-credential", async (_event, credential) => {
+ipcMain.handle('save-user-credential', async (_event, credential) => {
   try {
-    const email = String(credential?.email ?? "").trim().toLowerCase();
-    const password = String(credential?.password ?? "").trim();
-    const expiresAt = String(credential?.expiresAt ?? "").trim();
+    const email = String(credential?.email ?? '')
+      .trim()
+      .toLowerCase();
+    const password = String(credential?.password ?? '').trim();
+    const expiresAt = String(credential?.expiresAt ?? '').trim();
 
     if (!email || !password || !expiresAt) {
       return {
         success: false,
-        error: "Email, password, and expiry are required to save credentials",
+        error: 'Email, password, and expiry are required to save credentials',
       };
     }
 
@@ -796,17 +805,19 @@ ipcMain.handle("save-user-credential", async (_event, credential) => {
       record: nextRecord,
     };
   } catch (error) {
-    console.error("Failed to save credentials:", error);
+    console.error('Failed to save credentials:', error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle("get-user-credential", async (_event, emailInput) => {
+ipcMain.handle('get-user-credential', async (_event, emailInput) => {
   try {
-    const email = String(emailInput ?? "").trim().toLowerCase();
+    const email = String(emailInput ?? '')
+      .trim()
+      .toLowerCase();
 
     if (!email) {
-      return { success: false, error: "Email is required" };
+      return { success: false, error: 'Email is required' };
     }
 
     const store = readCredentialStore();
@@ -818,12 +829,12 @@ ipcMain.handle("get-user-credential", async (_event, emailInput) => {
       record,
     };
   } catch (error) {
-    console.error("Failed to read credentials:", error);
+    console.error('Failed to read credentials:', error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle("move-cursor-to", async (event, { clientX, clientY }) => {
+ipcMain.handle('move-cursor-to', async (event, { clientX, clientY }) => {
   try {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) {
@@ -833,7 +844,7 @@ ipcMain.handle("move-cursor-to", async (event, { clientX, clientY }) => {
     const screenPoint = resolveScreenPoint(win, clientX, clientY, screen);
 
     win.webContents.sendInputEvent({
-      type: "mouseMove",
+      type: 'mouseMove',
       x: Math.round(clientX),
       y: Math.round(clientY),
     });
@@ -841,22 +852,22 @@ ipcMain.handle("move-cursor-to", async (event, { clientX, clientY }) => {
     moveSystemCursor(screenPoint.x, screenPoint.y);
     return { success: true };
   } catch (error) {
-    console.error("Failed to move cursor:", error);
+    console.error('Failed to move cursor:', error);
     return { success: false };
   }
 });
 
-ipcMain.handle("get-app-version", async () => app.getVersion());
+ipcMain.handle('get-app-version', async () => app.getVersion());
 
-ipcMain.handle("get-update-status", async () => lastUpdateStatus);
+ipcMain.handle('get-update-status', async () => lastUpdateStatus);
 
-ipcMain.handle("check-for-updates", async () => {
-  if (process.env.NODE_ENV === "development") {
-    return { success: false, error: "Updates are disabled in development" };
+ipcMain.handle('check-for-updates', async () => {
+  if (process.env.NODE_ENV === 'development') {
+    return { success: false, error: 'Updates are disabled in development' };
   }
 
   if (!updatesEnabled) {
-    return { success: false, error: "Update server is not configured" };
+    return { success: false, error: 'Update server is not configured' };
   }
 
   try {
@@ -870,13 +881,13 @@ ipcMain.handle("check-for-updates", async () => {
   }
 });
 
-ipcMain.handle("download-update", async () => {
-  if (process.env.NODE_ENV === "development") {
-    return { success: false, error: "Updates are disabled in development" };
+ipcMain.handle('download-update', async () => {
+  if (process.env.NODE_ENV === 'development') {
+    return { success: false, error: 'Updates are disabled in development' };
   }
 
   if (!updatesEnabled) {
-    return { success: false, error: "Update server is not configured" };
+    return { success: false, error: 'Update server is not configured' };
   }
 
   try {
@@ -887,31 +898,29 @@ ipcMain.handle("download-update", async () => {
   }
 });
 
-ipcMain.handle("install-update", async () => {
-  if (process.env.NODE_ENV === "development") {
-    return { success: false, error: "Updates are disabled in development" };
+ipcMain.handle('install-update', async () => {
+  if (process.env.NODE_ENV === 'development') {
+    return { success: false, error: 'Updates are disabled in development' };
   }
 
   if (!updatesEnabled) {
-    return { success: false, error: "Update server is not configured" };
+    return { success: false, error: 'Update server is not configured' };
   }
 
   autoUpdater.quitAndInstall(false, true);
   return { success: true };
 });
 
-ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
+ipcMain.handle('print-pdf', async (_event, pdfArrayBuffer, options = {}) => {
   const rawDocumentName =
-    typeof options.documentName === "string" ? options.documentName.trim() : "";
-  const safeDocumentName = (
-    rawDocumentName || `billgram-print-${Date.now()}`
-  )
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_")
+    typeof options.documentName === 'string' ? options.documentName.trim() : '';
+  const safeDocumentName = (rawDocumentName || `billgram-print-${Date.now()}`)
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
     .slice(0, 120);
   const pdfPath = path.join(
-    app.getPath("temp"),
-    safeDocumentName.toLowerCase().endsWith(".pdf")
+    app.getPath('temp'),
+    safeDocumentName.toLowerCase().endsWith('.pdf')
       ? safeDocumentName
       : `${safeDocumentName}.pdf`,
   );
@@ -935,10 +944,13 @@ ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
     });
 
     await new Promise((resolve, reject) => {
-      printWindow.webContents.once("did-finish-load", resolve);
-      printWindow.webContents.once("did-fail-load", (_evt, _code, description) => {
-        reject(new Error(description || "Failed to load PDF for printing"));
-      });
+      printWindow.webContents.once('did-finish-load', resolve);
+      printWindow.webContents.once(
+        'did-fail-load',
+        (_evt, _code, description) => {
+          reject(new Error(description || 'Failed to load PDF for printing'));
+        },
+      );
       void printWindow.loadURL(pathToFileURL(pdfPath).href);
     });
 
@@ -948,7 +960,7 @@ ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
     if (printOptions.silent) {
       const printers = await printWindow.webContents.getPrintersAsync();
       if (printers.length === 0) {
-        throw new Error("No printer is available");
+        throw new Error('No printer is available');
       }
 
       const defaultPrinter = printers.find((printer) => printer.isDefault);
@@ -958,23 +970,23 @@ ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
         defaultPrinter?.description,
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
       const isVirtualPdfPrinter =
-        defaultPrinterText.includes("print to pdf") ||
-        defaultPrinterText.includes("xps") ||
-        defaultPrinterText.includes("onenote");
+        defaultPrinterText.includes('print to pdf') ||
+        defaultPrinterText.includes('xps') ||
+        defaultPrinterText.includes('onenote');
 
       if (isVirtualPdfPrinter) {
         const fileName = path.basename(pdfPath);
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-          title: "Save Print Output As",
-          defaultPath: path.join(app.getPath("downloads"), fileName),
-          filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+          title: 'Save Print Output As',
+          defaultPath: path.join(app.getPath('downloads'), fileName),
+          filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
         });
 
         if (canceled || !filePath) {
-          throw new Error("Print canceled");
+          throw new Error('Print canceled');
         }
 
         fs.writeFileSync(filePath, pdfBuffer);
@@ -993,21 +1005,18 @@ ipcMain.handle("print-pdf", async (_event, pdfArrayBuffer, options = {}) => {
     }
 
     return await new Promise((resolve) => {
-      printWindow.webContents.print(
-        printOptions,
-        (success, failureReason) => {
-          printWindow.destroy();
-          try {
-            fs.unlinkSync(pdfPath);
-          } catch {
-            // ignore cleanup errors
-          }
-          resolve({
-            success,
-            error: success ? undefined : failureReason || "Print failed",
-          });
-        },
-      );
+      printWindow.webContents.print(printOptions, (success, failureReason) => {
+        printWindow.destroy();
+        try {
+          fs.unlinkSync(pdfPath);
+        } catch {
+          // ignore cleanup errors
+        }
+        resolve({
+          success,
+          error: success ? undefined : failureReason || 'Print failed',
+        });
+      });
     });
   } catch (error) {
     if (printWindow && !printWindow.isDestroyed()) {

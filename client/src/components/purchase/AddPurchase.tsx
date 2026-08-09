@@ -100,6 +100,7 @@ interface ProductWithFactors {
   pricePerPcs?: number;
   gstRate?: number;
   cartonPack: number;
+  innerPack?: number | string | null;
   conversionFactor: number;
   productBrand: string;
   productShortName?: string | null;
@@ -673,15 +674,15 @@ export default function AddPurchase({ mode = "purchase" }: AddPurchaseProps) {
       return;
     }
     const product = item.productId ? findProduct(item.productId) : undefined;
-    const cartonPack = Number(item.cartonPack || product?.cartonPack || 0);
+    const innerPack = Number(product?.innerPack || 0);
     const aQty = Number(item.aQty || 0);
-    if (cartonPack > 0 && aQty > 0 && aQty % cartonPack !== 0) {
-      const lowerMultiple = Math.floor(aQty / cartonPack) * cartonPack;
-      const upperMultiple = lowerMultiple + cartonPack;
+    if (innerPack > 0 && aQty > 0 && aQty % innerPack !== 0) {
+      const lowerMultiple = Math.floor(aQty / innerPack) * innerPack;
+      const upperMultiple = lowerMultiple + innerPack;
       const addQty = upperMultiple - aQty;
       const removeQty = aQty - lowerMultiple;
       setCartonPackWarningText(
-        `A Qty must be multiple of carton pack (${cartonPack}). Add ${addQty} or remove ${removeQty}.`,
+        `A Qty must be multiple of inner pack (${innerPack}). Add ${addQty} or remove ${removeQty}.`,
       );
       setCartonPackWarningOpen(true);
       return;

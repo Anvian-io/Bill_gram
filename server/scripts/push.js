@@ -35,7 +35,7 @@ function getDatabasePath() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  return path.join(dbDir, "billgram.db");
+  return path.join(dbDir, "shopkeeper.db");
 }
 
 async function main() {

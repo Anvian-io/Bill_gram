@@ -10,6 +10,14 @@ import fs from "fs";
 import { createNotification } from "../../utils/notificationHelper.js";
 import { getDatabasePath } from "../../db/database.js";
 import { extractFilename, getImageUrl } from "../../utils/imageUrl.js";
+
+const parseOptionalInt = (value, fallback = null) => {
+  if (value === undefined) return fallback;
+  if (value === null || value === "") return null;
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 /**
  * Get products directory path (kept for potential future use)
  */
@@ -220,7 +228,7 @@ export const createProduct = asyncHandler(async (req, res) => {
             : null,
           saleUnit,
           cartonPack: cartonPack ? parseInt(cartonPack) : 1,
-          innerPack,
+          innerPack: parseOptionalInt(innerPack),
           packagingBasic: packagingBasic || false,
           packagingMRP: packagingMRP || false,
           insuranceTaxBasic: insuranceTaxBasic || false,
@@ -925,8 +933,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
             cartonPack !== undefined
               ? parseInt(cartonPack)
               : existingProduct.cartonPack,
-          innerPack:
-            innerPack !== undefined ? innerPack : existingProduct.innerPack,
+          innerPack: parseOptionalInt(innerPack, existingProduct.innerPack),
           packagingBasic:
             packagingBasic !== undefined
               ? packagingBasic

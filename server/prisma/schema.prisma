@@ -66,7 +66,7 @@ model Product {
   productCompany    ProductCompany? @relation(fields: [productCompanyId], references: [id])
   saleUnit          String?         @map("sale_unit")
   cartonPack        Int?            @default(1) @map("carton_pack")
-  innerPack         String?         @map("inner_pack")
+  innerPack         Int?            @map("inner_pack")
   packagingBasic    Boolean         @default(false) @map("packaging_basic")
   packagingMRP      Boolean         @default(false) @map("packaging_mrp")
   insuranceTaxBasic Boolean         @default(false) @map("insurance_tax_basic")

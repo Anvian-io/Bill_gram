@@ -24,6 +24,7 @@ import {
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { InlineSearchField } from "@/components/custom_ui/InlineSearchField";
 import { Input } from "@/components/ui/input";
+import { bindNumberField } from "@/lib/numberInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -66,7 +67,7 @@ const productSchema = z.object({
   productCompany: z.string().min(1, "Product company is required"),
   saleUnit: z.string().min(1, "Sale unit is required"),
   cartonPack: z.coerce.number().positive("Carton pack must be positive"),
-  innerPack: z.string().optional(),
+  innerPack: z.coerce.number().min(0, "Inner pack cannot be negative").optional(),
 
   // Packaging
   packagingBasic: z.boolean().default(false),
@@ -124,7 +125,7 @@ const defaultValues: ProductFormValues = {
   productCompany: "",
   saleUnit: "PCS",
   cartonPack: 24,
-  innerPack: "",
+  innerPack: 0,
   packagingBasic: true,
   packagingMRP: false,
   insuranceTaxBasic: true,
@@ -169,7 +170,7 @@ const sampleProduct: ProductFormValues = {
   productCompany: "Parle Agro Private Limited",
   saleUnit: "PCS",
   cartonPack: 24,
-  innerPack: "",
+  innerPack: 0,
   packagingBasic: true,
   packagingMRP: false,
   insuranceTaxBasic: true,
@@ -861,9 +862,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEditMode = false }) => {
                                   <FormItem>
                                     <FormControl>
                                       <Input
+                                        type="number"
                                         placeholder="Inner Pack"
-                                        {...field}
-                                        value={field.value || ""}
+                                        {...bindNumberField(field)}
                                         className="h-9 text-sm border-gray-300 dark:border-gray-700 focus:border-primary"
                                       />
                                     </FormControl>

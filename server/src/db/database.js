@@ -1,18 +1,24 @@
-import { PrismaClient } from "@prisma/client";
-import { spawnSync } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
-import os from "os";
+import { PrismaClient } from '@prisma/client';
+import { spawnSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SERVER_ROOT = path.join(__dirname, "..", "..");
+const SERVER_ROOT = path.join(__dirname, '..', '..');
 
 let prisma = null;
 
 function runPrismaGenerate() {
-  const prismaCli = path.join(SERVER_ROOT, "node_modules", "prisma", "build", "index.js");
+  const prismaCli = path.join(
+    SERVER_ROOT,
+    'node_modules',
+    'prisma',
+    'build',
+    'index.js',
+  );
 
   if (!fs.existsSync(prismaCli)) {
     throw new Error(
@@ -20,12 +26,12 @@ function runPrismaGenerate() {
     );
   }
 
-  console.log("🔄 Generating Prisma client...");
+  console.log('🔄 Generating Prisma client...');
 
-  const result = spawnSync(process.execPath, [prismaCli, "generate"], {
+  const result = spawnSync(process.execPath, [prismaCli, 'generate'], {
     cwd: SERVER_ROOT,
     env: process.env,
-    encoding: "utf-8",
+    encoding: 'utf-8',
   });
 
   if (result.stdout) {
@@ -38,15 +44,21 @@ function runPrismaGenerate() {
 
   if (result.status !== 0) {
     throw new Error(
-      `Prisma generate failed with exit code ${result.status ?? "unknown"}`,
+      `Prisma generate failed with exit code ${result.status ?? 'unknown'}`,
     );
   }
 
-  console.log("✅ Prisma client generated");
+  console.log('✅ Prisma client generated');
 }
 
 function runPrismaMigrations() {
-  const prismaCli = path.join(SERVER_ROOT, "node_modules", "prisma", "build", "index.js");
+  const prismaCli = path.join(
+    SERVER_ROOT,
+    'node_modules',
+    'prisma',
+    'build',
+    'index.js',
+  );
 
   if (!fs.existsSync(prismaCli)) {
     throw new Error(
@@ -54,12 +66,12 @@ function runPrismaMigrations() {
     );
   }
 
-  console.log("🔄 Applying database migrations...");
+  console.log('🔄 Applying database migrations...');
 
-  const result = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+  const result = spawnSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
     cwd: SERVER_ROOT,
     env: process.env,
-    encoding: "utf-8",
+    encoding: 'utf-8',
   });
 
   if (result.stdout) {
@@ -72,34 +84,34 @@ function runPrismaMigrations() {
 
   if (result.status !== 0) {
     throw new Error(
-      `Prisma migrate deploy failed with exit code ${result.status ?? "unknown"}`,
+      `Prisma migrate deploy failed with exit code ${result.status ?? 'unknown'}`,
     );
   }
 
-  console.log("✅ Database migrations applied");
+  console.log('✅ Database migrations applied');
 }
 
 function shouldRunInstallSetupScripts() {
   const configuredValue = process.env.BILLGRAM_RUN_INSTALL_SETUP;
 
   if (configuredValue === undefined) {
-    return process.env.NODE_ENV !== "production";
+    return process.env.NODE_ENV !== 'production';
   }
 
-  return String(configuredValue).trim().toLowerCase() === "true";
+  return String(configuredValue).trim().toLowerCase() === 'true';
 }
 
 async function ensureSubscriptionExpiryColumn(client) {
   const columns = await client.$queryRawUnsafe(`PRAGMA table_info("users")`);
   const hasSubscriptionExpiryColumn = columns.some(
-    (column) => column.name === "subscription_expires_at",
+    (column) => column.name === 'subscription_expires_at',
   );
 
   if (!hasSubscriptionExpiryColumn) {
     await client.$executeRawUnsafe(
-      `ALTER TABLE "users" ADD COLUMN "subscription_expires_at" DATETIME`
+      `ALTER TABLE "users" ADD COLUMN "subscription_expires_at" DATETIME`,
     );
-    console.log("Added subscription expiry column to users table");
+    console.log('Added subscription expiry column to users table');
   }
 }
 
@@ -108,8 +120,8 @@ async function ensureSubscriptionExpiryColumn(client) {
  * Always use OS-specific AppData/Local directory
  */
 export function getDatabasePath() {
-  const appName = "BillGram";
-  const legacyAppName = "Shopkeeper";
+  const appName = 'BillGram';
+  const legacyAppName = 'Shopkeeper';
   let dbDir;
 
   const platform = os.platform();
@@ -117,19 +129,19 @@ export function getDatabasePath() {
 
   const resolveDir = (name) => {
     switch (platform) {
-      case "win32":
-        return path.join(homeDir, "AppData", "Local", name);
-      case "darwin":
-        return path.join(homeDir, "Library", "Application Support", name);
-      case "linux":
-        return path.join(homeDir, ".config", name);
+      case 'win32':
+        return path.join(homeDir, 'AppData', 'Local', name);
+      case 'darwin':
+        return path.join(homeDir, 'Library', 'Application Support', name);
+      case 'linux':
+        return path.join(homeDir, '.config', name);
       default:
         return path.join(homeDir, `.${name.toLowerCase()}`);
     }
   };
 
-  const newDbPath = path.join(resolveDir(appName), "billgram.db");
-  const legacyDbPath = path.join(resolveDir(legacyAppName), "shopkeeper.db");
+  const newDbPath = path.join(resolveDir(appName), 'shopkeeper.db');
+  const legacyDbPath = path.join(resolveDir(legacyAppName), 'shopkeeper.db');
 
   if (fs.existsSync(newDbPath)) {
     dbDir = path.dirname(newDbPath);
@@ -146,7 +158,7 @@ export function getDatabasePath() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  return path.join(dbDir, "billgram.db");
+  return path.join(dbDir, 'shopkeeper.db');
 }
 
 /**
@@ -154,20 +166,20 @@ export function getDatabasePath() {
  */
 export async function initializeDatabase() {
   try {
-    console.log("🚀 Initializing database...");
+    console.log('🚀 Initializing database...');
 
     const dbPath = getDatabasePath();
     console.log(`📁 Database location: ${dbPath}`);
 
     // Convert Windows path to file:// URL format for Prisma
-    const databaseUrl = `file:${dbPath.replace(/\\/g, "/")}`;
+    const databaseUrl = `file:${dbPath.replace(/\\/g, '/')}`;
 
     // Set environment variable for Prisma
     process.env.DATABASE_URL = databaseUrl;
     console.log(`🔗 DATABASE_URL: ${databaseUrl}`);
 
     if (shouldRunInstallSetupScripts()) {
-      console.log("Running install setup scripts...");
+      console.log('Running install setup scripts...');
 
       // Regenerate client so schema changes (e.g. new columns) are available at runtime
       runPrismaGenerate();
@@ -175,31 +187,31 @@ export async function initializeDatabase() {
       // Apply pending Prisma migrations (creates schema on first run)
       runPrismaMigrations();
     } else {
-      console.log("Skipping install setup scripts for faster startup");
+      console.log('Skipping install setup scripts for faster startup');
     }
 
     // Initialize Prisma Client
     prisma = new PrismaClient({
       datasourceUrl: databaseUrl,
       log:
-        process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+        process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     });
 
     // Connect to database
     await prisma.$connect();
-    console.log("✅ Prisma connected successfully");
+    console.log('✅ Prisma connected successfully');
 
     // Verify connection after migrations
     await prisma.$queryRaw`SELECT 1 as test`;
     await ensureSubscriptionExpiryColumn(prisma);
-    console.log("✅ Database connection verified");
+    console.log('✅ Database connection verified');
 
-    console.log("✅ Database initialization completed!");
+    console.log('✅ Database initialization completed!');
     console.log(`💾 Database ready at: ${dbPath}`);
 
     return prisma;
   } catch (error) {
-    console.error("❌ Database initialization error:", error);
+    console.error('❌ Database initialization error:', error);
     throw error;
   }
 }
@@ -210,7 +222,7 @@ export async function initializeDatabase() {
 export function getDb() {
   if (!prisma) {
     throw new Error(
-      "Database not initialized! Call initializeDatabase() first.",
+      'Database not initialized! Call initializeDatabase() first.',
     );
   }
   return prisma;
@@ -230,6 +242,6 @@ export async function closeDatabase() {
   if (prisma) {
     await prisma.$disconnect();
     prisma = null;
-    console.log("✅ Database connection closed");
+    console.log('✅ Database connection closed');
   }
 }
