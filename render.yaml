@@ -5,8 +5,36 @@ services:
     rootDir: update-server
     buildCommand: npm install
     startCommand: npm start
+    disk:
+      name: releases-data
+      mountPath: /opt/render/project/src/update-server/releases
+      sizeGB: 10
     envVars:
       - key: UPLOAD_API_KEY
         sync: false
       - key: NODE_VERSION
         value: "20"
+      - key: RELEASES_DIR
+        value: "/opt/render/project/src/update-server/releases"
+
+  - type: web
+    name: bill-gram-landing-backend
+    runtime: node
+    rootDir: nebula-billing/server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: NODE_VERSION
+        value: "20"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: USER_EMAIL
+        sync: false
